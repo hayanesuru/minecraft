@@ -1,7 +1,7 @@
 pub fn encode(key: &[u32; 44], iv: &mut [u8; 16], plain: &mut [u8]) {
-    for plain in plain.chunks_mut(16) {
-        for x in plain {
-            let o = encrypt128(iv, key);
+    for x in plain.chunks_mut(16) {
+        for x in x {
+            let o = encrypt128(*iv, key);
             let n = o ^ *x;
             *x = n;
             iv.rotate_left(1);
@@ -11,9 +11,9 @@ pub fn encode(key: &[u32; 44], iv: &mut [u8; 16], plain: &mut [u8]) {
 }
 
 pub fn decode(key: &[u32; 44], iv: &mut [u8; 16], cipher: &mut [u8]) {
-    for cipher in cipher.chunks_mut(16) {
-        for x in cipher {
-            let o = encrypt128(iv, key);
+    for x in cipher.chunks_mut(16) {
+        for x in x {
+            let o = encrypt128(*iv, key);
             let y = *x;
             *x ^= o;
             iv.rotate_left(1);
@@ -23,7 +23,7 @@ pub fn decode(key: &[u32; 44], iv: &mut [u8; 16], cipher: &mut [u8]) {
 }
 
 // S-Box
-const SBOX: &[u8; 256] = &[
+const SBOX: [u8; 256] = [
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
     0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15,
@@ -42,7 +42,7 @@ const SBOX: &[u8; 256] = &[
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 ];
 // T-Box 0 for encryption
-const TE0: &[u32; 256] = &[
+const TE0: [u32; 256] = [
     0xA56363C6, 0x847C7CF8, 0x997777EE, 0x8D7B7BF6, 0x0DF2F2FF, 0xBD6B6BD6, 0xB16F6FDE, 0x54C5C591,
     0x50303060, 0x03010102, 0xA96767CE, 0x7D2B2B56, 0x19FEFEE7, 0x62D7D7B5, 0xE6ABAB4D, 0x9A7676EC,
     0x45CACA8F, 0x9D82821F, 0x40C9C989, 0x877D7DFA, 0x15FAFAEF, 0xEB5959B2, 0xC947478E, 0x0BF0F0FB,
@@ -77,7 +77,7 @@ const TE0: &[u32; 256] = &[
     0xC3414182, 0xB0999929, 0x772D2D5A, 0x110F0F1E, 0xCBB0B07B, 0xFC5454A8, 0xD6BBBB6D, 0x3A16162C,
 ];
 // T-Box 1 for encryption
-const TE1: &[u32; 256] = &[
+const TE1: [u32; 256] = [
     0x6363C6A5, 0x7C7CF884, 0x7777EE99, 0x7B7BF68D, 0xF2F2FF0D, 0x6B6BD6BD, 0x6F6FDEB1, 0xC5C59154,
     0x30306050, 0x01010203, 0x6767CEA9, 0x2B2B567D, 0xFEFEE719, 0xD7D7B562, 0xABAB4DE6, 0x7676EC9A,
     0xCACA8F45, 0x82821F9D, 0xC9C98940, 0x7D7DFA87, 0xFAFAEF15, 0x5959B2EB, 0x47478EC9, 0xF0F0FB0B,
@@ -112,7 +112,7 @@ const TE1: &[u32; 256] = &[
     0x414182C3, 0x999929B0, 0x2D2D5A77, 0x0F0F1E11, 0xB0B07BCB, 0x5454A8FC, 0xBBBB6DD6, 0x16162C3A,
 ];
 // T-Box 2 for encryption
-const TE2: &[u32; 256] = &[
+const TE2: [u32; 256] = [
     0x63C6A563, 0x7CF8847C, 0x77EE9977, 0x7BF68D7B, 0xF2FF0DF2, 0x6BD6BD6B, 0x6FDEB16F, 0xC59154C5,
     0x30605030, 0x01020301, 0x67CEA967, 0x2B567D2B, 0xFEE719FE, 0xD7B562D7, 0xAB4DE6AB, 0x76EC9A76,
     0xCA8F45CA, 0x821F9D82, 0xC98940C9, 0x7DFA877D, 0xFAEF15FA, 0x59B2EB59, 0x478EC947, 0xF0FB0BF0,
@@ -147,7 +147,7 @@ const TE2: &[u32; 256] = &[
     0x4182C341, 0x9929B099, 0x2D5A772D, 0x0F1E110F, 0xB07BCBB0, 0x54A8FC54, 0xBB6DD6BB, 0x162C3A16,
 ];
 // T-Box 3 for encryption
-const TE3: &[u32; 256] = &[
+const TE3: [u32; 256] = [
     0xC6A56363, 0xF8847C7C, 0xEE997777, 0xF68D7B7B, 0xFF0DF2F2, 0xD6BD6B6B, 0xDEB16F6F, 0x9154C5C5,
     0x60503030, 0x02030101, 0xCEA96767, 0x567D2B2B, 0xE719FEFE, 0xB562D7D7, 0x4DE6ABAB, 0xEC9A7676,
     0x8F45CACA, 0x1F9D8282, 0x8940C9C9, 0xFA877D7D, 0xEF15FAFA, 0xB2EB5959, 0x8EC94747, 0xFB0BF0F0,
@@ -228,49 +228,70 @@ fn b0(n: u32) -> u8 {
     n as u8
 }
 
-fn encrypt128(data: &[u8; 16], subkeys: &[u32; 44]) -> u8 {
-    let mut wa0 = le_u32(data[0], data[1], data[2], data[3]) ^ subkeys[0];
-    let mut wa1 = le_u32(data[4], data[5], data[6], data[7]) ^ subkeys[1];
-    let mut wa2 = le_u32(data[8], data[9], data[10], data[11]) ^ subkeys[2];
-    let mut wa3 = le_u32(data[12], data[13], data[14], data[15]) ^ subkeys[3];
-    let mut wb0 = te0(b0(wa0)) ^ te1(b1(wa1)) ^ te2(b2(wa2)) ^ te3(b3(wa3)) ^ subkeys[4];
-    let mut wb1 = te0(b0(wa1)) ^ te1(b1(wa2)) ^ te2(b2(wa3)) ^ te3(b3(wa0)) ^ subkeys[5];
-    let mut wb2 = te0(b0(wa2)) ^ te1(b1(wa3)) ^ te2(b2(wa0)) ^ te3(b3(wa1)) ^ subkeys[6];
-    let mut wb3 = te0(b0(wa3)) ^ te1(b1(wa0)) ^ te2(b2(wa1)) ^ te3(b3(wa2)) ^ subkeys[7];
-    for i in 1..5 {
-        wa0 = te0(b0(wb0)) ^ te1(b1(wb1)) ^ te2(b2(wb2)) ^ te3(b3(wb3)) ^ subkeys[8 * i];
-        wa1 = te0(b0(wb1)) ^ te1(b1(wb2)) ^ te2(b2(wb3)) ^ te3(b3(wb0)) ^ subkeys[8 * i + 1];
-        wa2 = te0(b0(wb2)) ^ te1(b1(wb3)) ^ te2(b2(wb0)) ^ te3(b3(wb1)) ^ subkeys[8 * i + 2];
-        wa3 = te0(b0(wb3)) ^ te1(b1(wb0)) ^ te2(b2(wb1)) ^ te3(b3(wb2)) ^ subkeys[8 * i + 3];
-        wb0 = te0(b0(wa0)) ^ te1(b1(wa1)) ^ te2(b2(wa2)) ^ te3(b3(wa3)) ^ subkeys[8 * i + 4];
-        wb1 = te0(b0(wa1)) ^ te1(b1(wa2)) ^ te2(b2(wa3)) ^ te3(b3(wa0)) ^ subkeys[8 * i + 5];
-        wb2 = te0(b0(wa2)) ^ te1(b1(wa3)) ^ te2(b2(wa0)) ^ te3(b3(wa1)) ^ subkeys[8 * i + 6];
-        wb3 = te0(b0(wa3)) ^ te1(b1(wa0)) ^ te2(b2(wa1)) ^ te3(b3(wa2)) ^ subkeys[8 * i + 7];
+fn encrypt128(
+    [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p]: [u8; 16],
+    subkeys: &[u32; 44],
+) -> u8 {
+    let mut ptr = subkeys.as_ptr();
+    unsafe {
+        let mut wa0 = le_u32(a, b, c, d) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wa1 = le_u32(e, f, g, h) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wa2 = le_u32(i, j, k, l) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wa3 = le_u32(m, n, o, p) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wb0 = te0(b0(wa0)) ^ te1(b1(wa1)) ^ te2(b2(wa2)) ^ te3(b3(wa3)) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wb1 = te0(b0(wa1)) ^ te1(b1(wa2)) ^ te2(b2(wa3)) ^ te3(b3(wa0)) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wb2 = te0(b0(wa2)) ^ te1(b1(wa3)) ^ te2(b2(wa0)) ^ te3(b3(wa1)) ^ *ptr;
+        ptr = ptr.add(1);
+        let mut wb3 = te0(b0(wa3)) ^ te1(b1(wa0)) ^ te2(b2(wa1)) ^ te3(b3(wa2)) ^ *ptr;
+        ptr = ptr.add(1);
+        for _ in 0u8..4 {
+            wa0 = te0(b0(wb0)) ^ te1(b1(wb1)) ^ te2(b2(wb2)) ^ te3(b3(wb3)) ^ *ptr;
+            ptr = ptr.add(1);
+            wa1 = te0(b0(wb1)) ^ te1(b1(wb2)) ^ te2(b2(wb3)) ^ te3(b3(wb0)) ^ *ptr;
+            ptr = ptr.add(1);
+            wa2 = te0(b0(wb2)) ^ te1(b1(wb3)) ^ te2(b2(wb0)) ^ te3(b3(wb1)) ^ *ptr;
+            ptr = ptr.add(1);
+            wa3 = te0(b0(wb3)) ^ te1(b1(wb0)) ^ te2(b2(wb1)) ^ te3(b3(wb2)) ^ *ptr;
+            ptr = ptr.add(1);
+            wb0 = te0(b0(wa0)) ^ te1(b1(wa1)) ^ te2(b2(wa2)) ^ te3(b3(wa3)) ^ *ptr;
+            ptr = ptr.add(1);
+            wb1 = te0(b0(wa1)) ^ te1(b1(wa2)) ^ te2(b2(wa3)) ^ te3(b3(wa0)) ^ *ptr;
+            ptr = ptr.add(1);
+            wb2 = te0(b0(wa2)) ^ te1(b1(wa3)) ^ te2(b2(wa0)) ^ te3(b3(wa1)) ^ *ptr;
+            ptr = ptr.add(1);
+            wb3 = te0(b0(wa3)) ^ te1(b1(wa0)) ^ te2(b2(wa1)) ^ te3(b3(wa2)) ^ *ptr;
+            ptr = ptr.add(1);
+        }
+        // [
+        //     sbox(b0(wb0)) ^ b0(subkeys[40]),
+        //     sbox(b1(wb1)) ^ b1(subkeys[40]),
+        //     sbox(b2(wb2)) ^ b2(subkeys[40]),
+        //     sbox(b3(wb3)) ^ b3(subkeys[40]),
+        //     sbox(b0(wb1)) ^ b0(subkeys[41]),
+        //     sbox(b1(wb2)) ^ b1(subkeys[41]),
+        //     sbox(b2(wb3)) ^ b2(subkeys[41]),
+        //     sbox(b3(wb0)) ^ b3(subkeys[41]),
+        //     sbox(b0(wb2)) ^ b0(subkeys[42]),
+        //     sbox(b1(wb3)) ^ b1(subkeys[42]),
+        //     sbox(b2(wb0)) ^ b2(subkeys[42]),
+        //     sbox(b3(wb1)) ^ b3(subkeys[42]),
+        //     sbox(b0(wb3)) ^ b0(subkeys[43]),
+        //     sbox(b1(wb0)) ^ b1(subkeys[43]),
+        //     sbox(b2(wb1)) ^ b2(subkeys[43]),
+        //     sbox(b3(wb2)) ^ b3(subkeys[43]),
+        // ]
+        sbox(wb0 as u8) ^ *ptr as u8
     }
-
-    // [
-    //     sbox(b0(wb0)) ^ b0(subkeys[40]),
-    //     sbox(b1(wb1)) ^ b1(subkeys[40]),
-    //     sbox(b2(wb2)) ^ b2(subkeys[40]),
-    //     sbox(b3(wb3)) ^ b3(subkeys[40]),
-    //     sbox(b0(wb1)) ^ b0(subkeys[41]),
-    //     sbox(b1(wb2)) ^ b1(subkeys[41]),
-    //     sbox(b2(wb3)) ^ b2(subkeys[41]),
-    //     sbox(b3(wb0)) ^ b3(subkeys[41]),
-    //     sbox(b0(wb2)) ^ b0(subkeys[42]),
-    //     sbox(b1(wb3)) ^ b1(subkeys[42]),
-    //     sbox(b2(wb0)) ^ b2(subkeys[42]),
-    //     sbox(b3(wb1)) ^ b3(subkeys[42]),
-    //     sbox(b0(wb3)) ^ b0(subkeys[43]),
-    //     sbox(b1(wb0)) ^ b1(subkeys[43]),
-    //     sbox(b2(wb1)) ^ b2(subkeys[43]),
-    //     sbox(b3(wb2)) ^ b3(subkeys[43]),
-    // ]
-    sbox(wb0 as u8) ^ (subkeys[40]) as u8
 }
 
 // Addend (round coefficient) needed in the round function
-const RC: &[u8; 10] = &[0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36];
+const RC: [u8; 10] = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36];
 
 pub fn key(origin: [u8; 16]) -> [u32; 44] {
     let mut x = [0u32; 44];
