@@ -1,0 +1,20 @@
+[package]
+name = "minecraft_data"
+version = "0.0.0"
+edition.workspace = true
+authors.workspace = true
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+highway = "*"
+ser = { workspace = true }
+
+[build-dependencies]
+ser = { workspace = true }
+itoa = "1"
+ryu = "1"
+highway = "*"

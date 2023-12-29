@@ -1,0 +1,15 @@
+[package]
+name = "ser"
+version = "0.0.0"
+edition.workspace = true
+authors.workspace = true
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+uuid = { version = "1", default-features = false }
+itoa = "*"
+ryu = "*"

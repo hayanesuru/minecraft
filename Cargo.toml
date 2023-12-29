@@ -1,0 +1,29 @@
+[workspace]
+members = ["minecraft_data", "ser", "ser_macro"]
+resolver = "2"
+
+[workspace.package]
+authors = ["Jvavav"]
+readme = "README.md"
+license = "AGPL-3.0+"
+repository = "https://git.pgyer.com/wooden/minecraft.git"
+edition = "2021"
+
+[workspace.dependencies]
+minecraft_data = { path = "minecraft_data" }
+ser = { path = "ser" }
+ser_macro = { path = "ser_macro" }
+
+[package]
+name = "minecraft"
+version = "1.20.5"
+edition.workspace = true
+authors.workspace = true
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+minecraft_data = { workspace = true }
+ser = { workspace = true }
+ser_macro = { workspace = true }
