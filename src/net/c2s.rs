@@ -1,31 +1,53 @@
 use crate::inventory::{ItemStack, SlotActionType};
 use crate::math::{BlockPos, Direction, Position};
 use crate::text::ChatVisibility;
-use crate::{Bytes, Read, UnsafeWriter, Writable, Write, V21, V32, Arm, CommandBlockType, Hand, Difficulty, JigsawBlockJoint, BlockHitResult, RecipeBookCategory, StructureBlockAction, BlockMirror, StructureBlockMode, BlockRotation};
+use crate::{
+    mob_effect, Arm, BlockHitResult, BlockMirror, BlockRotation, Bytes, CommandBlockType,
+    Difficulty, Hand, JigsawBlockJoint, Read, RecipeBookCategory, StructureBlockAction,
+    StructureBlockMode, V32,
+};
 use core::mem::transmute;
 use glam::{IVec3, Vec3};
-use minecraft_data::{configuration_c2s, handshake_c2s, login_c2s, mob_effect, play_c2s};
 use simdutf8::basic::from_utf8;
 use uuid::Uuid;
 
-#[derive(Writable, Clone, Copy)]
-#[ser(prefix = handshake_c2s::Handshake)]
-pub struct Handshake<'a> {
+#[derive(Clone, Copy)]
+pub struct Handshake {
     pub protocol_version: u32,
-    pub address: &'a str,
+    pub address: *const str,
     pub port: u16,
     pub intended_state: u32,
 }
 
-#[derive(Writable, Clone, Copy)]
-#[ser(prefix = login_c2s::LoginHello)]
-pub struct LoginHello<'a> {
-    pub name: &'a str,
+impl Read for Handshake {
+    #[inline]
+    fn read(buf: &mut &[u8]) -> Option<Self> {
+        Some(Self {
+            protocol_version: V32::read(buf)?.0,
+            address: s(buf, 255)?,
+            port: buf.u16()?,
+            intended_state: V32::read(buf)?.0,
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct LoginHello {
+    pub name: *const str,
     pub profile_id: Uuid,
 }
 
-#[derive(Clone, Copy, Writable)]
-#[ser(prefix = login_c2s::EnterConfiguration)]
+impl Read for LoginHello {
+    #[inline]
+    fn read(buf: &mut &[u8]) -> Option<Self> {
+        Some(Self {
+            name: s(buf, 16)?,
+            profile_id: Uuid::from_bytes(*buf.array()?),
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct EnterConfiguration;
 
 impl Read for EnterConfiguration {
@@ -52,8 +74,7 @@ impl Read for LoginKey {
     }
 }
 
-#[derive(Clone, Copy, Writable)]
-#[ser(prefix = configuration_c2s::Ready)]
+#[derive(Clone, Copy)]
 pub struct ConfReady;
 impl Read for ConfReady {
     #[inline]
@@ -79,8 +100,7 @@ impl Read for CustomPayload {
     }
 }
 
-#[derive(Clone, Copy, Writable)]
-#[ser(prefix = configuration_c2s::KeepAlive)]
+#[derive(Clone, Copy)]
 pub struct ConfKeepAlive {
     pub id: u64,
 }
@@ -92,8 +112,7 @@ impl Read for ConfKeepAlive {
     }
 }
 
-#[derive(Clone, Copy, Writable)]
-#[ser(prefix = play_c2s::KeepAlive)]
+#[derive(Clone, Copy)]
 pub struct KeepAlive {
     pub id: u64,
 }
@@ -115,37 +134,6 @@ pub struct ConfClientOptions {
     pub main_hand: Arm,
     pub text_filtering_enabled: bool,
     pub allows_listing: bool,
-}
-
-impl Write for ConfClientOptions {
-    fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            configuration_c2s::ClientOptions.write(w);
-            V21((*self.language).len() as u32).write(w);
-            w.write((*self.language).as_bytes());
-            w.write_byte(self.view_distance);
-            self.chat_visibility.write(w);
-            self.chat_colors.write(w);
-            w.write_byte(self.model_customisation);
-            self.main_hand.write(w);
-            self.text_filtering_enabled.write(w);
-            self.allows_listing.write(w);
-        }
-    }
-
-    fn len(&self) -> usize {
-        unsafe {
-            configuration_c2s::ClientOptions.len()
-                + V21((*self.language).len() as u32).len()
-                + (*self.language).len()
-                + 1
-                + self.chat_visibility.len()
-                + self.chat_colors.len()
-                + 1
-                + self.main_hand.len()
-                + 2
-        }
-    }
 }
 
 #[derive(Clone, Copy)]
