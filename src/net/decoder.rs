@@ -1,7 +1,5 @@
-use ser::Write;
-
 use crate::cfb8::decode;
-use crate::{UnsafeWriter, V21};
+use crate::{UnsafeWriter, Write, V21};
 use core::ptr::copy_nonoverlapping;
 
 pub struct PacketDecoder {

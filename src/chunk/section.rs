@@ -1,6 +1,6 @@
 use super::{BiomePC, BlockPC};
-use std::alloc::Global;
 use minecraft_data::{biome, block_state};
+use std::alloc::Global;
 
 #[derive(Clone)]
 pub struct Section {

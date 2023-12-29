@@ -2,6 +2,7 @@ use crate::command::CommandNode;
 use crate::entity::TrackedData;
 use crate::inventory::ItemStack;
 use crate::math::{BlockPos, ChunkSectionPos, GlobalPos, Position};
+use crate::nbt::{Compound, COMPOUND};
 use crate::recipe::Recipe;
 use crate::text::{Literal, Translate};
 use crate::{
@@ -9,7 +10,6 @@ use crate::{
     play_s2c as C, Difficulty, GameMode, GameProfile, Identifier, UnsafeWriter, Writable, Write,
     V21, V32,
 };
-use ser::nbt::{Compound, COMPOUND};
 use uuid::Uuid;
 
 #[derive(Writable, Clone, Copy)]

@@ -1,4 +1,4 @@
-use ser::{UnsafeWriter, V21, Write};
+use crate::{UnsafeWriter, Write, V21};
 
 pub struct PacketEncoder {
     pub buf: Vec<u8>,
