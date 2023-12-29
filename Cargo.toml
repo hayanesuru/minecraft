@@ -10,9 +10,9 @@ repository = "https://git.pgyer.com/wooden/minecraft.git"
 edition = "2021"
 
 [workspace.dependencies]
-minecraft_data = { path = "minecraft_data" }
-ser = { path = "ser" }
-ser_macro = { path = "ser_macro" }
+minecraft_data = { path = "minecraft_data", version = "1" }
+ser = { path = "ser", version = "1" }
+ser_macro = { path = "ser_macro", version = "1" }
 
 [package]
 name = "minecraft"
