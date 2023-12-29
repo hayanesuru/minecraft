@@ -2,7 +2,7 @@ use super::{
     collect_toplevel_struct_attributes, common_tokens, parse_attributes, BasicType, Field, Opt,
     PrimitiveTy, Struct, ToplevelStructAttribute, Trait, Ty, DEFAULT_LENGTH_TYPE,
 };
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::{Data, DataStruct};
@@ -22,8 +22,13 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                 let var_name = field.var_name();
                 let name = field.name();
 
-                quote! {
-                    let ref #var_name = self.#name;
+                match field.ty.inner() {
+                    Ty::RefSlice(..)
+                    | Ty::RefSliceStr(..)
+                    | Ty::RefSliceU8(..)
+                    | Ty::RefStr(..)
+                    | Ty::Type(syn::Type::Reference(..)) => quote!(let #var_name = self.#name;),
+                    _ => quote!(let ref #var_name = self.#name;),
                 }
             });
             let body = fields.clone().map(write_field_body);
@@ -31,7 +36,10 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
             types.extend(fields.flat_map(|x| x.bound_types()));
 
             let (a, b) = match attrs.prefix {
-                Some(ref x) => (quote!(#x.write_to(w);), quote!(#x.wlen() #(+ #needed)*)),
+                Some(ref x) => (
+                    quote!(Write::write(&#x, w);),
+                    quote!(Write::len(&#x) #(+ #needed)*),
+                ),
                 None => (quote!(), quote!(#(#needed)+*)),
             };
             let (impl_params, ty_params, where_clause) =
@@ -54,8 +62,41 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                 }
             })
         }
-        Data::Enum(syn::DataEnum { enum_token, .. }) => {
-            Err(syn::Error::new(enum_token.span(), "unimplemented"))
+        Data::Enum(syn::DataEnum {
+            enum_token,
+            variants,
+            ..
+        }) => {
+            let mut flag = false;
+            for attr in input.attrs {
+                let x = attr.meta.require_list()?;
+                if x.path.require_ident()? == "repr" {
+                    if let Some(TokenTree::Ident(x)) = x.tokens.clone().into_iter().next() {
+                        if x == "u8" {
+                            flag = true;
+                        }
+                    }
+                }
+            }
+            if flag && variants.len() <= 0x7f {
+                let x = quote! {
+                    #[automatically_derived]
+                    impl Write for #name {
+                        #[inline]
+                        fn write(&self, w: &mut UnsafeWriter) {
+                            w.write_byte(*self as u8);
+                        }
+
+                        #[inline]
+                        fn len(&self) -> usize {
+                            1
+                        }
+                    }
+                };
+                Ok(x)
+            } else {
+                Err(syn::Error::new(enum_token.span(), "unimplemented"))
+            }
         }
         Data::Union(syn::DataUnion { union_token, .. }) => {
             Err(syn::Error::new(union_token.span(), "unimplemented"))
@@ -82,6 +123,9 @@ fn needed_body(field: &Field) -> TokenStream {
         Ty::String | Ty::CowStr(..) | Ty::RefStr(..) | Ty::RefSliceU8(..) => {
             quote!(#needed #name.len())
         }
+        Ty::RefSliceStr(..) => {
+            quote! {#needed Write::len(#name) }
+        }
         Ty::HashMap(..)
         | Ty::HashSet(..)
         | Ty::BTreeMap(..)
@@ -92,23 +136,19 @@ fn needed_body(field: &Field) -> TokenStream {
         | Ty::CowBTreeSet(..)
         | Ty::Array(..) => quote!(#needed Write::len(#name)),
         Ty::Primitive(PrimitiveTy::I32) if field.varint => {
-            quote!(Write::len(&V32(*#name as u32)))
+            quote!(Write::len(&V32(#name as u32)))
         }
         Ty::Primitive(PrimitiveTy::U32) if field.varint => {
-            quote!(Write::len(&V32(*#name)))
+            quote!(Write::len(&V32(#name)))
         }
         Ty::Primitive(PrimitiveTy::I64) if field.varint => {
-            quote!(Write::len(&V64(*#name as i64)))
+            quote!(Write::len(&V64(#name as i64)))
         }
         Ty::Primitive(PrimitiveTy::U64) if field.varint => {
-            quote!(Write::len(&V64(*#name)))
+            quote!(Write::len(&V64(#name)))
         }
-        Ty::RefSliceStr(..) => {
-            quote! {#needed Write::len(&#name) }
-        }
-        _ if !field.expand => {
-            quote!(Write::len(&#name))
-        }
+        Ty::Type(syn::Type::Reference(..)) if !field.expand => quote!(Write::len(#name)),
+        _ if !field.expand => quote!(Write::len(&#name)),
         _ => quote! {#needed {
             let mut a___ = 0usize;
             for a in #name {
@@ -130,7 +170,7 @@ fn needed_body(field: &Field) -> TokenStream {
         q
     };
     if let Some(ref add) = field.add {
-        quote!(Write(#add).len() + #x)
+        quote!(Write::len(&#add) + #x)
     } else {
         x
     }
@@ -165,7 +205,7 @@ fn write_field_body(field: &Field) -> TokenStream {
                 match x {
                     PrimitiveTy::U32 => quote!(Write::write(&V32(*#name), w);),
                     PrimitiveTy::U64 => quote!(Write::write(&V64(*#name), w);),
-                    PrimitiveTy::I32 => quote!(Write::write(&V32(*#name as u64), w);),
+                    PrimitiveTy::I32 => quote!(Write::write(&V32(*#name as u32), w);),
                     PrimitiveTy::I64 => quote!(Write::write(&V64(#name as u64), w);),
                     _ => unimplemented!(),
                 }
@@ -196,7 +236,7 @@ fn write_field_body(field: &Field) -> TokenStream {
 
     if let Some(ref add) = field.add {
         quote! {{
-            Write::write(#add, w);
+            Write::write(&#add, w);
             #body
         }}
     } else {

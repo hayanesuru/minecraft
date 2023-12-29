@@ -27,3 +27,11 @@ repository.workspace = true
 minecraft_data = { workspace = true }
 ser = { workspace = true }
 ser_macro = { workspace = true }
+rand_core = "*"
+glam = "*"
+itoa = "1"
+ryu = "1"
+uuid = { version = "1", default-features = false }
+simdutf8 = "0"
+simd-adler32 = { version = "0.3.7", features = ["nightly"] }
+miniz_oxide = { version = "0.7", features = ["simd"] }

@@ -177,3 +177,15 @@ impl Write for [&str] {
         l
     }
 }
+
+impl Write for &[&str] {
+    #[inline]
+    fn write(&self, w: &mut UnsafeWriter) {
+        Write::write(*self, w);
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        Write::len(*self)
+    }
+}
