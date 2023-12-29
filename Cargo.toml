@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 authors = ["Jvavav"]
 readme = "README.md"
-license = "AGPL-3.0+"
+license = "MIT OR Apache-2.0"
 repository = "https://git.pgyer.com/wooden/minecraft.git"
 edition = "2021"
 
