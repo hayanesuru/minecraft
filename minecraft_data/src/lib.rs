@@ -404,6 +404,44 @@ impl item {
     }
 }
 
+impl block {
+    #[inline]
+    pub const fn hardness(self) -> f32 {
+        unsafe {
+            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
+            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>()
+        }
+    }
+    #[inline]
+    pub const fn blast_resistance(self) -> f32 {
+        unsafe {
+            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
+            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(1)
+        }
+    }
+    #[inline]
+    pub const fn slipperiness(self) -> f32 {
+        unsafe {
+            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
+            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(2)
+        }
+    }
+    #[inline]
+    pub const fn velocity_multiplier(self) -> f32 {
+        unsafe {
+            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
+            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(3)
+        }
+    }
+    #[inline]
+    pub const fn jump_velocity_multiplier(self) -> f32 {
+        unsafe {
+            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
+            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(4)
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum fluid_state {

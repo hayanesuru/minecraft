@@ -924,34 +924,6 @@ fn main() {
     w.pop();
     w += "];\n";
 
-    w += "impl block {\n";
-    w += "#[inline]\n";
-    w += "pub const fn hardness(self) -> f32 {\n";
-    w += "unsafe { *BLOCK_SETTINGS.as_ptr().add(*BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize).cast::<f32>() }\n";
-    w += "}\n";
-
-    w += "#[inline]\n";
-    w += "pub const fn blast_resistance(self) -> f32 {\n";
-    w += "unsafe { *BLOCK_SETTINGS.as_ptr().add(*BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize).cast::<f32>().add(1) }\n";
-    w += "}\n";
-
-    w += "#[inline]\n";
-    w += "pub const fn slipperiness(self) -> f32 {\n";
-    w += "unsafe { *BLOCK_SETTINGS.as_ptr().add(*BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize).cast::<f32>().add(2) }\n";
-    w += "}\n";
-
-    w += "#[inline]\n";
-    w += "pub const fn velocity_multiplier(self) -> f32 {\n";
-    w += "unsafe { *BLOCK_SETTINGS.as_ptr().add(*BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize).cast::<f32>().add(3) }\n";
-    w += "}\n";
-
-    w += "#[inline]\n";
-    w += "pub const fn jump_velocity_multiplier(self) -> f32 {\n";
-    w += "unsafe { *BLOCK_SETTINGS.as_ptr().add(*BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize).cast::<f32>().add(4) }\n";
-    w += "}\n";
-
-    w += "}\n";
-
     struct_head(&mut w, bsrepr, bsname);
     w += "impl ";
     w += bsname;
