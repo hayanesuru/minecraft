@@ -28,8 +28,8 @@ repository.workspace = true
 minecraft_data = { workspace = true }
 mser = { workspace = true }
 mser_macro = { workspace = true }
-rand_core = "*"
-glam = "*"
+rand_core = "0"
+glam = "0.25"
 itoa = "1"
 ryu = "1"
 uuid = { version = "1", default-features = false }

@@ -11,11 +11,11 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-highway = "*"
+highway = "1"
 mser = { workspace = true }
 
 [build-dependencies]
 mser = { workspace = true }
 itoa = "1"
 ryu = "1"
-highway = "*"
+highway = "1"

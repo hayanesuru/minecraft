@@ -12,5 +12,5 @@ repository.workspace = true
 
 [dependencies]
 uuid = { version = "1", default-features = false }
-itoa = "*"
-ryu = "*"
+itoa = "1"
+ryu = "1"
