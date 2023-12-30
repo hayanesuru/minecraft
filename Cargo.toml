@@ -17,6 +17,7 @@ mser_macro = { path = "ser_macro", version = "1" }
 [package]
 name = "minecraf2"
 version = "1.0.0"
+description = "minecraf2"
 edition.workspace = true
 authors.workspace = true
 readme.workspace = true

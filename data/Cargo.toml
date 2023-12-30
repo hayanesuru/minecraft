@@ -1,6 +1,7 @@
 [package]
 name = "minecraft_data"
 version = "1.0.0"
+description = "minecraft_data"
 edition.workspace = true
 authors.workspace = true
 readme.workspace = true
