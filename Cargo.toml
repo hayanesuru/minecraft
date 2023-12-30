@@ -1,5 +1,5 @@
 [workspace]
-members = ["minecraft_data", "ser", "ser_macro"]
+members = ["data", "ser", "ser_macro"]
 resolver = "2"
 
 [workspace.package]
@@ -10,13 +10,13 @@ repository = "https://github.com/jvavav/minecraft"
 edition = "2021"
 
 [workspace.dependencies]
-minecraft_data = { path = "minecraft_data", version = "1" }
-ser = { path = "ser", version = "1" }
-ser_macro = { path = "ser_macro", version = "1" }
+minecraft_data = { path = "data", version = "1" }
+mser = { path = "ser", version = "1" }
+mser_macro = { path = "ser_macro", version = "1" }
 
 [package]
-name = "minecraft"
-version = "1.20.5"
+name = "minecraf2"
+version = "1.0.0"
 edition.workspace = true
 authors.workspace = true
 readme.workspace = true
@@ -25,8 +25,8 @@ repository.workspace = true
 
 [dependencies]
 minecraft_data = { workspace = true }
-ser = { workspace = true }
-ser_macro = { workspace = true }
+mser = { workspace = true }
+mser_macro = { workspace = true }
 rand_core = "*"
 glam = "*"
 itoa = "1"

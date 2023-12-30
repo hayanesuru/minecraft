@@ -1,5 +1,5 @@
 use crate::inventory::ItemStack;
-use crate::{recipe_serializer, Identifier, UnsafeWriter, Writable, Write, V21, V32};
+use crate::{recipe_serializer, Identifier, UnsafeWriter, Write, V21, V32};
 
 #[derive(Copy, Clone)]
 pub struct Recipe<'a> {

@@ -7,8 +7,7 @@ use crate::recipe::Recipe;
 use crate::text::{Literal, Translate};
 use crate::{
     block, block_entity_type, block_state, configuration_s2c, entity_type, item, login_s2c,
-    play_s2c as C, Difficulty, GameMode, GameProfile, Identifier, UnsafeWriter, Writable, Write,
-    V21, V32,
+    play_s2c as C, Difficulty, GameMode, GameProfile, Identifier, UnsafeWriter, Write, V21, V32,
 };
 use uuid::Uuid;
 

@@ -1,7 +1,6 @@
 use crate::inventory::ItemStack;
 use crate::math::BlockPos;
-use crate::{UnsafeWriter, Writable, Write};
-use ser::V32;
+use crate::{UnsafeWriter, Write, V32};
 
 #[derive(Writable, Clone, Copy)]
 #[repr(u8)]

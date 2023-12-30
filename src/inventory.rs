@@ -1,6 +1,5 @@
 use crate::{
-    boxed_slice_as_array_unchecked, item, Bytes, GameMode, Hand, Read, UnsafeWriter, Writable,
-    Write,
+    boxed_slice_as_array_unchecked, item, Bytes, GameMode, Hand, Read, UnsafeWriter, Write,
 };
 use core::cell::Cell;
 use glam::DVec3;
@@ -64,7 +63,7 @@ impl Read for ItemStack {
             let item = item::read(buf)?;
             let count = buf.u8()?;
             if buf.u8()? == 1 {
-                ser::nbt::Compound::read(buf)?;
+                crate::nbt::Compound::read(buf)?;
             }
             if item == item::air {
                 Some(Self {

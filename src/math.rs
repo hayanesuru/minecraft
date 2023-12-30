@@ -1,4 +1,4 @@
-use crate::{Bytes, Read, UnsafeWriter, Writable, Write, V21};
+use crate::{Bytes, Read, UnsafeWriter, Write, V21};
 use core::mem::transmute;
 use glam::{DVec3, IVec3, Vec2};
 use minecraft_data::{

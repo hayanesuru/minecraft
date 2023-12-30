@@ -11,10 +11,10 @@ repository.workspace = true
 
 [dependencies]
 highway = "*"
-ser = { workspace = true }
+mser = { workspace = true }
 
 [build-dependencies]
-ser = { workspace = true }
+mser = { workspace = true }
 itoa = "1"
 ryu = "1"
 highway = "*"

@@ -1,5 +1,5 @@
-use ser::nbt::{Compound, List, Tag};
-use ser::*;
+use mser::nbt::{Compound, List, Tag};
+use mser::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::env::var_os;
@@ -97,7 +97,7 @@ fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
         namemap(w, wn, gen_repr(nbt.len()), &b);
         *w += "}\n";
         impl_name(w, name);
-        *w += "impl ::ser::Write for ";
+        *w += "impl ::mser::Write for ";
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
@@ -106,19 +106,19 @@ fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
         if size <= V7MAX {
             *w += "1usize";
         } else if size <= V21MAX {
-            *w += "::ser::V21(*self as u32).len()";
+            *w += "::mser::V21(*self as u32).len()";
         } else {
-            *w += "::ser::V32(*self as u32).len()";
+            *w += "::mser::V32(*self as u32).len()";
         }
         *w += "\n}\n";
         *w += "#[inline]\n";
-        *w += "fn write(&self, w: &mut ::ser::UnsafeWriter) {\n";
+        *w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
         if size <= V7MAX {
             *w += "w.write_byte(*self as u8);";
         } else if size <= V21MAX {
-            *w += "::ser::Write::write(&::ser::V21(*self as u32), w);";
+            *w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
         } else {
-            *w += "::ser::Write::write(&::ser::V32(*self as u32), w);";
+            *w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
         }
         *w += "\n}\n}\n";
     }
@@ -197,7 +197,7 @@ fn main() {
             }
         }
         enum_foot(&mut w, repr, &name);
-        w += "impl ::ser::Write for ";
+        w += "impl ::mser::Write for ";
         w += &name;
         w += " {\n";
         w += "#[inline]\n";
@@ -205,19 +205,19 @@ fn main() {
         if size <= V7MAX {
             w += "1usize";
         } else if size <= V21MAX {
-            w += "::ser::V21(*self as u32).len()";
+            w += "::mser::V21(*self as u32).len()";
         } else {
-            w += "::ser::V32(*self as u32).len()";
+            w += "::mser::V32(*self as u32).len()";
         }
         w += "\n}\n";
         w += "#[inline]\n";
-        w += "fn write(&self, w: &mut ::ser::UnsafeWriter) {\n";
+        w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
         if size <= V7MAX {
             w += "w.write_byte(*self as u8);";
         } else if size <= V21MAX {
-            w += "::ser::Write::write(&::ser::V21(*self as u32), w);";
+            w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
         } else {
-            w += "::ser::Write::write(&::ser::V32(*self as u32), w);";
+            w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
         }
         w += "\n}\n}\n";
     }
@@ -252,15 +252,15 @@ fn main() {
         namemap(&mut w, &mut wn, repr, &zhash);
         w += "}\n";
         impl_name(&mut w, &name);
-        w += "impl ::ser::Read for ";
+        w += "impl ::mser::Read for ";
         w += &name;
         w += " {\n";
         w += "#[inline]\n";
         w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
         if size <= V7MAX {
-            w += "let x = ::ser::Bytes::u8(n)?;\n";
+            w += "let x = ::mser::Bytes::u8(n)?;\n";
         } else {
-            w += "let x = ::ser::Bytes::v32(n)?;\n";
+            w += "let x = ::mser::Bytes::v32(n)?;\n";
             w += "let x = x as ";
             w += repr;
             w += ";\n";
@@ -431,13 +431,12 @@ fn main() {
         kvn.push(w.into_boxed_str());
     }
     for (index, props) in kv.iter().enumerate() {
-        w += "pub use ";
+        w += "pub type ";
+        w += &kvn[index];
         x2.clear();
         x2.extend(props[1..].iter().map(|&x| pv2[x as usize]));
-        w += "self::val::_";
+        w += " = self::val::_";
         w += ib.format(x.get(&*x2).copied().unwrap());
-        w += " as ";
-        w += &kvn[index];
         w += ";\n";
     }
     enum_head(&mut w, reprkv, namekv);
@@ -813,10 +812,10 @@ fn main() {
                 block_state.push(props + 1);
                 y += properties_size[props as usize];
 
-                w += "pub use self::prop::_";
-                w += ib.format(props);
-                w += " as ";
+                w += "pub type ";
                 w += x.next().unwrap();
+                w += " = self::prop::_";
+                w += ib.format(props);
                 w += ";\n";
             }
         }
@@ -949,7 +948,7 @@ fn main() {
     w += "}\n";
     w += "}\n";
 
-    w += "impl ::ser::Write for ";
+    w += "impl ::mser::Write for ";
     w += bsname;
     w += " {\n";
     w += "#[inline]\n";
@@ -957,19 +956,19 @@ fn main() {
     if bssize <= V7MAX {
         w += "1usize";
     } else if bssize <= V21MAX {
-        w += "::ser::V21(self.0 as u32).len()";
+        w += "::mser::V21(self.0 as u32).len()";
     } else {
-        w += "::ser::V32(self.0 as u32).len()";
+        w += "::mser::V32(self.0 as u32).len()";
     }
     w += "\n}\n";
     w += "#[inline]\n";
-    w += "fn write(&self, w: &mut ::ser::UnsafeWriter) {\n";
+    w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
     if bssize <= V7MAX {
         w += "w.write_byte(self.0 as u8);";
     } else if bssize <= V21MAX {
-        w += "::ser::Write::write(&::ser::V21(self.0 as u32), w);";
+        w += "::mser::Write::write(&::mser::V21(self.0 as u32), w);";
     } else {
-        w += "::ser::Write::write(&::ser::V32(self.0 as u32), w);";
+        w += "::mser::Write::write(&::mser::V32(self.0 as u32), w);";
     }
     w += "\n}\n}\n";
 
