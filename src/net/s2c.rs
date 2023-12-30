@@ -8,6 +8,7 @@ use crate::text::{Literal, Translate};
 use crate::{
     block, block_entity_type, block_state, configuration_s2c, entity_type, item, login_s2c,
     play_s2c as C, Difficulty, GameMode, GameProfile, Identifier, UnsafeWriter, Write, V21, V32,
+    V64,
 };
 use uuid::Uuid;
 
@@ -933,4 +934,57 @@ pub struct StartChunkSend;
 pub struct WorldTimeUpdate {
     pub time: u64,
     pub time_of_day: u64,
+}
+
+#[derive(Writable, Clone, Copy)]
+#[ser(prefix = C::WorldBorderInitialize)]
+pub struct WorldBorderInitialize {
+    pub center_x: f64,
+    pub center_z: f64,
+    pub old_size: f64,
+    pub new_size: f64,
+    #[ser(varint)]
+    pub lerp_time: u64,
+    #[ser(varint)]
+    pub abs_max_size: u32,
+    #[ser(varint)]
+    pub warning_blocks: u32,
+    #[ser(varint)]
+    pub warning_time: u32,
+}
+
+#[derive(Writable, Clone, Copy)]
+#[ser(prefix = C::WorldBorderSizeChanged)]
+pub struct WorldBorderSizeChanged {
+    pub new_size: f64,
+}
+
+#[derive(Writable, Clone, Copy)]
+#[ser(prefix = C::WorldBorderCenterChanged)]
+pub struct WorldBorderCenterChanged {
+    pub center_x: f64,
+    pub center_z: f64,
+}
+
+#[derive(Writable, Clone, Copy)]
+#[ser(prefix = C::WorldBorderInterpolateSize)]
+pub struct WorldBorderInterpolateSize {
+    pub old_size: f64,
+    pub new_size: f64,
+    #[ser(varint)]
+    pub lerp_time: u64,
+}
+
+#[derive(Writable, Clone, Copy)]
+#[ser(prefix = C::WorldBorderWarningTimeChanged)]
+pub struct WorldBorderWarningTimeChanged {
+    #[ser(varint)]
+    pub delay: u32,
+}
+
+#[derive(Writable, Clone, Copy)]
+#[ser(prefix = C::WorldBorderWarningBlocksChanged)]
+pub struct WorldBorderWarningBlocksChanged {
+    #[ser(varint)]
+    pub blocks: u32,
 }

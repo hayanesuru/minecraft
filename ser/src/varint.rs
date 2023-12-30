@@ -200,6 +200,7 @@ impl Read for V32 {
 pub struct V64(pub u64);
 
 impl V64 {
+    #[inline]
     pub const fn to_array(self) -> [u8; 10] {
         let n = self.0;
         [
@@ -214,6 +215,114 @@ impl V64 {
             (n >> 56) as u8 | 0x80,
             (n >> 63) as u8,
         ]
+    }
+}
+
+impl Write for V64 {
+    fn write(&self, w: &mut UnsafeWriter) {
+        let n = self.0;
+        if n & 0xFFFFFFFFFFFFFF80 == 0 {
+            w.write_byte(n as u8);
+        } else if n & 0xFFFFFFFFFFFFC000 == 0 {
+            w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
+        } else if n & 0xFFFFFFFFFFE00000 == 0 {
+            w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
+        } else if n & 0xFFFFFFFFF0000000 == 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8,
+            ]);
+        } else if n & 0xFFFFFFF800000000 == 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8,
+            ]);
+        } else if n & 0xFFFFFC0000000000 == 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8 | 0x80,
+                (n >> 35) as u8,
+            ]);
+        } else if n & 0xFFFE000000000000 == 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8 | 0x80,
+                (n >> 35) as u8 | 0x80,
+                (n >> 42) as u8,
+            ]);
+        } else if n & 0xFF00000000000000 == 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8 | 0x80,
+                (n >> 35) as u8 | 0x80,
+                (n >> 42) as u8 | 0x80,
+                (n >> 49) as u8,
+            ]);
+        } else if n & 0x8000000000000000 == 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8 | 0x80,
+                (n >> 35) as u8 | 0x80,
+                (n >> 42) as u8 | 0x80,
+                (n >> 49) as u8 | 0x80,
+                (n >> 56) as u8,
+            ]);
+        } else {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8 | 0x80,
+                (n >> 35) as u8 | 0x80,
+                (n >> 42) as u8 | 0x80,
+                (n >> 49) as u8 | 0x80,
+                (n >> 56) as u8 | 0x80,
+                (n >> 63) as u8,
+            ]);
+        }
+    }
+
+    fn len(&self) -> usize {
+        let n = self.0;
+        if n & 0xFFFFFFFFFFFFFF80 == 0 {
+            1
+        } else if n & 0xFFFFFFFFFFFFC000 == 0 {
+            2
+        } else if n & 0xFFFFFFFFFFE00000 == 0 {
+            3
+        } else if n & 0xFFFFFFFFF0000000 == 0 {
+            4
+        } else if n & 0xFFFFFFF800000000 == 0 {
+            5
+        } else if n & 0xFFFFFC0000000000 == 0 {
+            6
+        } else if n & 0xFFFE000000000000 == 0 {
+            7
+        } else if n & 0xFF00000000000000 == 0 {
+            8
+        } else if n & 0x8000000000000000 == 0 {
+            9
+        } else {
+            10
+        }
     }
 }
 

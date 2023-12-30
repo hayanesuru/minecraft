@@ -37,11 +37,21 @@ impl EntityAllocator {
     }
 }
 
-#[repr(align(8))]
+#[repr(C, align(8))]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Entity {
     version: NonZeroU32,
     index: u32,
+}
+
+impl Default for Entity {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            version: NonZeroU32::MIN,
+            index: 0,
+        }
+    }
 }
 
 impl Hash for Entity {
