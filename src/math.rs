@@ -1,17 +1,34 @@
-use crate::{Bytes, Read, UnsafeWriter, Write, V21};
+use crate::{
+    prop_axis__x_y_z, prop_facing__north_east_south_west_up_down,
+    prop_facing__north_south_west_east, prop_rotation, Bytes, Read, UnsafeWriter, Write, V21,
+};
 use core::mem::transmute;
 use glam::{DVec3, IVec3, Vec2};
-use minecraft_data::{
-    prop_axis__x_y_z, prop_facing__north_east_south_west_up_down,
-    prop_facing__north_south_west_east,
-};
 
 pub const FRAC_PI_180: f32 = 0.017453292;
 
-#[derive(Writable, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct GlobalPos<'a> {
     pub world: &'a str,
-    pub position: BlockPos,
+    pub pos: BlockPos,
+}
+
+impl Write for GlobalPos<'_> {
+    #[inline]
+    fn write(&self, w: &mut UnsafeWriter) {
+        V21(self.world.len() as u32).write(w);
+        w.write(self.world.as_bytes());
+        self.pos.write(w);
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        let mut x = 0;
+        x += V21(self.world.len() as u32).len();
+        x += self.world.len();
+        x += self.pos.len();
+        x
+    }
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -154,29 +171,29 @@ impl Rotation {
     }
 
     #[inline]
-    pub fn segment(self) -> minecraft_data::prop_rotation {
+    pub fn segment(self) -> prop_rotation {
         unsafe { core::mem::transmute((self.0.y * 0.044444446).round() as i8 & 15) }
     }
 
     #[inline]
-    pub fn segment_opposite(self) -> minecraft_data::prop_rotation {
+    pub fn segment_opposite(self) -> prop_rotation {
         match self.segment() {
-            minecraft_data::prop_rotation::d_0 => minecraft_data::prop_rotation::d_8,
-            minecraft_data::prop_rotation::d_1 => minecraft_data::prop_rotation::d_9,
-            minecraft_data::prop_rotation::d_2 => minecraft_data::prop_rotation::d_10,
-            minecraft_data::prop_rotation::d_3 => minecraft_data::prop_rotation::d_11,
-            minecraft_data::prop_rotation::d_4 => minecraft_data::prop_rotation::d_12,
-            minecraft_data::prop_rotation::d_5 => minecraft_data::prop_rotation::d_13,
-            minecraft_data::prop_rotation::d_6 => minecraft_data::prop_rotation::d_14,
-            minecraft_data::prop_rotation::d_7 => minecraft_data::prop_rotation::d_15,
-            minecraft_data::prop_rotation::d_8 => minecraft_data::prop_rotation::d_0,
-            minecraft_data::prop_rotation::d_9 => minecraft_data::prop_rotation::d_1,
-            minecraft_data::prop_rotation::d_10 => minecraft_data::prop_rotation::d_2,
-            minecraft_data::prop_rotation::d_11 => minecraft_data::prop_rotation::d_3,
-            minecraft_data::prop_rotation::d_12 => minecraft_data::prop_rotation::d_4,
-            minecraft_data::prop_rotation::d_13 => minecraft_data::prop_rotation::d_5,
-            minecraft_data::prop_rotation::d_14 => minecraft_data::prop_rotation::d_6,
-            minecraft_data::prop_rotation::d_15 => minecraft_data::prop_rotation::d_7,
+            prop_rotation::d_0 => prop_rotation::d_8,
+            prop_rotation::d_1 => prop_rotation::d_9,
+            prop_rotation::d_2 => prop_rotation::d_10,
+            prop_rotation::d_3 => prop_rotation::d_11,
+            prop_rotation::d_4 => prop_rotation::d_12,
+            prop_rotation::d_5 => prop_rotation::d_13,
+            prop_rotation::d_6 => prop_rotation::d_14,
+            prop_rotation::d_7 => prop_rotation::d_15,
+            prop_rotation::d_8 => prop_rotation::d_0,
+            prop_rotation::d_9 => prop_rotation::d_1,
+            prop_rotation::d_10 => prop_rotation::d_2,
+            prop_rotation::d_11 => prop_rotation::d_3,
+            prop_rotation::d_12 => prop_rotation::d_4,
+            prop_rotation::d_13 => prop_rotation::d_5,
+            prop_rotation::d_14 => prop_rotation::d_6,
+            prop_rotation::d_15 => prop_rotation::d_7,
         }
     }
 
@@ -302,11 +319,17 @@ const fn dirs6(a: Direction, b: Direction, c: Direction) -> [Direction; 6] {
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum Direction {
+    /// NEG Y
     Down,
+    /// Y
     Up,
+    /// NEG Z
     North,
+    /// Z
     South,
+    /// NEG X
     West,
+    /// X
     East,
 }
 
@@ -343,7 +366,9 @@ impl Direction {
         [Self::North, Self::South, Self::East, Self::Down, Self::Up],
         [Self::North, Self::South, Self::West, Self::Down, Self::Up],
     ];
-    const EXCEPT_CARDINAL: [[Self; 3]; 4] = [
+    const EXCEPT_CARDINAL: [[Self; 3]; 6] = [
+        [Self::North, Self::South, Self::West],
+        [Self::North, Self::South, Self::West],
         [Self::South, Self::West, Self::East],
         [Self::North, Self::West, Self::East],
         [Self::North, Self::South, Self::East],
@@ -355,12 +380,7 @@ impl Direction {
     }
 
     pub const fn except_cardinal(self) -> [Self; 3] {
-        debug_assert!(self as u8 > 1);
-        unsafe {
-            *Self::EXCEPT_CARDINAL
-                .as_ptr()
-                .add((self as u8 - 2) as usize)
-        }
+        unsafe { *Self::EXCEPT_CARDINAL.as_ptr().add(self as usize) }
     }
 }
 
