@@ -366,14 +366,16 @@ fn main() {
             }
         }
     }
-    w += "mod val {\n";
     let mut name = String::new();
-    name.push('_');
+    name += "val";
     let mut vals = x.iter().map(|(k, v)| (v, k)).collect::<Vec<_>>();
     vals.sort_unstable_by(|(x, _), (y, _)| (*x).cmp(*y));
-    for (y, x) in vals {
-        name.truncate(1);
-        name.push_str(ib.format(*y));
+    for (_, x) in vals {
+        name.truncate(3);
+        for &n in &**x {
+            name.push('_');
+            name += n;
+        }
         let name = name.as_str();
         let repr = gen_repr(x.len() - 1);
         enum_head(&mut w, repr, name);
@@ -395,7 +397,6 @@ fn main() {
         w += "}\n";
         impl_name(&mut w, name);
     }
-    w += "}\n";
     let mut xn = HashMap::<&str, (usize, bool)>::new();
     let mut x2 = Vec::new();
     for arr in &kv {
@@ -422,10 +423,15 @@ fn main() {
         w += "prop_";
         w += k;
         if dupe {
-            w += "_";
-            for v in arr[1..].iter().map(|&x| pv2[x as usize]) {
+            let x = pv2[arr[1] as usize].as_bytes();
+            if x.iter().all(|x| x.is_ascii_digit()) {
                 w += "_";
-                w += v;
+                w += ib.format(arr.len() - 1);
+            } else {
+                for v in arr[1..].iter().map(|&x| pv2[x as usize]) {
+                    w += "_";
+                    w += v;
+                }
             }
         }
         kvn.push(w.into_boxed_str());
@@ -433,10 +439,11 @@ fn main() {
     for (index, props) in kv.iter().enumerate() {
         w += "pub type ";
         w += &kvn[index];
-        x2.clear();
-        x2.extend(props[1..].iter().map(|&x| pv2[x as usize]));
-        w += " = self::val::_";
-        w += ib.format(x.get(&*x2).copied().unwrap());
+        w += " = val";
+        for &n in &props[1..] {
+            w.push('_');
+            w += &pv2[n as usize];
+        }
         w += ";\n";
     }
     enum_head(&mut w, reprkv, namekv);
@@ -533,14 +540,20 @@ fn main() {
         properties_size.push(len);
         block_state_properties.push(props);
     }
-    w += "mod prop {\n";
-    w += "use super::*;\n";
-    let mut name = String::new();
-    name.push('_');
+    let mut psn = Vec::<Box<str>>::with_capacity(block_state_properties.len());
+    for props in &block_state_properties {
+        let mut name = String::new();
+        name.push_str("props");
+        for &x in &**props {
+            let prop = &*kv[x as usize];
+            name.push('_');
+            name.push_str(pk2[prop[0] as usize]);
+            name.push_str(ib.format(prop.len() - 1));
+        }
+        psn.push(name.into_boxed_str());
+    }
     for (x, props) in block_state_properties.iter().enumerate() {
-        name.truncate(1);
-        name.push_str(ib.format(x));
-        let name = name.as_str();
+        let name = &*psn[x];
 
         let mut size = 1;
         let mut len = 1;
@@ -766,7 +779,6 @@ fn main() {
         }
         w += "}\n";
     }
-    w += "}\n";
 
     let (bsname, size, _) = head(iter.next().unwrap());
     if bsname != "block_state" {
@@ -814,8 +826,8 @@ fn main() {
 
                 w += "pub type ";
                 w += x.next().unwrap();
-                w += " = self::prop::_";
-                w += ib.format(props);
+                w += " = ";
+                w += &psn[props as usize];
                 w += ";\n";
             }
         }
