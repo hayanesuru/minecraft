@@ -13,24 +13,3 @@ edition = "2021"
 minecraft_data = { path = "data", version = "1" }
 mser = { path = "ser", version = "1" }
 mser_macro = { path = "ser_macro", version = "1" }
-
-[package]
-name = "minecraf2"
-version = "1.0.0"
-description = "minecraf2"
-edition.workspace = true
-authors.workspace = true
-readme.workspace = true
-license.workspace = true
-repository.workspace = true
-
-[dependencies]
-minecraft_data = { workspace = true }
-mser = { workspace = true }
-mser_macro = { workspace = true }
-rand_core = "0"
-glam = "0.25"
-itoa = "1"
-ryu = "1"
-uuid = { version = "1", default-features = false }
-simdutf8 = "0"
