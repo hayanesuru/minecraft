@@ -1,5 +1,8 @@
 use super::nbt::*;
 use crate::{parse_float, parse_int, Bytes};
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::hint::unreachable_unchecked;
 
 #[derive(Clone, Default)]
@@ -250,7 +253,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                     b'\'' => dqstr1(n)?,
                     _ => {
                         let x = find(n, |x| matches!(x, b':' | b' ' | b'\n' | b'\t' | b'\r'))?;
-                        let m = n.get_unchecked(0..x).to_owned();
+                        let m = Vec::from(n.get_unchecked(0..x));
                         *n = n.get_unchecked(x..);
                         m
                     }
@@ -299,7 +302,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                         let v = match dnum(s) {
                             Some(x) => x,
                             None => Tag::String(
-                                String::from_utf8_unchecked(s.to_owned()).into_boxed_str(),
+                                String::from_utf8_unchecked(Vec::from(s)).into_boxed_str(),
                             ),
                         };
                         c.push(k, v);
@@ -406,7 +409,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                             match dnum(s) {
                                 Some(x) => x,
                                 None => Tag::String(
-                                    String::from_utf8_unchecked(s.to_owned()).into_boxed_str(),
+                                    String::from_utf8_unchecked(Vec::from(s)).into_boxed_str(),
                                 ),
                             }
                         }
@@ -631,7 +634,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                                                                 | b'\r'
                                                         )
                                                     })?;
-                                                    let m = n.get_unchecked(0..x).to_owned();
+                                                    let m = Vec::from(n.get_unchecked(0..x));
                                                     *n = n.get_unchecked(x..);
                                                     m
                                                 }

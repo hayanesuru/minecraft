@@ -1,4 +1,7 @@
 use crate::{Bytes, Read, UnsafeWriter, Write};
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 
 pub const END: u8 = 0;
@@ -134,7 +137,7 @@ pub fn decode_string(b: &mut &[u8]) -> Option<String> {
     let len = b.u16()? as usize;
     let a = b.slice(len)?;
     match core::str::from_utf8(a) {
-        Ok(n) => Some(n.to_owned()),
+        Ok(n) => Some(String::from(n)),
         Err(_) => super::mutf8::decode(a),
     }
 }
@@ -381,7 +384,7 @@ pub fn decode1(n: &mut &[u8]) -> Option<Compound> {
             BYTE_ARRAY => {
                 let k = decode_string(n)?;
                 let len = n.i32()? as usize;
-                let v = n.slice(len)?.to_owned();
+                let v = Vec::from(n.slice(len)?);
                 compound.push(k, v);
             }
             STRING => {

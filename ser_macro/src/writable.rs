@@ -2,6 +2,7 @@ use super::{
     collect_toplevel_struct_attributes, common_tokens, parse_attributes, BasicType, Field, Opt,
     PrimitiveTy, Struct, ToplevelStructAttribute, Trait, Ty, DEFAULT_LENGTH_TYPE,
 };
+use alloc::vec::Vec;
 use proc_macro2::{TokenStream, TokenTree};
 use quote::quote;
 use syn::spanned::Spanned;

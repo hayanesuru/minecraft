@@ -1,4 +1,5 @@
 use crate::{u8_to_hex, UnsafeWriter, Write};
+use alloc::string::String;
 
 const B: u8 = b'b'; // \x08
 const T: u8 = b't'; // \x09

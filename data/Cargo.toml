@@ -1,17 +1,21 @@
 [package]
 name = "minecraft_data"
-version = "1.0.1"
+version = "1.0.2"
 description = "minecraft_data"
 edition.workspace = true
 authors.workspace = true
 readme.workspace = true
 license.workspace = true
 repository.workspace = true
+categories = ["no-std"]
+keywords = ["minecraft"]
+documentation = "https://docs.rs/minecraft_data"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+std = ["highway/std"]
 
 [dependencies]
-highway = "1"
+highway = { version = "1", default-features = false }
 mser = { workspace = true }
 
 [build-dependencies]

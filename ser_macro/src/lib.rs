@@ -1,7 +1,13 @@
 #![recursion_limit = "128"]
+#![no_std]
+
+extern crate alloc;
 
 mod writable;
 
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use alloc::{format, vec};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::parse::Parse;

@@ -1,4 +1,6 @@
 use crate::UnsafeWriter;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F

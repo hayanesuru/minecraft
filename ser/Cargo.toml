@@ -1,14 +1,14 @@
 [package]
 name = "mser"
-version = "1.0.0"
+version = "1.0.2"
 description = "mser"
 edition.workspace = true
 authors.workspace = true
 readme.workspace = true
 license.workspace = true
 repository.workspace = true
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+categories = ["no-std"]
+documentation = "https://docs.rs/mser"
 
 [dependencies]
 uuid = { version = "1", default-features = false }

@@ -1,5 +1,7 @@
 #![feature(ptr_sub_ptr)]
-#![allow(non_camel_case_types)]
+#![no_std]
+
+extern crate alloc;
 
 mod bytes;
 mod float;
