@@ -193,6 +193,20 @@ impl DerefMut for Compound {
     }
 }
 
+impl AsRef<[(Box<str>, Tag)]> for Compound {
+    #[inline]
+    fn as_ref(&self) -> &[(Box<str>, Tag)] {
+        self.0.as_slice()
+    }
+}
+
+impl AsMut<[(Box<str>, Tag)]> for Compound {
+    #[inline]
+    fn as_mut(&mut self) -> &mut [(Box<str>, Tag)] {
+        self.0.as_mut_slice()
+    }
+}
+
 impl Write for Compound {
     fn write(&self, w: &mut UnsafeWriter) {
         for (name, tag) in &self.0 {
@@ -254,7 +268,7 @@ impl Write for Compound {
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
                 Tag::List(x) => x.len(),
-                Tag::Compound(x) => x.len(),
+                Tag::Compound(x) => Write::len(x),
             };
         }
         w
@@ -618,7 +632,7 @@ impl Write for List {
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
             Self::List(x) => x.iter().map(|x| x.len()).sum::<usize>(),
-            Self::Compound(x) => x.iter().map(|x| x.len()).sum::<usize>(),
+            Self::Compound(x) => x.iter().map(Write::len).sum::<usize>(),
         }
     }
 }
