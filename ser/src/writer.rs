@@ -23,10 +23,21 @@ impl UnsafeWriter {
     pub fn ptr(&mut self) -> *mut u8 {
         self.0
     }
+}
 
-    /// # Safety
-    #[inline(always)]
-    pub unsafe fn sub_ptr(&self, n: *const u8) -> usize {
-        self.0.sub_ptr(n)
+impl<T: AsRef<[u8]>> core::ops::AddAssign<T> for UnsafeWriter {
+    #[inline]
+    fn add_assign(&mut self, rhs: T) {
+        self.write(rhs.as_ref());
+    }
+}
+
+impl<T: AsRef<[u8]>> core::ops::Add<T> for UnsafeWriter {
+    type Output = Self;
+
+    #[inline]
+    fn add(mut self, rhs: T) -> Self::Output {
+        self.write(rhs.as_ref());
+        self
     }
 }
