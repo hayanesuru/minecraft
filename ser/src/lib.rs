@@ -1,6 +1,8 @@
 #![feature(ptr_sub_ptr)]
 #![no_std]
 
+use core::ops::{Add, AddAssign};
+
 extern crate alloc;
 
 mod bytes;
@@ -33,4 +35,21 @@ pub trait Write {
 
 pub trait Read: Sized {
     fn read(buf: &mut &[u8]) -> Option<Self>;
+}
+
+impl<T: Write> AddAssign<T> for UnsafeWriter {
+    #[inline]
+    fn add_assign(&mut self, rhs: T) {
+        rhs.write(self);
+    }
+}
+
+impl<T: Write> Add<T> for UnsafeWriter {
+    type Output = Self;
+
+    #[inline]
+    fn add(mut self, rhs: T) -> Self::Output {
+        rhs.write(&mut self);
+        self
+    }
 }
