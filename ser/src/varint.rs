@@ -1,6 +1,4 @@
-use super::writable::Write;
-use super::writer::UnsafeWriter;
-use crate::Read;
+use super::{Read, UnsafeWriter, Write};
 
 pub const V21MAX: usize = 0x1FFFFF;
 pub const V7MAX: usize = 0x7F;

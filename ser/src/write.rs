@@ -1,15 +1,8 @@
-use super::writer::UnsafeWriter;
+use crate::{UnsafeWriter, Write};
 use core::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
     NonZeroU32, NonZeroU64, NonZeroU8,
 };
-
-#[allow(clippy::len_without_is_empty)]
-pub trait Write {
-    fn write(&self, w: &mut UnsafeWriter);
-
-    fn len(&self) -> usize;
-}
 
 macro_rules! primitive {
     ($type:ty) => {
@@ -106,11 +99,9 @@ impl Write for i8 {
 primitive!(i16);
 primitive!(i32);
 primitive!(i64);
-primitive!(i128);
 primitive!(u16);
 primitive!(u32);
 primitive!(u64);
-primitive!(u128);
 primitive!(f32);
 primitive!(f64);
 non_zero!(NonZeroI16);
