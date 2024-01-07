@@ -11,11 +11,13 @@ mod hex;
 mod integer;
 mod json;
 mod mutf8;
-pub mod nbt;
 mod snbt;
 mod varint;
 mod write;
 mod writer;
+
+pub mod text;
+pub mod nbt;
 
 pub use self::bytes::Bytes;
 pub use self::float::parse_float;
