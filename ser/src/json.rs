@@ -34,7 +34,7 @@ pub fn json_str_escape(buf: &mut String, b: &[u8]) {
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-struct JsonStr<'a>(&'a [u8]);
+pub struct JsonStr<'a>(pub &'a [u8]);
 
 impl Write for JsonStr<'_> {
     fn write(&self, w: &mut UnsafeWriter) {
