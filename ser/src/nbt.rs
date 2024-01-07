@@ -142,35 +142,45 @@ pub fn decode_string(b: &mut &[u8]) -> Option<String> {
     }
 }
 
-#[inline]
-pub fn encode_str(s: &str, w: &mut UnsafeWriter) {
-    if super::mutf8::is_valid(s.as_bytes()) {
-        (s.len() as u16).write(w);
-        w.write(s.as_bytes());
-    } else {
-        (super::mutf8::len(s) as u16).write(w);
-        super::mutf8::encode(s, w);
+pub struct MUTF8Tag<'a>(pub &'a [u8]);
+
+impl<'a> Write for MUTF8Tag<'a> {
+    #[inline]
+    fn write(&self, w: &mut UnsafeWriter) {
+        (self.0.len() as u16).write(w);
+        w.write(self.0);
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        2 + self.0.len()
     }
 }
 
-#[inline]
-pub fn len_str(s: &str) -> usize {
-    if super::mutf8::is_valid(s.as_bytes()) {
-        2 + s.len()
-    } else {
-        2 + super::mutf8::len(s)
+pub struct UTF8Tag<'a>(pub &'a [u8]);
+
+impl<'a> Write for UTF8Tag<'a> {
+    #[inline]
+    fn write(&self, w: &mut UnsafeWriter) {
+        if super::mutf8::is_valid(self.0) {
+            (self.0.len() as u16).write(w);
+            w.write(self.0);
+        } else {
+            unsafe {
+                (super::mutf8::len(self.0) as u16).write(w);
+                super::mutf8::encode(self.0, w);
+            }
+        }
     }
-}
 
-#[inline]
-pub fn encode_str_unchecked(s: &str, w: &mut UnsafeWriter) {
-    (s.len() as u16).write(w);
-    w.write(s.as_bytes());
-}
-
-#[inline]
-pub fn len_str_unchecked(s: &str) -> usize {
-    2 + s.len()
+    #[inline]
+    fn len(&self) -> usize {
+        if super::mutf8::is_valid(self.0) {
+            2 + self.0.len()
+        } else {
+            unsafe { 2 + super::mutf8::len(self.0) }
+        }
+    }
 }
 
 #[derive(Clone, Default)]
@@ -224,15 +234,15 @@ impl Write for Compound {
                 Tag::List(_) => LIST,
                 Tag::Compound(_) => COMPOUND,
             });
-            encode_str(name, w);
+            MUTF8Tag(name.as_bytes()).write(w);
             match tag {
-                Tag::Byte(x) => (*x).write(w),
-                Tag::Short(x) => (*x).write(w),
-                Tag::Int(x) => (*x).write(w),
-                Tag::Long(x) => (*x).write(w),
-                Tag::Float(x) => (*x).write(w),
-                Tag::Double(x) => (*x).write(w),
-                Tag::String(x) => encode_str(x, w),
+                Tag::Byte(x) => x.write(w),
+                Tag::Short(x) => x.write(w),
+                Tag::Int(x) => x.write(w),
+                Tag::Long(x) => x.write(w),
+                Tag::Float(x) => x.write(w),
+                Tag::Double(x) => x.write(w),
+                Tag::String(x) => MUTF8Tag(x.as_bytes()).write(w),
                 Tag::ByteArray(x) => {
                     (x.len() as u32).write(w);
                     w.write(x)
@@ -255,7 +265,7 @@ impl Write for Compound {
     fn len(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += len_str(name);
+            w += UTF8Tag(name.as_bytes()).len();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -263,7 +273,7 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => len_str(x),
+                Tag::String(x) => MUTF8Tag(x.as_bytes()).len(),
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
@@ -579,7 +589,7 @@ impl Write for List {
             Self::String(x) => {
                 (STRING).write(w);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|x| encode_str(x, w));
+                x.iter().for_each(|x| MUTF8Tag(x.as_bytes()).write(w));
             }
             Self::ByteArray(x) => {
                 w.write_byte(BYTE_ARRAY);
@@ -627,7 +637,10 @@ impl Write for List {
             Self::Long(x) => x.len() * 8,
             Self::Float(x) => x.len() * 4,
             Self::Double(x) => x.len() * 8,
-            Self::String(x) => x.iter().map(|x| len_str(x)).sum::<usize>(),
+            Self::String(x) => x
+                .iter()
+                .map(|x| MUTF8Tag(x.as_bytes()).len())
+                .sum::<usize>(),
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,

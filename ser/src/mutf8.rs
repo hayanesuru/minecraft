@@ -35,13 +35,15 @@ pub fn is_valid(bytes: &[u8]) -> bool {
     true
 }
 
-pub fn len(str: &str) -> usize {
+/// # Safety
+///
+/// `bytes` is valid UTF-8
+pub unsafe fn len(bytes: &[u8]) -> usize {
     let mut l = 0;
-    let bytes = str.as_bytes();
     let mut index = 0;
 
     while let Some(&byte) = bytes.get(index) {
-        let w = unsafe { *CHAR_WIDTH.get_unchecked(byte as usize) };
+        let w = *CHAR_WIDTH.get_unchecked(byte as usize);
         index += w as usize;
         if w == 0 {
             if byte == 0 {
@@ -56,48 +58,48 @@ pub fn len(str: &str) -> usize {
     l + index
 }
 
+/// # Safety
+///
+/// `bytes` is valid UTF-8
 #[inline(never)]
-pub fn encode(str: &str, w: &mut UnsafeWriter) {
-    let bytes = str.as_bytes();
+pub unsafe fn encode(bytes: &[u8], w: &mut UnsafeWriter) {
     let mut index = 0;
     let mut start = 0;
 
-    unsafe {
-        while let Some(&byte) = bytes.get(index) {
-            let x = *CHAR_WIDTH.get_unchecked(byte as usize);
-            index += x as usize;
-            if x != 0 {
-                continue;
-            }
-            if byte == 0 {
-                w.write(bytes.get_unchecked(start..index));
-                w.write(&[0xc0, 0x80]);
-                index += 1;
-                start = index;
-            } else {
-                let code_point = core::str::from_utf8_unchecked(&bytes[index..index + 4])
-                    .chars()
-                    .next()
-                    .unwrap() as u32;
-                let code_point = code_point - 0x10000;
-                let first = ((code_point >> 10) as u16) | 0xD800;
-                let second = ((code_point & 0x3FF) as u16) | 0xDC00;
-
-                w.write(bytes.get_unchecked(start..index));
-                w.write(&[
-                    0xE0 | ((first & 0xF000) >> 12) as u8,
-                    0x80 | ((first & 0xFC0) >> 6) as u8,
-                    0x80 | ((first & 0x3F) as u8),
-                    0xE0 | ((second & 0xF000) >> 12) as u8,
-                    0x80 | ((second & 0xFC0) >> 6) as u8,
-                    0x80 | (second & 0x3F) as u8,
-                ]);
-                index += 4;
-                start = index;
-            }
+    while let Some(&byte) = bytes.get(index) {
+        let x = *CHAR_WIDTH.get_unchecked(byte as usize);
+        index += x as usize;
+        if x != 0 {
+            continue;
         }
-        w.write(bytes.get_unchecked(start..index));
+        if byte == 0 {
+            w.write(bytes.get_unchecked(start..index));
+            w.write(&[0xc0, 0x80]);
+            index += 1;
+            start = index;
+        } else {
+            let code_point = core::str::from_utf8_unchecked(&bytes[index..index + 4])
+                .chars()
+                .next()
+                .unwrap() as u32;
+            let code_point = code_point - 0x10000;
+            let first = ((code_point >> 10) as u16) | 0xD800;
+            let second = ((code_point & 0x3FF) as u16) | 0xDC00;
+
+            w.write(bytes.get_unchecked(start..index));
+            w.write(&[
+                0xE0 | ((first & 0xF000) >> 12) as u8,
+                0x80 | ((first & 0xFC0) >> 6) as u8,
+                0x80 | ((first & 0x3F) as u8),
+                0xE0 | ((second & 0xF000) >> 12) as u8,
+                0x80 | ((second & 0xFC0) >> 6) as u8,
+                0x80 | (second & 0x3F) as u8,
+            ]);
+            index += 4;
+            start = index;
+        }
     }
+    w.write(bytes.get_unchecked(start..index));
 }
 
 #[inline(never)]
