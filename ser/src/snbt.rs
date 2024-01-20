@@ -9,6 +9,13 @@ use core::hint::unreachable_unchecked;
 #[repr(transparent)]
 pub struct Snbt(pub Compound);
 
+impl From<Compound> for Snbt {
+    #[inline]
+    fn from(value: Compound) -> Self {
+        Self(value)
+    }
+}
+
 impl Snbt {
     #[inline]
     pub fn decode(n: &str) -> Option<Self> {

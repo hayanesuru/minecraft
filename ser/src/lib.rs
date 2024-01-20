@@ -1,4 +1,3 @@
-#![feature(ptr_sub_ptr)]
 #![no_std]
 
 use core::ops::{Add, AddAssign};
@@ -55,4 +54,12 @@ impl<T: Write> Add<T> for UnsafeWriter {
         rhs.write(&mut self);
         self
     }
+}
+
+pub fn boxed(x: &impl Write) -> alloc::boxed::Box<[u8]> {
+    let len = Write::len(x);
+    let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
+    Write::write(x, &mut UnsafeWriter(vec.as_mut_ptr()));
+    unsafe { vec.set_len(len) };
+    vec.into_boxed_slice()
 }

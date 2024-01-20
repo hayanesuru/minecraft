@@ -1,8 +1,7 @@
 use crate::{Bytes, Read, UnsafeWriter, Write};
 use alloc::boxed::Box;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::ops::{Deref, DerefMut};
 
 pub const END: u8 = 0;
 pub const BYTE: u8 = 1;
@@ -187,22 +186,6 @@ impl<'a> Write for UTF8Tag<'a> {
 #[repr(transparent)]
 pub struct Compound(Vec<(Box<str>, Tag)>);
 
-impl Deref for Compound {
-    type Target = Vec<(Box<str>, Tag)>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Compound {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
 impl AsRef<[(Box<str>, Tag)]> for Compound {
     #[inline]
     fn as_ref(&self) -> &[(Box<str>, Tag)] {
@@ -285,11 +268,69 @@ impl Write for Compound {
     }
 }
 
+impl<K: ToString, V> FromIterator<(K, V)> for Compound
+where
+    Tag: From<V>,
+{
+    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
+        Self(
+            iter.into_iter()
+                .map(|(x, y)| (x.to_string().into_boxed_str(), Tag::from(y)))
+                .collect(),
+        )
+    }
+}
+
 impl Compound {
     #[inline]
     #[must_use]
     pub const fn new() -> Self {
         Self(Vec::new())
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn shrink_to_fit(&mut self) {
+        self.0.shrink_to_fit()
+    }
+
+    #[inline]
+    pub fn iter(&self) -> core::slice::Iter<(Box<str>, Tag)> {
+        self.0.iter()
+    }
+
+    #[inline]
+    pub fn sort(&mut self) {
+        self.0.sort_unstable_by(|x, y| (*x.0).cmp(&*y.0));
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn get(&self, index: usize) -> Option<(&str, &Tag)> {
+        #[allow(clippy::manual_map)]
+        match self.0.get(index) {
+            Some((x, y)) => Some((x, y)),
+            None => None,
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    /// # Safety
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> (&mut str, &mut Tag) {
+        let (x, y) = self.0.get_unchecked_mut(index);
+        (&mut *x, y)
     }
 
     #[inline]

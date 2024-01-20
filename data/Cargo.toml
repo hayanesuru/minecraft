@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "1.0.2"
+version = "1.0.3+24w03b"
 description = "minecraft_data"
 edition.workspace = true
 authors.workspace = true
@@ -17,6 +17,7 @@ std = ["highway/std"]
 [dependencies]
 highway = { version = "1", default-features = false }
 mser = { workspace = true }
+mser_macro = { workspace = true }
 
 [build-dependencies]
 mser = { workspace = true }

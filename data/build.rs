@@ -1,4 +1,4 @@
-use mser::nbt::{Compound, List, Tag};
+use mser::nbt::{Compound, List};
 use mser::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -20,11 +20,11 @@ fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
 
         file.read_to_end(bytes).unwrap();
         let comp = unsafe { core::str::from_utf8_unchecked(bytes) };
-        let mut comp = Snbt::decode(comp).expect("snbt decode error");
+        let mut comp = Snbt::decode(comp).expect("snbt decode error").0;
         bytes.clear();
 
-        comp.0.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
-        comp.0
+        comp.sort();
+        comp
     }
 
     let mut b = Vec::new();
@@ -35,7 +35,7 @@ fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
     let trim_pattern = decode(&mut b, "trim_pattern.snbt");
     let biome = decode(&mut b, "biome.snbt");
 
-    let codec = [
+    let codec: Compound = [
         ("minecraft:chat_type", &chat_type),
         ("minecraft:damage_type", &damage_type),
         ("minecraft:dimension_type", &dimension_type),
@@ -44,25 +44,16 @@ fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
         ("minecraft:worldgen/biome", &biome),
     ]
     .into_iter()
-    .map(|(name, value)| {
-        (
-            name.to_owned().into_boxed_str(),
-            Tag::Compound(write_codec(name, value)),
-        )
-    })
-    .collect::<Vec<_>>();
-    let codec = Compound::from(codec);
+    .map(|(name, value)| (name, write_codec(name, value)))
+    .collect();
 
-    let len = codec.len();
-    let mut vec = Vec::with_capacity(len);
-    codec.write(&mut UnsafeWriter(vec.as_mut_ptr()));
-    unsafe { vec.set_len(len) }
-    std::fs::write(out.join("codec.nbt"), &vec).unwrap();
-    vec.clear();
+    let mut vec = mser::boxed(&codec).into_vec();
+    std::fs::write(out.join("codec.nbt"), vec.as_slice()).unwrap();
 
     *w += "pub const CODEC: &[u8; ";
-    *w += itoa::Buffer::new().format(len);
+    *w += itoa::Buffer::new().format(vec.len());
     *w += "] = include_bytes!(\"codec.nbt\");\n\n";
+    vec.clear();
 
     let a = [
         ("chat_type", &chat_type),
