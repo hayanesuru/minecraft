@@ -1,10 +1,19 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 
-use mser_macro::Writable;
+#[cfg(feature = "packet")]
+pub mod packet;
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
-
+/// # Example
+/// 
+/// ```
+/// # use minecraft_data::{oak_log, prop_axis_x_y_z, encode_state};
+/// let x = oak_log::new();
+/// let x = x.with_axis(prop_axis_x_y_z::y);
+/// let x = encode_state!(oak_log(x));
+/// let id = x.id();
+/// ```
 #[macro_export]
 macro_rules! encode_state {
     ($b:ident($x:expr)) => {
@@ -14,6 +23,18 @@ macro_rules! encode_state {
     };
 }
 
+/// # Example
+/// 
+/// ```
+/// # use minecraft_data::*;
+/// 
+/// let x = oak_log::new();
+/// let x = x.with_axis(prop_axis_x_y_z::y);
+/// let x = encode_state!(oak_log(x));
+/// let id = x.id();
+/// let x = block_state::new(id);
+/// let x = decode_state!(oak_log(x));
+/// ```
 #[macro_export]
 macro_rules! decode_state {
     ($b:ident($x:expr)) => {
@@ -525,7 +546,7 @@ impl fluid_state {
     }
 }
 
-impl From<bool> for prop_waterlogged {
+impl From<bool> for val_true_false {
     #[inline]
     fn from(value: bool) -> Self {
         if value {
@@ -536,388 +557,13 @@ impl From<bool> for prop_waterlogged {
     }
 }
 
-impl From<prop_waterlogged> for bool {
+impl From<val_true_false> for bool {
     #[inline]
-    fn from(value: prop_waterlogged) -> Self {
+    fn from(value: val_true_false) -> Self {
         match value {
-            prop_waterlogged::r#true => true,
-            prop_waterlogged::r#false => false,
+            val_true_false::r#true => true,
+            val_true_false::r#false => false,
         }
-    }
-}
-
-pub type raw_play_s2c = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum play_s2c {
-    BundleDelimiter,
-    EntitySpawn,
-    ExperienceOrbSpawn,
-    EntityAnimation,
-    Statistics,
-    PlayerActionResponse,
-    BlockBreakingProgress,
-    BlockEntityUpdate,
-    BlockEvent,
-    BlockUpdate,
-    BossBar,
-    Difficulty,
-    ChunkSent,
-    StartChunkSend,
-    ChunkBiomeData,
-    ClearTitle,
-    CommandSuggestions,
-    CommandTree,
-    CloseScreen,
-    Inventory,
-    ScreenHandlerPropertyUpdate,
-    ScreenHandlerSlotUpdate,
-    CookieRequest,
-    CooldownUpdate,
-    ChatSuggestions,
-    CustomPayload,
-    EntityDamage,
-    RemoveMessage,
-    Disconnect,
-    ProfilelessChatMessage,
-    EntityStatus,
-    Explosion,
-    UnloadChunk,
-    GameStateChange,
-    OpenHorseScreen,
-    DamageTilt,
-    WorldBorderInitialize,
-    KeepAlive,
-    ChunkData,
-    WorldEvent,
-    Particle,
-    LightUpdate,
-    GameJoin,
-    MapUpdate,
-    SetTradeOffers,
-    EntityMoveRelative,
-    EntityRotateAndMoveRelative,
-    EntityRotate,
-    VehicleMove,
-    OpenWrittenBook,
-    OpenScreen,
-    SignEditorOpen,
-    CommonPing,
-    PingResult,
-    CraftFailedResponse,
-    PlayerAbilities,
-    ChatMessage,
-    EndCombat,
-    EnterCombat,
-    DeathMessage,
-    PlayerRemove,
-    PlayerList,
-    LookAt,
-    PlayerPositionLook,
-    UnlockRecipes,
-    EntitiesDestroy,
-    RemoveEntityStatusEffect,
-    ScoreboardScoreReset,
-    ResourcePackRemove,
-    ResourcePackSend,
-    PlayerRespawn,
-    EntitySetHeadYaw,
-    ChunkDeltaUpdate,
-    SelectAdvancementTab,
-    ServerMetadata,
-    OverlayMessage,
-    WorldBorderCenterChanged,
-    WorldBorderInterpolateSize,
-    WorldBorderSizeChanged,
-    WorldBorderWarningTimeChanged,
-    WorldBorderWarningBlocksChanged,
-    SetCameraEntity,
-    UpdateSelectedSlot,
-    ChunkRenderDistanceCenter,
-    ChunkLoadDistance,
-    PlayerSpawnPosition,
-    ScoreboardDisplay,
-    EntityTrackerUpdate,
-    EntityAttach,
-    EntityVelocityUpdate,
-    EntityEquipmentUpdate,
-    ExperienceBarUpdate,
-    HealthUpdate,
-    ScoreboardObjectiveUpdate,
-    EntityPassengersSet,
-    Team,
-    ScoreboardScoreUpdate,
-    SimulationDistance,
-    Subtitle,
-    WorldTimeUpdate,
-    Title,
-    TitleFade,
-    PlaySoundFromEntity,
-    PlaySound,
-    EnterReconfiguration,
-    StopSound,
-    StoreCookie,
-    GameMessage,
-    PlayerListHeader,
-    NbtQueryResponse,
-    ItemPickupAnimation,
-    EntityPosition,
-    UpdateTickRate,
-    TickStep,
-    ServerTransfer,
-    AdvancementUpdate,
-    EntityAttributes,
-    EntityStatusEffect,
-    SynchronizeRecipes,
-    SynchronizeTags,
-}
-
-impl play_s2c {
-    #[inline]
-    pub const fn id(self) -> raw_play_s2c {
-        self as raw_play_s2c
-    }
-    #[inline]
-    pub const fn new(x: raw_play_s2c) -> Self {
-        debug_assert!(x <= Self::SynchronizeTags as raw_play_s2c);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_status_s2c = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum status_s2c {
-    QueryResponse,
-    PingResult,
-}
-
-impl status_s2c {
-    #[inline]
-    pub const fn id(self) -> raw_status_s2c {
-        self as raw_status_s2c
-    }
-
-    #[inline]
-    pub const fn new(x: raw_status_s2c) -> Self {
-        debug_assert!(x <= Self::PingResult as raw_status_s2c);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_login_s2c = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum login_s2c {
-    LoginDisconnect,
-    LoginHello,
-    LoginSuccess,
-    LoginCompression,
-    LoginQueryRequest,
-    CookieRequest,
-}
-
-impl login_s2c {
-    #[inline]
-    pub const fn id(self) -> raw_login_s2c {
-        self as raw_login_s2c
-    }
-    #[inline]
-    pub const fn new(x: raw_login_s2c) -> Self {
-        debug_assert!(x <= Self::CookieRequest as raw_login_s2c);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_configuration_s2c = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum configuration_s2c {
-    CookieRequest,
-    CustomPayload,
-    Disconnect,
-    Ready,
-    KeepAlive,
-    CommonPing,
-    DynamicRegistries,
-    ResourcePackRemove,
-    ResourcePackSend,
-    StoreCookie,
-    ServerTransfer,
-    Features,
-    SynchronizeTags,
-}
-
-impl configuration_s2c {
-    #[inline]
-    pub const fn id(self) -> raw_configuration_s2c {
-        self as raw_configuration_s2c
-    }
-    #[inline]
-    pub const fn new(x: raw_configuration_s2c) -> Self {
-        debug_assert!(x <= Self::SynchronizeTags as raw_configuration_s2c);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_handshake_c2s = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum handshake_c2s {
-    Handshake,
-}
-
-impl handshake_c2s {
-    #[inline]
-    pub const fn id(self) -> raw_handshake_c2s {
-        self as raw_handshake_c2s
-    }
-    #[inline]
-    pub const fn new(x: raw_handshake_c2s) -> Self {
-        debug_assert!(x <= Self::Handshake as raw_handshake_c2s);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_play_c2s = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum play_c2s {
-    TeleportConfirm,
-    QueryBlockNbt,
-    UpdateDifficulty,
-    MessageAcknowledgment,
-    CommandExecution,
-    ChatMessage,
-    PlayerSession,
-    AcknowledgeChunks,
-    ClientStatus,
-    ClientOptions,
-    RequestCommandCompletions,
-    AcknowledgeReconfiguration,
-    ButtonClick,
-    ClickSlot,
-    CloseHandledScreen,
-    SlotChangedState,
-    CookieResponse,
-    CustomPayload,
-    BookUpdate,
-    QueryEntityNbt,
-    PlayerInteractEntity,
-    JigsawGenerating,
-    KeepAlive,
-    UpdateDifficultyLock,
-    PlayerMovePositionAndOnGround,
-    PlayerMoveFull,
-    PlayerMoveLookAndOnGround,
-    PlayerMoveOnGroundOnly,
-    VehicleMove,
-    BoatPaddleState,
-    PickFromInventory,
-    QueryPing,
-    CraftRequest,
-    UpdatePlayerAbilities,
-    PlayerAction,
-    ClientCommand,
-    PlayerInput,
-    CommonPong,
-    RecipeCategoryOptions,
-    RecipeBookData,
-    RenameItem,
-    ResourcePackStatus,
-    AdvancementTab,
-    SelectMerchantTrade,
-    UpdateBeacon,
-    UpdateSelectedSlot,
-    UpdateCommandBlock,
-    UpdateCommandBlockMinecart,
-    CreativeInventoryAction,
-    UpdateJigsaw,
-    UpdateStructureBlock,
-    UpdateSign,
-    HandSwing,
-    SpectatorTeleport,
-    PlayerInteractBlock,
-    PlayerInteractItem,
-}
-
-impl play_c2s {
-    #[inline]
-    pub const fn id(self) -> raw_play_c2s {
-        self as raw_play_c2s
-    }
-    #[inline]
-    pub const fn new(x: raw_play_c2s) -> Self {
-        debug_assert!(x <= Self::PlayerInteractItem as raw_play_c2s);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_status_c2s = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum status_c2s {
-    QueryRequest,
-    QueryPing,
-}
-
-impl status_c2s {
-    #[inline]
-    pub const fn id(self) -> raw_status_c2s {
-        self as raw_status_c2s
-    }
-    #[inline]
-    pub const fn new(x: u8) -> Self {
-        debug_assert!(x <= Self::QueryPing as raw_status_c2s);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_login_c2s = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum login_c2s {
-    LoginHello,
-    LoginKey,
-    LoginQueryResponse,
-    EnterConfiguration,
-    CookieResponse,
-}
-
-impl login_c2s {
-    #[inline]
-    pub const fn id(self) -> raw_login_c2s {
-        self as raw_login_c2s
-    }
-    #[inline]
-    pub const fn new(x: raw_login_c2s) -> Self {
-        debug_assert!(x <= Self::CookieResponse as raw_login_c2s);
-        unsafe { ::core::mem::transmute(x) }
-    }
-}
-
-pub type raw_configuration_c2s = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum configuration_c2s {
-    ClientOptions,
-    CookieResponse,
-    CustomPayload,
-    Ready,
-    KeepAlive,
-    CommonPong,
-    ResourcePackStatus,
-}
-
-impl configuration_c2s {
-    #[inline]
-    pub const fn id(self) -> raw_configuration_c2s {
-        self as raw_configuration_c2s
-    }
-    #[inline]
-    pub const fn new(x: raw_configuration_c2s) -> Self {
-        debug_assert!(x <= Self::ResourcePackStatus as raw_configuration_c2s);
-        unsafe { ::core::mem::transmute(x) }
     }
 }
 

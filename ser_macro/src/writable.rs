@@ -79,7 +79,9 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                     }
                 }
             }
-            if flag && variants.len() <= 0x7f {
+            let max = (variants.len() - 1) as u32;
+
+            if flag && max <= 0x7f {
                 let x = quote! {
                     #[automatically_derived]
                     impl ::mser::Write for #name {
@@ -91,6 +93,66 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                         #[inline]
                         fn len(&self) -> usize {
                             1
+                        }
+                    }
+
+                    #[automatically_derived]
+                    impl ::mser::Read for #name {
+                        #[inline]
+                        fn read(buf: &mut &[u8]) -> Option<Self> {
+                            match <::mser::V32 as ::mser::Read>::read(buf) {
+                                Some(::mser::V32(x)) => {
+                                    if x <= #max {
+                                        unsafe { Some(core::mem::transmute(x as u8)) }
+                                    } else {
+                                        None
+                                    }
+                                },
+                                None => None,
+                            }
+                        }
+                    }
+                };
+                Ok(x)
+            } else if flag && max <= 0xff {
+                let x = quote! {
+                    #[automatically_derived]
+                    impl ::mser::Write for #name {
+                        #[inline]
+                        fn write(&self, w: &mut ::mser::UnsafeWriter) {
+                            let n = self as u8;
+                            if n < 0x80 {
+                                w.write_byte(n);
+                            } else {
+                                w.write(&[n as u8, 1]);
+                            }
+                        }
+
+                        #[inline]
+                        fn len(&self) -> usize {
+                            let n = self as u8;
+                            if n < 0x80 {
+                                1
+                            } else {
+                                2
+                            }
+                        }
+                    }
+
+                    #[automatically_derived]
+                    impl ::mser::Read for #name {
+                        #[inline]
+                        fn read(buf: &mut &[u8]) -> Option<Self> {
+                            match <::mser::V32 as ::mser::Read>::read(buf) {
+                                Some(::mser::V32(x)) => {
+                                    if x <= #max {
+                                        unsafe { Some(core::mem::transmute(x as u8)) }
+                                    } else {
+                                        None
+                                    }
+                                 },
+                                 None => None,
+                            }
                         }
                     }
                 };
