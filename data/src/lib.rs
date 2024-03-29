@@ -46,20 +46,6 @@ macro_rules! decode_state {
 #[inline(always)]
 const fn cold__() {}
 
-impl Default for biome {
-    #[inline]
-    fn default() -> Self {
-        Self::plains
-    }
-}
-
-impl Default for dimension_type {
-    #[inline]
-    fn default() -> Self {
-        Self::overworld
-    }
-}
-
 #[derive(Copy, Clone)]
 struct NameMap<T: 'static> {
     key: [u64; 4],

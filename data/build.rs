@@ -1,137 +1,8 @@
-use mser::nbt::{Compound, List};
 use mser::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::env::var_os;
-use std::io::Read as _;
-use std::path::{Path, PathBuf};
-
-fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
-    fn decode(bytes: &mut Vec<u8>, path: &str) -> Compound {
-        let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(path);
-
-        let mut file = std::fs::File::options()
-            .read(true)
-            .open(path.as_path())
-            .unwrap();
-        if let Ok(size) = file.metadata() {
-            bytes.reserve_exact(size.len() as usize);
-        }
-
-        file.read_to_end(bytes).unwrap();
-        let comp = unsafe { core::str::from_utf8_unchecked(bytes) };
-        let mut comp = Snbt::decode(comp).expect("snbt decode error").0;
-        bytes.clear();
-
-        comp.sort();
-        comp
-    }
-
-    let mut b = Vec::new();
-    let chat_type = decode(&mut b, "chat_type.snbt");
-    let damage_type = decode(&mut b, "damage_type.snbt");
-    let dimension_type = decode(&mut b, "dimension_type.snbt");
-    let trim_material = decode(&mut b, "trim_material.snbt");
-    let trim_pattern = decode(&mut b, "trim_pattern.snbt");
-    let biome = decode(&mut b, "biome.snbt");
-
-    let codec: Compound = [
-        ("minecraft:chat_type", &chat_type),
-        ("minecraft:damage_type", &damage_type),
-        ("minecraft:dimension_type", &dimension_type),
-        ("minecraft:trim_material", &trim_material),
-        ("minecraft:trim_pattern", &trim_pattern),
-        ("minecraft:worldgen/biome", &biome),
-    ]
-    .into_iter()
-    .map(|(name, value)| (name, write_codec(name, value)))
-    .collect();
-
-    let mut vec = mser::boxed(&codec).into_vec();
-    std::fs::write(out.join("codec.nbt"), vec.as_slice()).unwrap();
-
-    *w += "pub const CODEC: &[u8; ";
-    *w += itoa::Buffer::new().format(vec.len());
-    *w += "] = include_bytes!(\"codec.nbt\");\n\n";
-    vec.clear();
-
-    let a = [
-        ("chat_type", &chat_type),
-        ("damage_type", &damage_type),
-        ("dimension_type", &dimension_type),
-        ("trim_material", &trim_material),
-        ("trim_pattern", &trim_pattern),
-        ("biome", &biome),
-    ];
-
-    for (name, nbt) in a {
-        let repr = gen_repr(nbt.len());
-        enum_head(w, repr, name);
-        for (x, _) in nbt.iter() {
-            *w += &x[10..];
-            *w += ",\n";
-        }
-        enum_foot(w, repr, name);
-    }
-
-    let mut b = Vec::new();
-    for (name, nbt) in a {
-        b.clear();
-        b.reserve(nbt.len());
-        for (x, _) in nbt.iter() {
-            b.push(&x[10..]);
-        }
-        *w += "impl ";
-        *w += name;
-        *w += " {\n";
-        gen_max(w, &b);
-        namemap(w, wn, gen_repr(nbt.len()), &b);
-        *w += "}\n";
-        impl_name(w, name);
-        *w += "impl ::mser::Write for ";
-        *w += name;
-        *w += " {\n";
-        *w += "#[inline]\n";
-        *w += "fn len(&self) -> usize {\n";
-        let size = nbt.len() - 1;
-        if size <= V7MAX {
-            *w += "1usize";
-        } else if size <= V21MAX {
-            *w += "::mser::V21(*self as u32).len()";
-        } else {
-            *w += "::mser::V32(*self as u32).len()";
-        }
-        *w += "\n}\n";
-        *w += "#[inline]\n";
-        *w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
-        if size <= V7MAX {
-            *w += "w.write_byte(*self as u8);";
-        } else if size <= V21MAX {
-            *w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
-        } else {
-            *w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
-        }
-        *w += "\n}\n}\n";
-    }
-}
-
-fn write_codec(name: &str, ele: &Compound) -> Compound {
-    let x = ele
-        .iter()
-        .enumerate()
-        .map(|(id, (k, v))| {
-            let mut y = Compound::with_capacity(3);
-            y.push("element", v.clone());
-            y.push("id", id as i32);
-            y.push("name", k.clone());
-            y
-        })
-        .collect::<Vec<Compound>>();
-    let mut c = Compound::with_capacity(2);
-    c.push("type", name.to_owned());
-    c.push("value", List::Compound(x));
-    c
-}
+use std::path::PathBuf;
 
 fn main() {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
@@ -153,8 +24,6 @@ fn main() {
     w += "#[macro_export]\nmacro_rules! protocol_version { () => { 0x";
     w += proto;
     w += " }; }\n";
-
-    codec(&out, &mut w, &mut wn);
 
     let data = &data[b + 1..];
     let pos = data.find(";block_state_property_key").unwrap();
