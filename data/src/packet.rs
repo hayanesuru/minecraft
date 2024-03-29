@@ -1,12 +1,16 @@
+#![allow(non_camel_case_types)]
+
 use mser_macro::Writable;
 
 pub type raw_play_s2c = u8;
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
 #[repr(u8)]
 pub enum play_s2c {
-    BundleDelimiter,
     EntitySpawn,
     ExperienceOrbSpawn,
+    MobSpawn,
+    PaintingSpawn,
+    PlayerSpawn,
     EntityAnimation,
     Statistics,
     PlayerActionResponse,
@@ -16,31 +20,23 @@ pub enum play_s2c {
     BlockUpdate,
     BossBar,
     Difficulty,
-    ChunkSent,
-    StartChunkSend,
-    ChunkBiomeData,
-    ClearTitle,
+    GameMessage,
     CommandSuggestions,
     CommandTree,
+    ConfirmScreenAction,
     CloseScreen,
     Inventory,
     ScreenHandlerPropertyUpdate,
     ScreenHandlerSlotUpdate,
-    CookieRequest,
     CooldownUpdate,
-    ChatSuggestions,
     CustomPayload,
-    EntityDamage,
-    RemoveMessage,
+    PlaySoundId,
     Disconnect,
-    ProfilelessChatMessage,
     EntityStatus,
     Explosion,
     UnloadChunk,
     GameStateChange,
     OpenHorseScreen,
-    DamageTilt,
-    WorldBorderInitialize,
     KeepAlive,
     ChunkData,
     WorldEvent,
@@ -52,39 +48,26 @@ pub enum play_s2c {
     EntityMoveRelative,
     EntityRotateAndMoveRelative,
     EntityRotate,
+    Entity,
     VehicleMove,
     OpenWrittenBook,
     OpenScreen,
     SignEditorOpen,
-    CommonPing,
-    PingResult,
     CraftFailedResponse,
     PlayerAbilities,
-    ChatMessage,
-    EndCombat,
-    EnterCombat,
-    DeathMessage,
-    PlayerRemove,
+    CombatEvent,
     PlayerList,
     LookAt,
     PlayerPositionLook,
     UnlockRecipes,
     EntitiesDestroy,
     RemoveEntityStatusEffect,
-    ScoreboardScoreReset,
-    ResourcePackRemove,
     ResourcePackSend,
     PlayerRespawn,
     EntitySetHeadYaw,
     ChunkDeltaUpdate,
     SelectAdvancementTab,
-    ServerMetadata,
-    OverlayMessage,
-    WorldBorderCenterChanged,
-    WorldBorderInterpolateSize,
-    WorldBorderSizeChanged,
-    WorldBorderWarningTimeChanged,
-    WorldBorderWarningBlocksChanged,
+    WorldBorder,
     SetCameraEntity,
     UpdateSelectedSlot,
     ChunkRenderDistanceCenter,
@@ -100,25 +83,16 @@ pub enum play_s2c {
     ScoreboardObjectiveUpdate,
     EntityPassengersSet,
     Team,
-    ScoreboardScoreUpdate,
-    SimulationDistance,
-    Subtitle,
+    ScoreboardPlayerUpdate,
     WorldTimeUpdate,
     Title,
-    TitleFade,
     PlaySoundFromEntity,
     PlaySound,
-    EnterReconfiguration,
     StopSound,
-    StoreCookie,
-    GameMessage,
     PlayerListHeader,
     NbtQueryResponse,
     ItemPickupAnimation,
     EntityPosition,
-    UpdateTickRate,
-    TickStep,
-    ServerTransfer,
     AdvancementUpdate,
     EntityAttributes,
     EntityStatusEffect,
@@ -135,11 +109,11 @@ pub type raw_status_s2c = u8;
 #[repr(u8)]
 pub enum status_s2c {
     QueryResponse,
-    PingResult,
+    QueryPong,
 }
 
 impl status_s2c {
-    pub const MAX: raw_status_s2c = Self::PingResult as _;
+    pub const MAX: raw_status_s2c = Self::QueryPong as _;
 }
 
 pub type raw_login_s2c = u8;
@@ -151,34 +125,10 @@ pub enum login_s2c {
     LoginSuccess,
     LoginCompression,
     LoginQueryRequest,
-    CookieRequest,
 }
 
 impl login_s2c {
-    pub const MAX: raw_login_s2c = Self::CookieRequest as _;
-}
-
-pub type raw_configuration_s2c = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum configuration_s2c {
-    CookieRequest,
-    CustomPayload,
-    Disconnect,
-    Ready,
-    KeepAlive,
-    CommonPing,
-    DynamicRegistries,
-    ResourcePackRemove,
-    ResourcePackSend,
-    StoreCookie,
-    ServerTransfer,
-    Features,
-    SynchronizeTags,
-}
-
-impl configuration_s2c {
-    pub const MAX: raw_configuration_s2c = Self::SynchronizeTags as _;
+    pub const MAX: raw_login_s2c = Self::LoginQueryRequest as _;
 }
 
 pub type raw_handshake_c2s = u8;
@@ -199,20 +149,14 @@ pub enum play_c2s {
     TeleportConfirm,
     QueryBlockNbt,
     UpdateDifficulty,
-    MessageAcknowledgment,
-    CommandExecution,
     ChatMessage,
-    PlayerSession,
-    AcknowledgeChunks,
     ClientStatus,
-    ClientOptions,
+    ClientSettings,
     RequestCommandCompletions,
-    AcknowledgeReconfiguration,
+    ConfirmScreenAction,
     ButtonClick,
     ClickSlot,
     CloseHandledScreen,
-    SlotChangedState,
-    CookieResponse,
     CustomPayload,
     BookUpdate,
     QueryEntityNbt,
@@ -220,20 +164,18 @@ pub enum play_c2s {
     JigsawGenerating,
     KeepAlive,
     UpdateDifficultyLock,
-    PlayerMovePositionAndOnGround,
-    PlayerMoveFull,
-    PlayerMoveLookAndOnGround,
-    PlayerMoveOnGroundOnly,
+    PlayerMovePositionOnly,
+    PlayerMoveBoth,
+    PlayerMoveLookOnly,
+    PlayerMove,
     VehicleMove,
     BoatPaddleState,
     PickFromInventory,
-    QueryPing,
     CraftRequest,
     UpdatePlayerAbilities,
     PlayerAction,
     ClientCommand,
     PlayerInput,
-    CommonPong,
     RecipeCategoryOptions,
     RecipeBookData,
     RenameItem,
@@ -277,27 +219,8 @@ pub enum login_c2s {
     LoginHello,
     LoginKey,
     LoginQueryResponse,
-    EnterConfiguration,
-    CookieResponse,
 }
 
 impl login_c2s {
-    pub const MAX: raw_login_c2s = Self::CookieResponse as _;
-}
-
-pub type raw_configuration_c2s = u8;
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Writable)]
-#[repr(u8)]
-pub enum configuration_c2s {
-    ClientOptions,
-    CookieResponse,
-    CustomPayload,
-    Ready,
-    KeepAlive,
-    CommonPong,
-    ResourcePackStatus,
-}
-
-impl configuration_c2s {
-    pub const MAX: raw_configuration_c2s = Self::ResourcePackStatus as _;
+    pub const MAX: raw_login_c2s = Self::LoginQueryResponse as _;
 }

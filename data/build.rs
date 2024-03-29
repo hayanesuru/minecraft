@@ -89,7 +89,7 @@ fn codec(out: &Path, w: &mut String, wn: &mut Vec<u8>) {
         *w += "}\n";
         impl_name(w, name);
         *w += "impl ::mser::Write for ";
-        *w += &name;
+        *w += name;
         *w += " {\n";
         *w += "#[inline]\n";
         *w += "fn len(&self) -> usize {\n";
@@ -234,7 +234,7 @@ fn main() {
             zhash.push(data);
         }
         if name == "block" {
-            block_names = zhash.clone();
+            block_names.clone_from(&zhash);
         }
         w += "impl ";
         w += &name;
@@ -433,7 +433,7 @@ fn main() {
         w += " = val";
         for &n in &props[1..] {
             w.push('_');
-            w += &pv2[n as usize];
+            w += pv2[n as usize];
         }
         w += ";\n";
     }
@@ -1516,7 +1516,7 @@ None => None,
 ";
 
     *w += "impl ::core::fmt::Display for ";
-    *w += &name;
+    *w += name;
     *w += " {
 #[inline]
 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
@@ -1526,7 +1526,7 @@ f.write_str(self.name())
 ";
 
     *w += "impl ::core::fmt::Debug for ";
-    *w += &name;
+    *w += name;
     *w += " {
 #[inline]
 fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {

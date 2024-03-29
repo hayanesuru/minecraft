@@ -6,7 +6,7 @@ pub mod packet;
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 /// # Example
-/// 
+///
 /// ```
 /// # use minecraft_data::{oak_log, prop_axis_x_y_z, encode_state};
 /// let x = oak_log::new();
@@ -24,10 +24,10 @@ macro_rules! encode_state {
 }
 
 /// # Example
-/// 
+///
 /// ```
 /// # use minecraft_data::*;
-/// 
+///
 /// let x = oak_log::new();
 /// let x = x.with_axis(prop_axis_x_y_z::y);
 /// let x = encode_state!(oak_log(x));

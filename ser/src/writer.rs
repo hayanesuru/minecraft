@@ -1,4 +1,3 @@
-
 pub struct UnsafeWriter(pub *mut u8);
 
 impl UnsafeWriter {
