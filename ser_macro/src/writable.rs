@@ -25,9 +25,9 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
 
                 match field.ty.inner() {
                     Ty::RefSlice(..)
-                    | Ty::RefSliceStr(..)
-                    | Ty::RefSliceU8(..)
-                    | Ty::RefStr(..)
+                    | Ty::RefSliceStr
+                    | Ty::RefSliceU8
+                    | Ty::RefStr
                     | Ty::Type(syn::Type::Reference(..)) => quote!(let #var_name = self.#name;),
                     _ => quote!(let ref #var_name = self.#name;),
                 }
@@ -183,10 +183,10 @@ fn needed_body(field: &Field) -> TokenStream {
     };
 
     let q = match field.ty.inner() {
-        Ty::String | Ty::CowStr(..) | Ty::RefStr(..) | Ty::RefSliceU8(..) => {
+        Ty::String | Ty::CowStr | Ty::RefStr | Ty::RefSliceU8 => {
             quote!(#needed #name.len())
         }
-        Ty::RefSliceStr(..) => {
+        Ty::RefSliceStr => {
             quote! {#needed ::mser::Write::len(#name) }
         }
         Ty::HashMap(..)
@@ -250,15 +250,15 @@ fn write_field_body(field: &Field) -> TokenStream {
     };
 
     let body = match field.ty.inner() {
-        Ty::String | Ty::CowStr(..) | Ty::RefStr(..) => quote! {
+        Ty::String | Ty::CowStr | Ty::RefStr => quote! {
             #l
             ::mser::Write::write(#name.as_bytes(), w);
         },
-        Ty::RefSliceU8(..) => quote! {
+        Ty::RefSliceU8 => quote! {
             #l
             w.write(#name);
         },
-        Ty::RefSliceStr(..) => quote! {
+        Ty::RefSliceStr => quote! {
             #l
             ::mser::Write::write(#name, w);
         },

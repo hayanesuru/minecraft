@@ -585,19 +585,19 @@ impl<'a> Field<'a> {
             | Ty::Vec(inner_ty)
             | Ty::HashSet(inner_ty)
             | Ty::BTreeSet(inner_ty)
-            | Ty::CowHashSet(_, inner_ty)
-            | Ty::CowBTreeSet(_, inner_ty)
-            | Ty::CowSlice(_, inner_ty)
-            | Ty::RefSlice(_, inner_ty) => vec![inner_ty.clone()],
+            | Ty::CowHashSet(inner_ty)
+            | Ty::CowBTreeSet(inner_ty)
+            | Ty::CowSlice(inner_ty)
+            | Ty::RefSlice(inner_ty) => vec![inner_ty.clone()],
             Ty::HashMap(key_ty, value_ty)
             | Ty::BTreeMap(key_ty, value_ty)
-            | Ty::CowHashMap(_, key_ty, value_ty)
-            | Ty::CowBTreeMap(_, key_ty, value_ty) => vec![key_ty.clone(), value_ty.clone()],
-            Ty::RefSliceStr(_)
-            | Ty::RefSliceU8(_)
-            | Ty::RefStr(_)
+            | Ty::CowHashMap(key_ty, value_ty)
+            | Ty::CowBTreeMap(key_ty, value_ty) => vec![key_ty.clone(), value_ty.clone()],
+            Ty::RefSliceStr
+            | Ty::RefSliceU8
+            | Ty::RefStr
             | Ty::String
-            | Ty::CowStr(..)
+            | Ty::CowStr
             | Ty::Primitive(..) => {
                 vec![]
             }
@@ -691,22 +691,22 @@ impl<T> Opt<T> {
 enum Ty {
     String,
     Vec(Type),
-    CowSlice(Lifetime, Type),
-    CowStr(Lifetime),
+    CowSlice( Type),
+    CowStr,
     HashMap(Type, Type),
     HashSet(Type),
     BTreeMap(Type, Type),
     BTreeSet(Type),
 
-    CowHashMap(Lifetime, Type, Type),
-    CowHashSet(Lifetime, Type),
-    CowBTreeMap(Lifetime, Type, Type),
-    CowBTreeSet(Lifetime, Type),
+    CowHashMap(Type, Type),
+    CowHashSet( Type),
+    CowBTreeMap( Type, Type),
+    CowBTreeSet( Type),
 
-    RefSliceStr(Lifetime),
-    RefSliceU8(Lifetime),
-    RefSlice(Lifetime, Type),
-    RefStr(Lifetime),
+    RefSliceStr,
+    RefSliceU8,
+    RefSlice(Type),
+    RefStr,
 
     Array(Type, u32),
 
@@ -849,11 +849,11 @@ fn parse_special_ty(ty: &Type) -> Option<Ty> {
                     } else if name == "BTreeSet" {
                         Some(Ty::BTreeSet(extract_inner_ty(args)?.clone()))
                     } else if name == "Cow" {
-                        let (lifetime, ty) = extract_lifetime_and_inner_ty(args)?;
+                        let (_, ty) = extract_lifetime_and_inner_ty(args)?;
                         if let Some(inner_ty) = extract_slice_inner_ty(ty) {
-                            Some(Ty::CowSlice(lifetime.clone(), inner_ty.clone()))
+                            Some(Ty::CowSlice( inner_ty.clone()))
                         } else if is_bare_ty(ty, "str") {
-                            Some(Ty::CowStr(lifetime.clone()))
+                            Some(Ty::CowStr)
                         } else {
                             match *ty {
                                 Type::Path(syn::TypePath {
@@ -875,25 +875,21 @@ fn parse_special_ty(ty: &Type) -> Option<Ty> {
                                         ) => {
                                             if inner_name == "HashSet" {
                                                 Some(Ty::CowHashSet(
-                                                    lifetime.clone(),
                                                     extract_inner_ty(args)?.clone(),
                                                 ))
                                             } else if inner_name == "BTreeSet" {
                                                 Some(Ty::CowBTreeSet(
-                                                    lifetime.clone(),
                                                     extract_inner_ty(args)?.clone(),
                                                 ))
                                             } else if inner_name == "HashMap" {
                                                 let (key_ty, value_ty) = extract_inner_ty_2(args)?;
                                                 Some(Ty::CowHashMap(
-                                                    lifetime.clone(),
                                                     key_ty.clone(),
                                                     value_ty.clone(),
                                                 ))
                                             } else if inner_name == "BTreeMap" {
                                                 let (key_ty, value_ty) = extract_inner_ty_2(args)?;
                                                 Some(Ty::CowBTreeMap(
-                                                    lifetime.clone(),
                                                     key_ty.clone(),
                                                     value_ty.clone(),
                                                 ))
@@ -936,31 +932,31 @@ fn parse_special_ty(ty: &Type) -> Option<Ty> {
             }
         }
         Type::Reference(syn::TypeReference {
-            lifetime: Some(ref lifetime),
+            lifetime: Some(_),
             mutability: None,
             ref elem,
             ..
         }) => {
             if let Some(inner_ty) = extract_slice_inner_ty(elem) {
                 if let Type::Reference(syn::TypeReference {
-                    lifetime: Some(lifetime),
+                    lifetime: Some(_),
                     mutability: _,
                     elem,
                     ..
                 }) = inner_ty
                 {
                     if is_bare_ty(elem, "str") {
-                        Some(Ty::RefSliceStr(lifetime.clone()))
+                        Some(Ty::RefSliceStr)
                     } else {
-                        Some(Ty::RefSlice(lifetime.clone(), inner_ty.clone()))
+                        Some(Ty::RefSlice(inner_ty.clone()))
                     }
                 } else if is_bare_ty(inner_ty, "u8") {
-                    Some(Ty::RefSliceU8(lifetime.clone()))
+                    Some(Ty::RefSliceU8)
                 } else {
-                    Some(Ty::RefSlice(lifetime.clone(), inner_ty.clone()))
+                    Some(Ty::RefSlice(inner_ty.clone()))
                 }
             } else if is_bare_ty(elem, "str") {
-                Some(Ty::RefStr(lifetime.clone()))
+                Some(Ty::RefStr)
             } else if let Type::Array(syn::TypeArray {
                 elem,
                 len:

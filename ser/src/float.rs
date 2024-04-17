@@ -918,14 +918,14 @@ pub trait ByteSlice: AsRef<[u8]> + AsMut<[u8]> {
         s
     }
 
-    #[inline]
-    fn skip_chars2(&self, c1: u8, c2: u8) -> &[u8] {
-        let mut s = self.as_ref();
-        while !s.is_empty() && (s.get_first() == c1 || s.get_first() == c2) {
-            s = s.advance(1);
-        }
-        s
-    }
+    // #[inline]
+    // fn skip_chars2(&self, c1: u8, c2: u8) -> &[u8] {
+    //     let mut s = self.as_ref();
+    //     while !s.is_empty() && (s.get_first() == c1 || s.get_first() == c2) {
+    //         s = s.advance(1);
+    //     }
+    //     s
+    // }
 
     #[inline]
     fn read_u64(&self) -> u64 {
