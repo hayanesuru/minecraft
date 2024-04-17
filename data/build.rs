@@ -1,3 +1,4 @@
+use mser::nbt::{List, Tag};
 use mser::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -6,9 +7,13 @@ use std::path::PathBuf;
 
 fn main() {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
-    let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("data.txt");
-    let data = std::fs::read(path).unwrap();
-    let data = unsafe { core::str::from_utf8_unchecked(&data) };
+    let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let data = path.join("data.txt");
+    let data = std::fs::read(data).unwrap();
+    let data = core::str::from_utf8(&data).unwrap();
+    let codec = path.join("codec.snbt");
+    let codec = std::fs::read(codec).unwrap();
+    let codec = core::str::from_utf8(&codec).unwrap();
 
     let mut mat = data.match_indices('\n');
     let a = mat.next().unwrap().0;
@@ -24,11 +29,75 @@ fn main() {
     w += "#[macro_export]\nmacro_rules! protocol_version { () => { 0x";
     w += proto;
     w += " }; }\n";
-
     let data = &data[b + 1..];
     let pos = data.find(";block_state_property_key").unwrap();
     let data1 = &data[..pos];
     let data2 = &data[pos..];
+
+    let mut codec = Snbt::decode(codec).expect("decode codec fail").0;
+    let codecraw = mser::boxed(&codec);
+    std::fs::write(out.join("codec.nbt"), &codecraw).unwrap();
+    w += "pub const REGISTRY_CODEC: &[u8; ";
+    w += itoa::Buffer::new().format(codecraw.len());
+    w += "] = include_bytes!(\"codec.nbt\");\n";
+
+    let Tag::Compound(mut dimension) = codec.find_remove("minecraft:dimension_type").unwrap()
+    else {
+        panic!()
+    };
+    let Tag::Compound(mut biome) = codec.find_remove("minecraft:worldgen/biome").unwrap() else {
+        panic!()
+    };
+    let Tag::List(List::Compound(dimension)) = dimension.find_remove("value").unwrap() else {
+        panic!()
+    };
+    let Tag::List(List::Compound(biome)) = biome.find_remove("value").unwrap() else {
+        panic!()
+    };
+    let mut zhash = Vec::<&str>::new();
+    for all in [(&dimension, "dimension"), (&biome, "biome")] {
+        let d = all.0.last().unwrap();
+        let Tag::Int(last) = d.find("id").unwrap() else {
+            panic!()
+        };
+        let size = *last as usize + 1;
+        zhash.clear();
+        zhash.resize(size, "");
+        for d in all.0 {
+            let Tag::Int(id) = d.find("id").unwrap() else {
+                panic!()
+            };
+            let Tag::String(name) = d.find("name").unwrap() else {
+                panic!()
+            };
+            *zhash.get_mut(*id as usize).expect(all.1) = &name[10..];
+        }
+        let cache = Vec::<String>::new();
+        let mut count = 0usize;
+        let mut b = itoa::Buffer::new();
+        for x in &mut zhash {
+            if x.is_empty() {
+                unsafe {
+                    (*(&cache as *const Vec<String> as *mut Vec<String>))
+                        .push("invalid_".to_owned() + b.format(count));
+                    *x = &*(cache.get(count).unwrap().as_str() as *const _);
+                }
+                count += 1;
+            }
+        }
+
+        let repr = gen_repr(size);
+
+        gen_enum(&zhash, size, &mut w, repr, all.1);
+
+        w += "impl ";
+        w += all.1;
+        w += " {\n";
+        gen_max(&mut w, &zhash);
+        namemap(&mut w, &mut wn, repr, &zhash);
+        w += "}\n";
+        impl_name(&mut w, all.1);
+    }
 
     let mut iter = data1.split('\n');
 
@@ -38,51 +107,14 @@ fn main() {
         }
         let (name, size, repr) = head(x);
         let name = name.replace('/', "__");
-
-        enum_head(&mut w, repr, &name);
-        if name == "sound_event" || name == "attribute" {
-            for _ in 0..size {
-                let data = iter.next().unwrap().replace('.', "_");
-                w += &data;
-                w += ",\n";
-            }
-        } else {
-            for _ in 0..size {
-                let data = iter.next().unwrap();
-                if let "match" | "true" | "false" | "type" = data {
-                    w += "r#"
-                }
-                w += data;
-                w += ",\n";
-            }
+        zhash.clear();
+        zhash.reserve(size);
+        for _ in 0..size {
+            let data = iter.next().unwrap();
+            zhash.push(data);
         }
-        enum_foot(&mut w, repr, &name);
-        w += "impl ::mser::Write for ";
-        w += &name;
-        w += " {\n";
-        w += "#[inline]\n";
-        w += "fn len(&self) -> usize {\n";
-        if size <= V7MAX {
-            w += "1usize";
-        } else if size <= V21MAX {
-            w += "::mser::V21(*self as u32).len()";
-        } else {
-            w += "::mser::V32(*self as u32).len()";
-        }
-        w += "\n}\n";
-        w += "#[inline]\n";
-        w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
-        if size <= V7MAX {
-            w += "w.write_byte(*self as u8);";
-        } else if size <= V21MAX {
-            w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
-        } else {
-            w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
-        }
-        w += "\n}\n}\n";
+        gen_enum(&zhash, size, &mut w, repr, &name);
     }
-
-    let mut zhash = Vec::<&str>::new();
 
     let mut block_names = Vec::<&str>::new();
 
@@ -1215,6 +1247,49 @@ fn main() {
     std::fs::write(out.join("data.bin"), wn.as_slice()).unwrap();
 }
 
+fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: &str, name: &str) {
+    enum_head(w, repr, name);
+    if name == "sound_event" || name == "attribute" {
+        for &data in zhash {
+            let data = data.replace('.', "_");
+            *w += &data;
+            *w += ",\n";
+        }
+    } else {
+        for &data in zhash {
+            if let "match" | "true" | "false" | "type" = data {
+                *w += "r#"
+            }
+            *w += data;
+            *w += ",\n";
+        }
+    }
+    enum_foot(w, repr, name);
+    *w += "impl ::mser::Write for ";
+    *w += name;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn len(&self) -> usize {\n";
+    if size <= V7MAX {
+        *w += "1usize";
+    } else if size <= V21MAX {
+        *w += "::mser::V21(*self as u32).len()";
+    } else {
+        *w += "::mser::V32(*self as u32).len()";
+    }
+    *w += "\n}\n";
+    *w += "#[inline]\n";
+    *w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
+    if size <= V7MAX {
+        *w += "w.write_byte(*self as u8);";
+    } else if size <= V21MAX {
+        *w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
+    } else {
+        *w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
+    }
+    *w += "\n}\n}\n";
+}
+
 fn head(x: &str) -> (&str, usize, &'static str) {
     let (x, first) = x.split_at(1);
     if x != ";" {
@@ -1301,7 +1376,7 @@ const fn gen_repr(size: usize) -> &'static str {
 }
 
 fn enum_head(w: &mut String, repr: &str, name: &str) {
-    if !name.starts_with('_') {
+    if !name.starts_with('_') && name != "biome" && name != "dimension" {
         *w += "pub type raw_";
         *w += name;
         *w += " = ";
