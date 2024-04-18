@@ -11,7 +11,6 @@ mod integer;
 mod json;
 mod mutf8;
 mod snbt;
-mod text;
 mod varint;
 mod write;
 mod writer;
