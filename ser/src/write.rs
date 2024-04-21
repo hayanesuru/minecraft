@@ -121,7 +121,7 @@ impl Write for str {
 
     #[inline(always)]
     fn len(&self) -> usize {
-        self.len()
+        str::len(self)
     }
 }
 
@@ -133,7 +133,19 @@ impl Write for [u8] {
 
     #[inline(always)]
     fn len(&self) -> usize {
-        self.len()
+        <[u8]>::len(self)
+    }
+}
+
+impl Write for &str {
+    #[inline(always)]
+    fn write(&self, w: &mut UnsafeWriter) {
+        w.write(self.as_bytes());
+    }
+
+    #[inline(always)]
+    fn len(&self) -> usize {
+        str::len(self)
     }
 }
 
@@ -153,7 +165,7 @@ impl Write for [&str] {
     #[inline(always)]
     fn write(&self, w: &mut UnsafeWriter) {
         for &x in self {
-            crate::V21(x.len() as u32).write(w);
+            crate::V21(str::len(x) as u32).write(w);
             w.write(x.as_bytes());
         }
     }
@@ -162,8 +174,8 @@ impl Write for [&str] {
     fn len(&self) -> usize {
         let mut l = 0;
         for &x in self {
-            l += crate::V21(x.len() as u32).len();
-            l += x.len();
+            l += crate::V21(str::len(x) as u32).len();
+            l += str::len(x);
         }
         l
     }
@@ -184,11 +196,11 @@ impl Write for &[&str] {
 impl Write for &[u8] {
     #[inline]
     fn write(&self, w: &mut UnsafeWriter) {
-        Write::write(*self, w);
+        w.write(self);
     }
 
     #[inline]
     fn len(&self) -> usize {
-        Write::len(*self)
+        <[u8]>::len(self)
     }
 }
