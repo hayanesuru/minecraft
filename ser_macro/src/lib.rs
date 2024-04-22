@@ -547,6 +547,7 @@ impl<'a> Struct<'a> {
     }
 }
 
+#[derive(Clone)]
 struct Field<'a> {
     index: usize,
     name: Option<&'a syn::Ident>,
@@ -674,6 +675,7 @@ impl Parse for FieldAttribute {
     }
 }
 
+#[derive(Clone)]
 enum Opt<T> {
     Plain(T),
     Option(T),
@@ -688,10 +690,11 @@ impl<T> Opt<T> {
     }
 }
 
+#[derive(Clone)]
 enum Ty {
     String,
     Vec(Type),
-    CowSlice( Type),
+    CowSlice(Type),
     CowStr,
     HashMap(Type, Type),
     HashSet(Type),
@@ -699,9 +702,9 @@ enum Ty {
     BTreeSet(Type),
 
     CowHashMap(Type, Type),
-    CowHashSet( Type),
-    CowBTreeMap( Type, Type),
-    CowBTreeSet( Type),
+    CowHashSet(Type),
+    CowBTreeMap(Type, Type),
+    CowBTreeSet(Type),
 
     RefSliceStr,
     RefSliceU8,
@@ -851,7 +854,7 @@ fn parse_special_ty(ty: &Type) -> Option<Ty> {
                     } else if name == "Cow" {
                         let (_, ty) = extract_lifetime_and_inner_ty(args)?;
                         if let Some(inner_ty) = extract_slice_inner_ty(ty) {
-                            Some(Ty::CowSlice( inner_ty.clone()))
+                            Some(Ty::CowSlice(inner_ty.clone()))
                         } else if is_bare_ty(ty, "str") {
                             Some(Ty::CowStr)
                         } else {
