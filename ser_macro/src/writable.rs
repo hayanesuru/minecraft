@@ -4,7 +4,7 @@ use super::{
 };
 use alloc::vec::Vec;
 use proc_macro2::{TokenStream, TokenTree};
-use quote::{quote, ToTokens};
+use quote::quote;
 use syn::spanned::Spanned;
 use syn::{Data, DataStruct};
 
@@ -32,21 +32,8 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                     _ => quote!(let ref #var_name = self.#name;),
                 }
             });
-            let body = fields
-                .clone()
-                .map(|x| write_field_body(x, x.var_name().into_token_stream(), x.expand));
-            let needed = fields.clone().map(|x| {
-                needed_body(
-                    x,
-                    if let Opt::Option(_) = &x.ty {
-                        quote!(x___)
-                    } else {
-                        let name = x.name();
-                        quote!(self.#name)
-                    },
-                    x.expand,
-                )
-            });
+            let body = fields.clone().map(write_field_body);
+            let needed = fields.clone().map(needed_body);
             types.extend(fields.flat_map(|x| x.bound_types()));
 
             let (a, b) = match attrs.prefix {
@@ -180,7 +167,13 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
     }
 }
 
-fn needed_body(field: &Field, name: TokenStream, expand: bool) -> TokenStream {
+fn needed_body(field: &Field) -> TokenStream {
+    let name = if let Opt::Option(_) = &field.ty {
+        quote!(x___)
+    } else {
+        let name = field.name();
+        quote!(self.#name)
+    };
     let needed = match field.len_type.unwrap_or(DEFAULT_LENGTH_TYPE) {
         BasicType::V32 => quote!(::mser::Write::len(&::mser::V32(#name.len() as u32)) + ),
         BasicType::V21 => quote!(::mser::Write::len(&::mser::V21(#name.len() as u32)) + ),
@@ -211,20 +204,38 @@ fn needed_body(field: &Field, name: TokenStream, expand: bool) -> TokenStream {
             quote!(::mser::Write::len(&::mser::V32(#name)))
         }
         Ty::Primitive(PrimitiveTy::I64) if field.varint => {
-            quote!(::mser::Write::len(&::mser::V64(#name as i64)))
+            quote!(::mser::Write::len(&::mser::V64(#name as u64)))
         }
         Ty::Primitive(PrimitiveTy::U64) if field.varint => {
             quote!(::mser::Write::len(&::mser::V64(#name)))
         }
         Ty::Type(syn::Type::Reference(..)) if !field.expand => quote!(::mser::Write::len(#name)),
-        _ if !expand => {
+        _ if !field.expand => {
             quote!(::mser::Write::len(&#name))
         }
         _ => {
-            let len = needed_body(field, quote!(a), false);
+            let len = if let Ty::RefSlice(ty) = field.ty.inner() {
+                if let Ty::Primitive(x) = crate::parse_ty(ty) {
+                    if field.varint {
+                        match x {
+                            PrimitiveTy::U32 => quote!(::mser::Write::len(&::mser::V32(*x))),
+                            PrimitiveTy::U64 => quote!(::mser::Write::len(&::mser::V64(*x))),
+                            PrimitiveTy::I32 => quote!(::mser::Write::len(&::mser::V32(*x as u32))),
+                            PrimitiveTy::I64 => quote!(::mser::Write::len(&::mser::V64(*x as u64))),
+                            _ => unimplemented!(),
+                        }
+                    } else {
+                        quote!(::mser::Write::len(x))
+                    }
+                } else {
+                    quote!(::mser::Write::len(x))
+                }
+            } else {
+                quote!(::mser::Write::len(x))
+            };
             quote! {#needed {
                 let mut a___ = 0usize;
-                for a in #name {
+                for x in #name {
                     a___ += #len;
                 }
                 a___
@@ -250,7 +261,8 @@ fn needed_body(field: &Field, name: TokenStream, expand: bool) -> TokenStream {
     }
 }
 
-fn write_field_body(field: &Field, name: TokenStream, expand: bool) -> TokenStream {
+fn write_field_body(field: &Field) -> TokenStream {
+    let name = field.var_name();
     let l = match field.len_type.unwrap_or(DEFAULT_LENGTH_TYPE) {
         BasicType::V32 => quote! { ::mser::Write::write(&::mser::V32(#name.len() as u32), w); },
         BasicType::V21 => quote! { ::mser::Write::write(&::mser::V21(#name.len() as u32), w); },
@@ -285,9 +297,27 @@ fn write_field_body(field: &Field, name: TokenStream, expand: bool) -> TokenStre
                 quote!(w.write(&#name.to_be_bytes());)
             }
         }
-        _ if !expand => quote! { ::mser::Write::write(#name, w); },
+        _ if !field.expand => quote!(::mser::Write::write(#name, w);),
         _ => {
-            let w = write_field_body(field, quote!(x), false);
+            let w = if let Ty::RefSlice(ty) = field.ty.inner() {
+                if let Ty::Primitive(x) = crate::parse_ty(ty) {
+                    if field.varint {
+                        match x {
+                            PrimitiveTy::U32 => quote!(::mser::Write::write(&V32(*x), w);),
+                            PrimitiveTy::U64 => quote!(::mser::Write::write(&V64(*x), w);),
+                            PrimitiveTy::I32 => quote!(::mser::Write::write(&V32(*x as u32), w);),
+                            PrimitiveTy::I64 => quote!(::mser::Write::write(&V64(*x as u64), w);),
+                            _ => unimplemented!(),
+                        }
+                    } else {
+                        quote!(w.write(&x.to_be_bytes());)
+                    }
+                } else {
+                    quote!(::mser::Write::write(x, w);)
+                }
+            } else {
+                quote!(::mser::Write::write(x, w);)
+            };
             quote! {
                 #l
                 for x in #name {
