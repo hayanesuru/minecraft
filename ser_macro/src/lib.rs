@@ -36,6 +36,7 @@ mod kw {
     syn::custom_keyword!(skip);
     syn::custom_keyword!(add);
     syn::custom_keyword!(u8);
+    syn::custom_keyword!(u16);
     syn::custom_keyword!(v21);
     syn::custom_keyword!(v32);
     syn::custom_keyword!(none);
@@ -273,8 +274,9 @@ fn common_tokens(
 #[derive(Copy, Clone)]
 enum BasicType {
     U8,
-    V32,
+    U16,
     V21,
+    V32,
     None,
 }
 
@@ -286,7 +288,11 @@ impl Parse for BasicType {
         let ty = if lookahead.peek(kw::u8) {
             input.parse::<kw::u8>()?;
             BasicType::U8
-        } else if lookahead.peek(kw::v32) {
+        }else if lookahead.peek(kw::u16) {
+            input.parse::<kw::u16>()?;
+            BasicType::U16
+        }
+         else if lookahead.peek(kw::v32) {
             input.parse::<kw::v32>()?;
             BasicType::V32
         } else if lookahead.peek(kw::v21) {

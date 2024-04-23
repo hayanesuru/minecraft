@@ -178,6 +178,7 @@ fn needed_body(field: &Field) -> TokenStream {
         BasicType::V32 => quote!(::mser::Write::len(&::mser::V32(#name.len() as u32)) + ),
         BasicType::V21 => quote!(::mser::Write::len(&::mser::V21(#name.len() as u32)) + ),
         BasicType::U8 => quote!(1 + ),
+        BasicType::U16 => quote!(2 + ),
         BasicType::None => quote!(),
     };
 
@@ -267,6 +268,7 @@ fn write_field_body(field: &Field) -> TokenStream {
         BasicType::V32 => quote! { ::mser::Write::write(&::mser::V32(#name.len() as u32), w); },
         BasicType::V21 => quote! { ::mser::Write::write(&::mser::V21(#name.len() as u32), w); },
         BasicType::U8 => quote! { w.write_byte(#name.len() as u8); },
+        BasicType::U16 => quote! { ::mser::Write::write(&#name.len() as u16, w); },
         BasicType::None => quote! {},
     };
 
