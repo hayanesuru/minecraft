@@ -1,6 +1,6 @@
 [package]
 name = "mser_macro"
-version = "1.0.4"
+version = "1.0.5"
 description = "mser_macro"
 authors.workspace = true
 readme.workspace = true
