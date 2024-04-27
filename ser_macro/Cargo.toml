@@ -1,6 +1,6 @@
 [package]
 name = "mser_macro"
-version = "1.0.7"
+version = "1.0.8"
 description = "mser_macro"
 authors.workspace = true
 readme.workspace = true
@@ -12,6 +12,6 @@ edition.workspace = true
 proc-macro = true
 
 [dependencies]
-syn = { version = "2", features = ["parsing"] }
+syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
