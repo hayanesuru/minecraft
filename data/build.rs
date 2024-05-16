@@ -1,4 +1,3 @@
-use mser::nbt::{List, Tag};
 use mser::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -11,9 +10,6 @@ fn main() {
     let data = path.join("data.txt");
     let data = std::fs::read(data).unwrap();
     let data = core::str::from_utf8(&data).unwrap();
-    let codec = path.join("codec.snbt");
-    let codec = std::fs::read(codec).unwrap();
-    let codec = core::str::from_utf8(&codec).unwrap();
 
     let mut mat = data.match_indices('\n');
     let a = mat.next().unwrap().0;
@@ -33,72 +29,7 @@ fn main() {
     let pos = data.find(";block_state_property_key").unwrap();
     let data1 = &data[..pos];
     let data2 = &data[pos..];
-
-    let mut codec = Snbt::decode(codec).expect("decode codec fail").0;
-    let codecraw = mser::boxed(&codec);
-    std::fs::write(out.join("codec.nbt"), &codecraw).unwrap();
-    w += "pub const REGISTRY_CODEC: &[u8; ";
-    w += itoa::Buffer::new().format(codecraw.len());
-    w += "] = include_bytes!(\"codec.nbt\");\n";
-
-    let Tag::Compound(mut dimension) = codec.find_remove("minecraft:dimension_type").unwrap()
-    else {
-        panic!()
-    };
-    let Tag::Compound(mut biome) = codec.find_remove("minecraft:worldgen/biome").unwrap() else {
-        panic!()
-    };
-    let Tag::List(List::Compound(dimension)) = dimension.find_remove("value").unwrap() else {
-        panic!()
-    };
-    let Tag::List(List::Compound(biome)) = biome.find_remove("value").unwrap() else {
-        panic!()
-    };
     let mut zhash = Vec::<&str>::new();
-    for all in [(&dimension, "dimension"), (&biome, "biome")] {
-        let d = all.0.last().unwrap();
-        let Tag::Int(last) = d.find("id").unwrap() else {
-            panic!()
-        };
-        let size = *last as usize + 1;
-        zhash.clear();
-        zhash.resize(size, "");
-        for d in all.0 {
-            let Tag::Int(id) = d.find("id").unwrap() else {
-                panic!()
-            };
-            let Tag::String(name) = d.find("name").unwrap() else {
-                panic!()
-            };
-            *zhash.get_mut(*id as usize).expect(all.1) = &name[10..];
-        }
-        let cache = Vec::<String>::new();
-        let mut count = 0usize;
-        let mut b = itoa::Buffer::new();
-        for x in &mut zhash {
-            if x.is_empty() {
-                unsafe {
-                    (*(&cache as *const Vec<String> as *mut Vec<String>))
-                        .push("invalid_".to_owned() + b.format(count));
-                    *x = &*(cache.get(count).unwrap().as_str() as *const _);
-                }
-                count += 1;
-            }
-        }
-
-        let repr = gen_repr(size);
-
-        gen_enum(&zhash, size, &mut w, repr, all.1);
-
-        w += "impl ";
-        w += all.1;
-        w += " {\n";
-        gen_max(&mut w, &zhash);
-        namemap(&mut w, &mut wn, repr, &zhash);
-        w += "}\n";
-        impl_name(&mut w, all.1);
-    }
-
     let mut iter = data1.split('\n');
 
     while let Some(x) = iter.next() {

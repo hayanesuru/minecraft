@@ -5,6 +5,7 @@
 pub mod packet;
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
+
 /// # Example
 ///
 /// ```

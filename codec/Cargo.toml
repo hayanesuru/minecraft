@@ -1,0 +1,24 @@
+[package]
+name = "minecraft_codecgen"
+version = "1.0.0"
+description = "minecraft_codecgem"
+edition.workspace = true
+authors.workspace = true
+readme = "README.md"
+license.workspace = true
+repository.workspace = true
+categories = ["no-std"]
+keywords = ["minecraft"]
+documentation = "https://docs.rs/minecraft_codecgen"
+
+[features]
+
+[dependencies]
+mser = { workspace = true }
+mser_macro = { workspace = true }
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"
+
+[lib]
+proc-macro = true
