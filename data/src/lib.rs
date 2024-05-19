@@ -1,6 +1,8 @@
 #![no_std]
 #![allow(non_camel_case_types)]
 
+use mser::nbt::{Compound, Tag};
+
 #[cfg(feature = "packet")]
 pub mod packet;
 
@@ -99,6 +101,45 @@ impl NameMap<u8> {
             None
         }
     }
+}
+
+pub fn read_block_state(
+    n: &Compound,
+    buf: &mut [(block_state_property_key, block_state_property_value); 16],
+) -> block_state {
+    let block = match n.find("Name") {
+        Some(Tag::String(x)) if x.as_bytes().starts_with(b"minecraft:") => match x.get(10..) {
+            Some(x) => block::parse(x.as_bytes()).unwrap_or(block::air),
+            None => block::air,
+        },
+        _ => block::air,
+    };
+    if block.props().is_empty() {
+        return block.state_default();
+    }
+    let props = match n.find("Properties") {
+        Some(Tag::Compound(x)) => x,
+        _ => return block.state_default(),
+    };
+    let mut len = 0;
+    for (k, v) in props.iter() {
+        let k = block_state_property_key::parse(k.as_bytes());
+        let k = match k {
+            Some(x) => x,
+            None => continue,
+        };
+        let v = match v {
+            Tag::String(v) => block_state_property_value::parse(v.as_bytes()),
+            _ => None,
+        };
+        let v = match v {
+            Some(val) => val,
+            None => continue,
+        };
+        buf[len] = (k, v);
+        len += 1;
+    }
+    make_block_state(unsafe { buf.get_unchecked_mut(0..len) }, block)
 }
 
 pub fn make_block_state(
