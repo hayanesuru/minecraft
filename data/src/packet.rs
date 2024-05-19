@@ -167,7 +167,7 @@ pub enum play_c2s {
     PlayerMovePositionOnly,
     PlayerMoveBoth,
     PlayerMoveLookOnly,
-    PlayerMove,
+    PlayerMoveOnGroundOnly,
     VehicleMove,
     BoatPaddleState,
     PickFromInventory,
