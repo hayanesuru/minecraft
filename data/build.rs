@@ -5,11 +5,19 @@ use std::env::var_os;
 use std::path::PathBuf;
 
 fn main() {
+    run("1.16.5");
+    run("1.17.1");
+    run("1.18.2");
+    run("1.19.4");
+    run("1.20.6");
+}
+
+fn run(version: &str) {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
     let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    let data = path.join("data.txt");
+    let data = path.join(version.to_owned() + ".txt");
     let data = std::fs::read(data).unwrap();
-    let data = core::str::from_utf8(&data).unwrap();
+    let data = simdutf8::basic::from_utf8(&data).unwrap();
 
     let mut mat = data.match_indices('\n');
     let a = mat.next().unwrap().0;
@@ -19,12 +27,12 @@ fn main() {
 
     let mut w = String::with_capacity(0x1000);
     let mut wn = Vec::new();
-    w += "#[macro_export]\nmacro_rules! name_version { () => { \"";
+    w += "pub const NAME_VERSION: &str = \"";
     w += name;
-    w += "\" }; }\n";
-    w += "#[macro_export]\nmacro_rules! protocol_version { () => { 0x";
+    w += "\";\n";
+    w += "pub const PROTOCOL_VERSION: u32 = 0x";
     w += proto;
-    w += " }; }\n";
+    w += ";\n";
     let data = &data[b + 1..];
     let pos = data.find(";block_state_property_key").unwrap();
     let data1 = &data[..pos];
@@ -748,7 +756,7 @@ fn main() {
     if name != "item_to_block" {
         panic!();
     }
-    w += "const ITEM: [crate::raw_block; crate::item::MAX + 1] = [";
+    w += "const ITEM: [raw_block; item::MAX + 1] = [";
     for _ in 0..size {
         let (x, _) = parse_hex::<u32>(iter.next().unwrap().as_bytes());
         w += ib.format(x);
@@ -1172,10 +1180,12 @@ fn main() {
     }
     w += "const NAMES: &[u8; ";
     w += ib.format(wn.len());
-    w += "] = include_bytes!(\"data.bin\");\n";
+    w += "] = include_bytes!(\"";
+    w += version;
+    w += ".bin\");\n";
 
-    std::fs::write(out.join("data.rs"), w.as_bytes()).unwrap();
-    std::fs::write(out.join("data.bin"), wn.as_slice()).unwrap();
+    std::fs::write(out.join(version.to_owned() + ".rs"), w.as_bytes()).unwrap();
+    std::fs::write(out.join(version.to_owned() + ".bin"), wn.as_slice()).unwrap();
 }
 
 fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: &str, name: &str) {
@@ -1221,10 +1231,10 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: &str, name: &str)
     *w += "\n}\n}\n";
 }
 
-fn head(x: &str) -> (&str, usize, &'static str) {
-    let (x, first) = x.split_at(1);
+fn head(raw: &str) -> (&str, usize, &'static str) {
+    let (x, first) = raw.split_at(1);
     if x != ";" {
-        unreachable!();
+        unreachable!("{raw}");
     }
     let (name, size) = first.split_once(';').unwrap();
     let (size, _) = parse_hex::<u32>(size.as_bytes());
@@ -1287,11 +1297,11 @@ fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: &str, names: &[&str]) {
     }
     *w += "const N: *const u8 = ";
     if start != 0 {
-        *w += "unsafe { crate::NAMES.as_ptr().add(";
+        *w += "unsafe { NAMES.as_ptr().add(";
         *w += ib.format(start);
         *w += ") }"
     } else {
-        *w += "crate::NAMES.as_ptr()";
+        *w += "NAMES.as_ptr()";
     }
     *w += ";\n";
 }

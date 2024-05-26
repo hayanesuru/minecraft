@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "1.0.8"
+version = "1.1.0"
 description = "minecraft_data"
 edition.workspace = true
 authors.workspace = true
@@ -12,9 +12,13 @@ keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_data"
 
 [features]
-default = ["std", "packet"]
+default = ["std", "1_16", "1_17", "1_18", "1_19", "1_20"]
 std = ["highway/std"]
-packet = []
+1_16 = []
+1_17 = []
+1_18 = []
+1_19 = []
+1_20 = []
 
 [dependencies]
 highway = { version = "1", default-features = false }
@@ -26,3 +30,4 @@ mser = { workspace = true }
 itoa = "1"
 ryu = "1"
 highway = "1"
+simdutf8 = "0"
