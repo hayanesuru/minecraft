@@ -17,10 +17,17 @@ use syn::token::Comma;
 use syn::{parenthesized, parse_macro_input, Expr, Lifetime, Lit, Token, Type, TypeParam};
 
 #[proc_macro]
-pub fn nbt(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = token.to_string();
-    let output = mser::Snbt::decode(&input).unwrap().0;
-    let data = mser::boxed(&output);
+pub fn compound(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let mut data = format!("{{{token}}}");
+    let output = mser::nbt::StringifyCompound::decode(&data).expect("Invalid SNBT compound").0;
+    data.clear();
+    let mut data = data.into_bytes();
+
+    let len = mser::Write::len(&output);
+    data.reserve(len);
+    mser::Write::write(&output, &mut mser::UnsafeWriter(data.as_mut_ptr()));
+    unsafe { data.set_len(len) };
+
     let datastr = format!("{data:?}");
     core::str::FromStr::from_str(&datastr).unwrap()
 }
@@ -463,7 +470,7 @@ impl core::ops::Deref for ToplevelStructAttributes {
 }
 
 fn parse_attributes<T: Parse>(attrs: &[syn::Attribute]) -> Result<Vec<T>, syn::Error> {
-    struct RawAttributes<T>(Punctuated<T, Token![,]>);
+    struct RawAttributes<T>(#[allow(unused)] Punctuated<T, Token![,]>);
 
     impl<T: Parse> Parse for RawAttributes<T> {
         fn parse(input: syn::parse::ParseStream) -> syn::parse::Result<Self> {
@@ -622,7 +629,7 @@ impl<'a> Field<'a> {
 }
 
 enum LengthKind {
-    Expr(Expr),
+    Expr(#[allow(unused)] Expr),
     UntilEndOfFile,
 }
 
@@ -725,7 +732,7 @@ enum Ty {
     RefSlice(Type),
     RefStr,
 
-    Array(Type, u32),
+    Array(Type, #[allow(unused)] u32),
 
     Primitive(PrimitiveTy),
     Type(Type),

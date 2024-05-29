@@ -1,3 +1,11 @@
+mod mutf8;
+mod string;
+mod stringify;
+mod list;
+
+pub use self::list::List;
+pub use self::string::{MUTF8Tag, UTF8Tag};
+pub use self::stringify::StringifyCompound;
 use crate::{Bytes, Read, UnsafeWriter, Write};
 use alloc::boxed::Box;
 use alloc::string::{String, ToString};
@@ -131,57 +139,6 @@ impl From<Vec<i64>> for Tag {
     }
 }
 
-#[inline]
-pub fn decode_string(b: &mut &[u8]) -> Option<String> {
-    let len = b.u16()? as usize;
-    let a = b.slice(len)?;
-    match core::str::from_utf8(a) {
-        Ok(n) => Some(String::from(n)),
-        Err(_) => super::mutf8::decode(a),
-    }
-}
-
-pub struct MUTF8Tag<'a>(pub &'a [u8]);
-
-impl<'a> Write for MUTF8Tag<'a> {
-    #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
-        (self.0.len() as u16).write(w);
-        w.write(self.0);
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        2 + self.0.len()
-    }
-}
-
-pub struct UTF8Tag<'a>(pub &'a [u8]);
-
-impl<'a> Write for UTF8Tag<'a> {
-    #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
-        if super::mutf8::is_valid(self.0) {
-            (self.0.len() as u16).write(w);
-            w.write(self.0);
-        } else {
-            unsafe {
-                (super::mutf8::len(self.0) as u16).write(w);
-                super::mutf8::encode(self.0, w);
-            }
-        }
-    }
-
-    #[inline]
-    fn len(&self) -> usize {
-        if super::mutf8::is_valid(self.0) {
-            2 + self.0.len()
-        } else {
-            unsafe { 2 + super::mutf8::len(self.0) }
-        }
-    }
-}
-
 #[derive(Clone, Default)]
 #[repr(transparent)]
 pub struct Compound(Vec<(Box<str>, Tag)>);
@@ -217,7 +174,9 @@ impl Write for Compound {
                 Tag::List(_) => LIST,
                 Tag::Compound(_) => COMPOUND,
             });
-            MUTF8Tag(name.as_bytes()).write(w);
+            unsafe {
+                UTF8Tag::new_unchecked(name.as_bytes()).write(w);
+            }
             match tag {
                 Tag::Byte(x) => x.write(w),
                 Tag::Short(x) => x.write(w),
@@ -225,7 +184,7 @@ impl Write for Compound {
                 Tag::Long(x) => x.write(w),
                 Tag::Float(x) => x.write(w),
                 Tag::Double(x) => x.write(w),
-                Tag::String(x) => MUTF8Tag(x.as_bytes()).write(w),
+                Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).write(w) },
                 Tag::ByteArray(x) => {
                     (x.len() as u32).write(w);
                     w.write(x)
@@ -248,7 +207,7 @@ impl Write for Compound {
     fn len(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += UTF8Tag(name.as_bytes()).len();
+            w += unsafe { UTF8Tag::new_unchecked(name.as_bytes()).len() };
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -256,7 +215,7 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => MUTF8Tag(x.as_bytes()).len(),
+                Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).len() },
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
@@ -268,10 +227,80 @@ impl Write for Compound {
     }
 }
 
+#[derive(Clone)]
+pub struct NamedCompound(pub String, pub Compound);
+
+impl Read for NamedCompound {
+    #[inline]
+    fn read(n: &mut &[u8]) -> Option<Self> {
+        if n.u8()? != COMPOUND {
+            return None;
+        }
+        Some(Self(decode_string(n)?, decode1(n)?))
+    }
+}
+
+impl Write for NamedCompound {
+    #[inline]
+    fn write(&self, w: &mut UnsafeWriter) {
+        w.write_byte(COMPOUND);
+        unsafe {
+            UTF8Tag::new_unchecked(self.0.as_bytes()).write(w);
+        }
+        self.1.write(w);
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        1 + unsafe { Write::len(&UTF8Tag::new_unchecked(self.0.as_bytes())) } + Write::len(&self.1)
+    }
+}
+
+#[derive(Clone)]
+pub struct UnamedCompound(pub Compound);
+
+impl Read for UnamedCompound {
+    #[inline]
+    fn read(n: &mut &[u8]) -> Option<Self> {
+        if n.u8()? != COMPOUND {
+            return None;
+        }
+        Some(Self(decode1(n)?))
+    }
+}
+
+impl Write for UnamedCompound {
+    #[inline]
+    fn write(&self, w: &mut UnsafeWriter) {
+        w.write_byte(COMPOUND);
+        self.0.write(w);
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        1 + Write::len(&self.0)
+    }
+}
+
+impl From<Compound> for UnamedCompound {
+    #[inline]
+    fn from(value: Compound) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Compound> for NamedCompound {
+    #[inline]
+    fn from(value: Compound) -> Self {
+        Self(String::new(), value)
+    }
+}
+
 impl<K: ToString, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
+    #[inline]
     fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
         Self(
             iter.into_iter()
@@ -306,8 +335,13 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<(Box<str>, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (Box<str>, Tag)> {
         self.0.iter()
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (Box<str>, Tag)> {
+        self.0.iter_mut()
     }
 
     #[inline]
@@ -344,21 +378,22 @@ impl Compound {
         self.0.push((k.into(), v.into()));
     }
 
+    #[deprecated]
     #[inline]
-    pub fn decode(n: &mut &[u8]) -> Option<Self> {
-        if n.u8()? != COMPOUND {
-            return None;
+    pub fn decode(buf: &mut &[u8]) -> Option<Self> {
+        match UnamedCompound::read(buf) {
+            Some(x) => Some(x.0),
+            None => None,
         }
-
-        decode1(n)
     }
 
+    #[deprecated]
     #[inline]
-    pub fn decode_named(n: &mut &[u8]) -> Option<(String, Self)> {
-        if n.u8()? != COMPOUND {
-            return None;
+    pub fn decode_named(buf: &mut &[u8]) -> Option<(String, Self)> {
+        match NamedCompound::read(buf) {
+            Some(x) => Some((x.0, x.1)),
+            None => None,
         }
-        Some((decode_string(n)?, decode1(n)?))
     }
 
     #[inline]
@@ -403,7 +438,7 @@ impl Compound {
 impl Read for Compound {
     #[inline]
     fn read(buf: &mut &[u8]) -> Option<Self> {
-        Self::decode(buf)
+        decode1(buf)
     }
 }
 
@@ -414,7 +449,7 @@ impl From<Vec<(Box<str>, Tag)>> for Compound {
     }
 }
 
-pub fn decode1(n: &mut &[u8]) -> Option<Compound> {
+fn decode1(n: &mut &[u8]) -> Option<Compound> {
     let mut compound = Compound(Default::default());
     loop {
         match n.u8()? {
@@ -460,7 +495,7 @@ pub fn decode1(n: &mut &[u8]) -> Option<Compound> {
                 let k = decode_string(n)?;
                 let id = n.u8()?;
                 let len = n.i32()? as usize;
-                compound.push(k, decode2(n, id, len)?);
+                compound.push(k, list::decode2(n, id, len)?);
             }
             COMPOUND => {
                 let k = decode_string(n)?;
@@ -492,326 +527,12 @@ pub fn decode1(n: &mut &[u8]) -> Option<Compound> {
     }
 }
 
-#[derive(Clone)]
-pub enum List {
-    None,
-    Byte(Vec<u8>),
-    Short(Vec<i16>),
-    Int(Vec<i32>),
-    Long(Vec<i64>),
-    Float(Vec<f32>),
-    Double(Vec<f64>),
-    String(Vec<Box<str>>),
-    ByteArray(Vec<Vec<u8>>),
-    IntArray(Vec<Vec<i32>>),
-    LongArray(Vec<Vec<i64>>),
-    List(Vec<Self>),
-    Compound(Vec<Compound>),
-}
-
-impl From<Vec<u8>> for List {
-    #[inline]
-    fn from(value: Vec<u8>) -> Self {
-        Self::Byte(value)
-    }
-}
-
-impl From<Vec<i16>> for List {
-    #[inline]
-    fn from(value: Vec<i16>) -> Self {
-        Self::Short(value)
-    }
-}
-
-impl From<Vec<i32>> for List {
-    #[inline]
-    fn from(value: Vec<i32>) -> Self {
-        Self::Int(value)
-    }
-}
-
-impl From<Vec<i64>> for List {
-    #[inline]
-    fn from(value: Vec<i64>) -> Self {
-        Self::Long(value)
-    }
-}
-
-impl From<Vec<f32>> for List {
-    #[inline]
-    fn from(value: Vec<f32>) -> Self {
-        Self::Float(value)
-    }
-}
-
-impl From<Vec<f64>> for List {
-    #[inline]
-    fn from(value: Vec<f64>) -> Self {
-        Self::Double(value)
-    }
-}
-
-impl From<Vec<Box<str>>> for List {
-    #[inline]
-    fn from(value: Vec<Box<str>>) -> Self {
-        Self::String(value)
-    }
-}
-
-impl From<Vec<Vec<u8>>> for List {
-    #[inline]
-    fn from(value: Vec<Vec<u8>>) -> Self {
-        Self::ByteArray(value)
-    }
-}
-
-impl From<Vec<Vec<i32>>> for List {
-    #[inline]
-    fn from(value: Vec<Vec<i32>>) -> Self {
-        Self::IntArray(value)
-    }
-}
-
-impl From<Vec<Vec<i64>>> for List {
-    #[inline]
-    fn from(value: Vec<Vec<i64>>) -> Self {
-        Self::LongArray(value)
-    }
-}
-
-impl From<Vec<List>> for List {
-    #[inline]
-    fn from(value: Vec<List>) -> Self {
-        Self::List(value)
-    }
-}
-
-impl From<Vec<Compound>> for List {
-    #[inline]
-    fn from(value: Vec<Compound>) -> Self {
-        Self::Compound(value)
-    }
-}
-
-impl Write for List {
-    fn write(&self, w: &mut UnsafeWriter) {
-        match self {
-            Self::None => w.write(&[END, 0, 0, 0, 0]),
-            Self::Byte(x) => {
-                w.write_byte(BYTE);
-                (x.len() as u32).write(w);
-                w.write(x);
-            }
-            Self::Short(x) => {
-                w.write_byte(SHORT);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
-            }
-            Self::Int(x) => {
-                w.write_byte(INT);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
-            }
-            Self::Long(x) => {
-                w.write_byte(LONG);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
-            }
-            Self::Float(x) => {
-                w.write_byte(FLOAT);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
-            }
-            Self::Double(x) => {
-                w.write_byte(DOUBLE);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
-            }
-            Self::String(x) => {
-                (STRING).write(w);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|x| MUTF8Tag(x.as_bytes()).write(w));
-            }
-            Self::ByteArray(x) => {
-                w.write_byte(BYTE_ARRAY);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|y| {
-                    (y.len() as u32).write(w);
-                    y.iter().for_each(|&z| z.write(w))
-                });
-            }
-            Self::IntArray(x) => {
-                w.write_byte(INT_ARRAY);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|y| {
-                    (y.len() as u32).write(w);
-                    y.iter().for_each(|&z| z.write(w))
-                });
-            }
-            Self::LongArray(x) => {
-                w.write_byte(LONG_ARRAY);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|y| {
-                    (y.len() as u32).write(w);
-                    y.iter().for_each(|&z| z.write(w))
-                });
-            }
-            Self::List(x) => {
-                w.write_byte(LIST);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|x| x.write(w));
-            }
-            Self::Compound(x) => {
-                (COMPOUND).write(w);
-                (x.len() as u32).write(w);
-                x.iter().for_each(|x| x.write(w));
-            }
-        }
-    }
-
-    fn len(&self) -> usize {
-        5 + match self {
-            Self::None => 0,
-            Self::Byte(x) => x.len(),
-            Self::Short(x) => x.len() * 2,
-            Self::Int(x) => x.len() * 4,
-            Self::Long(x) => x.len() * 8,
-            Self::Float(x) => x.len() * 4,
-            Self::Double(x) => x.len() * 8,
-            Self::String(x) => x
-                .iter()
-                .map(|x| MUTF8Tag(x.as_bytes()).len())
-                .sum::<usize>(),
-            Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
-            Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
-            Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
-            Self::List(x) => x.iter().map(|x| x.len()).sum::<usize>(),
-            Self::Compound(x) => x.iter().map(Write::len).sum::<usize>(),
-        }
-    }
-}
-
-pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Option<List> {
-    match id {
-        END => Some(List::None),
-        BYTE => Some(List::Byte(n.slice(len)?.to_vec())),
-        SHORT => {
-            let mut slice = n.slice(len << 1)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.i16()?);
-            }
-            Some(List::Short(v))
-        }
-        INT => {
-            let mut slice = n.slice(len << 2)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.i32()?);
-            }
-            Some(List::Int(v))
-        }
-        LONG => {
-            let mut slice = n.slice(len << 3)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.i64()?);
-            }
-            Some(List::Long(v))
-        }
-        FLOAT => {
-            let mut slice = n.slice(len << 2)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.f32()?);
-            }
-            Some(List::Float(v))
-        }
-        DOUBLE => {
-            let mut slice = n.slice(len << 3)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.f64()?);
-            }
-            Some(List::Double(v))
-        }
-        BYTE_ARRAY => {
-            if len * 4 > n.len() {
-                return None;
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let len = n.i32()? as usize;
-                let slice = n.slice(len)?;
-                list.push(slice.to_vec());
-            }
-            Some(List::ByteArray(list))
-        }
-        STRING => {
-            if len * 2 > n.len() {
-                return None;
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let v = decode_string(n)?.into_boxed_str();
-                list.push(v);
-            }
-            Some(List::String(list))
-        }
-        LIST => {
-            if len << 2 > n.len() {
-                return None;
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let id = n.u8()?;
-                let len = n.i32()? as usize;
-                list.push(decode2(n, id, len)?);
-            }
-            Some(List::List(list))
-        }
-        COMPOUND => {
-            if len > n.len() {
-                return None;
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                list.push(decode1(n)?);
-            }
-            Some(List::Compound(list))
-        }
-        INT_ARRAY => {
-            if len * 4 > n.len() {
-                return None;
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let len = n.i32()? as usize;
-                let mut slice = n.slice(len << 2)?;
-                let mut v = Vec::with_capacity(len);
-                for _ in 0..len {
-                    v.push(slice.i32()?);
-                }
-                list.push(v);
-            }
-            Some(List::IntArray(list))
-        }
-        LONG_ARRAY => {
-            if len * 4 > n.len() {
-                return None;
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let len = n.i32()? as usize;
-                let mut slice = n.slice(len * 8)?;
-                let mut v = Vec::with_capacity(len);
-                for _ in 0..len {
-                    v.push(slice.i64()?);
-                }
-                list.push(v);
-            }
-            Some(List::LongArray(list))
-        }
-        _ => None,
+#[inline]
+pub fn decode_string(b: &mut &[u8]) -> Option<String> {
+    let len = b.u16()? as usize;
+    let a = b.slice(len)?;
+    match simdutf8::basic::from_utf8(a) {
+        Ok(n) => Some(String::from(n)),
+        Err(_) => mutf8::decode(a),
     }
 }

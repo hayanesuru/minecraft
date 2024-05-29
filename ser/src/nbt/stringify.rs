@@ -1,4 +1,4 @@
-use super::nbt::*;
+use super::{Compound, List, Tag};
 use crate::{parse_float, parse_int, Bytes};
 use alloc::string::String;
 use alloc::vec;
@@ -7,19 +7,19 @@ use core::hint::unreachable_unchecked;
 
 #[derive(Clone, Default)]
 #[repr(transparent)]
-pub struct Snbt(pub Compound);
+pub struct StringifyCompound(pub Compound);
 
-impl From<Compound> for Snbt {
+impl From<Compound> for StringifyCompound {
     #[inline]
     fn from(value: Compound) -> Self {
         Self(value)
     }
 }
 
-impl Snbt {
+impl StringifyCompound {
     #[inline]
     pub fn decode(n: &str) -> Option<Self> {
-        unsafe { decode(&mut n.as_bytes()).map(Snbt) }
+        unsafe { decode(&mut n.as_bytes()).map(Self) }
     }
 
     #[inline]
