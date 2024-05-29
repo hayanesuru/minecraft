@@ -16,6 +16,15 @@ use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::{parenthesized, parse_macro_input, Expr, Lifetime, Lit, Token, Type, TypeParam};
 
+#[proc_macro]
+pub fn nbt(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = token.to_string();
+    let output = mser::Snbt::decode(&input).unwrap().0;
+    let data = mser::boxed(&output);
+    let datastr = format!("{data:?}");
+    core::str::FromStr::from_str(&datastr).unwrap()
+}
+
 #[proc_macro_derive(Writable, attributes(ser))]
 pub fn writable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
@@ -288,11 +297,10 @@ impl Parse for BasicType {
         let ty = if lookahead.peek(kw::u8) {
             input.parse::<kw::u8>()?;
             BasicType::U8
-        }else if lookahead.peek(kw::u16) {
+        } else if lookahead.peek(kw::u16) {
             input.parse::<kw::u16>()?;
             BasicType::U16
-        }
-         else if lookahead.peek(kw::v32) {
+        } else if lookahead.peek(kw::v32) {
             input.parse::<kw::v32>()?;
             BasicType::V32
         } else if lookahead.peek(kw::v21) {

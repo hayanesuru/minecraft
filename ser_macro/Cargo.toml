@@ -1,6 +1,6 @@
 [package]
 name = "mser_macro"
-version = "1.0.8"
+version = "1.0.9"
 description = "mser_macro"
 authors.workspace = true
 readme.workspace = true
@@ -15,3 +15,4 @@ proc-macro = true
 syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
+mser = { workspace = true }
