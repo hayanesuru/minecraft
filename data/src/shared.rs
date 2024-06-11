@@ -1,22 +1,21 @@
-use crate::cold__;
-use mser::nbt::{Compound, Tag};
-
 pub fn read_block_state(
-    n: &Compound,
+    n: &mser::nbt::Compound,
     buf: &mut [(block_state_property_key, block_state_property_value); 16],
 ) -> block_state {
     let block = match n.find("Name") {
-        Some(Tag::String(x)) if x.as_bytes().starts_with(b"minecraft:") => match x.get(10..) {
-            Some(x) => block::parse(x.as_bytes()).unwrap_or(block::air),
-            None => block::air,
-        },
+        Some(mser::nbt::Tag::String(x)) if x.as_bytes().starts_with(b"minecraft:") => {
+            match x.get(10..) {
+                Some(x) => block::parse(x.as_bytes()).unwrap_or(block::air),
+                None => block::air,
+            }
+        }
         _ => block::air,
     };
     if block.props().is_empty() {
         return block.state_default();
     }
     let props = match n.find("Properties") {
-        Some(Tag::Compound(x)) => x,
+        Some(mser::nbt::Tag::Compound(x)) => x,
         _ => return block.state_default(),
     };
     let mut len = 0;
@@ -27,7 +26,7 @@ pub fn read_block_state(
             None => continue,
         };
         let v = match v {
-            Tag::String(v) => block_state_property_value::parse(v.as_bytes()),
+            mser::nbt::Tag::String(v) => block_state_property_value::parse(v.as_bytes()),
             _ => None,
         };
         let v = match v {
@@ -136,11 +135,19 @@ impl core::fmt::Display for block_state {
 impl block_state {
     #[inline]
     pub const fn to_block(self) -> block {
-        unsafe { ::core::mem::transmute(*BLOCK_STATE_TO_BLOCK.add(self.0 as usize)) }
+        unsafe {
+            block::new(raw_block::from_le_bytes(
+                *BLOCK_STATE_TO_BLOCK.add(self.0 as usize),
+            ))
+        }
     }
     #[inline]
     pub const fn to_fluid(self) -> fluid_state {
-        unsafe { ::core::mem::transmute(*FLUID_STATE.add(self.0 as usize)) }
+        unsafe {
+            fluid_state::new(raw_fluid_state::from_le_bytes(
+                *FLUID_STATE.add(self.0 as usize),
+            ))
+        }
     }
     #[inline]
     pub const fn luminance(self) -> u8 {
@@ -229,9 +236,9 @@ impl block_state {
     #[inline]
     pub const fn opacity(self) -> Option<u8> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() >> 4 })
@@ -240,20 +247,20 @@ impl block_state {
     #[inline]
     pub const fn solid(self) -> Option<bool> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 8 != 0 })
         }
     }
     #[inline]
-    pub const fn translucent(self) -> Option<bool> {
+    pub const fn transparent(self) -> Option<bool> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 4 != 0 })
@@ -262,9 +269,9 @@ impl block_state {
     #[inline]
     pub const fn full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 2 != 0 })
@@ -273,9 +280,9 @@ impl block_state {
     #[inline]
     pub const fn opaque_full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 1 != 0 })
@@ -284,9 +291,9 @@ impl block_state {
     #[inline]
     pub const fn side_solid_full(self) -> Option<u8> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>().add(1) })
@@ -295,9 +302,9 @@ impl block_state {
     #[inline]
     pub const fn side_solid_center(self) -> Option<u8> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>().add(2) })
@@ -306,9 +313,9 @@ impl block_state {
     #[inline]
     pub const fn side_solid_rigid(self) -> Option<u8> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>().add(3) })
@@ -317,26 +324,26 @@ impl block_state {
     #[inline]
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             let index = unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1 + 4).cast::<[u8; 2]>() };
-            let index = u16::from_ne_bytes(index) as usize;
+            let index = u16::from_le_bytes(index) as usize;
             Some(unsafe { *SHAPES.as_ptr().add(index) })
         }
     }
     #[inline]
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
-        let n = unsafe { u16::from_ne_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
+        let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
         if n == 0 {
-            cold__();
+            crate::cold__();
             None
         } else {
             let index = unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1 + 6).cast::<[u8; 2]>() };
-            let index = u16::from_ne_bytes(index) as usize;
+            let index = u16::from_le_bytes(index) as usize;
             Some(unsafe { *SHAPES.as_ptr().add(index) })
         }
     }
@@ -359,119 +366,65 @@ impl block {
     pub const fn hardness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>()
+            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr()
         }
     }
     #[inline]
     pub const fn blast_resistance(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(1)
+            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(1)
         }
     }
     #[inline]
     pub const fn slipperiness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(2)
+            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(2)
         }
     }
     #[inline]
     pub const fn velocity_multiplier(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(3)
+            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(3)
         }
     }
     #[inline]
     pub const fn jump_velocity_multiplier(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *BLOCK_SETTINGS.as_ptr().add(x).cast::<f32>().add(4)
+            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(4)
         }
     }
-}
-
-#[repr(u8)]
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum fluid_state {
-    empty,
-    flowing_water_falling_1,
-    flowing_water_falling_2,
-    flowing_water_falling_3,
-    flowing_water_falling_4,
-    flowing_water_falling_5,
-    flowing_water_falling_6,
-    flowing_water_falling_7,
-    flowing_water_falling_8,
-    flowing_water_1,
-    flowing_water_2,
-    flowing_water_3,
-    flowing_water_4,
-    flowing_water_5,
-    flowing_water_6,
-    flowing_water_7,
-    flowing_water_8,
-    water_falling,
-    water,
-    flowing_lava_falling_1,
-    flowing_lava_falling_2,
-    flowing_lava_falling_3,
-    flowing_lava_falling_4,
-    flowing_lava_falling_5,
-    flowing_lava_falling_6,
-    flowing_lava_falling_7,
-    flowing_lava_falling_8,
-    flowing_lava_1,
-    flowing_lava_2,
-    flowing_lava_3,
-    flowing_lava_4,
-    flowing_lava_5,
-    flowing_lava_6,
-    flowing_lava_7,
-    flowing_lava_8,
-    lava_falling,
-    lava,
 }
 
 impl fluid_state {
     #[inline]
-    pub const fn to_fluid(self) -> fluid {
-        match self as u8 {
-            0 => fluid::empty,
-            1..=16 => fluid::flowing_water,
-            17..=18 => fluid::water,
-            19..=34 => fluid::flowing_lava,
-            _ => fluid::lava,
+    pub const fn to_block(self) -> block_state {
+        unsafe {
+            block_state::new(raw_block_state::from_le_bytes(
+                *FLUID_STATE_TO_BLOCK
+                    .add(self as usize * ::core::mem::size_of::<raw_block_state>()),
+            ))
         }
     }
 
     #[inline]
-    pub const fn is_empty(self) -> bool {
-        matches!(self as u8, 0)
+    pub const fn level(self) -> u8 {
+        unsafe { *(*FLUID_STATE_LEVEL.add(self as usize)).as_ptr() }
     }
 
     #[inline]
-    pub const fn is_flowing_water(self) -> bool {
-        matches!(self as u8, 1..=16)
+    pub const fn falling(self) -> bool {
+        unsafe { *(*FLUID_STATE_FALLING.add(self as usize)).as_ptr() == 1 }
     }
 
     #[inline]
-    pub const fn is_water(self) -> bool {
-        matches!(self as u8, 17..=18)
-    }
-
-    #[inline]
-    pub const fn is_flowing_lava(self) -> bool {
-        matches!(self as u8, 19..=34)
-    }
-
-    #[inline]
-    pub const fn is_lava(self) -> bool {
-        matches!(self as u8, 35..=36)
+    pub const fn to_fluid(self) -> fluid {
+        unsafe { fluid::new(*(*FLUID_STATE_TO_FLUID.add(self as usize)).as_ptr()) }
     }
 }
-
 impl From<bool> for val_true_false {
     #[inline]
     fn from(value: bool) -> Self {
@@ -482,7 +435,6 @@ impl From<bool> for val_true_false {
         }
     }
 }
-
 impl From<val_true_false> for bool {
     #[inline]
     fn from(value: val_true_false) -> Self {

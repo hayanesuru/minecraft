@@ -1,30 +1,30 @@
 #![no_std]
-#![allow(non_camel_case_types)]
+#![allow(non_camel_case_types, clippy::new_without_default, clippy::manual_map)]
 
 #[cfg(feature = "1_16")]
 pub mod v1_16 {
-    include!("shared.rs");
     include!(concat!(env!("OUT_DIR"), "/1.16.5.rs"));
+    include!("shared.rs");
 }
 #[cfg(feature = "1_17")]
 pub mod v1_17 {
-    include!("shared.rs");
     include!(concat!(env!("OUT_DIR"), "/1.17.1.rs"));
+    include!("shared.rs");
 }
 #[cfg(feature = "1_18")]
 pub mod v1_18 {
-    include!("shared.rs");
     include!(concat!(env!("OUT_DIR"), "/1.18.2.rs"));
+    include!("shared.rs");
 }
 #[cfg(feature = "1_19")]
 pub mod v1_19 {
-    include!("shared.rs");
     include!(concat!(env!("OUT_DIR"), "/1.19.4.rs"));
+    include!("shared.rs");
 }
 #[cfg(feature = "1_20")]
 pub mod v1_20 {
-    include!("shared.rs");
     include!(concat!(env!("OUT_DIR"), "/1.20.6.rs"));
+    include!("shared.rs");
 }
 
 #[macro_export]

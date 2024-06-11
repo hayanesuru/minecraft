@@ -4,6 +4,39 @@ use std::collections::HashMap;
 use std::env::var_os;
 use std::path::PathBuf;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Repr {
+    U32,
+    U16,
+    U8,
+}
+impl Repr {
+    const fn new(size: usize) -> Self {
+        if size > u16::MAX as usize {
+            Self::U32
+        } else if size > u8::MAX as usize {
+            Self::U16
+        } else {
+            Self::U8
+        }
+    }
+    #[inline]
+    const fn to_int(self) -> &'static str {
+        match self {
+            Self::U32 => "u32",
+            Self::U16 => "u16",
+            Self::U8 => "u8",
+        }
+    }
+    #[inline]
+    const fn to_arr(self) -> &'static str {
+        match self {
+            Self::U32 => "[u8; 4]",
+            Self::U16 => "[u8; 2]",
+            Self::U8 => "[u8; 1]",
+        }
+    }
+}
 fn main() {
     run("1.16.5");
     run("1.17.1");
@@ -93,15 +126,18 @@ fn run(version: &str) {
         } else {
             w += "let x = ::mser::Bytes::v32(n)?;\n";
             w += "let x = x as ";
-            w += repr;
+            w += repr.to_int();
             w += ";\n";
         }
         w += "if x > Self::MAX as ";
-        w += repr;
+        w += repr.to_int();
         w += " {\n";
         w += "crate::cold__();\nNone\n";
         w += "} else {\n";
-        w += "Some(unsafe { ::core::mem::transmute(x) }) }\n";
+        w += "Some(unsafe { ::core::mem::transmute::<";
+        w += repr.to_int();
+        w += ", Self>";
+        w += "(x) }) }\n";
         w += "}\n";
         w += "}\n";
     }
@@ -208,7 +244,7 @@ fn run(version: &str) {
             name += n;
         }
         let name = name.as_str();
-        let repr = gen_repr(x.len() - 1);
+        let repr = Repr::new(x.len() - 1);
         enum_head(&mut w, repr, name);
         for &n in &**x {
             if n == "true" || n == "false" {
@@ -308,7 +344,7 @@ fn run(version: &str) {
     w += ib.format(size);
     w += ";\n";
     w += "const K: [";
-    w += reprk;
+    w += reprk.to_int();
     w += "; ";
     w += ib.format(size);
     w += "] = [";
@@ -321,7 +357,7 @@ fn run(version: &str) {
     w += "];\n";
 
     w += "const V: [&'static [";
-    w += reprv;
+    w += reprv.to_int();
     w += "]; ";
     w += ib.format(size);
     w += "] = [";
@@ -342,7 +378,11 @@ fn run(version: &str) {
     w += "#[inline]\npub const fn key(self) -> ";
     w += namek;
     w += " {\n";
-    w += "unsafe { ::core::mem::transmute(*Self::K.as_ptr().add(self as usize)) }\n";
+    w += "unsafe { ::core::mem::transmute::<";
+    w += reprk.to_int();
+    w += ", ";
+    w += namek;
+    w += ">(*Self::K.as_ptr().add(self as usize)) }\n";
     w += "}\n";
 
     w += "#[inline]\npub const fn val(self) -> &'static [";
@@ -399,7 +439,7 @@ fn run(version: &str) {
         let bad = props[1..]
             .iter()
             .any(|&x| (kv[x as usize].len() - 1).count_ones() != 1);
-        let repr = gen_repr(size);
+        let repr = Repr::new(size);
         struct_head(&mut w, repr, name);
         w += "impl ";
         w += name;
@@ -411,14 +451,14 @@ fn run(version: &str) {
         if !bad {
             w += "#[inline]\n";
             w += "pub const fn encode(self) -> ";
-            w += repr;
+            w += repr.to_int();
             w += " {\n";
             w += "self.0\n";
             w += "}\n";
         } else {
             w += "#[inline]\n";
             w += "pub const fn encode(self) -> ";
-            w += repr;
+            w += repr.to_int();
             w += " {\n";
 
             let mut index = 1;
@@ -439,7 +479,7 @@ fn run(version: &str) {
                 w += k;
                 w += "()";
                 w += " as ";
-                w += repr;
+                w += repr.to_int();
                 if index != 1 {
                     w += " * ";
                     w += ib.format(index);
@@ -451,7 +491,7 @@ fn run(version: &str) {
         if !bad {
             w += "#[inline]\n";
             w += "pub const fn decode(n: ";
-            w += repr;
+            w += repr.to_int();
             w += ") -> Self {\n";
             w += "debug_assert!(n < ";
             w += ib.format(len);
@@ -460,7 +500,7 @@ fn run(version: &str) {
             w += "}\n";
         } else {
             w += "const M: [";
-            w += repr;
+            w += repr.to_int();
             w += "; ";
             w += ib.format(len);
             w += "] = [";
@@ -497,7 +537,7 @@ fn run(version: &str) {
             w += "];\n";
             w += "#[inline]\n";
             w += "pub const fn decode(n: ";
-            w += repr;
+            w += repr.to_int();
             w += ") -> Self {\n";
             w += "debug_assert!(n < ";
             w += ib.format(len);
@@ -513,11 +553,11 @@ fn run(version: &str) {
             let k = pk2[k_ as usize];
             let x = usize::BITS - (v.len() - 1).leading_zeros();
             let reprp = if x > 16 {
-                "u32"
+                Repr::U32
             } else if x > 8 {
-                "u16"
+                Repr::U16
             } else {
-                "u8"
+                Repr::U8
             };
             w += "#[inline]\n";
             w += "pub const fn ";
@@ -550,7 +590,7 @@ fn run(version: &str) {
             }
             if repr != reprp {
                 w += ") as ";
-                w += reprp;
+                w += reprp.to_int();
             }
             w += ") }";
             w += "\n}\n";
@@ -595,7 +635,7 @@ fn run(version: &str) {
             }
             w += k;
             w += " as ";
-            w += repr;
+            w += repr.to_int();
             if index != 0 {
                 w += ")";
             }
@@ -611,11 +651,11 @@ fn run(version: &str) {
         w += "}\n";
     }
 
-    let (bsname, size, _) = head(iter.next().unwrap());
+    let (bsname, bssize, _) = head(iter.next().unwrap());
     if bsname != "block_state" {
         panic!();
     }
-    if size != block_names.len() {
+    if bssize != block_names.len() {
         panic!();
     }
     let mut offsets = Vec::with_capacity(block_names.len());
@@ -665,11 +705,11 @@ fn run(version: &str) {
     }
 
     let bssize = y + 1;
-    let bsrepr = gen_repr(bssize);
+    let bsrepr = Repr::new(bssize);
 
     w += "impl block {\n";
     w += "const OFFSET: [";
-    w += bsrepr;
+    w += bsrepr.to_int();
     w += "; ";
     w += ib.format(block_names.len());
     w += "] = [";
@@ -682,7 +722,7 @@ fn run(version: &str) {
     w += "];\n";
 
     w += "const PROPS_INDEX: [";
-    w += gen_repr(block_state_properties.len() + 1);
+    w += Repr::new(block_state_properties.len() + 1).to_int();
     w += "; ";
     w += ib.format(block_names.len());
     w += "] = [";
@@ -695,7 +735,7 @@ fn run(version: &str) {
     w += "];\n";
 
     w += "const PROPS: [&'static [";
-    w += reprkv;
+    w += reprkv.to_int();
     w += "]; ";
     w += ib.format(block_state_properties.len() + 1);
     w += "] = [\n&[],\n";
@@ -715,7 +755,7 @@ fn run(version: &str) {
 
     w += "#[inline]\n";
     w += "pub const fn state_index(self) -> ";
-    w += bsrepr;
+    w += bsrepr.to_int();
     w += " {\n";
     w += "unsafe { *Self::OFFSET.as_ptr().add(self as usize) }\n";
     w += "}\n";
@@ -735,7 +775,7 @@ fn run(version: &str) {
         panic!();
     }
     w += "const DEFAULT: [";
-    w += bsrepr;
+    w += bsrepr.to_int();
     w += "; ";
     w += ib.format(block_names.len());
     w += "] = [";
@@ -776,16 +816,16 @@ fn run(version: &str) {
     w += ";\n";
     w += "#[inline]\n";
     w += "pub const fn new(n: ";
-    w += bsrepr;
+    w += bsrepr.to_int();
     w += ") -> Self {\n";
     w += "debug_assert!(n <= Self::MAX as ";
-    w += bsrepr;
+    w += bsrepr.to_int();
     w += ");\n";
     w += "Self(n)\n";
     w += "}\n";
     w += "#[inline]\n";
     w += "pub const fn id(self) -> ";
-    w += bsrepr;
+    w += bsrepr.to_int();
     w += " {\n";
     w += "self.0\n";
     w += "}\n";
@@ -927,9 +967,9 @@ fn run(version: &str) {
     w.pop();
     w += "];\n";
     let size = bsettingsl.len();
-    let repr = gen_repr(size);
+    let repr = Repr::new(size);
     w += "const BLOCK_SETTINGS_INDEX: [";
-    w += repr;
+    w += repr.to_int();
     w += "; ";
     w += ib.format(block_names.len());
     w += "] = [";
@@ -982,7 +1022,7 @@ fn run(version: &str) {
     if !name.starts_with("block_state_static_bounds_table") {
         panic!();
     }
-    assert_eq!(shape_repr, "u16");
+    assert_eq!(shape_repr, Repr::U16);
     w += "const BLOCK_STATE_BOUNDS: *const [u8; 8] = ";
     w += "unsafe { NAMES.as_ptr().add(";
     w += ib.format(wn.len());
@@ -1004,10 +1044,10 @@ fn run(version: &str) {
         wn.push(x);
         s = &s[y + 1..];
         let (x, y) = parse_hex::<u16>(s);
-        wn.extend(x.to_ne_bytes());
+        wn.extend(x.to_le_bytes());
         s = &s[y + 1..];
         let (x, _) = parse_hex::<u16>(s);
-        wn.extend(x.to_ne_bytes());
+        wn.extend(x.to_le_bytes());
     }
 
     let (name, size, _) = head(iter.next().unwrap());
@@ -1046,7 +1086,7 @@ fn run(version: &str) {
             };
             let n = if n.1 == 0 { 0 } else { n.0 + 1 };
             for _ in 0..count {
-                wn.extend(n.to_ne_bytes());
+                wn.extend(n.to_le_bytes());
                 x -= 1;
             }
         }
@@ -1071,7 +1111,7 @@ fn run(version: &str) {
             };
             let n = if n.1 == 0 { 0 } else { n.0 + 1 };
             for _ in 0..count {
-                wn.extend(n.to_ne_bytes());
+                wn.extend(n.to_le_bytes());
                 x -= 1;
             }
         }
@@ -1079,9 +1119,9 @@ fn run(version: &str) {
         unimplemented!()
     }
 
-    let reprblock = gen_repr(offsets.len());
+    let reprblock = Repr::new(offsets.len());
     w += "const BLOCK_STATE_TO_BLOCK: *const [u8; ";
-    if reprblock == "u16" {
+    if reprblock == Repr::U16 {
         w += "2";
     } else {
         w += "4";
@@ -1091,23 +1131,23 @@ fn run(version: &str) {
     w += ib.format(wn.len());
     w += ").cast() };\n";
 
-    if reprblock == "u16" {
+    if reprblock == Repr::U16 {
         for (index, &offset) in block_state.iter().enumerate() {
             if offset == 0 {
-                wn.extend((index as u16).to_ne_bytes());
+                wn.extend((index as u16).to_le_bytes());
             } else {
                 for _ in 0..properties_size[offset as usize - 1] {
-                    wn.extend((index as u16).to_ne_bytes());
+                    wn.extend((index as u16).to_le_bytes());
                 }
             }
         }
     } else {
         for (index, &offset) in block_state.iter().enumerate() {
             if offset == 0 {
-                wn.extend((index as u32).to_ne_bytes());
+                wn.extend((index as u32).to_le_bytes());
             } else {
                 for _ in 0..properties_size[offset as usize - 1] {
-                    wn.extend((index as u32).to_ne_bytes());
+                    wn.extend((index as u32).to_le_bytes());
                 }
             }
         }
@@ -1151,12 +1191,78 @@ fn run(version: &str) {
     w += "];\n";
 
     let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("fluid_to_block") {
+        panic!("{name}");
+    }
+    w += "const FLUID_STATE_TO_BLOCK: *const ";
+    w += bsrepr.to_arr();
+    w += " = unsafe { NAMES.as_ptr().add(";
+    w += ib.format(wn.len());
+    w += ").cast() };\n";
+    for _ in 0..size {
+        let next = iter.next().unwrap().as_bytes();
+        let (n, _) = parse_hex::<u32>(next);
+        match bsrepr {
+            Repr::U32 => wn.extend(n.to_le_bytes()),
+            Repr::U16 => wn.extend((n as u16).to_le_bytes()),
+            Repr::U8 => wn.push(n as u8),
+        }
+    }
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("fluid_state_level") {
+        panic!("{name}");
+    }
+    w += "const FLUID_STATE_LEVEL: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
+    w += ib.format(wn.len());
+    w += ").cast() };\n";
+    for _ in 0..size {
+        let next = iter.next().unwrap().as_bytes();
+        let (n, _) = parse_hex::<u8>(next);
+        wn.push(n);
+    }
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("fluid_state_falling") {
+        panic!("{name}");
+    }
+    w += "const FLUID_STATE_FALLING: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
+    w += ib.format(wn.len());
+    w += ").cast() };\n";
+    for _ in 0..size {
+        let next = iter.next().unwrap().as_bytes();
+        let (n, _) = parse_hex::<u8>(next);
+        wn.push(n);
+    }
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("fluid_state_to_fluid") {
+        panic!("{name}");
+    }
+    w += "const FLUID_STATE_TO_FLUID: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
+    w += ib.format(wn.len());
+    w += ").cast() };\n";
+    for _ in 0..size {
+        let next = iter.next().unwrap().as_bytes();
+        let (n, _) = parse_hex::<u8>(next);
+        wn.push(n);
+    }
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
     if !name.starts_with("block_to_fluid_state") {
         panic!("{name}");
     }
-    w += "const FLUID_STATE: *const u8 = unsafe { NAMES.as_ptr().add(";
+
+    w += "const FLUID_STATE: *const ";
+    w += "[u8; 1]";
+    w += " = unsafe { NAMES.as_ptr().add(";
     w += ib.format(wn.len());
-    w += ") };\n";
+    w += ").cast() };\n";
     let mut x = size;
     loop {
         if x == 0 {
@@ -1175,7 +1281,9 @@ fn run(version: &str) {
                 (n.0, 1)
             }
         };
-        wn.extend(core::iter::repeat(n).take(count));
+        for _ in 0..count {
+            wn.push(n);
+        }
         x -= count;
     }
     w += "const NAMES: &[u8; ";
@@ -1188,7 +1296,7 @@ fn run(version: &str) {
     std::fs::write(out.join(version.to_owned() + ".bin"), wn.as_slice()).unwrap();
 }
 
-fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: &str, name: &str) {
+fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str) {
     enum_head(w, repr, name);
     if name == "sound_event" || name == "attribute" {
         for &data in zhash {
@@ -1231,7 +1339,7 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: &str, name: &str)
     *w += "\n}\n}\n";
 }
 
-fn head(raw: &str) -> (&str, usize, &'static str) {
+fn head(raw: &str) -> (&str, usize, Repr) {
     let (x, first) = raw.split_at(1);
     if x != ";" {
         unreachable!("{raw}");
@@ -1239,15 +1347,15 @@ fn head(raw: &str) -> (&str, usize, &'static str) {
     let (name, size) = first.split_once(';').unwrap();
     let (size, _) = parse_hex::<u32>(size.as_bytes());
     let size = size as usize;
-    let repr = gen_repr(size);
+    let repr = Repr::new(size);
     (name, size, repr)
 }
 
-fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: &str, names: &[&str]) {
+fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
     let mut ib = itoa::Buffer::new();
 
     *w += "const M: crate::NameMap<";
-    *w += repr;
+    *w += repr.to_int();
     *w += "> = crate::NameMap { key: [";
 
     let state = generate_hash(names);
@@ -1288,11 +1396,11 @@ fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: &str, names: &[&str]) {
     w2.reserve(names.len() * 16);
     let mut offset = names.len() * 4;
     for val in names {
-        w2.extend(u32::try_from(offset).unwrap().to_ne_bytes());
+        w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
         offset += val.len() + 2;
     }
     for val in names {
-        w2.extend(u16::try_from(val.len()).unwrap().to_ne_bytes());
+        w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
         w2.extend(val.as_bytes());
     }
     *w += "const N: *const u8 = ";
@@ -1306,61 +1414,53 @@ fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: &str, names: &[&str]) {
     *w += ";\n";
 }
 
-const fn gen_repr(size: usize) -> &'static str {
-    if size > u16::MAX as usize {
-        "u32"
-    } else if size > u8::MAX as usize {
-        "u16"
-    } else {
-        "u8"
-    }
-}
-
-fn enum_head(w: &mut String, repr: &str, name: &str) {
+fn enum_head(w: &mut String, repr: Repr, name: &str) {
     if !name.starts_with('_') && name != "biome" && name != "dimension" {
         *w += "pub type raw_";
         *w += name;
         *w += " = ";
-        *w += repr;
+        *w += repr.to_int();
         *w += ";\n";
     }
     *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
     *w += "#[repr(";
-    *w += repr;
+    *w += repr.to_int();
     *w += ")]\n";
     *w += "pub enum ";
     *w += name;
     *w += " {\n";
 }
 
-fn enum_foot(w: &mut String, repr: &str, name: &str) {
+fn enum_foot(w: &mut String, repr: Repr, name: &str) {
     *w += "}\nimpl ";
     *w += name;
     *w += " {
 #[inline]
 pub const fn id(self) -> ";
-    *w += repr;
+    *w += repr.to_int();
     *w += " {\nself as ";
-    *w += repr;
+    *w += repr.to_int();
     *w += "\n}\n";
     *w += "#[inline]\n";
     *w += "pub const fn new(x: ";
-    *w += repr;
+    *w += repr.to_int();
     *w += ") -> Self {\n";
     *w += "debug_assert!(x <= Self::MAX as ";
-    *w += repr;
+    *w += repr.to_int();
     *w += ");\n";
-    *w += "unsafe { ::core::mem::transmute(x) }\n";
+    *w += "unsafe { ::core::mem::transmute::<";
+    *w += repr.to_int();
+    *w += ", Self>(x) }\n";
     *w += "}\n";
     *w += "}\n";
 }
 
-fn struct_head(w: &mut String, repr: &str, name: &str) {
+fn struct_head(w: &mut String, repr: Repr, name: &str) {
     if !name.starts_with('_') {
         *w += "pub type raw_";
         *w += name;
         *w += " = ";
-        *w += repr;
+        *w += repr.to_int();
         *w += ";\n";
     }
     *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
@@ -1368,7 +1468,7 @@ fn struct_head(w: &mut String, repr: &str, name: &str) {
     *w += "pub struct ";
     *w += name;
     *w += "(";
-    *w += repr;
+    *w += repr.to_int();
     *w += ");\n";
 }
 
@@ -1385,15 +1485,17 @@ fn impl_name(w: &mut String, name: &str) {
 #[inline]
 pub const fn name(self) -> &'static str {
 unsafe {
-let offset = u32::from_ne_bytes(*Self::N.add(4 * self as usize).cast::<[u8; 4]>());
-let len = u16::from_ne_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as usize;
+let offset = u32::from_le_bytes(*Self::N.add(4 * self as usize).cast::<[u8; 4]>());
+let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as usize;
 ::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset as usize + 2), len))
 }
 }
 #[inline]
 pub fn parse(name: &[u8]) -> Option<Self> {
 match Self::M.get(name) {
-Some(x) => unsafe { ::core::mem::transmute(x) },
+Some(x) => unsafe { Some(::core::mem::transmute::<raw_";
+    *w += name;
+    *w += ", Self>(x)) },
 None => None,
 }
 }
