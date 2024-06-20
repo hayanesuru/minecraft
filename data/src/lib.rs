@@ -98,3 +98,25 @@ impl NameMap<u8> {
         }
     }
 }
+
+pub type raw_props_nil = ();
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct props_nil;
+
+impl props_nil {
+    #[inline]
+    pub const fn new() -> Self {
+        Self
+    }
+
+    #[inline]
+    pub const fn encode(self) -> u8 {
+        0
+    }
+
+    #[inline]
+    pub const fn decode(_: u8) -> Self {
+        Self
+    }
+}

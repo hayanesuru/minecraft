@@ -694,7 +694,7 @@ fn run(version: &str) {
                 block_state.push(0);
                 w += "pub type ";
                 w += x.next().unwrap();
-                w += " = ();\n";
+                w += " = crate::props_nil;\n";
             }
         } else {
             for _ in 0..count {
