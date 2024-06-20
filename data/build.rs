@@ -38,10 +38,15 @@ impl Repr {
     }
 }
 fn main() {
+    #[cfg(feature = "1_16")]
     run("1.16.5");
+    #[cfg(feature = "1_17")]
     run("1.17.1");
+    #[cfg(feature = "1_18")]
     run("1.18.2");
+    #[cfg(feature = "1_19")]
     run("1.19.4");
+    #[cfg(feature = "1_20")]
     run("1.20.6");
 }
 
