@@ -692,7 +692,9 @@ fn run(version: &str) {
                 offsets.push(y as u32);
                 y += 1;
                 block_state.push(0);
-                x.next().unwrap();
+                w += "pub type ";
+                w += x.next().unwrap();
+                w += " = ();\n";
             }
         } else {
             for _ in 0..count {
