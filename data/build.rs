@@ -454,14 +454,14 @@ fn run(version: &str) {
         w += "Self(0)\n";
         w += "}\n";
         if !bad {
-            w += "#[inline]\n";
+            w += "#[inline]\n#[must_use]\n";
             w += "pub const fn encode(self) -> ";
             w += repr.to_int();
             w += " {\n";
             w += "self.0\n";
             w += "}\n";
         } else {
-            w += "#[inline]\n";
+            w += "#[inline]\n#[must_use]\n";
             w += "pub const fn encode(self) -> ";
             w += repr.to_int();
             w += " {\n";
@@ -1432,7 +1432,7 @@ fn enum_head(w: &mut String, repr: Repr, name: &str) {
     *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
     *w += "#[repr(";
     *w += repr.to_int();
-    *w += ")]\n";
+    *w += ")]\n#[must_use]\n";
     *w += "pub enum ";
     *w += name;
     *w += " {\n";
@@ -1448,7 +1448,7 @@ pub const fn id(self) -> ";
     *w += " {\nself as ";
     *w += repr.to_int();
     *w += "\n}\n";
-    *w += "#[inline]\n";
+    *w += "#[inline]\n#[must_use]\n";
     *w += "pub const fn new(x: ";
     *w += repr.to_int();
     *w += ") -> Self {\n";
@@ -1471,7 +1471,7 @@ fn struct_head(w: &mut String, repr: Repr, name: &str) {
         *w += ";\n";
     }
     *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
-    *w += "#[repr(transparent)]\n";
+    *w += "#[repr(transparent)]\n#[must_use]\n";
     *w += "pub struct ";
     *w += name;
     *w += "(";
@@ -1490,6 +1490,7 @@ fn impl_name(w: &mut String, name: &str) {
     *w += name;
     *w += " {
 #[inline]
+#[must_use]
 pub const fn name(self) -> &'static str {
 unsafe {
 let offset = u32::from_le_bytes(*Self::N.add(4 * self as usize).cast::<[u8; 4]>());
