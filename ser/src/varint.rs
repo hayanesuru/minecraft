@@ -26,20 +26,16 @@ impl Read for V21 {
                 *buf = c;
                 Some(Self((a & 0x7F) as u32 | (b as u32) << 7))
             }
-            [a, b, c, ref d @ ..] if (c & 0x80) == 0 => {
-                *buf = d;
-                Some(Self(
-                    (a & 0x7F) as u32 | ((b & 0x7F) as u32) << 7 | (c as u32) << 14,
-                ))
-            }
-            [a, b, c, 0x00, ref d @ ..] => {
-                *buf = d;
-                Some(Self(
-                    (a & 0x7F) as u32 | ((b & 0x7F) as u32) << 7 | (c as u32) << 14,
-                ))
-            }
-            [a, b, c, 0x80, 0x00, ref d @ ..] => {
-                *buf = d;
+            [a, b, c, ref d @ ..] => {
+                if (c & 0x80) == 0 {
+                    *buf = d;
+                } else if let [0x00, ref e @ ..] = d {
+                    *buf = e;
+                } else if let [0x80, 0x00, ref e @ ..] = d {
+                    *buf = e;
+                } else {
+                    return None;
+                }
                 Some(Self(
                     (a & 0x7F) as u32 | ((b & 0x7F) as u32) << 7 | (c as u32) << 14,
                 ))
