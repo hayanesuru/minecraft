@@ -64,6 +64,13 @@ pub fn boxed(x: &(impl Write + ?Sized)) -> alloc::boxed::Box<[u8]> {
     vec.into_boxed_slice()
 }
 
+/// # Safety
+pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
+    let mut w = UnsafeWriter(ptr);
+    Write::write(x, &mut w);
+    unsafe { debug_assert_eq!(w.0, ptr.add(x.sz())) }
+}
+
 pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
     let len = x.sz();
     vec.reserve(len);
