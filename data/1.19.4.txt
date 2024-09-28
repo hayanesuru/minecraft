@@ -55,7 +55,7 @@ SpectatorTeleport
 PlayerInteractBlock
 PlayerInteractItem
 ;play_s2c;6f
-Object
+BundleDelimiter
 EntitySpawn
 ExperienceOrbSpawn
 PlayerSpawn

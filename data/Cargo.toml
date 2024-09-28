@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "1.3.0"
+version = "1.3.1"
 description = "minecraft_data"
 edition.workspace = true
 authors.workspace = true
@@ -13,7 +13,7 @@ documentation = "https://docs.rs/minecraft_data"
 
 [features]
 default = ["std", "1_16"]
-std = ["highway/std"]
+std = ["highway/std", "mser/std"]
 1_16 = []
 1_17 = []
 1_18 = []
@@ -22,8 +22,7 @@ std = ["highway/std"]
 
 [dependencies]
 highway = { version = "1", default-features = false }
-mser = { workspace = true }
-mser_macro = { workspace = true }
+mser = { workspace = true, default-features = false }
 
 [build-dependencies]
 mser = { workspace = true }
