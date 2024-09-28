@@ -53,7 +53,7 @@ impl<T: Write + ?Sized> Add<&T> for UnsafeWriter {
 }
 
 #[must_use]
-pub fn boxed(x: &impl Write) -> alloc::boxed::Box<[u8]> {
+pub fn boxed(x: &(impl Write + ?Sized)) -> alloc::boxed::Box<[u8]> {
     let len = x.sz();
     let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
     let mut w = UnsafeWriter(vec.as_mut_ptr());
@@ -64,7 +64,7 @@ pub fn boxed(x: &impl Write) -> alloc::boxed::Box<[u8]> {
     vec.into_boxed_slice()
 }
 
-pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &impl Write) {
+pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
     let len = x.sz();
     vec.reserve(len);
     let mut w = unsafe { UnsafeWriter(vec.as_mut_ptr().add(vec.len())) };
@@ -73,7 +73,7 @@ pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &impl Write) {
     unsafe { vec.set_len(len + vec.len()) };
 }
 
-pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &impl Write) {
+pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
     let len = x.sz();
     vec.reserve_exact(len);
     let mut w = unsafe { UnsafeWriter(vec.as_mut_ptr().add(vec.len())) };
