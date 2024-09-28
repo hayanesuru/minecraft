@@ -39,7 +39,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
             let (a, b) = match attrs.prefix {
                 Some(ref x) => (
                     quote!(::mser::Write::write(&#x, w);),
-                    quote!(::mser::Write::len(&#x) #(+ #needed)*),
+                    quote!(::mser::Write::sz(&#x) #(+ #needed)*),
                 ),
                 None => (quote!(), quote!(#(#needed)+*)),
             };
@@ -175,8 +175,8 @@ fn needed_body(field: &Field) -> TokenStream {
         quote!(self.#name)
     };
     let needed = match field.len_type.unwrap_or(DEFAULT_LENGTH_TYPE) {
-        BasicType::V32 => quote!(::mser::Write::len(&::mser::V32(#name.len() as u32)) + ),
-        BasicType::V21 => quote!(::mser::Write::len(&::mser::V21(#name.len() as u32)) + ),
+        BasicType::V32 => quote!(::mser::Write::sz(&::mser::V32(#name.len() as u32)) + ),
+        BasicType::V21 => quote!(::mser::Write::sz(&::mser::V21(#name.len() as u32)) + ),
         BasicType::U8 => quote!(1 + ),
         BasicType::U16 => quote!(2 + ),
         BasicType::None => quote!(),
@@ -187,7 +187,7 @@ fn needed_body(field: &Field) -> TokenStream {
             quote!(#needed #name.len())
         }
         Ty::RefSliceStr => {
-            quote! {#needed ::mser::Write::len(#name) }
+            quote! {#needed ::mser::Write::sz(#name) }
         }
         Ty::HashMap(..)
         | Ty::HashSet(..)
@@ -197,42 +197,42 @@ fn needed_body(field: &Field) -> TokenStream {
         | Ty::CowHashSet(..)
         | Ty::CowBTreeMap(..)
         | Ty::CowBTreeSet(..)
-        | Ty::Array(..) => quote!(#needed ::mser::Write::len(#name)),
+        | Ty::Array(..) => quote!(#needed ::mser::Write::sz(#name)),
         Ty::Primitive(PrimitiveTy::I32) if field.varint => {
-            quote!(::mser::Write::len(&::mser::V32(#name as u32)))
+            quote!(::mser::Write::sz(&::mser::V32(#name as u32)))
         }
         Ty::Primitive(PrimitiveTy::U32) if field.varint => {
-            quote!(::mser::Write::len(&::mser::V32(#name)))
+            quote!(::mser::Write::sz(&::mser::V32(#name)))
         }
         Ty::Primitive(PrimitiveTy::I64) if field.varint => {
-            quote!(::mser::Write::len(&::mser::V64(#name as u64)))
+            quote!(::mser::Write::sz(&::mser::V64(#name as u64)))
         }
         Ty::Primitive(PrimitiveTy::U64) if field.varint => {
-            quote!(::mser::Write::len(&::mser::V64(#name)))
+            quote!(::mser::Write::sz(&::mser::V64(#name)))
         }
-        Ty::Type(syn::Type::Reference(..)) if !field.expand => quote!(::mser::Write::len(#name)),
+        Ty::Type(syn::Type::Reference(..)) if !field.expand => quote!(::mser::Write::sz(#name)),
         _ if !field.expand => {
-            quote!(::mser::Write::len(&#name))
+            quote!(::mser::Write::sz(&#name))
         }
         _ => {
             let len = if let Ty::RefSlice(ty) = field.ty.inner() {
                 if let Ty::Primitive(x) = crate::parse_ty(ty) {
                     if field.varint {
                         match x {
-                            PrimitiveTy::U32 => quote!(::mser::Write::len(&::mser::V32(*x))),
-                            PrimitiveTy::U64 => quote!(::mser::Write::len(&::mser::V64(*x))),
-                            PrimitiveTy::I32 => quote!(::mser::Write::len(&::mser::V32(*x as u32))),
-                            PrimitiveTy::I64 => quote!(::mser::Write::len(&::mser::V64(*x as u64))),
+                            PrimitiveTy::U32 => quote!(::mser::Write::sz(&::mser::V32(*x))),
+                            PrimitiveTy::U64 => quote!(::mser::Write::sz(&::mser::V64(*x))),
+                            PrimitiveTy::I32 => quote!(::mser::Write::sz(&::mser::V32(*x as u32))),
+                            PrimitiveTy::I64 => quote!(::mser::Write::sz(&::mser::V64(*x as u64))),
                             _ => unimplemented!(),
                         }
                     } else {
-                        quote!(::mser::Write::len(x))
+                        quote!(::mser::Write::sz(x))
                     }
                 } else {
-                    quote!(::mser::Write::len(x))
+                    quote!(::mser::Write::sz(x))
                 }
             } else {
-                quote!(::mser::Write::len(x))
+                quote!(::mser::Write::sz(x))
             };
             quote! {#needed {
                 let mut a___ = 0usize;
@@ -256,7 +256,7 @@ fn needed_body(field: &Field) -> TokenStream {
         q
     };
     if let Some(ref add) = field.add {
-        quote!(::mser::Write::len(&#add) + #x)
+        quote!(::mser::Write::sz(&#add) + #x)
     } else {
         x
     }
