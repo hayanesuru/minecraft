@@ -35,14 +35,14 @@ pub trait Read: Sized {
     fn read(buf: &mut &[u8]) -> Option<Self>;
 }
 
-impl<T: Write> AddAssign<&T> for UnsafeWriter {
+impl<T: Write + ?Sized> AddAssign<&T> for UnsafeWriter {
     #[inline]
     fn add_assign(&mut self, rhs: &T) {
         rhs.write(self);
     }
 }
 
-impl<T: Write> Add<&T> for UnsafeWriter {
+impl<T: Write + ?Sized> Add<&T> for UnsafeWriter {
     type Output = Self;
 
     #[inline]
