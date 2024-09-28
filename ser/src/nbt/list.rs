@@ -1,8 +1,10 @@
 use super::{
-    decode_string, Compound, UTF8Tag, BYTE, BYTE_ARRAY, COMPOUND, DOUBLE, END, FLOAT, INT, INT_ARRAY, LIST, LONG, LONG_ARRAY, SHORT, STRING
+    decode_string, Compound, UTF8Tag, BYTE, BYTE_ARRAY, COMPOUND, DOUBLE, END, FLOAT, INT,
+    INT_ARRAY, LIST, LONG, LONG_ARRAY, SHORT, STRING,
 };
 use crate::{Bytes, UnsafeWriter, Write};
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 #[derive(Clone)]
 pub enum List {
@@ -117,27 +119,27 @@ impl Write for List {
             Self::Short(x) => {
                 w.write_byte(SHORT);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
+                x.iter().write(w);
             }
             Self::Int(x) => {
                 w.write_byte(INT);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
+                x.iter().write(w);
             }
             Self::Long(x) => {
                 w.write_byte(LONG);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
+                x.iter().write(w);
             }
             Self::Float(x) => {
                 w.write_byte(FLOAT);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
+                x.iter().write(w);
             }
             Self::Double(x) => {
                 w.write_byte(DOUBLE);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|&x| x.write(w));
+                x.iter().write(w);
             }
             Self::String(x) => unsafe {
                 (STRING).write(w);
@@ -150,7 +152,7 @@ impl Write for List {
                 (x.len() as u32).write(w);
                 x.iter().for_each(|y| {
                     (y.len() as u32).write(w);
-                    y.iter().for_each(|&z| z.write(w))
+                    y.iter().write(w);
                 });
             }
             Self::IntArray(x) => {
@@ -158,7 +160,7 @@ impl Write for List {
                 (x.len() as u32).write(w);
                 x.iter().for_each(|y| {
                     (y.len() as u32).write(w);
-                    y.iter().for_each(|&z| z.write(w))
+                    y.iter().write(w);
                 });
             }
             Self::LongArray(x) => {
@@ -166,23 +168,23 @@ impl Write for List {
                 (x.len() as u32).write(w);
                 x.iter().for_each(|y| {
                     (y.len() as u32).write(w);
-                    y.iter().for_each(|&z| z.write(w))
+                    y.iter().write(w);
                 });
             }
             Self::List(x) => {
                 w.write_byte(LIST);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|x| x.write(w));
+                x.iter().write(w);
             }
             Self::Compound(x) => {
                 (COMPOUND).write(w);
                 (x.len() as u32).write(w);
-                x.iter().for_each(|x| x.write(w));
+                x.iter().write(w);
             }
         }
     }
 
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         5 + match self {
             Self::None => 0,
             Self::Byte(x) => x.len(),
@@ -193,14 +195,14 @@ impl Write for List {
             Self::Double(x) => x.len() * 8,
             Self::String(x) => unsafe {
                 x.iter()
-                    .map(|x| UTF8Tag::new_unchecked(x.as_bytes()).len())
+                    .map(|x| UTF8Tag::new_unchecked(x.as_bytes()).sz())
                     .sum::<usize>()
             },
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
-            Self::List(x) => x.iter().map(|x| x.len()).sum::<usize>(),
-            Self::Compound(x) => x.iter().map(Write::len).sum::<usize>(),
+            Self::List(x) => x.iter().map(|x| x.sz()).sum::<usize>(),
+            Self::Compound(x) => x.iter().map(Write::sz).sum::<usize>(),
         }
     }
 }

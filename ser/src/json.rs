@@ -23,7 +23,7 @@ const ESCAPE: [u8; 256] = [
 
 pub fn json_str_escape(buf: &mut String, b: &[u8]) {
     let e = JsonStr(b);
-    let wlen = e.len();
+    let wlen = e.sz();
     buf.reserve(wlen);
     unsafe {
         e.write(&mut UnsafeWriter(buf.as_mut_ptr().add(buf.len())));
@@ -61,7 +61,7 @@ impl Write for JsonStr<'_> {
         }
     }
 
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         let mut cur = 0usize;
         let mut len = 0usize;
         unsafe {

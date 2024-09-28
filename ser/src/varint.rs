@@ -59,7 +59,7 @@ impl Write for V21 {
     }
 
     #[inline]
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             1
@@ -67,20 +67,6 @@ impl Write for V21 {
             2
         } else {
             3
-        }
-    }
-}
-
-impl V21 {
-    pub fn decode(n: &[u8]) -> (usize, u32) {
-        match n {
-            [a, ..] if (a & 0x80) == 0 => (1, u32::from(*a)),
-            [a, b, ..] if (b & 0x80) == 0 => (2, u32::from(a & 0x7F) | u32::from(*b) << 7),
-            [a, b, c, ..] if (c & 0x80) == 0 => (
-                3,
-                u32::from(a & 0x7F) | u32::from(b & 0x7F) << 7 | u32::from(*c) << 14,
-            ),
-            _ => (0, 0),
         }
     }
 }
@@ -132,7 +118,7 @@ impl Write for V32 {
     }
 
     #[inline]
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             1
@@ -294,7 +280,7 @@ impl Write for V64 {
         }
     }
 
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
             1

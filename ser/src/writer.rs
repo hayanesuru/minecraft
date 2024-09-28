@@ -1,4 +1,4 @@
-pub struct UnsafeWriter(pub *mut u8);
+pub struct UnsafeWriter(pub(crate) *mut u8);
 
 impl UnsafeWriter {
     #[inline(always)]

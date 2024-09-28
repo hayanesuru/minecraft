@@ -19,14 +19,13 @@ use syn::{parenthesized, parse_macro_input, Expr, Lifetime, Lit, Token, Type, Ty
 #[proc_macro]
 pub fn compound(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut data = format!("{{{token}}}");
-    let output = mser::nbt::StringifyCompound::decode(&data).expect("Invalid SNBT compound").0;
+    let output = mser::nbt::StringifyCompound::decode(&data)
+        .expect("Invalid SNBT compound")
+        .0;
     data.clear();
-    let mut data = data.into_bytes();
 
-    let len = mser::Write::len(&output);
-    data.reserve(len);
-    mser::Write::write(&output, &mut mser::UnsafeWriter(data.as_mut_ptr()));
-    unsafe { data.set_len(len) };
+    let mut data = data.into_bytes();
+    mser::write_exact(&mut data, &output);
 
     let datastr = format!("{data:?}");
     core::str::FromStr::from_str(&datastr).unwrap()

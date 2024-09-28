@@ -23,7 +23,7 @@ impl Write for MUTF8Tag {
     }
 
     #[inline]
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         2 + self.0.len()
     }
 }
@@ -66,9 +66,9 @@ impl Write for UTF8Tag {
     }
 
     #[inline]
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         if super::mutf8::is_valid(unsafe { self.0.as_ref() }) {
-            MUTF8Tag(self.0).len()
+            MUTF8Tag(self.0).sz()
         } else {
             unsafe { 2 + super::mutf8::len(self.0.as_ref()) }
         }

@@ -10,6 +10,7 @@ enum Repr {
     U16,
     U8,
 }
+
 impl Repr {
     const fn new(size: usize) -> Self {
         if size > u16::MAX as usize {
@@ -842,13 +843,13 @@ fn run(version: &str) {
     w += bsname;
     w += " {\n";
     w += "#[inline]\n";
-    w += "fn len(&self) -> usize {\n";
+    w += "fn sz(&self) -> usize {\n";
     if bssize <= V7MAX {
         w += "1usize";
     } else if bssize <= V21MAX {
-        w += "::mser::V21(self.0 as u32).len()";
+        w += "::mser::V21(self.0 as u32).sz()";
     } else {
-        w += "::mser::V32(self.0 as u32).len()";
+        w += "::mser::V32(self.0 as u32).sz()";
     }
     w += "\n}\n";
     w += "#[inline]\n";
@@ -1325,13 +1326,13 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str)
     *w += name;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn len(&self) -> usize {\n";
+    *w += "fn sz(&self) -> usize {\n";
     if size <= V7MAX {
         *w += "1usize";
     } else if size <= V21MAX {
-        *w += "::mser::V21(*self as u32).len()";
+        *w += "::mser::V21(*self as u32).sz()";
     } else {
-        *w += "::mser::V32(*self as u32).len()";
+        *w += "::mser::V32(*self as u32).sz()";
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
@@ -1404,10 +1405,10 @@ fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
     let mut offset = names.len() * 4;
     for val in names {
         w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
-        offset += val.len() + 2;
+        offset += val.sz() + 2;
     }
     for val in names {
-        w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
+        w2.extend(u16::try_from(val.sz()).unwrap().to_le_bytes());
         w2.extend(val.as_bytes());
     }
     *w += "const N: *const u8 = ";
@@ -1561,22 +1562,17 @@ struct HashState {
 }
 
 fn generate_hash(entries: &[&str]) -> HashState {
-    let x = entries
-        .first()
-        .copied()
-        .unwrap_or("default")
-        .as_bytes()
-        .iter()
-        .map(|&x| x as u64)
-        .sum::<u64>();
-    let x = x.wrapping_mul(entries.len() as u64);
     let mut r = WyRand {
-        seed: 0xE3D172B05F73CBC3u64.wrapping_add(x),
+        seed: 0xE3D172B05F73CBC3u64.wrapping_mul(entries.len() as u64),
     };
     let mut b = Vec::new();
+    let mut c = Vec::new();
+    let mut d = Vec::new();
     loop {
         if let Some(x) = try_generate_hash(
             &mut b,
+            &mut c,
+            &mut d,
             entries,
             highway::Key([r.nx(), r.nx(), r.nx(), r.nx()]),
         ) {
@@ -1585,16 +1581,18 @@ fn generate_hash(entries: &[&str]) -> HashState {
     }
 }
 
+struct Bucket {
+    idx: usize,
+    keys: Vec<u32>,
+}
+
 fn try_generate_hash(
     hashes: &mut Vec<[u64; 2]>,
+    buckets: &mut Vec<Bucket>,
+    values_to_add: &mut Vec<(usize, u32)>,
     entries: &[&str],
     key: highway::Key,
 ) -> Option<HashState> {
-    struct Bucket {
-        idx: u32,
-        keys: Vec<u32>,
-    }
-
     let hasher = highway::HighwayHasher::new(key);
     hashes.clear();
     hashes.extend(
@@ -1603,15 +1601,20 @@ fn try_generate_hash(
             .map(|entry| highway::HighwayHash::hash128(hasher.clone(), entry.as_bytes())),
     );
 
-    let buckets_len = (hashes.len() + DEFAULT_LAMBDA - 1) / DEFAULT_LAMBDA;
+    let buckets_len = hashes.len().div_ceil(DEFAULT_LAMBDA);
     let table_len = hashes.len();
 
-    let mut buckets = (0..buckets_len)
-        .map(|i| Bucket {
-            idx: i as u32,
-            keys: vec![],
-        })
-        .collect::<Box<_>>();
+    buckets.truncate(buckets_len);
+    for (i, bucket) in buckets.iter_mut().enumerate() {
+        bucket.idx = i;
+        bucket.keys.clear();
+    }
+    if buckets.len() < buckets_len {
+        buckets.extend((buckets.len()..buckets_len).map(|i| Bucket {
+            idx: i,
+            keys: Vec::new(),
+        }));
+    }
 
     for (i, [hash, _]) in hashes.iter().enumerate() {
         buckets[((hash >> 32) as u32 % buckets_len as u32) as usize]
@@ -1626,7 +1629,6 @@ fn try_generate_hash(
 
     let mut try_map: Vec<u64> = vec![0u64; table_len];
     let mut generation = 0u64;
-    let mut values_to_add: Vec<(usize, u32)> = vec![];
 
     'buckets: for bucket in &*buckets {
         for d1 in 0..(table_len as u32) {
@@ -1647,8 +1649,8 @@ fn try_generate_hash(
                     try_map[idx] = generation;
                     values_to_add.push((idx, key));
                 }
-                disps[bucket.idx as usize] = (d1, d2);
-                for &(idx, key) in &values_to_add {
+                disps[bucket.idx] = (d1, d2);
+                for &(idx, key) in values_to_add.iter() {
                     map[idx] = Some(key);
                 }
                 continue 'buckets;

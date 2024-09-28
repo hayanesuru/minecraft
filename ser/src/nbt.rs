@@ -1,7 +1,7 @@
+mod list;
 mod mutf8;
 mod string;
 mod stringify;
-mod list;
 
 pub use self::list::List;
 pub use self::string::{MUTF8Tag, UTF8Tag};
@@ -204,10 +204,10 @@ impl Write for Compound {
         w.write_byte(END);
     }
 
-    fn len(&self) -> usize {
+    fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += unsafe { UTF8Tag::new_unchecked(name.as_bytes()).len() };
+            w += unsafe { UTF8Tag::new_unchecked(name.as_bytes()).sz() };
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -215,12 +215,12 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).len() },
+                Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).sz() },
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
-                Tag::List(x) => x.len(),
-                Tag::Compound(x) => Write::len(x),
+                Tag::List(x) => x.sz(),
+                Tag::Compound(x) => Write::sz(x),
             };
         }
         w
@@ -251,8 +251,8 @@ impl Write for NamedCompound {
     }
 
     #[inline]
-    fn len(&self) -> usize {
-        1 + unsafe { Write::len(&UTF8Tag::new_unchecked(self.0.as_bytes())) } + Write::len(&self.1)
+    fn sz(&self) -> usize {
+        1 + unsafe { Write::sz(&UTF8Tag::new_unchecked(self.0.as_bytes())) } + Write::sz(&self.1)
     }
 }
 
@@ -277,8 +277,8 @@ impl Write for UnamedCompound {
     }
 
     #[inline]
-    fn len(&self) -> usize {
-        1 + Write::len(&self.0)
+    fn sz(&self) -> usize {
+        1 + Write::sz(&self.0)
     }
 }
 
@@ -362,6 +362,10 @@ impl Compound {
     #[inline]
     #[must_use]
     /// # Safety
+    ///
+    /// `index` < [`len`]
+    ///
+    /// [`len`]: Self::len
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> (&mut str, &mut Tag) {
         let (x, y) = self.0.get_unchecked_mut(index);
         (&mut *x, y)
