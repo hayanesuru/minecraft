@@ -57,7 +57,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                     }
 
                     #[inline]
-                    fn len(&self) -> usize {
+                    fn sz(&self) -> usize {
                         #b
                     }
                 }
@@ -91,7 +91,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                         }
 
                         #[inline]
-                        fn len(&self) -> usize {
+                        fn sz(&self) -> usize {
                             1
                         }
                     }
@@ -129,7 +129,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                         }
 
                         #[inline]
-                        fn len(&self) -> usize {
+                        fn sz(&self) -> usize {
                             let n = self as u8;
                             if n < 0x80 {
                                 1
