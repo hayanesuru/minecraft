@@ -3,8 +3,8 @@ use super::{
     INT_ARRAY, LIST, LONG, LONG_ARRAY, SHORT, STRING,
 };
 use crate::{Bytes, UnsafeWriter, Write};
-use alloc::boxed::Box;
 use alloc::vec::Vec;
+use kstring::KString;
 
 #[derive(Clone)]
 pub enum List {
@@ -15,7 +15,7 @@ pub enum List {
     Long(Vec<i64>),
     Float(Vec<f32>),
     Double(Vec<f64>),
-    String(Vec<Box<str>>),
+    String(Vec<KString>),
     ByteArray(Vec<Vec<u8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
@@ -65,9 +65,9 @@ impl From<Vec<f64>> for List {
     }
 }
 
-impl From<Vec<Box<str>>> for List {
+impl From<Vec<KString>> for List {
     #[inline]
-    fn from(value: Vec<Box<str>>) -> Self {
+    fn from(value: Vec<KString>) -> Self {
         Self::String(value)
     }
 }
@@ -269,7 +269,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Option<List> {
             }
             let mut list = Vec::with_capacity(len);
             for _ in 0..len {
-                let v = decode_string(n)?.into_boxed_str();
+                let v = decode_string(n)?;
                 list.push(v);
             }
             Some(List::String(list))

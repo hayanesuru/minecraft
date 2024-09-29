@@ -8,8 +8,9 @@ pub use self::string::{MUTF8Tag, UTF8Tag};
 pub use self::stringify::StringifyCompound;
 use crate::{Bytes, Read, UnsafeWriter, Write};
 use alloc::boxed::Box;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
+use kstring::KString;
 
 pub const END: u8 = 0;
 pub const BYTE: u8 = 1;
@@ -33,7 +34,7 @@ pub enum Tag {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(Box<str>),
+    String(KString),
     ByteArray(Vec<u8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
@@ -100,14 +101,21 @@ impl From<Vec<u8>> for Tag {
 impl From<String> for Tag {
     #[inline]
     fn from(value: String) -> Self {
-        Self::String(value.into_boxed_str())
+        Self::String(KString::from_string(value))
+    }
+}
+
+impl From<KString> for Tag {
+    #[inline]
+    fn from(value: KString) -> Self {
+        Self::String(value)
     }
 }
 
 impl From<Box<str>> for Tag {
     #[inline]
     fn from(value: Box<str>) -> Self {
-        Self::String(value)
+        Self::String(KString::from_boxed(value))
     }
 }
 
@@ -141,18 +149,18 @@ impl From<Vec<i64>> for Tag {
 
 #[derive(Clone, Default)]
 #[repr(transparent)]
-pub struct Compound(Vec<(Box<str>, Tag)>);
+pub struct Compound(Vec<(KString, Tag)>);
 
-impl AsRef<[(Box<str>, Tag)]> for Compound {
+impl AsRef<[(KString, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(Box<str>, Tag)] {
+    fn as_ref(&self) -> &[(KString, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(Box<str>, Tag)]> for Compound {
+impl AsMut<[(KString, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(Box<str>, Tag)] {
+    fn as_mut(&mut self) -> &mut [(KString, Tag)] {
         self.0.as_mut_slice()
     }
 }
@@ -228,7 +236,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound(pub String, pub Compound);
+pub struct NamedCompound(pub KString, pub Compound);
 
 impl Read for NamedCompound {
     #[inline]
@@ -292,11 +300,11 @@ impl From<Compound> for UnamedCompound {
 impl From<Compound> for NamedCompound {
     #[inline]
     fn from(value: Compound) -> Self {
-        Self(String::new(), value)
+        Self(KString::new(), value)
     }
 }
 
-impl<K: ToString, V> FromIterator<(K, V)> for Compound
+impl<K: Into<KString>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -304,7 +312,7 @@ where
     fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
         Self(
             iter.into_iter()
-                .map(|(x, y)| (x.to_string().into_boxed_str(), Tag::from(y)))
+                .map(|(x, y)| (x.into(), Tag::from(y)))
                 .collect(),
         )
     }
@@ -335,12 +343,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (Box<str>, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (KString, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (Box<str>, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (KString, Tag)> {
         self.0.iter_mut()
     }
 
@@ -366,9 +374,9 @@ impl Compound {
     /// `index` < [`len`]
     ///
     /// [`len`]: Self::len
-    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> (&mut str, &mut Tag) {
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> (&str, &mut Tag) {
         let (x, y) = self.0.get_unchecked_mut(index);
-        (&mut *x, y)
+        (x.as_str(), y)
     }
 
     #[inline]
@@ -378,8 +386,13 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: impl Into<Box<str>>, v: impl Into<Tag>) {
-        self.0.push((k.into(), v.into()));
+    pub fn push(&mut self, k: impl Into<KString>, v: impl Into<Tag>) {
+        self.push_(k.into(), v.into());
+    }
+
+    #[inline]
+    pub fn push_(&mut self, k: KString, v: Tag) {
+        self.0.push((k, v));
     }
 
     #[deprecated]
@@ -393,7 +406,7 @@ impl Compound {
 
     #[deprecated]
     #[inline]
-    pub fn decode_named(buf: &mut &[u8]) -> Option<(String, Self)> {
+    pub fn decode_named(buf: &mut &[u8]) -> Option<(KString, Self)> {
         match NamedCompound::read(buf) {
             Some(x) => Some((x.0, x.1)),
             None => None,
@@ -434,7 +447,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(Box<str>, Tag)> {
+    pub fn into_inner(self) -> Vec<(KString, Tag)> {
         self.0
     }
 }
@@ -446,9 +459,9 @@ impl Read for Compound {
     }
 }
 
-impl From<Vec<(Box<str>, Tag)>> for Compound {
+impl From<Vec<(KString, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(Box<str>, Tag)>) -> Self {
+    fn from(value: Vec<(KString, Tag)>) -> Self {
         Self(value)
     }
 }
@@ -532,11 +545,14 @@ fn decode1(n: &mut &[u8]) -> Option<Compound> {
 }
 
 #[inline]
-pub fn decode_string(b: &mut &[u8]) -> Option<String> {
+pub(super) fn decode_string(b: &mut &[u8]) -> Option<KString> {
     let len = b.u16()? as usize;
     let a = b.slice(len)?;
-    match simdutf8::basic::from_utf8(a) {
-        Ok(n) => Some(String::from(n)),
-        Err(_) => mutf8::decode(a),
+
+    match a.is_ascii() || simdutf8::basic::from_utf8(a).is_ok() {
+        true => Some(KString::from_ref(unsafe {
+            core::str::from_utf8_unchecked(a)
+        })),
+        false => mutf8::decode(a),
     }
 }

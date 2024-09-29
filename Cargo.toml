@@ -11,5 +11,5 @@ edition = "2021"
 
 [workspace.dependencies]
 minecraft_data = { path = "data", version = "1" }
-mser = { path = "ser", version = "1" }
+mser = { path = "ser", version = "1.3" }
 mser_macro = { path = "ser_macro", version = "1" }

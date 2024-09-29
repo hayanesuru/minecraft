@@ -1,6 +1,7 @@
 use crate::UnsafeWriter;
 use alloc::string::String;
 use alloc::vec::Vec;
+use kstring::KString;
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -103,7 +104,7 @@ pub unsafe fn encode(bytes: &[u8], w: &mut UnsafeWriter) {
 }
 
 #[inline(never)]
-pub fn decode(bytes: &[u8]) -> Option<String> {
+pub fn decode(bytes: &[u8]) -> Option<KString> {
     let mut buf = Vec::with_capacity(bytes.len());
     let mut index = 0;
     let mut start = 0;
@@ -172,8 +173,12 @@ pub fn decode(bytes: &[u8]) -> Option<String> {
     }
 
     unsafe {
-        buf.extend(bytes.get_unchecked(start..index));
-        buf.shrink_to_fit();
-        Some(String::from_utf8_unchecked(buf))
+        let x = bytes.get_unchecked(start..index);
+        if buf.is_empty() {
+            Some(KString::from_ref(core::str::from_utf8_unchecked(x)))
+        } else {
+            buf.extend(x);
+            Some(KString::from_string(String::from_utf8_unchecked(buf)))
+        }
     }
 }
