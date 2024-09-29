@@ -11,7 +11,7 @@ categories = ["no-std"]
 documentation = "https://docs.rs/mser"
 
 [features]
-default = []
+default = ["std"]
 std = ["simdutf8/std", "kstring/std"]
 
 [dependencies]
