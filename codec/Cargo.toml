@@ -7,7 +7,7 @@ authors.workspace = true
 readme = "README.md"
 license.workspace = true
 repository.workspace = true
-categories = ["no-std"]
+categories = []
 keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_codecgen"
 

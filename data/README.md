@@ -12,7 +12,6 @@ Supported version:
 ```toml
 [dependencies]
 minecraft_data = { version = "1.3", default-features = false, features = [
-    "std",
     "1_16",
 ] }
 ```
