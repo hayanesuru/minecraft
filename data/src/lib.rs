@@ -120,3 +120,11 @@ impl props_nil {
         Self
     }
 }
+
+#[must_use]
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct entity_dimensions {
+    pub width: f32,
+    pub height: f32,
+    pub fixed: bool,
+}
