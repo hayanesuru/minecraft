@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(non_camel_case_types, clippy::new_without_default, clippy::manual_map)]
+#![allow(non_camel_case_types, clippy::manual_map)]
 
 #[cfg(feature = "1_16")]
 pub mod v1_16 {
@@ -101,7 +101,7 @@ impl NameMap<u8> {
 
 pub type raw_props_nil = ();
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct props_nil;
 
 impl props_nil {
