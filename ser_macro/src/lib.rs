@@ -580,7 +580,7 @@ struct Field<'a> {
     add: Option<Expr>,
 }
 
-impl<'a> Field<'a> {
+impl Field<'_> {
     fn var_name(&self) -> syn::Ident {
         if let Some(name) = self.name {
             name.clone()
