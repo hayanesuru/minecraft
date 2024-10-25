@@ -150,10 +150,12 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn luminance(self) -> u8 {
         unsafe { *BLOCK_STATE_SETTINGS.add(self.0 as usize).cast::<u8>() }
     }
     #[inline]
+    #[must_use]
     pub const fn has_sided_transparency(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -164,6 +166,7 @@ impl block_state {
         x & 128 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn lava_ignitable(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -174,6 +177,7 @@ impl block_state {
         x & 64 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn material_replaceable(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -184,6 +188,7 @@ impl block_state {
         x & 32 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn opaque(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -194,6 +199,7 @@ impl block_state {
         x & 16 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn tool_required(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -204,6 +210,7 @@ impl block_state {
         x & 8 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn exceeds_cube(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -214,6 +221,7 @@ impl block_state {
         x & 4 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn redstone_power_source(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -224,6 +232,7 @@ impl block_state {
         x & 2 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn has_comparator_output(self) -> bool {
         let x = unsafe {
             *BLOCK_STATE_SETTINGS
@@ -234,6 +243,7 @@ impl block_state {
         x & 1 != 0
     }
     #[inline]
+    #[must_use]
     pub const fn opacity(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -245,6 +255,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn solid(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -256,6 +267,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn transparent(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -267,6 +279,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -278,6 +291,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn opaque_full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -289,6 +303,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn side_solid_full(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -300,6 +315,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn side_solid_center(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -311,6 +327,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn side_solid_rigid(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -322,6 +339,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -335,6 +353,7 @@ impl block_state {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
@@ -351,6 +370,7 @@ impl block_state {
 
 impl item {
     #[inline]
+    #[must_use]
     pub const fn max_count(self) -> u8 {
         unsafe { *ITEM_MAX_COUNT.as_ptr().add(self as usize) }
     }
@@ -363,6 +383,7 @@ impl item {
 
 impl block {
     #[inline]
+    #[must_use]
     pub const fn hardness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -370,6 +391,7 @@ impl block {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn blast_resistance(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -377,6 +399,7 @@ impl block {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn slipperiness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -384,6 +407,7 @@ impl block {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn velocity_multiplier(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -391,6 +415,7 @@ impl block {
         }
     }
     #[inline]
+    #[must_use]
     pub const fn jump_velocity_multiplier(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -411,11 +436,13 @@ impl fluid_state {
     }
 
     #[inline]
+    #[must_use]
     pub const fn level(self) -> u8 {
         unsafe { *(*FLUID_STATE_LEVEL.add(self as usize)).as_ptr() }
     }
 
     #[inline]
+    #[must_use]
     pub const fn falling(self) -> bool {
         unsafe { *(*FLUID_STATE_FALLING.add(self as usize)).as_ptr() == 1 }
     }
@@ -442,6 +469,26 @@ impl From<val_true_false> for bool {
             val_true_false::r#true => true,
             val_true_false::r#false => false,
         }
+    }
+}
+
+impl entity_type {
+    #[inline]
+    #[must_use]
+    pub const fn width(self) -> f32 {
+        unsafe { *ENTITY_WIDTH.as_ptr().add(self as usize) }
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn height(self) -> f32 {
+        unsafe { *ENTITY_HEIGHT.as_ptr().add(self as usize) }
+    }
+
+    #[inline]
+    #[must_use]
+    pub const fn fixed(self) -> bool {
+        unsafe { *ENTITY_FIXED.as_ptr().add(self as usize) }
     }
 }
 
