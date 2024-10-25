@@ -1294,6 +1294,123 @@ fn run(version: &str) {
         }
         x -= count;
     }
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("entity_type_height") {
+        panic!("{name}");
+    }
+    w += "const ENTITY_HEIGHT: [f32; ";
+    w += ib.format(size);
+    w += "] = [";
+
+    let mut x = size;
+    loop {
+        if x == 0 {
+            break;
+        }
+        let next = iter.next().unwrap().as_bytes();
+        let (n, count) = match next.first().copied() {
+            Some(b'~') => {
+                let (a, b) = parse_hex::<u32>(&next[1..]);
+                let next = &next[b + 2..];
+                let n = parse_hex::<u32>(next);
+                (n.0, a as usize)
+            }
+            _ => {
+                let n = parse_hex::<u32>(next);
+                (n.0, 1)
+            }
+        };
+        for _ in 0..count {
+            w += rb.format(f32::from_bits(n));
+            w += ", ";
+        }
+        x -= count;
+    }
+    if size != 0 {
+        w.pop();
+        w.pop();
+    }
+    w += "];\n";
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("entity_type_width") {
+        panic!("{name}");
+    }
+    w += "const ENTITY_WIDTH: [f32; ";
+    w += ib.format(size);
+    w += "] = [";
+
+    let mut x = size;
+    loop {
+        if x == 0 {
+            break;
+        }
+        let next = iter.next().unwrap().as_bytes();
+        let (n, count) = match next.first().copied() {
+            Some(b'~') => {
+                let (a, b) = parse_hex::<u32>(&next[1..]);
+                let next = &next[b + 2..];
+                let n = parse_hex::<u32>(next);
+                (n.0, a as usize)
+            }
+            _ => {
+                let n = parse_hex::<u32>(next);
+                (n.0, 1)
+            }
+        };
+        for _ in 0..count {
+            w += rb.format(f32::from_bits(n));
+            w += ", ";
+        }
+        x -= count;
+    }
+    if size != 0 {
+        w.pop();
+        w.pop();
+    }
+    w += "];\n";
+
+    let (name, size, _) = head(iter.next().unwrap());
+    wn.reserve(size);
+    if !name.starts_with("entity_type_fixed") {
+        panic!("{name}");
+    }
+    w += "const ENTITY_FIXED: [bool; ";
+    w += ib.format(size);
+    w += "] = [";
+    let mut x = size;
+    loop {
+        if x == 0 {
+            break;
+        }
+        let next = iter.next().unwrap().as_bytes();
+        let (n, count) = match next.first().copied() {
+            Some(b'~') => {
+                let (a, b) = parse_hex::<u32>(&next[1..]);
+                let next = &next[b + 2..];
+                let n = parse_hex::<u8>(next);
+                (n.0, a as usize)
+            }
+            _ => {
+                let n = parse_hex::<u8>(next);
+                (n.0, 1)
+            }
+        };
+        for _ in 0..count {
+            w += if n == 1 { "true" } else { "false" };
+            w += ", ";
+        }
+        x -= count;
+    }
+    if size != 0 {
+        w.pop();
+        w.pop();
+    }
+    w += "];\n";
+
     w += "const NAMES: &[u8; ";
     w += ib.format(wn.len());
     w += "] = include_bytes!(\"";
