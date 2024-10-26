@@ -52,6 +52,7 @@ mod kw {
     syn::custom_keyword!(add);
     syn::custom_keyword!(u8);
     syn::custom_keyword!(u16);
+    syn::custom_keyword!(u32);
     syn::custom_keyword!(v21);
     syn::custom_keyword!(v32);
     syn::custom_keyword!(none);
@@ -290,6 +291,7 @@ fn common_tokens(
 enum BasicType {
     U8,
     U16,
+    U32,
     V21,
     V32,
     None,
@@ -306,6 +308,9 @@ impl Parse for BasicType {
         } else if lookahead.peek(kw::u16) {
             input.parse::<kw::u16>()?;
             BasicType::U16
+        } else if lookahead.peek(kw::u32) {
+            input.parse::<kw::u32>()?;
+            BasicType::U32
         } else if lookahead.peek(kw::v32) {
             input.parse::<kw::v32>()?;
             BasicType::V32
@@ -573,7 +578,7 @@ struct Field<'a> {
     name: Option<&'a syn::Ident>,
     raw_ty: &'a Type,
     expand: bool,
-    len_type: Option<BasicType>,
+    head: Option<BasicType>,
     ty: Opt<Ty>,
     skip: bool,
     varint: bool,
@@ -645,7 +650,7 @@ impl Parse for LengthKind {
 }
 
 enum FieldAttribute {
-    Len { key_span: Span, ty: BasicType },
+    Head { key_span: Span, ty: BasicType },
     Skip { key_span: Span },
     Add { key_span: Span, prefix: Expr },
     Expand { key_span: Span },
@@ -664,7 +669,7 @@ impl Parse for FieldAttribute {
             let key_token = input.parse::<kw::head>()?;
             let _: Token![=] = input.parse()?;
             let ty: BasicType = input.parse()?;
-            FieldAttribute::Len {
+            FieldAttribute::Head {
                 key_span: key_token.span(),
                 ty,
             }
@@ -1015,7 +1020,7 @@ fn get_field(field: (usize, &syn::Field)) -> Result<Field<'_>, syn::Error> {
     let (index, field) = field;
 
     let mut expand = false;
-    let mut len_type = None;
+    let mut head = None;
     let mut skip = false;
     let mut varint = false;
     let mut add = None;
@@ -1028,13 +1033,13 @@ fn get_field(field: (usize, &syn::Field)) -> Result<Field<'_>, syn::Error> {
                 }
                 expand = true;
             }
-            FieldAttribute::Len { key_span, ty } => {
-                if len_type.is_some() {
-                    let message = "duplicate \"len_type\"";
+            FieldAttribute::Head { key_span, ty } => {
+                if head.is_some() {
+                    let message = "duplicate \"head\"";
                     return Err(syn::Error::new(key_span, message));
                 }
 
-                len_type = Some((key_span, ty));
+                head = Some((key_span, ty));
             }
             FieldAttribute::Skip { key_span } => {
                 if skip {
@@ -1064,7 +1069,7 @@ fn get_field(field: (usize, &syn::Field)) -> Result<Field<'_>, syn::Error> {
     } else {
         Opt::Plain(parse_ty(&field.ty))
     };
-    if len_type.is_some() {
+    if head.is_some() {
         match ty {
             Opt::Plain(Ty::Array(..))
             | Opt::Option(Ty::Array(..))
@@ -1086,7 +1091,7 @@ fn get_field(field: (usize, &syn::Field)) -> Result<Field<'_>, syn::Error> {
         index,
         name: field.ident.as_ref(),
         raw_ty: &field.ty,
-        len_type: len_type.map(|x| x.1),
+        head: head.map(|x| x.1),
         expand,
         ty,
         skip,

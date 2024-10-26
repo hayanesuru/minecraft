@@ -174,11 +174,12 @@ fn needed_body(field: &Field) -> TokenStream {
         let name = field.name();
         quote!(self.#name)
     };
-    let needed = match field.len_type.unwrap_or(DEFAULT_LENGTH_TYPE) {
+    let needed = match field.head.unwrap_or(DEFAULT_LENGTH_TYPE) {
         BasicType::V32 => quote!(::mser::Write::sz(&::mser::V32(#name.len() as u32)) + ),
         BasicType::V21 => quote!(::mser::Write::sz(&::mser::V21(#name.len() as u32)) + ),
         BasicType::U8 => quote!(1 + ),
         BasicType::U16 => quote!(2 + ),
+        BasicType::U32 => quote!(4 + ),
         BasicType::None => quote!(),
     };
 
@@ -264,11 +265,12 @@ fn needed_body(field: &Field) -> TokenStream {
 
 fn write_field_body(field: &Field) -> TokenStream {
     let name = field.var_name();
-    let l = match field.len_type.unwrap_or(DEFAULT_LENGTH_TYPE) {
+    let l = match field.head.unwrap_or(DEFAULT_LENGTH_TYPE) {
         BasicType::V32 => quote! { ::mser::Write::write(&::mser::V32(#name.len() as u32), w); },
         BasicType::V21 => quote! { ::mser::Write::write(&::mser::V21(#name.len() as u32), w); },
         BasicType::U8 => quote! { w.write_byte(#name.len() as u8); },
         BasicType::U16 => quote! { ::mser::Write::write(&(#name.len() as u16), w); },
+        BasicType::U32 => quote! { ::mser::Write::write(&(#name.len() as u32), w); },
         BasicType::None => quote! {},
     };
 
