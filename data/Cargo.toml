@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "1.3.4"
+version = "1.3.5"
 description = "minecraft_data"
 edition.workspace = true
 authors.workspace = true
