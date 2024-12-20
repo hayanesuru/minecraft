@@ -3,6 +3,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::env::var_os;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Repr {
@@ -57,7 +58,7 @@ fn run(version: &str) {
     let data = path.join(version.to_owned() + ".txt");
     let data = std::fs::read(data).unwrap();
     let data = simdutf8::basic::from_utf8(&data).unwrap();
-
+    let mut gen_hash = GenerateHash::new();
     let mut mat = data.match_indices('\n');
     let a = mat.next().unwrap().0;
     let b = mat.next().unwrap().0;
@@ -119,7 +120,7 @@ fn run(version: &str) {
         w += &name;
         w += " {\n";
         gen_max(&mut w, &zhash);
-        namemap(&mut w, &mut wn, repr, &zhash);
+        namemap(&mut w, &mut gen_hash, &mut wn, repr, &zhash);
         w += "}\n";
         impl_name(&mut w, &name);
         w += "impl ::mser::Read for ";
@@ -266,7 +267,7 @@ fn run(version: &str) {
         w += name;
         w += " {\n";
         gen_max(&mut w, x);
-        namemap(&mut w, &mut wn, repr, x);
+        namemap(&mut w, &mut gen_hash, &mut wn, repr, x);
         w += "}\n";
         impl_name(&mut w, name);
     }
@@ -330,7 +331,7 @@ fn run(version: &str) {
     w += namek;
     w += " {\n";
     gen_max(&mut w, &pk2);
-    namemap(&mut w, &mut wn, reprk, &pk2);
+    namemap(&mut w, &mut gen_hash, &mut wn, reprk, &pk2);
     w += "}\n";
     impl_name(&mut w, namek);
 
@@ -338,7 +339,7 @@ fn run(version: &str) {
     w += namev;
     w += " {\n";
     gen_max(&mut w, &pv2);
-    namemap(&mut w, &mut wn, reprv, &pv2);
+    namemap(&mut w, &mut gen_hash, &mut wn, reprv, &pv2);
     w += "}\n";
     impl_name(&mut w, namev);
 
@@ -447,6 +448,13 @@ fn run(version: &str) {
             .any(|&x| (kv[x as usize].len() - 1).count_ones() != 1);
         let repr = Repr::new(size);
         struct_head(&mut w, repr, name);
+        w += "impl Default for ";
+        w += name;
+        w += " {\n";
+        w += "#[inline]\n";
+        w += "fn default() -> Self {\n";
+        w += "Self(0)\n";
+        w += "}\n}\n\n";
         w += "impl ";
         w += name;
         w += " {\n";
@@ -1476,14 +1484,14 @@ fn head(raw: &str) -> (&str, usize, Repr) {
     (name, size, repr)
 }
 
-fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
+fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
     let mut ib = itoa::Buffer::new();
 
     *w += "const M: crate::NameMap<";
     *w += repr.to_int();
     *w += "> = crate::NameMap { key: [";
 
-    let state = generate_hash(names);
+    let state = g.generate_hash(names.iter());
 
     let mut flag = true;
     for x in state.key.0 {
@@ -1495,11 +1503,11 @@ fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
     }
     *w += "], disps: &[";
 
-    for &disp in &state.disps {
+    for &(x, y) in state.disps {
         *w += "(";
-        *w += ib.format(disp.0);
+        *w += ib.format(x);
         *w += ", ";
-        *w += ib.format(disp.1);
+        *w += ib.format(y);
         *w += "), ";
     }
     if !state.disps.is_empty() {
@@ -1507,8 +1515,8 @@ fn namemap(w: &mut String, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
         w.pop();
     }
     *w += "], names: Self::N, vals: &[";
-    for &ele in &state.map {
-        *w += ib.format(ele);
+    for &ele in state.map {
+        *w += ib.format(ele.unwrap());
         *w += ", ";
     }
     if !state.map.is_empty() {
@@ -1566,7 +1574,7 @@ pub const fn id(self) -> ";
     *w += " {\nself as ";
     *w += repr.to_int();
     *w += "\n}\n";
-    *w += "#[inline]\n#[must_use]\n";
+    *w += "#[inline]\n\n";
     *w += "pub const fn new(x: ";
     *w += repr.to_int();
     *w += ") -> Self {\n";
@@ -1655,130 +1663,138 @@ fn hex_line(x: &str) -> impl Iterator<Item = u32> + '_ {
         .map(|x| parse_hex::<u32>(x).0)
 }
 
-#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq)]
-struct WyRand {
-    seed: u64,
+struct GenerateHash {
+    wy_rand: u64,
+    hashes: Vec<[u64; 2]>,
+    buckets: Vec<Bucket>,
+    values_to_add: Vec<(usize, u32)>,
+    map: Vec<Option<u32>>,
+    disps: Vec<(u32, u32)>,
+    try_map: Vec<u64>,
 }
 
-impl WyRand {
+impl GenerateHash {
+    fn new() -> Self {
+        Self {
+            wy_rand: 0xE3D172B05F73CBC3u64
+                ^ SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos() as u64,
+            hashes: Vec::new(),
+            buckets: Vec::new(),
+            values_to_add: Vec::new(),
+            map: Vec::new(),
+            try_map: Vec::new(),
+            disps: Vec::new(),
+        }
+    }
+
+    fn generate_hash(
+        &mut self,
+        entries: impl Iterator<Item = impl AsRef<str>> + Clone,
+    ) -> HashState {
+        'key: loop {
+            let key = highway::Key([self.nx(), self.nx(), self.nx(), self.nx()]);
+            let hasher = highway::HighwayHasher::new(key);
+            self.hashes.clear();
+            self.hashes.extend(entries.clone().map(|entry| {
+                highway::HighwayHash::hash128(hasher.clone(), entry.as_ref().as_bytes())
+            }));
+
+            let buckets_len = self.hashes.len().div_ceil(DEFAULT_LAMBDA);
+            let table_len = self.hashes.len();
+
+            self.buckets.truncate(buckets_len);
+            for (i, bucket) in self.buckets.iter_mut().enumerate() {
+                bucket.idx = i;
+                bucket.keys.clear();
+            }
+            if self.buckets.len() < buckets_len {
+                self.buckets
+                    .extend((self.buckets.len()..buckets_len).map(|i| Bucket {
+                        idx: i,
+                        keys: Vec::new(),
+                    }));
+            }
+
+            for (i, [hash, _]) in self.hashes.iter().enumerate() {
+                self.buckets[((hash >> 32) as u32 % buckets_len as u32) as usize]
+                    .keys
+                    .push(i as u32);
+            }
+
+            self.buckets
+                .sort_unstable_by(|a, b| a.keys.len().cmp(&b.keys.len()).reverse());
+
+            self.map.clear();
+            self.map.extend(core::iter::repeat(None).take(table_len));
+
+            self.disps.clear();
+            self.disps
+                .extend(core::iter::repeat((0u32, 0u32)).take(buckets_len));
+
+            self.try_map.clear();
+            self.try_map
+                .extend(core::iter::repeat(0u64).take(table_len));
+
+            let mut generation = 0u64;
+
+            'buckets: for bucket in &*self.buckets {
+                for d1 in 0..(table_len as u32) {
+                    'disps: for d2 in 0..(table_len as u32) {
+                        self.values_to_add.clear();
+                        generation += 1;
+
+                        for &key in &bucket.keys {
+                            let [a, b] = (&mut self.hashes)[key as usize];
+                            let f1 = a as u32;
+                            let f2 = b as u32;
+
+                            let x = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
+                            let idx = (x % (table_len as u32)) as usize;
+                            if self.map[idx].is_some() || self.try_map[idx] == generation {
+                                continue 'disps;
+                            }
+                            self.try_map[idx] = generation;
+                            self.values_to_add.push((idx, key));
+                        }
+                        self.disps[bucket.idx] = (d1, d2);
+                        for &(idx, key) in self.values_to_add.iter() {
+                            self.map[idx] = Some(key);
+                        }
+                        continue 'buckets;
+                    }
+                }
+                continue 'key;
+            }
+
+            return HashState {
+                key,
+                disps: &self.disps,
+                map: &self.map,
+            };
+        }
+    }
+
     #[inline]
-    pub fn nx(&mut self) -> u64 {
-        self.seed = self.seed.wrapping_add(0xa0761d6478bd642f);
-        let x = (self.seed ^ 0xe7037ed1a0b428db) as u128;
-        let t = (self.seed as u128).wrapping_mul(x);
+    fn nx(&mut self) -> u64 {
+        self.wy_rand = self.wy_rand.wrapping_add(0xa0761d6478bd642f);
+        let x = (self.wy_rand ^ 0xe7037ed1a0b428db) as u128;
+        let t = (self.wy_rand as u128).wrapping_mul(x);
         (t.wrapping_shr(64) ^ t) as u64
     }
 }
 
 const DEFAULT_LAMBDA: usize = 5;
 
-struct HashState {
+struct HashState<'a> {
     key: highway::Key,
-    disps: Vec<(u32, u32)>,
-    map: Vec<u32>,
-}
-
-fn generate_hash(entries: &[&str]) -> HashState {
-    let mut r = WyRand {
-        seed: 0xE3D172B05F73CBC3u64.wrapping_mul(entries.len() as u64),
-    };
-    let mut b = Vec::new();
-    let mut c = Vec::new();
-    let mut d = Vec::new();
-    loop {
-        if let Some(x) = try_generate_hash(
-            &mut b,
-            &mut c,
-            &mut d,
-            entries,
-            highway::Key([r.nx(), r.nx(), r.nx(), r.nx()]),
-        ) {
-            return x;
-        }
-    }
+    disps: &'a [(u32, u32)],
+    map: &'a [Option<u32>],
 }
 
 struct Bucket {
     idx: usize,
     keys: Vec<u32>,
-}
-
-fn try_generate_hash(
-    hashes: &mut Vec<[u64; 2]>,
-    buckets: &mut Vec<Bucket>,
-    values_to_add: &mut Vec<(usize, u32)>,
-    entries: &[&str],
-    key: highway::Key,
-) -> Option<HashState> {
-    let hasher = highway::HighwayHasher::new(key);
-    hashes.clear();
-    hashes.extend(
-        entries
-            .iter()
-            .map(|entry| highway::HighwayHash::hash128(hasher.clone(), entry.as_bytes())),
-    );
-
-    let buckets_len = hashes.len().div_ceil(DEFAULT_LAMBDA);
-    let table_len = hashes.len();
-
-    buckets.truncate(buckets_len);
-    for (i, bucket) in buckets.iter_mut().enumerate() {
-        bucket.idx = i;
-        bucket.keys.clear();
-    }
-    if buckets.len() < buckets_len {
-        buckets.extend((buckets.len()..buckets_len).map(|i| Bucket {
-            idx: i,
-            keys: Vec::new(),
-        }));
-    }
-
-    for (i, [hash, _]) in hashes.iter().enumerate() {
-        buckets[((hash >> 32) as u32 % buckets_len as u32) as usize]
-            .keys
-            .push(i as u32);
-    }
-
-    buckets.sort_unstable_by(|a, b| a.keys.len().cmp(&b.keys.len()).reverse());
-
-    let mut map: Vec<Option<u32>> = vec![None; table_len];
-    let mut disps: Vec<(u32, u32)> = vec![(0u32, 0u32); buckets_len];
-
-    let mut try_map: Vec<u64> = vec![0u64; table_len];
-    let mut generation = 0u64;
-
-    'buckets: for bucket in &*buckets {
-        for d1 in 0..(table_len as u32) {
-            'disps: for d2 in 0..(table_len as u32) {
-                values_to_add.clear();
-                generation += 1;
-
-                for &key in &bucket.keys {
-                    let [a, b] = hashes[key as usize];
-                    let f1 = a as u32;
-                    let f2 = b as u32;
-
-                    let x = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
-                    let idx = (x % (table_len as u32)) as usize;
-                    if map[idx].is_some() || try_map[idx] == generation {
-                        continue 'disps;
-                    }
-                    try_map[idx] = generation;
-                    values_to_add.push((idx, key));
-                }
-                disps[bucket.idx] = (d1, d2);
-                for &(idx, key) in values_to_add.iter() {
-                    map[idx] = Some(key);
-                }
-                continue 'buckets;
-            }
-        }
-        return None;
-    }
-
-    Some(HashState {
-        key,
-        disps,
-        map: map.iter().map(|&i| i.unwrap()).collect(),
-    })
 }
