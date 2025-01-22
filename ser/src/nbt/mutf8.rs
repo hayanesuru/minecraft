@@ -155,9 +155,9 @@ pub fn decode(bytes: &[u8]) -> Option<KString> {
                             Some(&x) if x & 0xC0 == 0x80 => x & 0x3F,
                             _ => return None,
                         };
-                        let s1 = 0xD000 | u32::from(sec & 0x3F) << 6 | u32::from(third & 0x3F);
-                        let s2 = 0xD000 | u32::from(fifth) << 6 | u32::from(sixth);
-                        let point = 0x10000 + ((s1 - 0xD800) << 10 | (s2 - 0xDC00));
+                        let s1 = 0xD000 | (u32::from(sec & 0x3F) << 6) | u32::from(third & 0x3F);
+                        let s2 = 0xD000 | (u32::from(fifth) << 6) | u32::from(sixth);
+                        let point = 0x10000 + (((s1 - 0xD800) << 10) | (s2 - 0xDC00));
                         buf.extend([
                             0xF0 | ((point & 0x1C0000) >> 18) as u8,
                             0x80 | ((point & 0x3F000) >> 12) as u8,

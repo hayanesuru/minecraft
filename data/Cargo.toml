@@ -12,12 +12,6 @@ keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_data"
 
 [features]
-default = ["1_16"]
-1_16 = []
-1_17 = []
-1_18 = []
-1_19 = []
-1_20 = []
 
 [dependencies]
 mser = { workspace = true }
@@ -28,4 +22,3 @@ mser = { workspace = true }
 itoa = "1"
 ryu = "1"
 highway = "1"
-simdutf8 = "0"

@@ -1,19 +1,13 @@
 # minecraft_data
 
 Supported version:  
-`1.16.5`
-`1.17.1`
-`1.18.2`
-`1.19.4`
-`1.20.6`
+`1.21.4`
 
 # Usage
 
 ```toml
 [dependencies]
-minecraft_data = { version = "1.3", default-features = false, features = [
-    "1_16",
-] }
+minecraft_data = "2.0"
 ```
 
 ```rust

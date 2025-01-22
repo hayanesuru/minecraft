@@ -26,7 +26,9 @@ pub fn json_str_escape(buf: &mut String, b: &[u8]) {
     let wlen = e.sz();
     buf.reserve(wlen);
     unsafe {
-        e.write(&mut UnsafeWriter(buf.as_mut_ptr().add(buf.len())));
+        e.write(&mut UnsafeWriter(core::ptr::NonNull::new_unchecked(
+            buf.as_mut_ptr().add(buf.len()),
+        )));
         let len = buf.len() + wlen;
         buf.as_mut_vec().set_len(len);
     }
@@ -37,7 +39,7 @@ pub fn json_str_escape(buf: &mut String, b: &[u8]) {
 pub struct JsonStr<'a>(pub &'a [u8]);
 
 impl Write for JsonStr<'_> {
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         let mut start = 0;
         let mut cur = 0;
         unsafe {

@@ -166,7 +166,7 @@ impl AsMut<[(KString, Tag)]> for Compound {
 }
 
 impl Write for Compound {
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         for (name, tag) in &self.0 {
             w.write_byte(match tag {
                 Tag::Byte(_) => BYTE,
@@ -250,7 +250,7 @@ impl Read for NamedCompound {
 
 impl Write for NamedCompound {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(COMPOUND);
         unsafe {
             UTF8Tag::new_unchecked(self.0.as_bytes()).write(w);
@@ -279,7 +279,7 @@ impl Read for UnamedCompound {
 
 impl Write for UnamedCompound {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(COMPOUND);
         self.0.write(w);
     }

@@ -40,16 +40,7 @@ impl Repr {
     }
 }
 fn main() {
-    #[cfg(feature = "1_16")]
-    run("1.16.5");
-    #[cfg(feature = "1_17")]
-    run("1.17.1");
-    #[cfg(feature = "1_18")]
-    run("1.18.2");
-    #[cfg(feature = "1_19")]
-    run("1.19.4");
-    #[cfg(feature = "1_20")]
-    run("1.20.6");
+    run("data");
 }
 
 fn run(version: &str) {
@@ -57,7 +48,7 @@ fn run(version: &str) {
     let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let data = path.join(version.to_owned() + ".txt");
     let data = std::fs::read(data).unwrap();
-    let data = simdutf8::basic::from_utf8(&data).unwrap();
+    let data = unsafe { core::str::from_utf8_unchecked(&data) };
     let mut gen_hash = GenerateHash::new();
     let mut mat = data.match_indices('\n');
     let a = mat.next().unwrap().0;
@@ -638,7 +629,7 @@ fn run(version: &str) {
                 w += ib.format(m);
                 w += ")";
 
-                w += " | ";
+                w += " | (";
             }
 
             if index != 0 {
@@ -657,6 +648,10 @@ fn run(version: &str) {
             if index != 0 {
                 w += " << ";
                 w += ib.format(index);
+            }
+
+            if props.len() != 1 {
+                w += ")";
             }
             w += ")";
             w += "\n}\n";
@@ -784,7 +779,7 @@ fn run(version: &str) {
     w += "}\n";
 
     let (name, size, _) = head(iter.next().unwrap());
-    if name != "block_to_block_state" {
+    if name != "block_to_default_block_state" {
         panic!();
     }
     if size != block_names.len() {
@@ -795,9 +790,11 @@ fn run(version: &str) {
     w += "; ";
     w += ib.format(block_names.len());
     w += "] = [";
+    let mut prev = 0u32;
     for _ in 0..block_names.len() {
         let (x, _) = parse_hex::<u32>(iter.next().unwrap().as_bytes());
-        w += ib.format(x);
+        w += ib.format(x + prev);
+        prev = 1 + x;
         w += ", ";
     }
     w.pop();
@@ -809,13 +806,20 @@ fn run(version: &str) {
     w += "}\n";
     w += "}\n";
     let (name, size, _) = head(iter.next().unwrap());
-    if name != "item_to_block" {
+    if name != "block_item_to_block" {
         panic!();
     }
     w += "const ITEM: [raw_block; item::MAX + 1] = [";
+    prev = 0;
     for _ in 0..size {
-        let (x, _) = parse_hex::<u32>(iter.next().unwrap().as_bytes());
-        w += ib.format(x);
+        let next = iter.next().unwrap().as_bytes();
+        if next.is_empty() {
+            w += "0, ";
+            continue;
+        }
+        let (x, _) = parse_hex::<u32>(next);
+        w += ib.format(x.wrapping_add(prev));
+        prev = 1 + x.wrapping_add(prev);
         w += ", ";
     }
     w.pop();
@@ -861,7 +865,7 @@ fn run(version: &str) {
     }
     w += "\n}\n";
     w += "#[inline]\n";
-    w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
+    w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
     if bssize <= V7MAX {
         w += "w.write_byte(self.0 as u8);";
     } else if bssize <= V21MAX {
@@ -1461,7 +1465,7 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str)
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
-    *w += "fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
+    *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
     if size <= V7MAX {
         *w += "w.write_byte(*self as u8);";
     } else if size <= V21MAX {
@@ -1475,7 +1479,7 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str)
 fn head(raw: &str) -> (&str, usize, Repr) {
     let (x, first) = raw.split_at(1);
     if x != ";" {
-        unreachable!("{raw}");
+        panic!("invalid head: {raw}");
     }
     let (name, size) = first.split_once(';').unwrap();
     let (size, _) = parse_hex::<u32>(size.as_bytes());
@@ -1574,7 +1578,7 @@ pub const fn id(self) -> ";
     *w += " {\nself as ";
     *w += repr.to_int();
     *w += "\n}\n";
-    *w += "#[inline]\n\n";
+    *w += "#[inline]\n";
     *w += "pub const fn new(x: ";
     *w += repr.to_int();
     *w += ") -> Self {\n";

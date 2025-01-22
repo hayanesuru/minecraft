@@ -24,7 +24,7 @@ impl Read for V21 {
             }
             [a, b, ref c @ ..] if (b & 0x80) == 0 => {
                 *buf = c;
-                Some(Self((a & 0x7F) as u32 | (b as u32) << 7))
+                Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)))
             }
             [a, b, c, ref d @ ..] => {
                 if (c & 0x80) == 0 {
@@ -37,7 +37,7 @@ impl Read for V21 {
                     return None;
                 }
                 Some(Self(
-                    (a & 0x7F) as u32 | ((b & 0x7F) as u32) << 7 | (c as u32) << 14,
+                    (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
                 ))
             }
             _ => None,
@@ -47,7 +47,7 @@ impl Read for V21 {
 
 impl Write for V21 {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             w.write_byte(n as u8);
@@ -91,7 +91,7 @@ impl V32 {
 
 impl Write for V32 {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             w.write_byte(n as u8);
@@ -143,31 +143,31 @@ impl Read for V32 {
             }
             [a, b, ref c @ ..] if (b & 0x80) == 0 => {
                 *buf = c;
-                Some(Self((a & 0x7F) as u32 | (b as u32) << 7))
+                Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)))
             }
             [a, b, c, ref d @ ..] if (c & 0x80) == 0 => {
                 *buf = d;
                 Some(Self(
-                    (a & 0x7F) as u32 | ((b & 0x7F) as u32) << 7 | (c as u32) << 14,
+                    (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
                 ))
             }
             [a, b, c, d, ref e @ ..] if (d & 0x80) == 0 => {
                 *buf = e;
                 Some(Self(
                     (a & 0x7F) as u32
-                        | ((b & 0x7F) as u32) << 7
-                        | ((c & 0x7F) as u32) << 14
-                        | (d as u32) << 21,
+                        | (((b & 0x7F) as u32) << 7)
+                        | (((c & 0x7F) as u32) << 14)
+                        | ((d as u32) << 21),
                 ))
             }
             [a, b, c, d, e, ref g @ ..] if (e & 0xF0) == 0 => {
                 *buf = g;
                 Some(Self(
                     (a & 0x7F) as u32
-                        | ((b & 0x7F) as u32) << 7
-                        | ((c & 0x7F) as u32) << 14
-                        | ((d & 0x7F) as u32) << 21
-                        | (e as u32) << 28,
+                        | (((b & 0x7F) as u32) << 7)
+                        | (((c & 0x7F) as u32) << 14)
+                        | (((d & 0x7F) as u32) << 21)
+                        | ((e as u32) << 28),
                 ))
             }
             _ => None,
@@ -199,7 +199,7 @@ impl V64 {
 }
 
 impl Write for V64 {
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
             w.write_byte(n as u8);
@@ -315,96 +315,96 @@ impl Read for V64 {
             }
             [a, b, ref c @ ..] if (b & 0x80) == 0 => {
                 *buf = c;
-                Some(Self((a & 0x7F) as u64 | (b as u64) << 7))
+                Some(Self((a & 0x7F) as u64 | ((b as u64) << 7)))
             }
             [a, b, c, ref d @ ..] if (c & 0x80) == 0 => {
                 *buf = d;
                 Some(Self(
-                    (a & 0x7F) as u64 | ((b & 0x7F) as u64) << 7 | (c as u64) << 14,
+                    (a & 0x7F) as u64 | (((b & 0x7F) as u64) << 7) | ((c as u64) << 14),
                 ))
             }
             [a, b, c, d, ref e @ ..] if (d & 0x80) == 0 => {
                 *buf = e;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | (d as u64) << 21,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | ((d as u64) << 21),
                 ))
             }
             [a, b, c, d, e, ref f @ ..] if (e & 0x80) == 0 => {
                 *buf = f;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | ((d & 0x7F) as u64) << 21
-                        | (e as u64) << 28,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | (((d & 0x7F) as u64) << 21)
+                        | ((e as u64) << 28),
                 ))
             }
             [a, b, c, d, e, f, ref g @ ..] if (f & 0x80) == 0 => {
                 *buf = g;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | ((d & 0x7F) as u64) << 21
-                        | ((e & 0x7F) as u64) << 28
-                        | (f as u64) << 35,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | (((d & 0x7F) as u64) << 21)
+                        | (((e & 0x7F) as u64) << 28)
+                        | ((f as u64) << 35),
                 ))
             }
             [a, b, c, d, e, f, g, ref h @ ..] if (g & 0x80) == 0 => {
                 *buf = h;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | ((d & 0x7F) as u64) << 21
-                        | ((e & 0x7F) as u64) << 28
-                        | ((f & 0x7F) as u64) << 35
-                        | (g as u64) << 42,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | (((d & 0x7F) as u64) << 21)
+                        | (((e & 0x7F) as u64) << 28)
+                        | (((f & 0x7F) as u64) << 35)
+                        | ((g as u64) << 42),
                 ))
             }
             [a, b, c, d, e, f, g, h, ref i @ ..] if (h & 0x80) == 0 => {
                 *buf = i;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | ((d & 0x7F) as u64) << 21
-                        | ((e & 0x7F) as u64) << 28
-                        | ((f & 0x7F) as u64) << 35
-                        | ((g & 0x7F) as u64) << 42
-                        | (h as u64) << 49,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | (((d & 0x7F) as u64) << 21)
+                        | (((e & 0x7F) as u64) << 28)
+                        | (((f & 0x7F) as u64) << 35)
+                        | (((g & 0x7F) as u64) << 42)
+                        | ((h as u64) << 49),
                 ))
             }
             [a, b, c, d, e, f, g, h, i, ref j @ ..] if (i & 0x80) == 0 => {
                 *buf = j;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | ((d & 0x7F) as u64) << 21
-                        | ((e & 0x7F) as u64) << 28
-                        | ((f & 0x7F) as u64) << 35
-                        | ((g & 0x7F) as u64) << 42
-                        | ((h & 0x7F) as u64) << 49
-                        | (i as u64) << 56,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | (((d & 0x7F) as u64) << 21)
+                        | (((e & 0x7F) as u64) << 28)
+                        | (((f & 0x7F) as u64) << 35)
+                        | (((g & 0x7F) as u64) << 42)
+                        | (((h & 0x7F) as u64) << 49)
+                        | ((i as u64) << 56),
                 ))
             }
             [a, b, c, d, e, f, g, h, i, j, ref k @ ..] if (j & 0xFE) == 0 => {
                 *buf = k;
                 Some(Self(
                     (a & 0x7F) as u64
-                        | ((b & 0x7F) as u64) << 7
-                        | ((c & 0x7F) as u64) << 14
-                        | ((d & 0x7F) as u64) << 21
-                        | ((e & 0x7F) as u64) << 28
-                        | ((f & 0x7F) as u64) << 35
-                        | ((g & 0x7F) as u64) << 42
-                        | ((h & 0x7F) as u64) << 49
-                        | ((i & 0x7F) as u64) << 56
-                        | (j as u64) << 63,
+                        | (((b & 0x7F) as u64) << 7)
+                        | (((c & 0x7F) as u64) << 14)
+                        | (((d & 0x7F) as u64) << 21)
+                        | (((e & 0x7F) as u64) << 28)
+                        | (((f & 0x7F) as u64) << 35)
+                        | (((g & 0x7F) as u64) << 42)
+                        | (((h & 0x7F) as u64) << 49)
+                        | (((i & 0x7F) as u64) << 56)
+                        | ((j as u64) << 63),
                 ))
             }
             _ => None,

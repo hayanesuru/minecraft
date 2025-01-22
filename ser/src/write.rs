@@ -8,7 +8,7 @@ macro_rules! primitive {
     ($type:ty) => {
         impl Write for $type {
             #[inline(always)]
-            fn write(&self, w: &mut UnsafeWriter) {
+            unsafe fn write(&self, w: &mut UnsafeWriter) {
                 w.write(&self.to_be_bytes());
             }
 
@@ -24,7 +24,7 @@ macro_rules! non_zero {
     ($type:ty) => {
         impl Write for $type {
             #[inline(always)]
-            fn write(&self, w: &mut UnsafeWriter) {
+            unsafe fn write(&self, w: &mut UnsafeWriter) {
                 w.write(&self.get().to_be_bytes());
             }
 
@@ -43,7 +43,7 @@ pub struct Write2<'a, A: ?Sized, B: ?Sized> {
 
 impl<A: Write + ?Sized, B: Write + ?Sized> Write for Write2<'_, A, B> {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.a.write(w);
         self.b.write(w);
     }
@@ -62,7 +62,7 @@ pub struct Write3<'a, A: ?Sized, B: ?Sized, C: ?Sized> {
 
 impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'_, A, B, C> {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.a.write(w);
         self.b.write(w);
         self.c.write(w);
@@ -76,7 +76,7 @@ impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'
 
 impl<T: Write> Write for alloc::slice::Iter<'_, T> {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.clone().for_each(|x| x.write(w));
     }
 
@@ -88,7 +88,7 @@ impl<T: Write> Write for alloc::slice::Iter<'_, T> {
 
 impl<T: Write> Write for alloc::slice::IterMut<'_, T> {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.as_slice().iter().for_each(|x| x.write(w));
     }
 
@@ -100,7 +100,7 @@ impl<T: Write> Write for alloc::slice::IterMut<'_, T> {
 
 impl Write for bool {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(*self as u8)
     }
 
@@ -112,7 +112,7 @@ impl Write for bool {
 
 impl Write for NonZeroI8 {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(self.get() as u8)
     }
 
@@ -124,7 +124,7 @@ impl Write for NonZeroI8 {
 
 impl Write for NonZeroU8 {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(self.get())
     }
 
@@ -136,7 +136,7 @@ impl Write for NonZeroU8 {
 
 impl Write for u8 {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(*self)
     }
 
@@ -148,7 +148,7 @@ impl Write for u8 {
 
 impl Write for i8 {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(*self as u8)
     }
 
@@ -177,7 +177,7 @@ non_zero!(NonZeroU128);
 
 impl Write for str {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write(self.as_bytes());
     }
 
@@ -189,7 +189,7 @@ impl Write for str {
 
 impl Write for [u8] {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write(self);
     }
 
@@ -201,7 +201,7 @@ impl Write for [u8] {
 
 impl Write for &str {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write(self.as_bytes());
     }
 
@@ -213,7 +213,7 @@ impl Write for &str {
 
 impl Write for uuid::Uuid {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write(self.as_bytes())
     }
 
@@ -225,7 +225,7 @@ impl Write for uuid::Uuid {
 
 impl Write for [&str] {
     #[inline(always)]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         for &x in self {
             crate::V21(str::len(x) as u32).write(w);
             w.write(x.as_bytes());
@@ -245,7 +245,7 @@ impl Write for [&str] {
 
 impl Write for &[&str] {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         Write::write(*self, w);
     }
 
@@ -257,7 +257,7 @@ impl Write for &[&str] {
 
 impl Write for &[u8] {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write(self);
     }
 

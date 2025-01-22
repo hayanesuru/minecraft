@@ -108,7 +108,7 @@ impl From<Vec<Compound>> for List {
 }
 
 impl Write for List {
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         match self {
             Self::None => w.write(&[END, 0, 0, 0, 0]),
             Self::Byte(x) => {
