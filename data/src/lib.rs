@@ -326,11 +326,11 @@ impl block_state {
     pub const fn opacity(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() >> 4 })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>() >> 4 })
         }
     }
     #[inline]
@@ -338,11 +338,11 @@ impl block_state {
     pub const fn solid(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 8 != 0 })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>() & 8 != 0 })
         }
     }
     #[inline]
@@ -350,11 +350,11 @@ impl block_state {
     pub const fn transparent(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 4 != 0 })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>() & 4 != 0 })
         }
     }
     #[inline]
@@ -362,11 +362,11 @@ impl block_state {
     pub const fn full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 2 != 0 })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>() & 2 != 0 })
         }
     }
     #[inline]
@@ -374,11 +374,11 @@ impl block_state {
     pub const fn opaque_full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>() & 1 != 0 })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>() & 1 != 0 })
         }
     }
     #[inline]
@@ -386,11 +386,11 @@ impl block_state {
     pub const fn side_solid_full(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>().add(1) })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>().add(1) })
         }
     }
     #[inline]
@@ -398,11 +398,11 @@ impl block_state {
     pub const fn side_solid_center(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>().add(2) })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>().add(2) })
         }
     }
     #[inline]
@@ -410,11 +410,11 @@ impl block_state {
     pub const fn side_solid_rigid(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1).cast::<u8>().add(3) })
+            Some(unsafe { *BLOCK_STATE_BOUNDS.add(n as usize).cast::<u8>().add(3) })
         }
     }
     #[inline]
@@ -422,11 +422,17 @@ impl block_state {
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            let index = unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1 + 4).cast::<[u8; 2]>() };
+            let index = unsafe {
+                *BLOCK_STATE_BOUNDS
+                    .add(n as usize)
+                    .cast::<u8>()
+                    .add(4)
+                    .cast::<[u8; 2]>()
+            };
             let index = u16::from_le_bytes(index) as usize;
             Some(unsafe { *SHAPES.as_ptr().add(index) })
         }
@@ -436,11 +442,17 @@ impl block_state {
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == 0 {
+        if n == u16::MAX {
             crate::cold__();
             None
         } else {
-            let index = unsafe { *BLOCK_STATE_BOUNDS.add(n as usize - 1 + 6).cast::<[u8; 2]>() };
+            let index = unsafe {
+                *BLOCK_STATE_BOUNDS
+                    .add(n as usize)
+                    .cast::<u8>()
+                    .add(6)
+                    .cast::<[u8; 2]>()
+            };
             let index = u16::from_le_bytes(index) as usize;
             Some(unsafe { *SHAPES.as_ptr().add(index) })
         }
@@ -572,7 +584,7 @@ impl entity_type {
 }
 
 #[test]
-fn test_white_concrete_block() {
+fn test_block_state() {
     let x = encode_state!(white_concrete(white_concrete::new()));
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
@@ -582,10 +594,7 @@ fn test_white_concrete_block() {
     let b = x.to_block();
     assert_eq!(b.name(), "white_concrete");
     assert_eq!(Some(b), block::parse(b"white_concrete"));
-}
 
-#[test]
-fn test_air() {
     assert_eq!(block::air.name(), "air");
     assert_eq!(Some(block::air), block::parse(b"air"));
 
@@ -593,11 +602,8 @@ fn test_air() {
     assert_eq!(x.side_solid_full(), Some(0));
     assert_eq!(x.side_solid_rigid(), Some(0));
     assert_eq!(x.side_solid_center(), Some(0));
-    assert_eq!(x.full_cube(), Some(false))
-}
+    assert_eq!(x.full_cube(), Some(false));
 
-#[test]
-fn test_oak_sapling() {
     let x = encode_state!(oak_sapling(oak_sapling::new()));
     let b = x.to_block();
     assert_eq!(b.name(), "oak_sapling");
@@ -606,5 +612,15 @@ fn test_oak_sapling() {
     assert_eq!(x.side_solid_full(), Some(0));
     assert_eq!(x.side_solid_rigid(), Some(0));
     assert_eq!(x.side_solid_center(), Some(0));
-    assert_eq!(x.full_cube(), Some(false))
+    assert_eq!(x.full_cube(), Some(false));
+
+    let x = block::mud.state_default();
+    let b = x.to_block();
+    assert_eq!(b.name(), "mud");
+    assert_eq!(Some(b), block::parse(b"mud"));
+
+    assert_eq!(x.side_solid_full(), Some(0b111111));
+    assert_eq!(x.side_solid_rigid(), Some(0b111111));
+    assert_eq!(x.side_solid_center(), Some(0b111111));
+    assert_eq!(x.full_cube(), Some(false));
 }

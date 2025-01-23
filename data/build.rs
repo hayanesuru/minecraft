@@ -1052,7 +1052,7 @@ fn data1(w: &mut String, wn: &mut Vec<u8>, data: &str, block_names: &[&str], bsr
     for _ in 0..block_names.len() {
         let (x, _) = parse_hex::<u32>(iter.next().unwrap().as_bytes());
         *w += ib.format(x + prev);
-        prev = 1 + x;
+        prev += 1 + x;
         *w += ", ";
     }
     w.pop();
@@ -1278,12 +1278,12 @@ fn data1(w: &mut String, wn: &mut Vec<u8>, data: &str, block_names: &[&str], bsr
         let (x, _) = parse_hex::<u16>(s);
         wn.extend(x.to_le_bytes());
     }
+    let empty_index = size;
 
     let (name, size, _) = head(iter.next().unwrap());
     if !name.starts_with("block_state_static_bounds") {
         panic!();
     }
-    let size = size + 1;
     if size > u16::MAX as usize {
         *w += "const BLOCK_STATE_BOUNDS_INDEX: *const [u8; 4] = ";
     } else if size > u8::MAX as usize {
@@ -1294,58 +1294,43 @@ fn data1(w: &mut String, wn: &mut Vec<u8>, data: &str, block_names: &[&str], bsr
     *w += "unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
-    if size > u16::MAX as usize {
-        let mut x = size - 1;
-        loop {
-            if x == 0 {
-                break;
+    let mut x = size;
+    loop {
+        if x == 0 {
+            break;
+        }
+        let next = iter.next().unwrap().as_bytes();
+        let (n, count) = match next.first().copied() {
+            Some(b'~') => {
+                let (a, b) = parse_hex::<u32>(&next[1..]);
+                let next = next.get(b + 2..).unwrap_or(b"");
+                let n = parse_hex::<u32>(next);
+                (n, a as usize)
             }
-            let next = iter.next().unwrap().as_bytes();
-            let (n, count) = match next.first().copied() {
-                Some(b'~') => {
-                    let (a, b) = parse_hex::<u32>(&next[1..]);
-                    let next = next.get(b + 2..).unwrap_or(b"");
-                    let n = parse_hex::<u32>(next);
-                    (n, a as usize)
-                }
-                _ => {
-                    let n = parse_hex::<u32>(next);
-                    (n, 1)
-                }
-            };
-            let n = if n.1 == 0 { 0 } else { n.0 + 1 };
+            _ => {
+                let n = parse_hex::<u32>(next);
+                (n, 1)
+            }
+        };
+        let n = if n.0 == empty_index as u32 {
+            u32::MAX
+        } else {
+            n.0
+        };
+        if size > u16::MAX as usize {
             for _ in 0..count {
                 wn.extend(n.to_le_bytes());
                 x -= 1;
             }
-        }
-    } else if size > u8::MAX as usize {
-        let mut x = size - 1;
-        loop {
-            if x == 0 {
-                break;
-            }
-            let next = iter.next().unwrap().as_bytes();
-            let (n, count) = match next.first().copied() {
-                Some(b'~') => {
-                    let (a, b) = parse_hex::<u32>(&next[1..]);
-                    let next = next.get(b + 2..).unwrap_or(b"");
-                    let n = parse_hex::<u16>(next);
-                    (n, a as usize)
-                }
-                _ => {
-                    let n = parse_hex::<u16>(next);
-                    (n, 1)
-                }
-            };
-            let n = if n.1 == 0 { 0 } else { n.0 + 1 };
+        } else if size > u8::MAX as usize {
+            let n = n as u16;
             for _ in 0..count {
                 wn.extend(n.to_le_bytes());
                 x -= 1;
             }
+        } else {
+            unimplemented!()
         }
-    } else {
-        unimplemented!()
     }
 
     let (name, size, _) = head(iter.next().unwrap());

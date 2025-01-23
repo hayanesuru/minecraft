@@ -5237,7 +5237,7 @@ e 0
 ~a3 0 50
 ~2 0 40
 ~4 0 0
-;block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape;309
+;block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape;30a
 4 0 0 0 0 0
 fb 3f 3f 3f 1 1
 10 0 0 0 0 0
@@ -6015,6 +6015,7 @@ f2 3f 3f 3f 1 0
 10 0 1 0 157 157
 4 0 1 0 157 157
 4 1 1 1 168 0
+ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff
 ;block_state_static_bounds;6cda
 0
 ~1c 1
@@ -6370,7 +6371,7 @@ f
 ~2 1b
 ~2 1c
 ~10 1
-~c
+~c 309
 ~10 0
 ~3 1
 ~2 10
@@ -13322,7 +13323,7 @@ d1
 ~6 1
 0
 ~c 10
-~66
+~66 309
 ~60 1
 ~1b 2
 1
@@ -13462,7 +13463,7 @@ d1
 28b
 28c
 0
-~c
+~c 309
 225
 ~2 0
 ~2 2
@@ -18863,7 +18864,7 @@ ff
 211
 212
 213
-~20
+~20 309
 ~22 1
 ~2 28d
 ~2 28e
@@ -22304,7 +22305,7 @@ ff
 213
 ~2 1
 2e8
-
+309
 d0
 d1
 d0
@@ -24321,7 +24322,7 @@ d1
 23c
 2eb
 23c
-~14
+~14 309
 1
 ~37 0
 ~2 2ec
