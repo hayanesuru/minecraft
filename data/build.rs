@@ -1252,7 +1252,7 @@ fn data1(w: &mut String, wn: &mut Vec<u8>, data: &str, block_names: &[&str], bsr
         panic!();
     }
     assert_eq!(shape_repr, Repr::U16);
-    *w += "const BLOCK_STATE_BOUNDS: *const [u8; 8] = ";
+    *w += "const BLOCK_STATE_BOUNDS: *const u8 = ";
     *w += "unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
@@ -1289,7 +1289,7 @@ fn data1(w: &mut String, wn: &mut Vec<u8>, data: &str, block_names: &[&str], bsr
     } else if size > u8::MAX as usize {
         *w += "const BLOCK_STATE_BOUNDS_INDEX: *const [u8; 2] = ";
     } else {
-        unimplemented!()
+        *w += "const BLOCK_STATE_BOUNDS_INDEX: *const [u8; 1] = ";
     };
     *w += "unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
@@ -1329,7 +1329,11 @@ fn data1(w: &mut String, wn: &mut Vec<u8>, data: &str, block_names: &[&str], bsr
                 x -= 1;
             }
         } else {
-            unimplemented!()
+            let n = n as u8;
+            for _ in 0..count {
+                wn.extend(n.to_le_bytes());
+                x -= 1;
+            }
         }
     }
 
