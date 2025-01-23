@@ -6,7 +6,7 @@ resolver = "2"
 authors = ["Jvavav"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/jvavav/minecraft"
+repository = "https://github.com/hayanesuru/minecraft"
 edition = "2021"
 
 [workspace.dependencies]
