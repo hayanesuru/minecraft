@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(non_camel_case_types, clippy::manual_map)]
+#![allow(non_camel_case_types, clippy::manual_map, non_upper_case_globals)]
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
@@ -243,7 +243,7 @@ impl block_state {
     #[inline]
     pub const fn to_fluid(self) -> fluid_state {
         unsafe {
-            fluid_state::new(raw_fluid_state::from_le_bytes(
+            fluid_state(raw_fluid_state::from_le_bytes(
                 *FLUID_STATE.add(self.0 as usize),
             ))
         }
@@ -529,7 +529,7 @@ impl fluid_state {
         unsafe {
             block_state::new(raw_block_state::from_le_bytes(
                 *FLUID_STATE_TO_BLOCK
-                    .add(self as usize * ::core::mem::size_of::<raw_block_state>()),
+                    .add(self.0 as usize * ::core::mem::size_of::<raw_block_state>()),
             ))
         }
     }
@@ -537,18 +537,18 @@ impl fluid_state {
     #[inline]
     #[must_use]
     pub const fn level(self) -> u8 {
-        unsafe { *(*FLUID_STATE_LEVEL.add(self as usize)).as_ptr() }
+        unsafe { *(*FLUID_STATE_LEVEL.add(self.0 as usize)).as_ptr() }
     }
 
     #[inline]
     #[must_use]
     pub const fn falling(self) -> bool {
-        unsafe { *(*FLUID_STATE_FALLING.add(self as usize)).as_ptr() == 1 }
+        unsafe { *(*FLUID_STATE_FALLING.add(self.0 as usize)).as_ptr() == 1 }
     }
 
     #[inline]
     pub const fn to_fluid(self) -> fluid {
-        unsafe { fluid::new(*(*FLUID_STATE_TO_FLUID.add(self as usize)).as_ptr()) }
+        unsafe { fluid::new(*(*FLUID_STATE_TO_FLUID.add(self.0 as usize)).as_ptr()) }
     }
 }
 impl From<bool> for val_true_false {

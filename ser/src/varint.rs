@@ -4,6 +4,7 @@ pub const V21MAX: usize = 0x1FFFFF;
 pub const V7MAX: usize = 0x7F;
 
 #[repr(transparent)]
+#[must_use]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct V21(pub u32);
 
@@ -72,6 +73,7 @@ impl Write for V21 {
 }
 
 #[repr(transparent)]
+#[must_use]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct V32(pub u32);
 
@@ -176,6 +178,7 @@ impl Read for V32 {
 }
 
 #[repr(transparent)]
+#[must_use]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct V64(pub u64);
 

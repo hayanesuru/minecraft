@@ -50,7 +50,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                 #[automatically_derived]
                 impl<#impl_params> ::mser::Write for #name #ty_params #where_clause {
                     #[inline]
-                    fn write(&self, w: &mut ::mser::UnsafeWriter) {
+                    unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {
                         #(#assignments)*
                         #a
                         #(#body)*
@@ -86,7 +86,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                     #[automatically_derived]
                     impl ::mser::Write for #name {
                         #[inline]
-                        fn write(&self, w: &mut ::mser::UnsafeWriter) {
+                        unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {
                             w.write_byte(*self as u8);
                         }
 
@@ -119,7 +119,7 @@ pub fn impl_writable(input: syn::DeriveInput) -> Result<TokenStream, syn::Error>
                     #[automatically_derived]
                     impl ::mser::Write for #name {
                         #[inline]
-                        fn write(&self, w: &mut ::mser::UnsafeWriter) {
+                        unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {
                             let n = self as u8;
                             if n < 0x80 {
                                 w.write_byte(n);
