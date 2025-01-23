@@ -3,6 +3,7 @@
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
+/// `block_name(prop_expr)`
 #[macro_export]
 macro_rules! encode_state {
     ($b:ident($x:expr)) => {
@@ -10,6 +11,7 @@ macro_rules! encode_state {
     };
 }
 
+/// `block_name(prop_expr)`
 #[macro_export]
 macro_rules! decode_state {
     ($b:ident($x:expr)) => {
@@ -72,28 +74,6 @@ impl NameMap<u8> {
         } else {
             None
         }
-    }
-}
-
-pub type raw_props_nil = ();
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct props_nil;
-
-impl props_nil {
-    #[inline]
-    pub const fn new() -> Self {
-        Self
-    }
-
-    #[inline]
-    pub const fn encode(self) -> u8 {
-        0
-    }
-
-    #[inline]
-    pub const fn decode(_: u8) -> Self {
-        Self
     }
 }
 
@@ -593,12 +573,38 @@ impl entity_type {
 
 #[test]
 fn test_white_concrete_block() {
-    assert_eq!(block::white_concrete.name(), "white_concrete");
-    assert_eq!(Some(block::white_concrete), block::parse(b"white_concrete"));
-
-    let x = block::white_concrete.state_default();
+    let x = encode_state!(white_concrete(white_concrete::new()));
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
     assert_eq!(x.side_solid_center(), Some(0b111111));
-    assert_eq!(x.full_cube(), Some(true))
+    assert_eq!(x.full_cube(), Some(true));
+
+    let b = x.to_block();
+    assert_eq!(b.name(), "white_concrete");
+    assert_eq!(Some(b), block::parse(b"white_concrete"));
+}
+
+#[test]
+fn test_air() {
+    assert_eq!(block::air.name(), "air");
+    assert_eq!(Some(block::air), block::parse(b"air"));
+
+    let x = block::air.state_default();
+    assert_eq!(x.side_solid_full(), Some(0));
+    assert_eq!(x.side_solid_rigid(), Some(0));
+    assert_eq!(x.side_solid_center(), Some(0));
+    assert_eq!(x.full_cube(), Some(false))
+}
+
+#[test]
+fn test_oak_sapling() {
+    let x = encode_state!(oak_sapling(oak_sapling::new()));
+    let b = x.to_block();
+    assert_eq!(b.name(), "oak_sapling");
+    assert_eq!(Some(b), block::parse(b"oak_sapling"));
+
+    assert_eq!(x.side_solid_full(), Some(0));
+    assert_eq!(x.side_solid_rigid(), Some(0));
+    assert_eq!(x.side_solid_center(), Some(0));
+    assert_eq!(x.full_cube(), Some(false))
 }

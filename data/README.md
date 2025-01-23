@@ -11,8 +11,7 @@ minecraft_data = "2.0"
 ```
 
 ```rust
-pub use minecraft_data::v1_16::*;
-pub use minecraft_data::{decode_state, encode_state};
+pub use minecraft_data::*;
 
 fn main() {
     assert_eq!(core::mem::size_of::<block_state>(), 2);
