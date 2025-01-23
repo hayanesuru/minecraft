@@ -7,18 +7,20 @@ authors.workspace = true
 readme = "README.md"
 license.workspace = true
 repository.workspace = true
-categories = []
+categories = ["no-std"]
 keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_data"
 
 [features]
+default = ["std"]
+std = ["highway/std", "mser/std"]
 
 [dependencies]
-mser = { workspace = true }
-highway = "1"
+mser = { workspace = true, default-features = false }
+highway = { version = "1", default-features = false }
 
 [build-dependencies]
-mser = { workspace = true }
+mser = { workspace = true, default-features = false }
 itoa = "1"
 ryu = "1"
-highway = "1"
+highway = { version = "1", default-features = false }

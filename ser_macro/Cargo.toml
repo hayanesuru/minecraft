@@ -7,6 +7,11 @@ readme.workspace = true
 license.workspace = true
 repository.workspace = true
 edition.workspace = true
+categories = ["no-std"]
+
+[features]
+default = ["std"]
+std = ["mser/std"]
 
 [lib]
 proc-macro = true

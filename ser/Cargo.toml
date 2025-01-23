@@ -7,14 +7,16 @@ authors.workspace = true
 readme.workspace = true
 license.workspace = true
 repository.workspace = true
-categories = []
+categories = ["no-std"]
 documentation = "https://docs.rs/mser"
 
 [features]
+default = ["std"]
+std = ["simdutf8/std", "flexstr/std"]
 
 [dependencies]
 uuid = { version = "1", default-features = false }
 itoa = "1"
 ryu = "1"
-simdutf8 = "0"
-kstring = "2"
+simdutf8 = { version = "0", default-features = false }
+flexstr = { version = "0.9", default-features = false }

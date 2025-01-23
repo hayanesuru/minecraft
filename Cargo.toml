@@ -10,6 +10,6 @@ repository = "https://github.com/jvavav/minecraft"
 edition = "2021"
 
 [workspace.dependencies]
-minecraft_data = { path = "data", version = "2.0" }
-mser = { path = "ser", version = "2.0" }
-mser_macro = { path = "ser_macro", version = "2.0" }
+minecraft_data = { path = "data", version = "2.0", default-features = false }
+mser = { path = "ser", version = "2.0", default-features = false }
+mser_macro = { path = "ser_macro", version = "2.0", default-features = false }

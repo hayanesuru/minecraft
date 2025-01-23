@@ -4,7 +4,6 @@ use super::{
 };
 use crate::{Bytes, UnsafeWriter, Write};
 use alloc::vec::Vec;
-use kstring::KString;
 
 #[derive(Clone)]
 pub enum List {
@@ -15,7 +14,7 @@ pub enum List {
     Long(Vec<i64>),
     Float(Vec<f32>),
     Double(Vec<f64>),
-    String(Vec<KString>),
+    String(Vec<flexstr::SharedStr>),
     ByteArray(Vec<Vec<u8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
@@ -65,9 +64,9 @@ impl From<Vec<f64>> for List {
     }
 }
 
-impl From<Vec<KString>> for List {
+impl From<Vec<flexstr::SharedStr>> for List {
     #[inline]
-    fn from(value: Vec<KString>) -> Self {
+    fn from(value: Vec<flexstr::SharedStr>) -> Self {
         Self::String(value)
     }
 }
