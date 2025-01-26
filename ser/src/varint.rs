@@ -1,11 +1,12 @@
 use super::{Read, UnsafeWriter, Write};
+use core::slice::from_raw_parts;
 
 pub const V21MAX: usize = 0x1FFFFF;
 pub const V7MAX: usize = 0x7F;
 
 #[repr(transparent)]
 #[must_use]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct V21(pub u32);
 
 impl V21 {
@@ -18,30 +19,60 @@ impl V21 {
 
 impl Read for V21 {
     fn read(buf: &mut &[u8]) -> Option<Self> {
-        match **buf {
-            [a, ref b @ ..] if (a & 0x80) == 0 => {
-                *buf = b;
-                Some(Self(a as u32))
+        unsafe {
+            let mut ptr = buf.as_ptr();
+            let len = buf.len();
+
+            if unlikely(len == 0) {
+                return None;
             }
-            [a, b, ref c @ ..] if (b & 0x80) == 0 => {
-                *buf = c;
-                Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)))
+            let a = *ptr;
+            ptr = ptr.add(1);
+            if likely((a & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 1);
+                return Some(Self(a as u32));
             }
-            [a, b, c, ref d @ ..] => {
-                if (c & 0x80) == 0 {
-                    *buf = d;
-                } else if let [0x00, ref e @ ..] = d {
-                    *buf = e;
-                } else if let [0x80, 0x00, ref e @ ..] = d {
-                    *buf = e;
-                } else {
-                    return None;
-                }
-                Some(Self(
-                    (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
-                ))
+
+            if unlikely(len == 1) {
+                return None;
             }
-            _ => None,
+            let b = *ptr;
+            ptr = ptr.add(1);
+            if likely((b & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 2);
+                return Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
+            }
+
+            if unlikely(len == 2) {
+                return None;
+            }
+            let c = *ptr;
+            ptr = ptr.add(1);
+            let p = (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14);
+            if likely((c & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 3);
+                return Some(Self(p));
+            }
+
+            if unlikely(len == 3) {
+                return None;
+            }
+            let d = *ptr;
+            ptr = ptr.add(1);
+            if unlikely(d == 0x00) {
+                *buf = from_raw_parts(ptr, buf.len() - 4);
+                return Some(Self(p));
+            }
+            if unlikely(len == 4) {
+                return None;
+            }
+            let e = *ptr;
+            ptr = ptr.add(1);
+            if likely(d == 0x80 && e == 0x00) {
+                *buf = from_raw_parts(ptr, buf.len() - 5);
+                return Some(Self(p));
+            }
+            None
         }
     }
 }
@@ -74,7 +105,7 @@ impl Write for V21 {
 
 #[repr(transparent)]
 #[must_use]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct V32(pub u32);
 
 impl V32 {
@@ -138,48 +169,80 @@ impl Write for V32 {
 
 impl Read for V32 {
     fn read(buf: &mut &[u8]) -> Option<Self> {
-        match **buf {
-            [a, ref b @ ..] if (a & 0x80) == 0 => {
-                *buf = b;
-                Some(Self(a as u32))
+        unsafe {
+            let mut ptr = buf.as_ptr();
+            let len = buf.len();
+
+            if unlikely(len == 0) {
+                return None;
             }
-            [a, b, ref c @ ..] if (b & 0x80) == 0 => {
-                *buf = c;
-                Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)))
+            let a = *ptr;
+            ptr = ptr.add(1);
+            if likely((a & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 1);
+                return Some(Self(a as u32));
             }
-            [a, b, c, ref d @ ..] if (c & 0x80) == 0 => {
-                *buf = d;
-                Some(Self(
+
+            if unlikely(len == 1) {
+                return None;
+            }
+            let b = *ptr;
+            ptr = ptr.add(1);
+            if likely((b & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 2);
+                return Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
+            }
+
+            if unlikely(len == 2) {
+                return None;
+            }
+            let c = *ptr;
+            ptr = ptr.add(1);
+            if unlikely((c & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 3);
+                return Some(Self(
                     (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
-                ))
+                ));
             }
-            [a, b, c, d, ref e @ ..] if (d & 0x80) == 0 => {
-                *buf = e;
-                Some(Self(
+
+            if unlikely(len == 3) {
+                return None;
+            }
+            let d = *ptr;
+            ptr = ptr.add(1);
+            if unlikely((d & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 4);
+                return Some(Self(
                     (a & 0x7F) as u32
                         | (((b & 0x7F) as u32) << 7)
                         | (((c & 0x7F) as u32) << 14)
                         | ((d as u32) << 21),
-                ))
+                ));
             }
-            [a, b, c, d, e, ref g @ ..] if (e & 0xF0) == 0 => {
-                *buf = g;
-                Some(Self(
+
+            if unlikely(len == 4) {
+                return None;
+            }
+            let e = *ptr;
+            ptr = ptr.add(1);
+            if (e & 0xF0) == 0 {
+                *buf = core::slice::from_raw_parts(ptr, buf.len() - 5);
+                return Some(Self(
                     (a & 0x7F) as u32
                         | (((b & 0x7F) as u32) << 7)
                         | (((c & 0x7F) as u32) << 14)
                         | (((d & 0x7F) as u32) << 21)
                         | ((e as u32) << 28),
-                ))
+                ));
             }
-            _ => None,
+            None
         }
     }
 }
 
 #[repr(transparent)]
 #[must_use]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct V64(pub u64);
 
 impl V64 {
@@ -206,6 +269,19 @@ impl Write for V64 {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
             w.write_byte(n as u8);
+        } else if n & 0x8000000000000000 != 0 {
+            w.write(&[
+                n as u8 | 0x80,
+                (n >> 7) as u8 | 0x80,
+                (n >> 14) as u8 | 0x80,
+                (n >> 21) as u8 | 0x80,
+                (n >> 28) as u8 | 0x80,
+                (n >> 35) as u8 | 0x80,
+                (n >> 42) as u8 | 0x80,
+                (n >> 49) as u8 | 0x80,
+                (n >> 56) as u8 | 0x80,
+                (n >> 63) as u8,
+            ]);
         } else if n & 0xFFFFFFFFFFFFC000 == 0 {
             w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
         } else if n & 0xFFFFFFFFFFE00000 == 0 {
@@ -255,7 +331,7 @@ impl Write for V64 {
                 (n >> 42) as u8 | 0x80,
                 (n >> 49) as u8,
             ]);
-        } else if n & 0x8000000000000000 == 0 {
+        } else {
             w.write(&[
                 n as u8 | 0x80,
                 (n >> 7) as u8 | 0x80,
@@ -267,19 +343,6 @@ impl Write for V64 {
                 (n >> 49) as u8 | 0x80,
                 (n >> 56) as u8,
             ]);
-        } else {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8 | 0x80,
-                (n >> 35) as u8 | 0x80,
-                (n >> 42) as u8 | 0x80,
-                (n >> 49) as u8 | 0x80,
-                (n >> 56) as u8 | 0x80,
-                (n >> 63) as u8,
-            ]);
         }
     }
 
@@ -287,6 +350,8 @@ impl Write for V64 {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
             1
+        } else if n & 0x8000000000000000 != 0 {
+            10
         } else if n & 0xFFFFFFFFFFFFC000 == 0 {
             2
         } else if n & 0xFFFFFFFFFFE00000 == 0 {
@@ -301,64 +366,124 @@ impl Write for V64 {
             7
         } else if n & 0xFF00000000000000 == 0 {
             8
-        } else if n & 0x8000000000000000 == 0 {
-            9
         } else {
-            10
+            9
         }
     }
 }
 
 impl Read for V64 {
     fn read(buf: &mut &[u8]) -> Option<Self> {
-        match **buf {
-            [a, ref b @ ..] if (a & 0x80) == 0 => {
-                *buf = b;
-                Some(Self(a as u64))
+        unsafe {
+            let mut ptr = buf.as_ptr();
+            let len = buf.len();
+
+            if unlikely(len == 0) {
+                return None;
             }
-            [a, b, ref c @ ..] if (b & 0x80) == 0 => {
-                *buf = c;
-                Some(Self((a & 0x7F) as u64 | ((b as u64) << 7)))
+            let a = *ptr;
+            ptr = ptr.add(1);
+            if likely((a & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 1);
+                return Some(Self(a as u64));
             }
-            [a, b, c, ref d @ ..] if (c & 0x80) == 0 => {
-                *buf = d;
-                Some(Self(
+
+            if unlikely(len == 1) {
+                return None;
+            }
+            let b = *ptr;
+            ptr = ptr.add(1);
+            if likely((b & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 2);
+                return Some(Self((a & 0x7F) as u64 | ((b as u64) << 7)));
+            }
+
+            if likely(len >= 10) {
+                let y = u64::from_le_bytes(*ptr.cast::<[u8; 8]>());
+                if unlikely(y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080) {
+                    *buf = from_raw_parts(ptr.add(8), buf.len() - 10);
+                    return Some(Self(
+                        ((a & 0x7F) as u64)
+                            | (((b & 0x7F) as u64) << 7)
+                            | ((y & 0x0000_0000_0000_007F) << 14)
+                            | ((y & 0x0000_0000_0000_7F00) << 13)
+                            | ((y & 0x0000_0000_007F_0000) << 12)
+                            | ((y & 0x0000_0000_7F00_0000) << 11)
+                            | ((y & 0x0000_007F_0000_0000) << 10)
+                            | ((y & 0x0000_7F00_0000_0000) << 9)
+                            | ((y & 0x007F_0000_0000_0000) << 8)
+                            | ((y & 0x0100_0000_0000_0000) << 7),
+                    ));
+                }
+            }
+
+            if unlikely(len == 2) {
+                return None;
+            }
+            let c = *ptr;
+            ptr = ptr.add(1);
+            if unlikely((c & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 3);
+                return Some(Self(
                     (a & 0x7F) as u64 | (((b & 0x7F) as u64) << 7) | ((c as u64) << 14),
-                ))
+                ));
             }
-            [a, b, c, d, ref e @ ..] if (d & 0x80) == 0 => {
-                *buf = e;
-                Some(Self(
+
+            if unlikely(len == 3) {
+                return None;
+            }
+            let d = *ptr;
+            ptr = ptr.add(1);
+            if unlikely((d & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 4);
+                return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
                         | (((c & 0x7F) as u64) << 14)
                         | ((d as u64) << 21),
-                ))
+                ));
             }
-            [a, b, c, d, e, ref f @ ..] if (e & 0x80) == 0 => {
-                *buf = f;
-                Some(Self(
+            if unlikely(len == 4) {
+                return None;
+            }
+            let e = *ptr;
+            ptr = ptr.add(1);
+            if likely((e & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 5);
+                return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
                         | (((c & 0x7F) as u64) << 14)
                         | (((d & 0x7F) as u64) << 21)
                         | ((e as u64) << 28),
-                ))
+                ));
             }
-            [a, b, c, d, e, f, ref g @ ..] if (f & 0x80) == 0 => {
-                *buf = g;
-                Some(Self(
+
+            if unlikely(len == 5) {
+                return None;
+            }
+            let f = *ptr;
+            ptr = ptr.add(1);
+            if likely((f & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 6);
+                return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
                         | (((c & 0x7F) as u64) << 14)
                         | (((d & 0x7F) as u64) << 21)
                         | (((e & 0x7F) as u64) << 28)
                         | ((f as u64) << 35),
-                ))
+                ));
             }
-            [a, b, c, d, e, f, g, ref h @ ..] if (g & 0x80) == 0 => {
-                *buf = h;
-                Some(Self(
+
+            if unlikely(len == 6) {
+                return None;
+            }
+            let g = *ptr;
+            ptr = ptr.add(1);
+            if likely((g & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 7);
+                return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
                         | (((c & 0x7F) as u64) << 14)
@@ -366,11 +491,17 @@ impl Read for V64 {
                         | (((e & 0x7F) as u64) << 28)
                         | (((f & 0x7F) as u64) << 35)
                         | ((g as u64) << 42),
-                ))
+                ));
             }
-            [a, b, c, d, e, f, g, h, ref i @ ..] if (h & 0x80) == 0 => {
-                *buf = i;
-                Some(Self(
+
+            if unlikely(len == 7) {
+                return None;
+            }
+            let h = *ptr;
+            ptr = ptr.add(1);
+            if likely((h & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 8);
+                return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
                         | (((c & 0x7F) as u64) << 14)
@@ -379,11 +510,17 @@ impl Read for V64 {
                         | (((f & 0x7F) as u64) << 35)
                         | (((g & 0x7F) as u64) << 42)
                         | ((h as u64) << 49),
-                ))
+                ));
             }
-            [a, b, c, d, e, f, g, h, i, ref j @ ..] if (i & 0x80) == 0 => {
-                *buf = j;
-                Some(Self(
+
+            if unlikely(len == 8) {
+                return None;
+            }
+            let i = *ptr;
+            ptr = ptr.add(1);
+            if likely((i & 0x80) == 0) {
+                *buf = from_raw_parts(ptr, buf.len() - 9);
+                return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
                         | (((c & 0x7F) as u64) << 14)
@@ -393,24 +530,71 @@ impl Read for V64 {
                         | (((g & 0x7F) as u64) << 42)
                         | (((h & 0x7F) as u64) << 49)
                         | ((i as u64) << 56),
-                ))
+                ));
             }
-            [a, b, c, d, e, f, g, h, i, j, ref k @ ..] if (j & 0xFE) == 0 => {
-                *buf = k;
-                Some(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | (((d & 0x7F) as u64) << 21)
-                        | (((e & 0x7F) as u64) << 28)
-                        | (((f & 0x7F) as u64) << 35)
-                        | (((g & 0x7F) as u64) << 42)
-                        | (((h & 0x7F) as u64) << 49)
-                        | (((i & 0x7F) as u64) << 56)
-                        | ((j as u64) << 63),
-                ))
-            }
-            _ => None,
+        }
+
+        None
+    }
+}
+
+#[inline(always)]
+const fn unlikely(b: bool) -> bool {
+    #[allow(clippy::needless_bool)]
+    if (1i32).checked_div(if b { 0 } else { 1 }).is_none() {
+        true
+    } else {
+        false
+    }
+}
+
+#[inline(always)]
+const fn likely(b: bool) -> bool {
+    #[allow(clippy::needless_bool)]
+    if (1i32).checked_div(if b { 1 } else { 0 }).is_some() {
+        true
+    } else {
+        false
+    }
+}
+
+#[test]
+fn test_varint() {
+    let mut r = 0xE3D172B05F73CBC3u64;
+    let mut buf = [0u8; 10];
+
+    for _ in 0..100_000 {
+        r = r.wrapping_add(0xa0761d6478bd642f);
+        let x = (r ^ 0xe7037ed1a0b428db) as u128;
+        let t = (r as u128).wrapping_mul(x);
+        let x = (t.wrapping_shr(64) ^ t) as u64;
+        unsafe {
+            let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
+            let y = V64(x);
+            y.write(&mut w);
+            let sz = y.sz();
+            assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
+            let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+            assert_eq!(V64::read(&mut sl), Some(y));
+            assert!(sl.is_empty());
+
+            let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
+            let y = V32(x as u32);
+            y.write(&mut w);
+            let sz = y.sz();
+            assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
+            let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+            assert_eq!(V32::read(&mut sl), Some(y));
+            assert!(sl.is_empty());
+
+            let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
+            let y = V21(x as u32 & 0x1FFFFF);
+            y.write(&mut w);
+            let sz = y.sz();
+            assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
+            let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+            assert_eq!(V21::read(&mut sl), Some(y));
+            assert!(sl.is_empty());
         }
     }
 }
