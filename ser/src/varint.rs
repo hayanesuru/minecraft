@@ -30,7 +30,7 @@ impl Read for V21 {
             let a = *ptr;
             ptr = ptr.add(1);
             if likely((a & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 1);
+                *buf = from_raw_parts(ptr, len - 1);
                 return Some(Self(a as u32));
             }
 
@@ -40,7 +40,7 @@ impl Read for V21 {
             let b = *ptr;
             ptr = ptr.add(1);
             if likely((b & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 2);
+                *buf = from_raw_parts(ptr, len - 2);
                 return Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
             }
 
@@ -51,7 +51,7 @@ impl Read for V21 {
             ptr = ptr.add(1);
             let p = (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14);
             if likely((c & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 3);
+                *buf = from_raw_parts(ptr, len - 3);
                 return Some(Self(p));
             }
 
@@ -61,7 +61,7 @@ impl Read for V21 {
             let d = *ptr;
             ptr = ptr.add(1);
             if unlikely(d == 0x00) {
-                *buf = from_raw_parts(ptr, buf.len() - 4);
+                *buf = from_raw_parts(ptr, len - 4);
                 return Some(Self(p));
             }
             if unlikely(len == 4) {
@@ -70,7 +70,7 @@ impl Read for V21 {
             let e = *ptr;
             ptr = ptr.add(1);
             if likely(d == 0x80 && e == 0x00) {
-                *buf = from_raw_parts(ptr, buf.len() - 5);
+                *buf = from_raw_parts(ptr, len - 5);
                 return Some(Self(p));
             }
             None
@@ -180,7 +180,7 @@ impl Read for V32 {
             let a = *ptr;
             ptr = ptr.add(1);
             if likely((a & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 1);
+                *buf = from_raw_parts(ptr, len - 1);
                 return Some(Self(a as u32));
             }
 
@@ -190,7 +190,7 @@ impl Read for V32 {
             let b = *ptr;
             ptr = ptr.add(1);
             if likely((b & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 2);
+                *buf = from_raw_parts(ptr, len - 2);
                 return Some(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
             }
 
@@ -200,7 +200,7 @@ impl Read for V32 {
             let c = *ptr;
             ptr = ptr.add(1);
             if unlikely((c & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 3);
+                *buf = from_raw_parts(ptr, len - 3);
                 return Some(Self(
                     (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
                 ));
@@ -212,7 +212,7 @@ impl Read for V32 {
             let d = *ptr;
             ptr = ptr.add(1);
             if unlikely((d & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 4);
+                *buf = from_raw_parts(ptr, len - 4);
                 return Some(Self(
                     (a & 0x7F) as u32
                         | (((b & 0x7F) as u32) << 7)
@@ -227,7 +227,7 @@ impl Read for V32 {
             let e = *ptr;
             ptr = ptr.add(1);
             if (e & 0xF0) == 0 {
-                *buf = core::slice::from_raw_parts(ptr, buf.len() - 5);
+                *buf = core::slice::from_raw_parts(ptr, len - 5);
                 return Some(Self(
                     (a & 0x7F) as u32
                         | (((b & 0x7F) as u32) << 7)
@@ -385,7 +385,7 @@ impl Read for V64 {
             let a = *ptr;
             ptr = ptr.add(1);
             if likely((a & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 1);
+                *buf = from_raw_parts(ptr, len - 1);
                 return Some(Self(a as u64));
             }
 
@@ -395,14 +395,14 @@ impl Read for V64 {
             let b = *ptr;
             ptr = ptr.add(1);
             if likely((b & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 2);
+                *buf = from_raw_parts(ptr, len - 2);
                 return Some(Self((a & 0x7F) as u64 | ((b as u64) << 7)));
             }
 
             if likely(len >= 10) {
                 let y = u64::from_le_bytes(*ptr.cast::<[u8; 8]>());
                 if unlikely(y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080) {
-                    *buf = from_raw_parts(ptr.add(8), buf.len() - 10);
+                    *buf = from_raw_parts(ptr.add(8), len - 10);
                     return Some(Self(
                         ((a & 0x7F) as u64)
                             | (((b & 0x7F) as u64) << 7)
@@ -424,7 +424,7 @@ impl Read for V64 {
             let c = *ptr;
             ptr = ptr.add(1);
             if unlikely((c & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 3);
+                *buf = from_raw_parts(ptr, len - 3);
                 return Some(Self(
                     (a & 0x7F) as u64 | (((b & 0x7F) as u64) << 7) | ((c as u64) << 14),
                 ));
@@ -436,7 +436,7 @@ impl Read for V64 {
             let d = *ptr;
             ptr = ptr.add(1);
             if unlikely((d & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 4);
+                *buf = from_raw_parts(ptr, len - 4);
                 return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
@@ -450,7 +450,7 @@ impl Read for V64 {
             let e = *ptr;
             ptr = ptr.add(1);
             if likely((e & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 5);
+                *buf = from_raw_parts(ptr, len - 5);
                 return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
@@ -466,7 +466,7 @@ impl Read for V64 {
             let f = *ptr;
             ptr = ptr.add(1);
             if likely((f & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 6);
+                *buf = from_raw_parts(ptr, len - 6);
                 return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
@@ -483,7 +483,7 @@ impl Read for V64 {
             let g = *ptr;
             ptr = ptr.add(1);
             if likely((g & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 7);
+                *buf = from_raw_parts(ptr, len - 7);
                 return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
@@ -501,7 +501,7 @@ impl Read for V64 {
             let h = *ptr;
             ptr = ptr.add(1);
             if likely((h & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 8);
+                *buf = from_raw_parts(ptr, len - 8);
                 return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
@@ -520,7 +520,7 @@ impl Read for V64 {
             let i = *ptr;
             ptr = ptr.add(1);
             if likely((i & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, buf.len() - 9);
+                *buf = from_raw_parts(ptr, len - 9);
                 return Some(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
