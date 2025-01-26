@@ -1545,10 +1545,10 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str)
         *w += repr.to_int();
         *w += ";\n";
     }
-    *w += "if x > Self::MAX as ";
+    *w += "if ::mser::unlikely(x > Self::MAX as ";
     *w += repr.to_int();
-    *w += " {\n";
-    *w += "crate::cold__();\nNone\n";
+    *w += ") {\n";
+    *w += "None\n";
     *w += "} else {\n";
     *w += "Some(unsafe { ::core::mem::transmute::<";
     *w += repr.to_int();

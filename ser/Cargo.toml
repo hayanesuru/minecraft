@@ -9,6 +9,7 @@ license.workspace = true
 repository.workspace = true
 categories = ["no-std"]
 documentation = "https://docs.rs/mser"
+build = "build.rs"
 
 [features]
 default = ["std"]
@@ -20,3 +21,6 @@ itoa = "1"
 ryu = "1"
 simdutf8 = { version = "0", default-features = false }
 flexstr = { version = "0.9", default-features = false }
+
+[build-dependencies]
+rustc_version = "0"

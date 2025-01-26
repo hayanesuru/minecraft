@@ -21,10 +21,6 @@ macro_rules! decode_state {
     };
 }
 
-#[cold]
-#[inline(always)]
-const fn cold__() {}
-
 #[derive(Copy, Clone)]
 struct NameMap<T: 'static> {
     key: [u64; 4],
@@ -328,8 +324,7 @@ impl block_state {
     pub const fn opacity(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 0) >> 4 })
@@ -340,8 +335,7 @@ impl block_state {
     pub const fn solid(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 0) & 8 != 0 })
@@ -352,8 +346,7 @@ impl block_state {
     pub const fn transparent(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 0) & 4 != 0 })
@@ -364,8 +357,7 @@ impl block_state {
     pub const fn full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 0) & 2 != 0 })
@@ -376,8 +368,7 @@ impl block_state {
     pub const fn opaque_full_cube(self) -> Option<bool> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 0) & 1 != 0 })
@@ -388,8 +379,7 @@ impl block_state {
     pub const fn side_solid_full(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 1) })
@@ -400,8 +390,7 @@ impl block_state {
     pub const fn side_solid_center(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 2) })
@@ -412,8 +401,7 @@ impl block_state {
     pub const fn side_solid_rigid(self) -> Option<u8> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             Some(unsafe { *block_state_bound(n as _, 3) })
@@ -424,8 +412,7 @@ impl block_state {
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             let index = unsafe { *block_state_bound(n as _, 4).cast::<[u8; 2]>() };
@@ -438,8 +425,7 @@ impl block_state {
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         let n = self.0 as usize;
         let n = unsafe { u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(n)) };
-        if n == !0 {
-            crate::cold__();
+        if ::mser::unlikely(n == !0) {
             None
         } else {
             let index = unsafe { *block_state_bound(n as _, 6).cast::<[u8; 2]>() };

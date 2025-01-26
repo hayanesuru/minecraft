@@ -1,4 +1,6 @@
 #![no_std]
+#![allow(internal_features)]
+#![cfg_attr(nightly, feature(core_intrinsics))]
 
 extern crate alloc;
 
@@ -72,4 +74,38 @@ pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
         write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
         vec.set_len(len + vec.len());
     }
+}
+
+#[inline(always)]
+#[cfg(not(nightly))]
+pub const fn unlikely(b: bool) -> bool {
+    #[allow(clippy::needless_bool)]
+    if (1i32).checked_div(if b { 0 } else { 1 }).is_none() {
+        true
+    } else {
+        false
+    }
+}
+
+#[inline(always)]
+#[cfg(not(nightly))]
+pub const fn likely(b: bool) -> bool {
+    #[allow(clippy::needless_bool)]
+    if (1i32).checked_div(if b { 1 } else { 0 }).is_some() {
+        true
+    } else {
+        false
+    }
+}
+
+#[inline(always)]
+#[cfg(nightly)]
+pub const fn unlikely(b: bool) -> bool {
+    ::core::intrinsics::unlikely(b)
+}
+
+#[inline(always)]
+#[cfg(nightly)]
+pub const fn likely(b: bool) -> bool {
+    ::core::intrinsics::likely(b)
 }
