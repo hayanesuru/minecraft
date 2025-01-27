@@ -939,11 +939,11 @@ fn block_state(
     *w += "}\n";
     *w += "}\n";
 
-    *w += "impl ::mser::Write for ";
+    *w += "unsafe impl ::mser::Write for ";
     *w += bsname;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn sz(&self) -> usize {\n";
+    *w += "unsafe fn sz(&self) -> usize {\n";
     if bssize <= V7MAX {
         *w += "1usize";
     } else if bssize <= V21MAX {
@@ -1350,11 +1350,11 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str)
         }
     }
     enum_foot(w, repr, name);
-    *w += "impl ::mser::Write for ";
+    *w += "unsafe impl ::mser::Write for ";
     *w += name;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn sz(&self) -> usize {\n";
+    *w += "unsafe fn sz(&self) -> usize {\n";
     if size <= V7MAX {
         *w += "1usize";
     } else if size <= V21MAX {
@@ -1457,10 +1457,10 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     let mut offset = names.len() * 4;
     for val in names {
         w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
-        offset += val.sz() + 2;
+        offset += val.len() + 2;
     }
     for val in names {
-        w2.extend(u16::try_from(val.sz()).unwrap().to_le_bytes());
+        w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
         w2.extend(val.as_bytes());
     }
     *w += "const N: *const u8 = ";

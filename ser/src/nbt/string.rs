@@ -15,7 +15,7 @@ impl MUTF8Tag {
     }
 }
 
-impl Write for MUTF8Tag {
+unsafe impl Write for MUTF8Tag {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         (self.0.len() as u16).write(w);
@@ -23,7 +23,7 @@ impl Write for MUTF8Tag {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         2 + self.0.len()
     }
 }
@@ -51,7 +51,7 @@ impl UTF8Tag {
     }
 }
 
-impl Write for UTF8Tag {
+unsafe impl Write for UTF8Tag {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         let x = unsafe { self.0.as_ref() };
@@ -66,7 +66,7 @@ impl Write for UTF8Tag {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         if super::mutf8::is_valid(unsafe { self.0.as_ref() }) {
             MUTF8Tag(self.0).sz()
         } else {

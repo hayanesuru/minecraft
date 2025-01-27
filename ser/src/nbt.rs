@@ -156,7 +156,7 @@ impl AsMut<[(flexstr::SharedStr, Tag)]> for Compound {
     }
 }
 
-impl Write for Compound {
+unsafe impl Write for Compound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         for (name, tag) in &self.0 {
             w.write_byte(match tag {
@@ -203,7 +203,7 @@ impl Write for Compound {
         w.write_byte(END);
     }
 
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
             w += unsafe { UTF8Tag::new_unchecked(name.as_bytes()).sz() };
@@ -239,7 +239,7 @@ impl Read for NamedCompound {
     }
 }
 
-impl Write for NamedCompound {
+unsafe impl Write for NamedCompound {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(COMPOUND);
@@ -250,7 +250,7 @@ impl Write for NamedCompound {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         1 + unsafe { Write::sz(&UTF8Tag::new_unchecked(self.0.as_bytes())) } + Write::sz(&self.1)
     }
 }
@@ -268,7 +268,7 @@ impl Read for UnamedCompound {
     }
 }
 
-impl Write for UnamedCompound {
+unsafe impl Write for UnamedCompound {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(COMPOUND);
@@ -276,7 +276,7 @@ impl Write for UnamedCompound {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         1 + Write::sz(&self.0)
     }
 }

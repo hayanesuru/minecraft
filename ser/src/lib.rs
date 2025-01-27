@@ -24,12 +24,13 @@ pub use self::varint::{V21, V21MAX, V32, V64, V7MAX};
 pub use self::write::{Write2, Write3};
 pub use self::writer::UnsafeWriter;
 
-#[allow(clippy::len_without_is_empty)]
-pub trait Write {
+/// # Safety
+pub unsafe trait Write {
     /// # Safety
     unsafe fn write(&self, w: &mut UnsafeWriter);
 
-    fn sz(&self) -> usize;
+    /// # Safety
+    unsafe fn sz(&self) -> usize;
 }
 
 pub trait Read: Sized {
@@ -38,14 +39,13 @@ pub trait Read: Sized {
 
 #[must_use]
 pub fn boxed(x: &(impl Write + ?Sized)) -> alloc::boxed::Box<[u8]> {
-    let len = x.sz();
-    let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
     unsafe {
+        let len = x.sz();
+        let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
         write_unchecked(vec.as_mut_ptr(), x);
-        vec.set_len(len)
+        vec.set_len(len);
+        vec.into_boxed_slice()
     }
-
-    vec.into_boxed_slice()
 }
 
 /// # Safety
@@ -59,18 +59,18 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
 }
 
 pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
-    let len = x.sz();
-    vec.reserve(len);
     unsafe {
+        let len = x.sz();
+        vec.reserve(len);
         write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
         vec.set_len(len + vec.len());
     }
 }
 
 pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
-    let len = x.sz();
-    vec.reserve_exact(len);
     unsafe {
+        let len = x.sz();
+        vec.reserve_exact(len);
         write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
         vec.set_len(len + vec.len());
     }

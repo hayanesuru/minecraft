@@ -78,7 +78,7 @@ impl Read for V21 {
     }
 }
 
-impl Write for V21 {
+unsafe impl Write for V21 {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         let n = self.0;
@@ -92,7 +92,7 @@ impl Write for V21 {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             1
@@ -123,7 +123,7 @@ impl V32 {
     }
 }
 
-impl Write for V32 {
+unsafe impl Write for V32 {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         let n = self.0;
@@ -152,7 +152,7 @@ impl Write for V32 {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             1
@@ -265,7 +265,7 @@ impl V64 {
     }
 }
 
-impl Write for V64 {
+unsafe impl Write for V64 {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
@@ -347,7 +347,7 @@ impl Write for V64 {
         }
     }
 
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
             1

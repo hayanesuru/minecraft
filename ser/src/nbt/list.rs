@@ -106,7 +106,7 @@ impl From<Vec<Compound>> for List {
     }
 }
 
-impl Write for List {
+unsafe impl Write for List {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         match self {
             Self::None => w.write(&[END, 0, 0, 0, 0]),
@@ -183,7 +183,7 @@ impl Write for List {
         }
     }
 
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         5 + match self {
             Self::None => 0,
             Self::Byte(x) => x.len(),
@@ -201,7 +201,7 @@ impl Write for List {
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
             Self::List(x) => x.iter().map(|x| x.sz()).sum::<usize>(),
-            Self::Compound(x) => x.iter().map(Write::sz).sum::<usize>(),
+            Self::Compound(x) => x.iter().sz(),
         }
     }
 }
