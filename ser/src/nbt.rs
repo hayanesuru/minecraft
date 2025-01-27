@@ -7,10 +7,8 @@ pub use self::list::List;
 pub use self::string::{MUTF8Tag, UTF8Tag};
 pub use self::stringify::StringifyCompound;
 use crate::{Bytes, Read, UnsafeWriter, Write};
-use alloc::boxed::Box;
-use alloc::string::String;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
-use kstring::KString;
 
 pub const END: u8 = 0;
 pub const BYTE: u8 = 1;
@@ -34,7 +32,7 @@ pub enum Tag {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(KString),
+    String(flexstr::SharedStr),
     ByteArray(Vec<u8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
@@ -98,24 +96,17 @@ impl From<Vec<u8>> for Tag {
     }
 }
 
-impl From<String> for Tag {
+impl From<Arc<str>> for Tag {
     #[inline]
-    fn from(value: String) -> Self {
-        Self::String(KString::from_string(value))
+    fn from(value: Arc<str>) -> Self {
+        Self::String(flexstr::SharedStr::from_heap(value))
     }
 }
 
-impl From<KString> for Tag {
+impl From<flexstr::SharedStr> for Tag {
     #[inline]
-    fn from(value: KString) -> Self {
+    fn from(value: flexstr::SharedStr) -> Self {
         Self::String(value)
-    }
-}
-
-impl From<Box<str>> for Tag {
-    #[inline]
-    fn from(value: Box<str>) -> Self {
-        Self::String(KString::from_boxed(value))
     }
 }
 
@@ -149,24 +140,24 @@ impl From<Vec<i64>> for Tag {
 
 #[derive(Clone, Default)]
 #[repr(transparent)]
-pub struct Compound(Vec<(KString, Tag)>);
+pub struct Compound(Vec<(flexstr::SharedStr, Tag)>);
 
-impl AsRef<[(KString, Tag)]> for Compound {
+impl AsRef<[(flexstr::SharedStr, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(KString, Tag)] {
+    fn as_ref(&self) -> &[(flexstr::SharedStr, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(KString, Tag)]> for Compound {
+impl AsMut<[(flexstr::SharedStr, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(KString, Tag)] {
+    fn as_mut(&mut self) -> &mut [(flexstr::SharedStr, Tag)] {
         self.0.as_mut_slice()
     }
 }
 
-impl Write for Compound {
-    fn write(&self, w: &mut UnsafeWriter) {
+unsafe impl Write for Compound {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         for (name, tag) in &self.0 {
             w.write_byte(match tag {
                 Tag::Byte(_) => BYTE,
@@ -212,7 +203,7 @@ impl Write for Compound {
         w.write_byte(END);
     }
 
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
             w += unsafe { UTF8Tag::new_unchecked(name.as_bytes()).sz() };
@@ -236,7 +227,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound(pub KString, pub Compound);
+pub struct NamedCompound(pub flexstr::SharedStr, pub Compound);
 
 impl Read for NamedCompound {
     #[inline]
@@ -248,9 +239,9 @@ impl Read for NamedCompound {
     }
 }
 
-impl Write for NamedCompound {
+unsafe impl Write for NamedCompound {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(COMPOUND);
         unsafe {
             UTF8Tag::new_unchecked(self.0.as_bytes()).write(w);
@@ -259,7 +250,7 @@ impl Write for NamedCompound {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         1 + unsafe { Write::sz(&UTF8Tag::new_unchecked(self.0.as_bytes())) } + Write::sz(&self.1)
     }
 }
@@ -277,15 +268,15 @@ impl Read for UnamedCompound {
     }
 }
 
-impl Write for UnamedCompound {
+unsafe impl Write for UnamedCompound {
     #[inline]
-    fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         w.write_byte(COMPOUND);
         self.0.write(w);
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         1 + Write::sz(&self.0)
     }
 }
@@ -300,11 +291,11 @@ impl From<Compound> for UnamedCompound {
 impl From<Compound> for NamedCompound {
     #[inline]
     fn from(value: Compound) -> Self {
-        Self(KString::new(), value)
+        Self(flexstr::SharedStr::EMPTY, value)
     }
 }
 
-impl<K: Into<KString>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<flexstr::SharedStr>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -343,12 +334,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (KString, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (flexstr::SharedStr, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (KString, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (flexstr::SharedStr, Tag)> {
         self.0.iter_mut()
     }
 
@@ -386,12 +377,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: impl Into<KString>, v: impl Into<Tag>) {
+    pub fn push(&mut self, k: impl Into<flexstr::SharedStr>, v: impl Into<Tag>) {
         self.push_(k.into(), v.into());
     }
 
     #[inline]
-    pub fn push_(&mut self, k: KString, v: Tag) {
+    pub fn push_(&mut self, k: flexstr::SharedStr, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -406,7 +397,7 @@ impl Compound {
 
     #[deprecated]
     #[inline]
-    pub fn decode_named(buf: &mut &[u8]) -> Option<(KString, Self)> {
+    pub fn decode_named(buf: &mut &[u8]) -> Option<(flexstr::SharedStr, Self)> {
         match NamedCompound::read(buf) {
             Some(x) => Some((x.0, x.1)),
             None => None,
@@ -447,7 +438,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(KString, Tag)> {
+    pub fn into_inner(self) -> Vec<(flexstr::SharedStr, Tag)> {
         self.0
     }
 }
@@ -459,9 +450,9 @@ impl Read for Compound {
     }
 }
 
-impl From<Vec<(KString, Tag)>> for Compound {
+impl From<Vec<(flexstr::SharedStr, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(KString, Tag)>) -> Self {
+    fn from(value: Vec<(flexstr::SharedStr, Tag)>) -> Self {
         Self(value)
     }
 }
@@ -545,12 +536,12 @@ fn decode1(n: &mut &[u8]) -> Option<Compound> {
 }
 
 #[inline]
-pub(super) fn decode_string(b: &mut &[u8]) -> Option<KString> {
+pub(super) fn decode_string(b: &mut &[u8]) -> Option<flexstr::SharedStr> {
     let len = b.u16()? as usize;
     let a = b.slice(len)?;
 
     match a.is_ascii() || simdutf8::basic::from_utf8(a).is_ok() {
-        true => Some(KString::from_ref(unsafe {
+        true => Some(flexstr::SharedStr::from_ref(unsafe {
             core::str::from_utf8_unchecked(a)
         })),
         false => mutf8::decode(a),

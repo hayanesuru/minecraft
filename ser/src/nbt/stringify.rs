@@ -4,7 +4,6 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::hint::unreachable_unchecked;
-use kstring::KString;
 
 #[derive(Clone, Default)]
 #[repr(transparent)]
@@ -262,7 +261,9 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                     _ => {
                         let x = find(n, |x| matches!(x, b':' | b' ' | b'\n' | b'\t' | b'\r'))?;
                         let m = unsafe {
-                            KString::from_ref(core::str::from_utf8_unchecked(n.get_unchecked(0..x)))
+                            flexstr::SharedStr::from_ref(core::str::from_utf8_unchecked(
+                                n.get_unchecked(0..x),
+                            ))
                         };
                         *n = n.get_unchecked(x..);
                         m
@@ -310,9 +311,9 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                             .unwrap_unchecked();
                         let v = match dnum(s) {
                             Some(x) => x,
-                            None => {
-                                Tag::String(KString::from_ref(core::str::from_utf8_unchecked(s)))
-                            }
+                            None => Tag::String(flexstr::SharedStr::from_ref(
+                                core::str::from_utf8_unchecked(s),
+                            )),
                         };
                         c.push(k, v);
                     }
@@ -417,7 +418,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                             let s = n.slice(i).unwrap_unchecked();
                             match dnum(s) {
                                 Some(x) => x,
-                                None => Tag::String(KString::from_ref(
+                                None => Tag::String(flexstr::SharedStr::from_ref(
                                     core::str::from_utf8_unchecked(s),
                                 )),
                             }
@@ -643,7 +644,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<Compound> {
                                                                 | b'\r'
                                                         )
                                                     })?;
-                                                    let m = KString::from_ref(
+                                                    let m = flexstr::SharedStr::from_ref(
                                                         core::str::from_utf8_unchecked(
                                                             n.get_unchecked(0..x),
                                                         ),
@@ -756,7 +757,7 @@ fn dnum(n: &[u8]) -> Option<Tag> {
     }
 }
 
-unsafe fn dqstr1(n: &mut &[u8]) -> Option<KString> {
+unsafe fn dqstr1(n: &mut &[u8]) -> Option<flexstr::SharedStr> {
     *n = n.get_unchecked(1..);
     let mut k = Vec::<u8>::new();
     let mut last = 0;
@@ -791,18 +792,18 @@ unsafe fn dqstr1(n: &mut &[u8]) -> Option<KString> {
         }
     }
     if k.is_empty() {
-        let k = KString::from_ref(core::str::from_utf8_unchecked(n.get(last..cur)?));
+        let k = flexstr::SharedStr::from_ref(core::str::from_utf8_unchecked(n.get(last..cur)?));
         *n = n.get(1 + cur..)?;
         Some(k)
     } else {
         k.extend(n.get(last..cur)?);
         k.shrink_to_fit();
         *n = n.get(1 + cur..)?;
-        Some(KString::from_string(String::from_utf8_unchecked(k)))
+        Some(flexstr::SharedStr::from(core::str::from_utf8_unchecked(&k)))
     }
 }
 
-unsafe fn dqstr2(n: &mut &[u8]) -> Option<KString> {
+unsafe fn dqstr2(n: &mut &[u8]) -> Option<flexstr::SharedStr> {
     *n = n.get_unchecked(1..);
     let mut k = Vec::<u8>::new();
     let mut last = 0;
@@ -837,14 +838,16 @@ unsafe fn dqstr2(n: &mut &[u8]) -> Option<KString> {
         }
     }
     if k.is_empty() {
-        let k = KString::from_ref(core::str::from_utf8_unchecked(n.get(last..cur)?));
+        let k = flexstr::SharedStr::from_ref(core::str::from_utf8_unchecked(n.get(last..cur)?));
         *n = n.get(1 + cur..)?;
         Some(k)
     } else {
         k.extend(n.get(last..cur)?);
         k.shrink_to_fit();
         *n = n.get(1 + cur..)?;
-        Some(KString::from_string(String::from_utf8_unchecked(k)))
+        Some(flexstr::SharedStr::from_ref(
+            core::str::from_utf8_unchecked(&k),
+        ))
     }
 }
 

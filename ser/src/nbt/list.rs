@@ -4,7 +4,6 @@ use super::{
 };
 use crate::{Bytes, UnsafeWriter, Write};
 use alloc::vec::Vec;
-use kstring::KString;
 
 #[derive(Clone)]
 pub enum List {
@@ -15,7 +14,7 @@ pub enum List {
     Long(Vec<i64>),
     Float(Vec<f32>),
     Double(Vec<f64>),
-    String(Vec<KString>),
+    String(Vec<flexstr::SharedStr>),
     ByteArray(Vec<Vec<u8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
@@ -65,9 +64,9 @@ impl From<Vec<f64>> for List {
     }
 }
 
-impl From<Vec<KString>> for List {
+impl From<Vec<flexstr::SharedStr>> for List {
     #[inline]
-    fn from(value: Vec<KString>) -> Self {
+    fn from(value: Vec<flexstr::SharedStr>) -> Self {
         Self::String(value)
     }
 }
@@ -107,8 +106,8 @@ impl From<Vec<Compound>> for List {
     }
 }
 
-impl Write for List {
-    fn write(&self, w: &mut UnsafeWriter) {
+unsafe impl Write for List {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
         match self {
             Self::None => w.write(&[END, 0, 0, 0, 0]),
             Self::Byte(x) => {
@@ -184,7 +183,7 @@ impl Write for List {
         }
     }
 
-    fn sz(&self) -> usize {
+    unsafe fn sz(&self) -> usize {
         5 + match self {
             Self::None => 0,
             Self::Byte(x) => x.len(),
@@ -202,7 +201,7 @@ impl Write for List {
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
             Self::List(x) => x.iter().map(|x| x.sz()).sum::<usize>(),
-            Self::Compound(x) => x.iter().map(Write::sz).sum::<usize>(),
+            Self::Compound(x) => x.iter().sz(),
         }
     }
 }

@@ -1,7 +1,5 @@
 use crate::UnsafeWriter;
-use alloc::string::String;
 use alloc::vec::Vec;
-use kstring::KString;
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -104,7 +102,7 @@ pub unsafe fn encode(bytes: &[u8], w: &mut UnsafeWriter) {
 }
 
 #[inline(never)]
-pub fn decode(bytes: &[u8]) -> Option<KString> {
+pub fn decode(bytes: &[u8]) -> Option<flexstr::SharedStr> {
     let mut buf = Vec::with_capacity(bytes.len());
     let mut index = 0;
     let mut start = 0;
@@ -155,9 +153,9 @@ pub fn decode(bytes: &[u8]) -> Option<KString> {
                             Some(&x) if x & 0xC0 == 0x80 => x & 0x3F,
                             _ => return None,
                         };
-                        let s1 = 0xD000 | u32::from(sec & 0x3F) << 6 | u32::from(third & 0x3F);
-                        let s2 = 0xD000 | u32::from(fifth) << 6 | u32::from(sixth);
-                        let point = 0x10000 + ((s1 - 0xD800) << 10 | (s2 - 0xDC00));
+                        let s1 = 0xD000 | (u32::from(sec & 0x3F) << 6) | u32::from(third & 0x3F);
+                        let s2 = 0xD000 | (u32::from(fifth) << 6) | u32::from(sixth);
+                        let point = 0x10000 + (((s1 - 0xD800) << 10) | (s2 - 0xDC00));
                         buf.extend([
                             0xF0 | ((point & 0x1C0000) >> 18) as u8,
                             0x80 | ((point & 0x3F000) >> 12) as u8,
@@ -175,10 +173,14 @@ pub fn decode(bytes: &[u8]) -> Option<KString> {
     unsafe {
         let x = bytes.get_unchecked(start..index);
         if buf.is_empty() {
-            Some(KString::from_ref(core::str::from_utf8_unchecked(x)))
+            Some(flexstr::SharedStr::from_ref(
+                core::str::from_utf8_unchecked(x),
+            ))
         } else {
             buf.extend(x);
-            Some(KString::from_string(String::from_utf8_unchecked(buf)))
+            Some(flexstr::SharedStr::from_ref(
+                core::str::from_utf8_unchecked(&buf),
+            ))
         }
     }
 }

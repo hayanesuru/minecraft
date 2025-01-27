@@ -1,6 +1,6 @@
 #![no_std]
-
-use core::ops::{Add, AddAssign};
+#![allow(internal_features)]
+#![cfg_attr(nightly, feature(core_intrinsics))]
 
 extern crate alloc;
 
@@ -24,67 +24,88 @@ pub use self::varint::{V21, V21MAX, V32, V64, V7MAX};
 pub use self::write::{Write2, Write3};
 pub use self::writer::UnsafeWriter;
 
-#[allow(clippy::len_without_is_empty)]
-pub trait Write {
-    fn write(&self, w: &mut UnsafeWriter);
+/// # Safety
+pub unsafe trait Write {
+    /// # Safety
+    unsafe fn write(&self, w: &mut UnsafeWriter);
 
-    fn sz(&self) -> usize;
+    /// # Safety
+    unsafe fn sz(&self) -> usize;
 }
 
 pub trait Read: Sized {
     fn read(buf: &mut &[u8]) -> Option<Self>;
 }
 
-impl<T: Write + ?Sized> AddAssign<&T> for UnsafeWriter {
-    #[inline]
-    fn add_assign(&mut self, rhs: &T) {
-        rhs.write(self);
-    }
-}
-
-impl<T: Write + ?Sized> Add<&T> for UnsafeWriter {
-    type Output = Self;
-
-    #[inline]
-    fn add(mut self, rhs: &T) -> Self::Output {
-        rhs.write(&mut self);
-        self
-    }
-}
-
 #[must_use]
 pub fn boxed(x: &(impl Write + ?Sized)) -> alloc::boxed::Box<[u8]> {
-    let len = x.sz();
-    let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
-    let mut w = UnsafeWriter(vec.as_mut_ptr());
-    Write::write(x, &mut w);
-    unsafe { debug_assert_eq!(w.0, vec.as_mut_ptr().add(len)) };
-    unsafe { vec.set_len(len) };
-
-    vec.into_boxed_slice()
+    unsafe {
+        let len = x.sz();
+        let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
+        write_unchecked(vec.as_mut_ptr(), x);
+        vec.set_len(len);
+        vec.into_boxed_slice()
+    }
 }
 
 /// # Safety
+#[inline]
 pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
-    let mut w = UnsafeWriter(ptr);
-    Write::write(x, &mut w);
-    unsafe { debug_assert_eq!(w.0, ptr.add(x.sz())) }
+    unsafe {
+        let mut w = UnsafeWriter(core::ptr::NonNull::new_unchecked(ptr));
+        Write::write(x, &mut w);
+        debug_assert_eq!(w.0, core::ptr::NonNull::new_unchecked(ptr.add(x.sz())))
+    }
 }
 
 pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
-    let len = x.sz();
-    vec.reserve(len);
-    let mut w = unsafe { UnsafeWriter(vec.as_mut_ptr().add(vec.len())) };
-    Write::write(x, &mut w);
-    unsafe { debug_assert_eq!(w.0, vec.as_mut_ptr().add(vec.len()).add(len)) };
-    unsafe { vec.set_len(len + vec.len()) };
+    unsafe {
+        let len = x.sz();
+        vec.reserve(len);
+        write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
+        vec.set_len(len + vec.len());
+    }
 }
 
 pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
-    let len = x.sz();
-    vec.reserve_exact(len);
-    let mut w = unsafe { UnsafeWriter(vec.as_mut_ptr().add(vec.len())) };
-    Write::write(x, &mut w);
-    unsafe { debug_assert_eq!(w.0, vec.as_mut_ptr().add(vec.len()).add(len)) };
-    unsafe { vec.set_len(len + vec.len()) };
+    unsafe {
+        let len = x.sz();
+        vec.reserve_exact(len);
+        write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
+        vec.set_len(len + vec.len());
+    }
+}
+
+#[inline(always)]
+#[cfg(not(nightly))]
+pub const fn unlikely(b: bool) -> bool {
+    #[allow(clippy::needless_bool)]
+    if (1i32).checked_div(if b { 0 } else { 1 }).is_none() {
+        true
+    } else {
+        false
+    }
+}
+
+#[inline(always)]
+#[cfg(not(nightly))]
+pub const fn likely(b: bool) -> bool {
+    #[allow(clippy::needless_bool)]
+    if (1i32).checked_div(if b { 1 } else { 0 }).is_some() {
+        true
+    } else {
+        false
+    }
+}
+
+#[inline(always)]
+#[cfg(nightly)]
+pub const fn unlikely(b: bool) -> bool {
+    ::core::intrinsics::unlikely(b)
+}
+
+#[inline(always)]
+#[cfg(nightly)]
+pub const fn likely(b: bool) -> bool {
+    ::core::intrinsics::likely(b)
 }
