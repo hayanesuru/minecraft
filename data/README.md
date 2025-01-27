@@ -1,6 +1,6 @@
 # minecraft_data
 
-Supported version:  
+minecraft version:  
 `1.21.4`
 
 # Usage
