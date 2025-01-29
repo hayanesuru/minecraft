@@ -80,7 +80,12 @@ fn main() -> std::io::Result<()> {
     let ent = read(&mut data, path.join("entity.txt"))?;
     let ent = ite.end..ite.end + ent;
 
+    let pac = read(&mut data, path.join("packet.txt"))?;
+    let pac = ent.end..ent.end + pac;
+
     let block_names = registries(&mut w, &mut wn, data.get(reg).unwrap(), &mut gen_hash);
+    registries(&mut w, &mut wn, data.get(pac).unwrap(), &mut gen_hash);
+
     item(&mut w, data.get(ite).unwrap());
     entity(&mut w, &mut wn, data.get(ent).unwrap());
 
