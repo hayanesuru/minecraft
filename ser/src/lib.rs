@@ -9,6 +9,7 @@ mod float;
 mod hex;
 mod integer;
 mod json;
+mod read;
 mod varint;
 mod write;
 mod writer;
@@ -58,6 +59,7 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
     }
 }
 
+#[inline]
 pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
     unsafe {
         let len = x.sz();
@@ -67,6 +69,7 @@ pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
     }
 }
 
+#[inline]
 pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
     unsafe {
         let len = x.sz();

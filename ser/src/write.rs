@@ -1,4 +1,5 @@
 use crate::{UnsafeWriter, Write};
+use alloc::borrow::{Cow, ToOwned};
 use core::num::{
     NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroU128, NonZeroU16,
     NonZeroU32, NonZeroU64, NonZeroU8,
@@ -268,7 +269,7 @@ unsafe impl Write for &[u8] {
     }
 }
 
-unsafe impl<T: Write> Write for NonNull<T> {
+unsafe impl<T: Write + ?Sized> Write for NonNull<T> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.as_ref().write(w);
@@ -277,5 +278,17 @@ unsafe impl<T: Write> Write for NonNull<T> {
     #[inline]
     unsafe fn sz(&self) -> usize {
         self.as_ref().sz()
+    }
+}
+
+unsafe impl<T: ?Sized + Write + ToOwned> Write for Cow<'_, T> {
+    #[inline]
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        <Self as AsRef<T>>::as_ref(self).write(w);
+    }
+
+    #[inline]
+    unsafe fn sz(&self) -> usize {
+        <Self as AsRef<T>>::as_ref(self).sz()
     }
 }
