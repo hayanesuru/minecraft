@@ -3,8 +3,6 @@
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
-pub extern crate mser;
-
 /// `block_name(prop_expr)`
 #[macro_export]
 macro_rules! encode_state {

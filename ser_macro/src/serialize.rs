@@ -15,13 +15,10 @@ pub fn serialize_struct(
         .iter()
         .enumerate()
         .map(|(idx, field)| match &field.ident {
-            Some(ident) => quote!(#cratename::Write::write(&self.#ident, w);),
+            Some(ident) => quote!(#cratename::Write::write(&self.#ident, __w);),
             None => {
-                let ident = syn::Ident::new(
-                    itoa::Buffer::new().format(idx),
-                    proc_macro2::Span::call_site(),
-                );
-                quote!(#cratename::Write::write(&self.#ident, w);)
+                let l = proc_macro2::Literal::usize_unsuffixed(idx);
+                quote!(#cratename::Write::write(&self.#l, __w);)
             }
         });
     let sz = fields
@@ -30,11 +27,8 @@ pub fn serialize_struct(
         .map(|(idx, field)| match &field.ident {
             Some(ident) => quote!(#cratename::Write::sz(&self.#ident)),
             None => {
-                let ident = syn::Ident::new(
-                    itoa::Buffer::new().format(idx),
-                    proc_macro2::Span::call_site(),
-                );
-                quote!(#cratename::Write::sz(&self.#ident))
+                let l = proc_macro2::Literal::usize_unsuffixed(idx);
+                quote!(#cratename::Write::sz(&self.#l))
             }
         });
 
@@ -42,15 +36,19 @@ pub fn serialize_struct(
         #[automatically_derived]
         unsafe impl #impl_generics #cratename::Write for #name #ty_generics #where_clause {
             #[inline]
-            unsafe fn write(&self, w: &mut #cratename::UnsafeWriter) {
-                #(#write)*
+            unsafe fn write(&self, __w: &mut #cratename::UnsafeWriter) {
+                unsafe {
+                    #(#write)*
+                }
             }
 
             #[inline]
             unsafe fn sz(&self) -> usize {
-                let mut __l = 0usize;
-                #(__l += #sz;)*
-                __l
+                unsafe {
+                    let mut __l = 0usize;
+                    #(__l += #sz;)*
+                    __l
+                }
             }
         }
     })
@@ -130,12 +128,16 @@ pub fn serialize_enum(
         unsafe impl #impl_generics #cratename::Write for #name #ty_generics #where_clause {
             #[inline]
             unsafe fn write(&self, w: &mut #cratename::UnsafeWriter) {
-                #cratename::Write::write(&(#repr), w);
+                unsafe {
+                    #cratename::Write::write(&(#repr), w);
+                }
             }
 
             #[inline]
             unsafe fn sz(&self) -> usize {
-                #cratename::Write::sz(&(#repr))
+                unsafe {
+                    #cratename::Write::sz(&(#repr))
+                }
             }
         }
     })

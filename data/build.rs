@@ -1,3 +1,4 @@
+use core::iter::repeat_n;
 use mser::*;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -1384,9 +1385,14 @@ fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str)
     *w += "#[inline]\n";
     *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
     if size <= V7MAX {
-        *w += "let x = ::mser::Bytes::u8(n)?;\n";
+        *w += "let x = <u8 as ::mser::Read>::read(n)?;\n";
+    } else if size <= V21MAX {
+        *w += "let x = <::mser::V21 as ::mser::Read>::read(n)?.0;\n";
+        *w += "let x = x as ";
+        *w += repr.to_int();
+        *w += ";\n";
     } else {
-        *w += "let x = ::mser::Bytes::v32(n)?;\n";
+        *w += "let x = <::mser::V32 as ::mser::Read>::read(n)?.0;\n";
         *w += "let x = x as ";
         *w += repr.to_int();
         *w += ";\n";
@@ -1660,15 +1666,13 @@ impl GenerateHash {
                 .sort_unstable_by(|a, b| a.keys.len().cmp(&b.keys.len()).reverse());
 
             self.map.clear();
-            self.map.extend(core::iter::repeat(None).take(table_len));
+            self.map.extend(repeat_n(None, table_len));
 
             self.disps.clear();
-            self.disps
-                .extend(core::iter::repeat((0u32, 0u32)).take(buckets_len));
+            self.disps.extend(repeat_n((0u32, 0u32), buckets_len));
 
             self.try_map.clear();
-            self.try_map
-                .extend(core::iter::repeat(0u64).take(table_len));
+            self.try_map.extend(repeat_n(0u64, table_len));
 
             let mut generation = 0u64;
 

@@ -75,6 +75,7 @@ pub fn deserialize_enum(
                             }
                         });
                     } else {
+                        let len = len as u8;
                         read = Some(quote! {
                             let x = <u8 as #cratename::Read>::read(r)?;
                             if x < #len {
