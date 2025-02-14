@@ -24,6 +24,7 @@ impl Repr {
         }
     }
     #[inline]
+    #[must_use]
     const fn to_int(self) -> &'static str {
         match self {
             Self::U32 => "u32",
@@ -146,16 +147,132 @@ fn registries<'a>(
         if name == "block" {
             block_names.clone_from(&zhash);
         }
-        gen_enum(&zhash, size, w, repr, &name);
+        enum_head(w, repr, &name);
+        if name == "sound_event" || name == "attribute" {
+            for &data in &zhash {
+                let data = data.replace('.', "_");
+                *w += &data;
+                *w += ",\n";
+            }
+        } else {
+            for &data in &zhash {
+                if let "match" | "true" | "false" | "type" = data {
+                    *w += "r#"
+                }
+                *w += data;
+                *w += ",\n";
+            }
+        }
+        *w += "}\n";
+        *w += "unsafe impl ::mser::Write for ";
+        *w += &name;
+        *w += " {\n";
+        *w += "#[inline]\n";
+        *w += "unsafe fn sz(&self) -> usize {\n";
+        if size <= V7MAX {
+            *w += "1usize";
+        } else if size <= V21MAX {
+            *w += "::mser::V21(*self as u32).sz()";
+        } else {
+            *w += "::mser::V32(*self as u32).sz()";
+        }
+        *w += "\n}\n";
+        *w += "#[inline]\n";
+        *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
+        if size <= V7MAX {
+            *w += "w.write_byte(*self as u8);";
+        } else if size <= V21MAX {
+            *w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
+        } else {
+            *w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
+        }
+        *w += "\n}\n}\n";
+        *w += "impl ::mser::Read for ";
+        *w += &name;
+        *w += " {\n";
+        *w += "#[inline]\n";
+        *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
+        if size <= V7MAX {
+            *w += "let x = <u8 as ::mser::Read>::read(n)?;\n";
+        } else if size <= V21MAX {
+            *w += "let x = <::mser::V21 as ::mser::Read>::read(n)?.0;\n";
+            *w += "let x = x as ";
+            *w += repr.to_int();
+            *w += ";\n";
+        } else {
+            *w += "let x = <::mser::V32 as ::mser::Read>::read(n)?.0;\n";
+            *w += "let x = x as ";
+            *w += repr.to_int();
+            *w += ";\n";
+        }
+        *w += "Self::new(x)";
+        *w += "}\n";
+        *w += "}\n";
         *w += "impl ";
         *w += &name;
         *w += " {\n";
-        gen_max(w, &zhash);
         namemap(w, gen_hash, wn, repr, &zhash);
         *w += "}\n";
         impl_name(w, &name);
+        impl_common(w, &name, repr, size, 0);
     }
     block_names
+}
+
+fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
+    if !name.starts_with('_') {
+        *w += "pub type raw_";
+        *w += name;
+        *w += " = ";
+        *w += repr.to_int();
+        *w += ";\n";
+    }
+
+    *w += "impl ";
+    *w += name;
+    *w += " {\n";
+    *w += "pub const MAX: ";
+    *w += repr.to_int();
+    *w += " = ";
+    *w += itoa::Buffer::new().format(size - 1);
+    *w += ";\n";
+
+    *w += "#[inline]\n";
+    *w += "pub const fn new(n: ";
+    *w += repr.to_int();
+    *w += ") -> Option<Self> {\n";
+    *w += "if ::mser::likely(n <= Self::MAX) {\n";
+    *w += "unsafe {\nSome(::core::mem::transmute::<";
+    *w += repr.to_int();
+    *w += ", Self>(n))";
+    *w += "\n}\n";
+    *w += "} else {\n";
+    *w += "None\n";
+    *w += "}\n";
+    *w += "}\n";
+
+    *w += "#[inline]\n";
+    *w += "pub const fn id(self) -> ";
+    *w += repr.to_int();
+    *w += " {\n";
+    *w += "unsafe { ::core::mem::transmute::<Self, ";
+    *w += repr.to_int();
+    *w += ">(self) }";
+    *w += "\n}\n";
+    *w += "}\n";
+
+    *w += "impl Default for ";
+    *w += name;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn default() -> Self {\n";
+    *w += "unsafe { ::core::mem::transmute::<";
+    *w += repr.to_int();
+    *w += ", Self>(";
+    *w += itoa::Buffer::new().format(def);
+    *w += ") }\n";
+    *w += "}\n";
+    *w += "}\n";
 }
 
 fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
@@ -164,6 +281,7 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     let (name, size, repr) = head(iter.next());
     assert_eq!(name, "fluid_state");
     struct_head(w, repr, name);
+    impl_common(w, name, repr, size, 0);
     *w += "impl ";
     *w += name;
     *w += " {\n";
@@ -175,24 +293,6 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         *w += ib.format(index);
         *w += ");\n";
     }
-    *w += "pub const MAX: usize = ";
-    *w += ib.format(size - 1);
-    *w += ";\n";
-    *w += "#[inline]\n";
-    *w += "pub const fn new(n: ";
-    *w += repr.to_int();
-    *w += ") -> Self {\n";
-    *w += "debug_assert!(n <= Self::MAX as ";
-    *w += repr.to_int();
-    *w += ");\n";
-    *w += "Self(n)\n";
-    *w += "}\n";
-    *w += "#[inline]\n";
-    *w += "pub const fn id(self) -> ";
-    *w += repr.to_int();
-    *w += " {\n";
-    *w += "self.0\n";
-    *w += "}\n";
     *w += "}\n";
     let (name, size, _) = head(iter.next());
     assert_eq!(name, "fluid_to_block");
@@ -272,13 +372,13 @@ fn block_state(
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
-    let (namek, size, reprk) = head(iter.next());
+    let (namek, sizek, reprk) = head(iter.next());
     assert_eq!(namek, "block_state_property_key");
 
-    let mut pk1 = Vec::with_capacity(size);
-    let mut pk2 = vec![""; size];
-    let mut pk3 = vec![0_usize; size];
-    for index in 0..size {
+    let mut pk1 = Vec::with_capacity(sizek);
+    let mut pk2 = vec![""; sizek];
+    let mut pk3 = vec![0_usize; sizek];
+    for index in 0..sizek {
         let data = iter.next().unwrap();
         pk1.push((data, index));
     }
@@ -288,13 +388,13 @@ fn block_state(
         pk3[before] = sorted;
     }
 
-    let (namev, size, reprv) = head(iter.next());
+    let (namev, sizev, reprv) = head(iter.next());
     assert_eq!(namev, "block_state_property_value");
 
-    let mut pv1 = Vec::with_capacity(size);
-    let mut pv2 = vec![""; size];
-    let mut pv3 = vec![0_usize; size];
-    for index in 0..size {
+    let mut pv1 = Vec::with_capacity(sizev);
+    let mut pv2 = vec![""; sizev];
+    let mut pv3 = vec![0_usize; sizev];
+    for index in 0..sizev {
         let data = iter.next().unwrap();
         pv1.push((data, index));
     }
@@ -304,10 +404,10 @@ fn block_state(
         pv3[before] = sorted;
     }
 
-    let (namekv, size, reprkv) = head(iter.next());
+    let (namekv, sizekv, reprkv) = head(iter.next());
     assert_eq!(namekv, "block_state_property");
 
-    let kv = (0..size)
+    let kv = (0..sizekv)
         .map(|_| {
             let mut x = hex_line(iter.next().unwrap());
             let k = x.next().unwrap();
@@ -328,7 +428,7 @@ fn block_state(
         *w += ele;
         *w += ",\n";
     }
-    enum_foot(w, reprk, namek);
+    *w += "}\n";
 
     enum_head(w, reprv, namev);
     for &val in &pv2 {
@@ -342,7 +442,10 @@ fn block_state(
         *w += val;
         *w += ",\n";
     }
-    enum_foot(w, reprv, namev);
+    *w += "}\n";
+
+    impl_common(w, namek, reprk, sizek, 0);
+    impl_common(w, namev, reprv, sizev, 0);
 
     let mut kvn = Vec::<Box<str>>::with_capacity(kv.len());
     let mut x = HashMap::<Box<[&str]>, usize>::new();
@@ -379,11 +482,11 @@ fn block_state(
             *w += n;
             *w += ",\n";
         }
-        enum_foot(w, repr, name);
+        *w += "}\n";
+        impl_common(w, name, repr, x.len(), 0);
         *w += "impl ";
         *w += name;
         *w += " {\n";
-        gen_max(w, x);
         namemap(w, gen_hash, wn, repr, x);
         *w += "}\n";
         impl_name(w, name);
@@ -442,12 +545,12 @@ fn block_state(
         *w += &name[5..];
         *w += ",\n";
     }
-    enum_foot(w, reprkv, namekv);
+    *w += "}\n";
+    impl_common(w, namekv, reprkv, sizekv, 0);
 
     *w += "impl ";
     *w += namek;
     *w += " {\n";
-    gen_max(w, &pk2);
     namemap(w, gen_hash, wn, reprk, &pk2);
     *w += "}\n";
     impl_name(w, namek);
@@ -455,7 +558,6 @@ fn block_state(
     *w += "impl ";
     *w += namev;
     *w += " {\n";
-    gen_max(w, &pv2);
     namemap(w, gen_hash, wn, reprv, &pv2);
     *w += "}\n";
     impl_name(w, namev);
@@ -464,13 +566,10 @@ fn block_state(
     *w += namekv;
     *w += " {\n";
 
-    *w += "const MAX: usize = ";
-    *w += ib.format(size);
-    *w += ";\n";
     *w += "const K: [";
     *w += reprk.to_int();
     *w += "; ";
-    *w += ib.format(size);
+    *w += ib.format(sizekv);
     *w += "] = [";
     for data in &kv {
         *w += ib.format(data[0]);
@@ -483,7 +582,7 @@ fn block_state(
     *w += "const V: [&'static [";
     *w += reprv.to_int();
     *w += "]; ";
-    *w += ib.format(size);
+    *w += ib.format(sizekv);
     *w += "] = [";
     for data in &kv {
         *w += "&[";
@@ -568,25 +667,11 @@ fn block_state(
             len *= prop.len() - 1;
         }
         if props.is_empty() {
-            if !name.starts_with('_') {
-                *w += "pub type raw_";
-                *w += name;
-                *w += " = ";
-                *w += "()";
-                *w += ";\n";
-            }
-            *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
+            *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]\n";
             *w += "#[repr(transparent)]\n#[must_use]\n";
             *w += "pub struct ";
             *w += name;
             *w += ";\n";
-            *w += "impl Default for ";
-            *w += name;
-            *w += " {\n";
-            *w += "#[inline]\n";
-            *w += "fn default() -> Self {\n";
-            *w += "Self\n";
-            *w += "}\n}\n\n";
             *w += "impl ";
             *w += name;
             *w += " {\n";
@@ -921,29 +1006,7 @@ fn block_state(
     *w += "}\n";
 
     struct_head(w, bsrepr, bsname);
-    *w += "impl ";
-    *w += bsname;
-    *w += " {\n";
-    *w += "pub const AIR: Self = block::air.state_default();\n";
-    *w += "pub const MAX: usize = ";
-    *w += ib.format(bssize - 1);
-    *w += ";\n";
-    *w += "#[inline]\n";
-    *w += "pub const fn new(n: ";
-    *w += bsrepr.to_int();
-    *w += ") -> Self {\n";
-    *w += "debug_assert!(n <= Self::MAX as ";
-    *w += bsrepr.to_int();
-    *w += ");\n";
-    *w += "Self(n)\n";
-    *w += "}\n";
-    *w += "#[inline]\n";
-    *w += "pub const fn id(self) -> ";
-    *w += bsrepr.to_int();
-    *w += " {\n";
-    *w += "self.0\n";
-    *w += "}\n";
-    *w += "}\n";
+    impl_common(w, bsname, bsrepr, bssize, 0);
 
     *w += "unsafe impl ::mser::Write for ";
     *w += bsname;
@@ -967,6 +1030,25 @@ fn block_state(
     } else {
         *w += "::mser::Write::write(&::mser::V32(self.0 as u32), w);";
     }
+    *w += "\n}\n}\n";
+
+    *w += "impl ::mser::Read for ";
+    *w += bsname;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
+    *w += "let x = <";
+    if bssize <= V7MAX {
+        *w += "u8 as ::mser::Read>::read(n)?";
+    } else if bssize <= V21MAX {
+        *w += "::mser::V21 as ::mser::Read>::read(n)?.0";
+    } else {
+        *w += "::mser::V32 as ::mser::Read>::read(n)?.0";
+    }
+    *w += " as ";
+    *w += bsrepr.to_int();
+    *w += ";\n";
+    *w += "Self::new(x)";
     *w += "\n}\n}\n";
 
     let reprblock = Repr::new(offsets.len());
@@ -1022,7 +1104,7 @@ fn block_state(
     let (name, size, _) = head(iter.next());
     assert_eq!(name, "block_item_to_block");
 
-    *w += "const ITEM: [raw_block; item::MAX + 1] = [";
+    *w += "const ITEM: [raw_block; item::MAX as usize + 1] = [";
     prev = 0;
     for x in read_rl(size, &mut iter) {
         *w += ib.format(x.wrapping_add(prev));
@@ -1338,78 +1420,6 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
     *w += "];\n";
 }
 
-fn gen_enum(zhash: &[&str], size: usize, w: &mut String, repr: Repr, name: &str) {
-    enum_head(w, repr, name);
-    if name == "sound_event" || name == "attribute" {
-        for &data in zhash {
-            let data = data.replace('.', "_");
-            *w += &data;
-            *w += ",\n";
-        }
-    } else {
-        for &data in zhash {
-            if let "match" | "true" | "false" | "type" = data {
-                *w += "r#"
-            }
-            *w += data;
-            *w += ",\n";
-        }
-    }
-    enum_foot(w, repr, name);
-    *w += "unsafe impl ::mser::Write for ";
-    *w += name;
-    *w += " {\n";
-    *w += "#[inline]\n";
-    *w += "unsafe fn sz(&self) -> usize {\n";
-    if size <= V7MAX {
-        *w += "1usize";
-    } else if size <= V21MAX {
-        *w += "::mser::V21(*self as u32).sz()";
-    } else {
-        *w += "::mser::V32(*self as u32).sz()";
-    }
-    *w += "\n}\n";
-    *w += "#[inline]\n";
-    *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
-    if size <= V7MAX {
-        *w += "w.write_byte(*self as u8);";
-    } else if size <= V21MAX {
-        *w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
-    } else {
-        *w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
-    }
-    *w += "\n}\n}\n";
-    *w += "impl ::mser::Read for ";
-    *w += name;
-    *w += " {\n";
-    *w += "#[inline]\n";
-    *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
-    if size <= V7MAX {
-        *w += "let x = <u8 as ::mser::Read>::read(n)?;\n";
-    } else if size <= V21MAX {
-        *w += "let x = <::mser::V21 as ::mser::Read>::read(n)?.0;\n";
-        *w += "let x = x as ";
-        *w += repr.to_int();
-        *w += ";\n";
-    } else {
-        *w += "let x = <::mser::V32 as ::mser::Read>::read(n)?.0;\n";
-        *w += "let x = x as ";
-        *w += repr.to_int();
-        *w += ";\n";
-    }
-    *w += "if ::mser::unlikely(x > Self::MAX as ";
-    *w += repr.to_int();
-    *w += ") {\n";
-    *w += "None\n";
-    *w += "} else {\n";
-    *w += "Some(unsafe { ::core::mem::transmute::<";
-    *w += repr.to_int();
-    *w += ", Self>";
-    *w += "(x) }) }\n";
-    *w += "}\n";
-    *w += "}\n";
-}
-
 fn head(raw: Option<&str>) -> (&str, usize, Repr) {
     let raw = raw.expect("EOF");
     let (x, first) = raw.split_at(1);
@@ -1486,13 +1496,6 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
 }
 
 fn enum_head(w: &mut String, repr: Repr, name: &str) {
-    if !name.starts_with('_') && name != "biome" && name != "dimension" {
-        *w += "pub type raw_";
-        *w += name;
-        *w += " = ";
-        *w += repr.to_int();
-        *w += ";\n";
-    }
     *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
     *w += "#[repr(";
     *w += repr.to_int();
@@ -1502,38 +1505,7 @@ fn enum_head(w: &mut String, repr: Repr, name: &str) {
     *w += " {\n";
 }
 
-fn enum_foot(w: &mut String, repr: Repr, name: &str) {
-    *w += "}\nimpl ";
-    *w += name;
-    *w += " {
-#[inline]
-pub const fn id(self) -> ";
-    *w += repr.to_int();
-    *w += " {\nself as ";
-    *w += repr.to_int();
-    *w += "\n}\n";
-    *w += "#[inline]\n";
-    *w += "pub const fn new(x: ";
-    *w += repr.to_int();
-    *w += ") -> Self {\n";
-    *w += "debug_assert!(x <= Self::MAX as ";
-    *w += repr.to_int();
-    *w += ");\n";
-    *w += "unsafe { ::core::mem::transmute::<";
-    *w += repr.to_int();
-    *w += ", Self>(x) }\n";
-    *w += "}\n";
-    *w += "}\n";
-}
-
 fn struct_head(w: &mut String, repr: Repr, name: &str) {
-    if !name.starts_with('_') {
-        *w += "pub type raw_";
-        *w += name;
-        *w += " = ";
-        *w += repr.to_int();
-        *w += ";\n";
-    }
     *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n";
     *w += "#[repr(transparent)]\n#[must_use]\n";
     *w += "pub struct ";
@@ -1541,12 +1513,6 @@ fn struct_head(w: &mut String, repr: Repr, name: &str) {
     *w += "(";
     *w += repr.to_int();
     *w += ");\n";
-}
-
-fn gen_max(w: &mut String, slice: &[&str]) {
-    *w += "pub const MAX: usize = ";
-    *w += itoa::Buffer::new().format(slice.len() - 1);
-    *w += ";\n";
 }
 
 fn impl_name(w: &mut String, name: &str) {

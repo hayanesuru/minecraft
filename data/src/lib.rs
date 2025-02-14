@@ -7,7 +7,7 @@ include!(concat!(env!("OUT_DIR"), "/data.rs"));
 #[macro_export]
 macro_rules! encode_state {
     ($b:ident($x:expr)) => {
-        block_state::new($x.encode() as raw_block_state + block::$b.state_index())
+        block_state::new($x.encode() as raw_block_state + block::$b.state_index()).unwrap()
     };
 }
 
@@ -161,7 +161,7 @@ pub fn make_block_state(
             index *= vals.len() as u16;
         }
     }
-    block_state::new(block.state_index() + offset)
+    block_state(block.state_index() + offset)
 }
 
 pub fn block_state_props(
@@ -211,7 +211,7 @@ impl block_state {
     #[inline]
     pub const fn to_block(self) -> block {
         unsafe {
-            block::new(raw_block::from_le_bytes(
+            core::mem::transmute(raw_block::from_le_bytes(
                 *BLOCK_STATE_TO_BLOCK.add(self.0 as usize),
             ))
         }
@@ -220,7 +220,7 @@ impl block_state {
     #[inline]
     pub const fn to_fluid(self) -> fluid_state {
         unsafe {
-            fluid_state::new(raw_fluid_state::from_le_bytes(
+            fluid_state(raw_fluid_state::from_le_bytes(
                 *FLUID_STATE.add(self.0 as usize),
             ))
         }
@@ -516,7 +516,7 @@ impl item {
 
     #[inline]
     pub const fn to_block(self) -> block {
-        unsafe { block::new(*ITEM.as_ptr().add(self as usize)) }
+        unsafe { core::mem::transmute(*ITEM.as_ptr().add(self as usize)) }
     }
 }
 
@@ -567,7 +567,7 @@ impl fluid_state {
     #[inline]
     pub const fn to_block(self) -> block_state {
         unsafe {
-            block_state::new(raw_block_state::from_le_bytes(
+            block_state(raw_block_state::from_le_bytes(
                 *FLUID_STATE_TO_BLOCK
                     .add(self.0 as usize * ::core::mem::size_of::<raw_block_state>()),
             ))
@@ -588,7 +588,7 @@ impl fluid_state {
 
     #[inline]
     pub const fn to_fluid(self) -> fluid {
-        unsafe { fluid::new(*(*FLUID_STATE_TO_FLUID.add(self.0 as usize)).as_ptr()) }
+        unsafe { core::mem::transmute(*(*FLUID_STATE_TO_FLUID.add(self.0 as usize)).as_ptr()) }
     }
 }
 impl From<bool> for val_true_false {
@@ -633,7 +633,7 @@ impl entity_type {
 
 #[test]
 fn test_block_state() {
-    let x = encode_state!(white_concrete(white_concrete::new()));
+    let x = encode_state!(white_concrete(white_concrete::new())).unwrap();
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
     assert_eq!(x.side_solid_center(), Some(0b111111));
