@@ -241,7 +241,11 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "pub const fn new(n: ";
     *w += repr.to_int();
     *w += ") -> Option<Self> {\n";
-    *w += "if ::mser::likely(n <= Self::MAX) {\n";
+    if size == 1 {
+        *w += "if ::mser::likely(n == Self::MAX) {\n";
+    } else {
+        *w += "if ::mser::likely(n <= Self::MAX) {\n";
+    }
     *w += "unsafe {\nSome(::core::mem::transmute::<";
     *w += repr.to_int();
     *w += ", Self>(n))";

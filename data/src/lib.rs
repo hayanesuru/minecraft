@@ -633,7 +633,7 @@ impl entity_type {
 
 #[test]
 fn test_block_state() {
-    let x = encode_state!(white_concrete(white_concrete::new())).unwrap();
+    let x = encode_state!(white_concrete(white_concrete::new()));
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
     assert_eq!(x.side_solid_center(), Some(0b111111));
