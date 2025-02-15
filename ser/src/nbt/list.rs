@@ -200,7 +200,7 @@ unsafe impl Write for List {
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
-            Self::List(x) => x.iter().map(|x| x.sz()).sum::<usize>(),
+            Self::List(x) => x.iter().sz(),
             Self::Compound(x) => x.iter().sz(),
         }
     }

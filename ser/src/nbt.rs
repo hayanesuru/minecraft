@@ -40,6 +40,72 @@ pub enum Tag {
     Compound(Compound),
 }
 
+unsafe impl Write for Tag {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        w.write_byte(self.id());
+        match self {
+            Tag::Byte(x) => x.write(w),
+            Tag::Short(x) => x.write(w),
+            Tag::Int(x) => x.write(w),
+            Tag::Long(x) => x.write(w),
+            Tag::Float(x) => x.write(w),
+            Tag::Double(x) => x.write(w),
+            Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).write(w) },
+            Tag::ByteArray(x) => {
+                (x.len() as u32).write(w);
+                w.write(x);
+            }
+            Tag::IntArray(x) => {
+                (x.len() as u32).write(w);
+                x.iter().write(w);
+            }
+            Tag::LongArray(x) => {
+                (x.len() as u32).write(w);
+                x.iter().write(w);
+            }
+            Tag::List(x) => x.write(w),
+            Tag::Compound(x) => x.write(w),
+        }
+    }
+
+    unsafe fn sz(&self) -> usize {
+        1 + match self {
+            Tag::Byte(_) => 1,
+            Tag::Short(_) => 2,
+            Tag::Int(_) => 4,
+            Tag::Long(_) => 8,
+            Tag::Float(_) => 4,
+            Tag::Double(_) => 8,
+            Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).sz() },
+            Tag::ByteArray(x) => 4 + x.len(),
+            Tag::IntArray(x) => 4 + x.len() * 4,
+            Tag::LongArray(x) => 4 + x.len() * 8,
+            Tag::List(x) => x.sz(),
+            Tag::Compound(x) => x.sz(),
+        }
+    }
+}
+
+impl Tag {
+    #[inline]
+    pub const fn id(&self) -> u8 {
+        match self {
+            Tag::Byte(_) => BYTE,
+            Tag::Short(_) => SHORT,
+            Tag::Int(_) => INT,
+            Tag::Long(_) => LONG,
+            Tag::Float(_) => FLOAT,
+            Tag::Double(_) => DOUBLE,
+            Tag::String(_) => STRING,
+            Tag::ByteArray(_) => BYTE_ARRAY,
+            Tag::IntArray(_) => INT_ARRAY,
+            Tag::LongArray(_) => LONG_ARRAY,
+            Tag::List(_) => LIST,
+            Tag::Compound(_) => COMPOUND,
+        }
+    }
+}
+
 impl From<bool> for Tag {
     #[inline]
     fn from(value: bool) -> Self {
@@ -159,20 +225,7 @@ impl AsMut<[(flexstr::SharedStr, Tag)]> for Compound {
 unsafe impl Write for Compound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         for (name, tag) in &self.0 {
-            w.write_byte(match tag {
-                Tag::Byte(_) => BYTE,
-                Tag::Short(_) => SHORT,
-                Tag::Int(_) => INT,
-                Tag::Long(_) => LONG,
-                Tag::Float(_) => FLOAT,
-                Tag::Double(_) => DOUBLE,
-                Tag::String(_) => STRING,
-                Tag::ByteArray(_) => BYTE_ARRAY,
-                Tag::IntArray(_) => INT_ARRAY,
-                Tag::LongArray(_) => LONG_ARRAY,
-                Tag::List(_) => LIST,
-                Tag::Compound(_) => COMPOUND,
-            });
+            w.write_byte(tag.id());
             unsafe {
                 UTF8Tag::new_unchecked(name.as_bytes()).write(w);
             }
