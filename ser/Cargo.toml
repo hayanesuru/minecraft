@@ -1,6 +1,6 @@
 [package]
 name = "mser"
-version = "2.0.1"
+version = "2.0.2"
 description = "mser"
 edition.workspace = true
 authors.workspace = true
