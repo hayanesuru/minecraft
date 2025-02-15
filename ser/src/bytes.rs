@@ -16,7 +16,7 @@ pub trait Bytes {
     fn v64(&mut self) -> Option<u64>;
     fn array<const L: usize>(&mut self) -> Option<&[u8; L]>;
     fn slice(&mut self, len: usize) -> Option<&[u8]>;
-    fn chunk<const L: usize>(&self) -> Option<&[u8; L]>;
+    fn peek<const L: usize>(&self) -> Option<&[u8; L]>;
 }
 
 #[allow(clippy::manual_map)]
@@ -153,7 +153,7 @@ impl Bytes for &[u8] {
     }
 
     #[inline]
-    fn chunk<const L: usize>(&self) -> Option<&[u8; L]> {
+    fn peek<const L: usize>(&self) -> Option<&[u8; L]> {
         if L > self.len() {
             return None;
         }
