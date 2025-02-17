@@ -225,38 +225,6 @@ unsafe impl Write for uuid::Uuid {
     }
 }
 
-unsafe impl Write for [&str] {
-    #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        for &x in self {
-            crate::V21(str::len(x) as u32).write(w);
-            w.write(x.as_bytes());
-        }
-    }
-
-    #[inline(always)]
-    unsafe fn sz(&self) -> usize {
-        let mut l = 0;
-        for &x in self {
-            l += crate::V21(str::len(x) as u32).sz();
-            l += str::len(x);
-        }
-        l
-    }
-}
-
-unsafe impl Write for &[&str] {
-    #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        Write::write(*self, w);
-    }
-
-    #[inline]
-    unsafe fn sz(&self) -> usize {
-        Write::sz(*self)
-    }
-}
-
 unsafe impl Write for &[u8] {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
@@ -290,5 +258,28 @@ unsafe impl<T: ?Sized + Write + ToOwned> Write for Cow<'_, T> {
     #[inline]
     unsafe fn sz(&self) -> usize {
         <Self as AsRef<T>>::as_ref(self).sz()
+    }
+}
+
+unsafe impl<T: Write> Write for Option<T> {
+    #[inline]
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        match self.as_ref() {
+            Some(x) => {
+                w.write_byte(1);
+                x.write(w);
+            }
+            None => {
+                w.write_byte(0);
+            }
+        }
+    }
+
+    #[inline]
+    unsafe fn sz(&self) -> usize {
+        match self.as_ref() {
+            Some(x) => 1 + x.sz(),
+            None => 1,
+        }
     }
 }

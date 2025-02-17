@@ -83,3 +83,14 @@ impl Read for uuid::Uuid {
         Some(Self::from_bytes(*buf.array()?))
     }
 }
+
+impl<T: Read> Read for Option<T> {
+    #[inline]
+    fn read(buf: &mut &[u8]) -> Option<Self> {
+        if bool::read(buf)? {
+            Some(Some(T::read(buf)?))
+        } else {
+            Some(None)
+        }
+    }
+}
