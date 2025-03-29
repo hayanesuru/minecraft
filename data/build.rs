@@ -59,9 +59,9 @@ fn read(buf: &mut String, path: PathBuf) -> std::io::Result<usize> {
 fn main() -> std::io::Result<()> {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
     let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    let mut w = String::with_capacity(0x1000);
-    let mut wn = Vec::with_capacity(0x1000);
-    let mut data = String::with_capacity(0x20000);
+    let mut w = String::with_capacity(0x80000);
+    let mut wn = Vec::with_capacity(0x80000);
+    let mut data = String::with_capacity(0x40000);
     let mut gen_hash = GenerateHash::new();
 
     read(&mut data, path.join("version.txt"))?;
@@ -238,7 +238,7 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += itoa::Buffer::new().format(size - 1);
     *w += ";\n";
 
-    *w += "#[inline]\n";
+    *w += "#[inline]\n#[must_use]\n";
     *w += "pub const fn new(n: ";
     *w += repr.to_int();
     *w += ") -> Option<Self> {\n";
@@ -256,7 +256,7 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "}\n";
     *w += "}\n";
 
-    *w += "#[inline]\n";
+    *w += "#[inline]\n#[must_use]\n";
     *w += "pub const fn id(self) -> ";
     *w += repr.to_int();
     *w += " {\n";
@@ -906,7 +906,11 @@ fn block_state(
             *w += "(self) -> ";
             *w += &kvn[prop_ as usize];
             *w += " {\n";
-            *w += "unsafe { ::core::mem::transmute(";
+            *w += "unsafe { ::core::mem::transmute::<";
+            *w += reprp.to_int();
+            *w += ", ";
+            *w += &kvn[prop_ as usize];
+            *w += ">(";
             if repr != reprp {
                 *w += "(";
             }
@@ -1064,7 +1068,7 @@ fn block_state(
     w.pop();
     *w += "];\n";
 
-    *w += "#[inline]\n";
+    *w += "#[inline]\n#[must_use]\n";
     *w += "pub const fn state_index(self) -> ";
     *w += bsrepr.to_int();
     *w += " {\n";
@@ -1603,6 +1607,7 @@ let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as
 }
 }
 #[inline]
+#[must_use]
 pub fn parse(name: &[u8]) -> Option<Self> {
 match Self::M.get(name) {
 Some(x) => unsafe { Some(::core::mem::transmute::<raw_";

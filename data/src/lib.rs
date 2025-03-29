@@ -27,6 +27,7 @@ struct NameMap<T: 'static> {
     vals: &'static [T],
 }
 
+#[inline]
 fn hash(key: [u64; 4], name: &[u8], disps: &'static [(u32, u32)], len: u32) -> u32 {
     let hasher = highway::HighwayHasher::new(highway::Key(key));
     let [a, b] = highway::HighwayHash::hash128(hasher, name);
@@ -42,9 +43,9 @@ impl NameMap<u16> {
         let index = hash(self.key, name, self.disps, self.vals.len() as u32);
         let v = unsafe { *self.vals.get_unchecked(index as usize) };
         let offset =
-            unsafe { u32::from_ne_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
+            unsafe { u32::from_le_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
         let len = unsafe {
-            u16::from_ne_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
+            u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
         };
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
         if name == k {
@@ -60,9 +61,9 @@ impl NameMap<u8> {
         let index = hash(self.key, name, self.disps, self.vals.len() as u32);
         let v = unsafe { *self.vals.get_unchecked(index as usize) };
         let offset =
-            unsafe { u32::from_ne_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
+            unsafe { u32::from_le_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
         let len = unsafe {
-            u16::from_ne_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
+            u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
         };
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
         if name == k {
@@ -89,25 +90,18 @@ pub fn read_block_state(
     if block.props().is_empty() {
         return block.state_default();
     }
-    let props = match n.find("Properties") {
-        Some(mser::nbt::Tag::Compound(x)) => x,
-        _ => return block.state_default(),
+    let Some(mser::nbt::Tag::Compound(props)) = n.find("Properties") else {
+        return block.state_default();
     };
     let mut len = 0;
     for (k, v) in props.iter() {
         let k = block_state_property_key::parse(k.as_bytes());
-        let k = match k {
-            Some(x) => x,
-            None => continue,
-        };
+        let Some(k) = k else { continue };
         let v = match v {
             mser::nbt::Tag::String(v) => block_state_property_value::parse(v.as_bytes()),
             _ => None,
         };
-        let v = match v {
-            Some(val) => val,
-            None => continue,
-        };
+        let Some(v) = v else { continue };
         buf[len] = (k, v);
         len += 1;
     }
@@ -118,47 +112,42 @@ pub fn make_block_state(
     mut buf: &mut [(block_state_property_key, block_state_property_value)],
     block: block,
 ) -> block_state {
-    let mut offset = 0_u16;
-    let mut index = 0_u16;
+    let mut offset: raw_block_state = 0;
+    let mut index: raw_block_state = 0;
 
     for &prop in block.props().iter().rev() {
         let key = prop.key();
         let vals = prop.val();
 
         let val = buf.iter().position(|&(x, _)| x == key);
-        let val = match val {
-            Some(x) => unsafe {
+        let val = if let Some(x) = val {
+            unsafe {
                 let y = buf.len() - 1;
-                let x = if x != y {
+                let val = if x == y {
+                    *buf.get_unchecked_mut(x)
+                } else {
                     let y = *buf.get_unchecked_mut(y);
                     let x = buf.get_unchecked_mut(x);
-                    Some(core::mem::replace(x, y))
-                } else {
-                    let x = buf.get_unchecked_mut(x);
-                    Some(*x)
+                    core::mem::replace(x, y)
                 };
-                buf = buf.get_unchecked_mut(0..buf.len() - 1);
-                x
-            },
-            None => None,
-        };
-        let val = match val {
-            Some((_, val)) => match vals.iter().position(|&v| v == val) {
-                None => 0,
-                Some(x) => x as u16,
-            },
-            None => {
-                let def = block.state_default().id() - block.state_index();
-                let x = if index == 0 { def } else { def / index };
-                x % vals.len() as u16
+                buf = buf.get_unchecked_mut(0..y);
+                let val = val.1;
+                match vals.iter().position(|&v| v == val) {
+                    None => 0,
+                    Some(x) => x as raw_block_state,
+                }
             }
+        } else {
+            let def = block.state_default().id() - block.state_index();
+            let x = if index == 0 { def } else { def / index };
+            x % vals.len() as raw_block_state
         };
         if index == 0 {
             offset = val;
-            index = vals.len() as u16;
+            index = vals.len() as raw_block_state;
         } else {
             offset += val * index;
-            index *= vals.len() as u16;
+            index *= vals.len() as raw_block_state;
         }
     }
     block_state(block.state_index() + offset)
@@ -173,13 +162,10 @@ pub fn block_state_props(
     let mut raw = state.id() - kind.state_index();
     for prop in kind.props().iter().rev() {
         let v = prop.val();
-        let idx = raw % v.len() as u16;
-        raw /= v.len() as u16;
+        let idx = raw % v.len() as raw_block_state;
+        raw /= v.len() as raw_block_state;
         match iter.next_back() {
-            Some(x) => {
-                *x = (prop.key(), unsafe { *v.get_unchecked(idx as usize) });
-                continue;
-            }
+            Some(x) => *x = (prop.key(), unsafe { *v.get_unchecked(idx as usize) }),
             None => break,
         }
     }
@@ -300,10 +286,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) >> 4)
         }
@@ -321,10 +307,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 8 != 0)
         }
@@ -342,10 +328,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 4 != 0)
         }
@@ -363,10 +349,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 2 != 0)
         }
@@ -384,10 +370,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 1 != 0)
         }
@@ -405,10 +391,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8 + 1))
         }
@@ -426,10 +412,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8 + 2))
         }
@@ -447,10 +433,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8 + 3))
         }
@@ -468,10 +454,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             let index = *BLOCK_STATE_BOUNDS
                 .add(index as usize * 8 + 4)
@@ -493,10 +479,10 @@ impl block_state {
             }
             let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() != 1 {
-                *bounds.as_ptr().add(offset as _)
-            } else {
+            let index = if ::mser::unlikely(bounds.len() == 1) {
                 *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
             };
             let index = *BLOCK_STATE_BOUNDS
                 .add(index as usize * 8 + 6)
@@ -516,7 +502,7 @@ impl item {
 
     #[inline]
     pub const fn to_block(self) -> block {
-        unsafe { core::mem::transmute(*ITEM.as_ptr().add(self as usize)) }
+        unsafe { core::mem::transmute::<raw_block, block>(*ITEM.as_ptr().add(self as usize)) }
     }
 }
 
