@@ -537,13 +537,13 @@ fn block_state(
         kvn.push(w.into_boxed_str());
     }
     for (index, props) in kv.iter().enumerate() {
-        *w += "pub type ";
-        *w += &kvn[index];
-        *w += " = val";
+        *w += "pub use val";
         for &n in &props[1..] {
             w.push('_');
             *w += pv2[n as usize];
         }
+        *w += " as ";
+        *w += &kvn[index];
         *w += ";\n";
     }
     enum_head(w, reprkv, namekv);
@@ -1006,10 +1006,10 @@ fn block_state(
         block_state.push(props);
         y += properties_size[props as usize];
 
-        *w += "pub type ";
-        *w += x.next().unwrap();
-        *w += " = ";
+        *w += "pub use ";
         *w += &psn[props as usize];
+        *w += " as ";
+        *w += x.next().unwrap();
         *w += ";\n";
     }
 
