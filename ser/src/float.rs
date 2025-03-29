@@ -804,7 +804,7 @@ impl<'a> AsciiStr<'a> {
 
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.ptr == self.end
+        core::ptr::eq(self.ptr, self.end)
     }
 
     #[inline]
