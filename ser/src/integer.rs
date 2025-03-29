@@ -20,26 +20,24 @@ macro_rules! parse_signed {
                 }
                 let mut out: $t = 0;
                 if pos {
-                    match x.split_first() {
-                        Some((&dig @ b'0'..=b'9', y)) => {
-                            x = y;
-                            out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
-                        }
-                        _ => return (0, 0),
+                    if let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
+                        x = y;
+                        out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
+                    } else {
+                        return (0, 0);
                     }
-                    while let Some((&dig @ b'0'..=b'9', y)) = x.split_first() {
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
                         x = y;
                         out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
                     }
                 } else {
-                    match x.split_first() {
-                        Some((&dig @ b'0'..=b'9', y)) => {
-                            x = y;
-                            out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as _);
-                        }
-                        _ => return (0, 0),
+                    if let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
+                        x = y;
+                        out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as _);
+                    } else {
+                        return (0, 0);
                     }
-                    while let Some((&dig @ b'0'..=b'9', y)) = x.split_first() {
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
                         x = y;
                         out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as _);
                     }
@@ -65,14 +63,13 @@ macro_rules! parse_unsigned {
                     }
                 }
                 let mut out: $t = 0;
-                match x.split_first() {
-                    Some((&dig @ b'0'..=b'9', y)) => {
-                        x = y;
-                        out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
-                    }
-                    _ => return (0, 0),
+                if let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
+                    x = y;
+                    out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
+                } else {
+                    return (0, 0);
                 }
-                while let Some((&dig @ b'0'..=b'9', y)) = x.split_first() {
+                while let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
                     x = y;
                     out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
                 }

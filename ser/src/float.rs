@@ -1,4 +1,4 @@
-//! https://github.com/aldanor/fast-float-rust
+//! <https://github.com/aldanor/fast-float-rust>
 
 use core::marker::PhantomData;
 use core::ops::{Add, Div, Mul, Neg};
