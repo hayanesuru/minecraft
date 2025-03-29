@@ -1,5 +1,6 @@
 use core::iter::repeat_n;
 use mser::*;
+use nested::ZString;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::env::var_os;
@@ -148,21 +149,21 @@ fn registries<'a>(
             block_names.clone_from(&zhash);
         }
         enum_head(w, repr, &name);
-        if name == "sound_event" || name == "attribute" {
-            for &data in &zhash {
-                let data = data.replace('.', "_");
-                *w += &data;
-                *w += ",\n";
+
+        for &location in &zhash {
+            if let "match" | "true" | "false" | "type" = location {
+                *w += "r#"
             }
-        } else {
-            for &data in &zhash {
-                if let "match" | "true" | "false" | "type" = data {
-                    *w += "r#"
-                }
-                *w += data;
-                *w += ",\n";
+            let mut last_end = 0;
+            for (start, part) in location.match_indices(['.', '/']) {
+                *w += unsafe { location.get_unchecked(last_end..start) };
+                w.push('_');
+                last_end = start + part.len();
             }
+            *w += unsafe { location.get_unchecked(last_end..location.len()) };
+            *w += ",\n";
         }
+
         *w += "}\n";
         *w += "unsafe impl ::mser::Write for ";
         *w += &name;
@@ -501,8 +502,7 @@ fn block_state(
         x2.clear();
         x2.extend(arr[1..].iter().map(|&x| pv2[x as usize]));
         let idx = x.get(&*x2).copied().unwrap();
-        let k = pk2[arr[0] as usize];
-        match xn.entry(k) {
+        match xn.entry(pk2[arr[0] as usize]) {
             Entry::Vacant(x) => {
                 x.insert((idx, false));
             }
@@ -515,14 +515,16 @@ fn block_state(
         }
     }
     for arr in &kv {
-        let k = pk2[arr[0] as usize];
-        let dupe = xn.get(k).unwrap().1;
+        let dupe = xn.get(pk2[arr[0] as usize]).unwrap().1;
         let mut w = String::new();
         w += "prop_";
-        w += k;
+        w += pk2[arr[0] as usize];
         if dupe {
-            let x = pv2[arr[1] as usize].as_bytes();
-            if x.iter().all(|x| x.is_ascii_digit()) {
+            let is_digit = arr[1..]
+                .iter()
+                .map(|&x| pv2[x as usize])
+                .all(|x| !x.contains(|n: char| !n.is_ascii_digit()));
+            if is_digit {
                 w += "_";
                 w += ib.format(arr.len() - 1);
             } else {
@@ -642,23 +644,91 @@ fn block_state(
         properties_size.push(len);
         block_state_properties.push(props);
     }
-    let mut psn = Vec::<Box<str>>::with_capacity(block_state_properties.len());
+
+    let mut psn = ZString::with_capacity(
+        block_state_properties.len(),
+        block_state_properties.len() * 10,
+    );
+    let mut dedup = HashMap::<Vec<u64>, u32>::with_capacity(block_state_properties.len());
     for props in &block_state_properties {
-        let mut name = String::new();
-        name.push_str("props");
+        let mut ctx = Vec::with_capacity(props.len());
         for &x in &**props {
             let prop = &*kv[x as usize];
-            name.push('_');
-            name.push_str(pk2[prop[0] as usize]);
-            name.push_str(ib.format(prop.len() - 1));
+            ctx.push(prop[0] as u64 | ((prop.len() as u64) << 32));
         }
+        match dedup.entry(ctx) {
+            Entry::Vacant(x) => {
+                x.insert(0);
+            }
+            Entry::Occupied(x) => {
+                *x.into_mut() += 1;
+            }
+        }
+    }
+    let mut ctx = Vec::<u64>::with_capacity(16);
+    let mut ctx1 = String::with_capacity(32);
+    for props in block_state_properties.iter().map(|x| &**x) {
         if props.is_empty() {
-            name.push_str("_nil");
+            psn.push("props_nil");
+            continue;
         }
-        psn.push(name.into_boxed_str());
+        ctx.clear();
+        for &x in props {
+            let prop = &*kv[x as usize];
+            ctx.push(prop[0] as u64 | ((prop.len() as u64) << 32));
+        }
+        let dupe = match dedup.get_mut(&ctx) {
+            None => unreachable!(),
+            Some(n) => *n != 0,
+        };
+        let mut cap = 5;
+
+        if dupe {
+            for &x in props {
+                cap += 1;
+                let prop = &*kv[x as usize];
+                cap += pk2[prop[0] as usize].len();
+                cap += prop[1..]
+                    .iter()
+                    .map(|&x| pv2[x as usize])
+                    .map(|x| x.len() + 2)
+                    .sum::<usize>();
+            }
+        } else {
+            for &x in props {
+                cap += 1;
+                let prop = &*kv[x as usize];
+                cap += pk2[prop[0] as usize].len();
+                cap += ib.format(prop.len() - 1).len();
+            }
+        }
+        ctx1.clear();
+        ctx1.reserve(cap);
+
+        ctx1 += "props";
+
+        if dupe {
+            for &x in props {
+                ctx1.push('_');
+                let prop = &*kv[x as usize];
+                ctx1 += pk2[prop[0] as usize];
+                for ele in prop[1..].iter().map(|&x| pv2[x as usize]) {
+                    ctx1 += "__";
+                    ctx1 += ele;
+                }
+            }
+        } else {
+            for &x in props {
+                ctx1.push('_');
+                let prop = &*kv[x as usize];
+                ctx1 += pk2[prop[0] as usize];
+                ctx1 += ib.format(prop.len() - 1);
+            }
+        }
+        psn.push(&*ctx1);
     }
     for (x, props) in block_state_properties.iter().enumerate() {
-        let name = &*psn[x];
+        let name = &psn[x];
 
         let mut size = 1;
         let mut len = 1;

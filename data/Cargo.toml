@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "2.0.3"
+version = "2.0.4"
 description = "minecraft data"
 edition.workspace = true
 authors.workspace = true
@@ -24,3 +24,4 @@ mser = { workspace = true, default-features = false }
 itoa = "1"
 ryu = "1"
 highway = { version = "1", default-features = false }
+nested = "0.1"

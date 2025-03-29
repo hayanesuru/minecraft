@@ -49,7 +49,6 @@ select_known_packs
 ;clientbound/play;83
 bundle_delimiter
 add_entity
-add_experience_orb
 animate
 award_stats
 block_changed_ack
@@ -167,6 +166,7 @@ tab_list
 tag_query
 take_item_entity
 teleport_entity
+test_instance_block_status
 ticking_state
 ticking_step
 transfer
@@ -178,7 +178,7 @@ update_tags
 projectile_power
 custom_report_details
 server_links
-;serverbound/play;3e
+;serverbound/play;40
 accept_teleportation
 block_entity_tag_query
 bundle_item_selected
@@ -236,8 +236,10 @@ set_command_minecart
 set_creative_mode_slot
 set_jigsaw_block
 set_structure_block
+set_test_block
 sign_update
 swing
 teleport_to_entity
+test_instance_block_action
 use_item_on
 use_item

@@ -1,4 +1,4 @@
-;block_state_property_key;58
+;block_state_property_key;59
 snowy
 axis
 stage
@@ -33,7 +33,7 @@ north
 south
 up
 west
-active
+creaking_heart_state
 natural
 power
 moisture
@@ -80,6 +80,7 @@ thickness
 vertical_direction
 berries
 flower_amount
+segment_amount
 tilt
 cracked
 crafting
@@ -87,7 +88,7 @@ ominous
 trial_spawner_state
 vault_state
 tip
-;block_state_property_value;84
+;block_state_property_value;8b
 true
 false
 x
@@ -159,6 +160,9 @@ upper
 lower
 normal
 sticky
+uprooted
+dormant
+awake
 top
 bottom
 straight
@@ -204,6 +208,10 @@ west_up
 east_up
 north_up
 south_up
+start
+log
+fail
+accept
 inactive
 active
 cooldown
@@ -220,7 +228,7 @@ waiting_for_reward_ejection
 ejecting_reward
 unlocking
 ejecting
-;block_state_property;73
+;block_state_property;75
 0 0 1
 1 2 3 4
 2 5 6
@@ -257,25 +265,25 @@ f 0 1
 1f 0 1
 20 0 1
 21 0 1
-22 0 1
+22 47 48 49
 23 0 1
-13 47 48
-11 49 4a 4b 4c 4d
-15 4e 4f 50
-1d 19 51 52
-1e 19 51 52
+13 4a 4b
+11 4c 4d 4e 4f 50
+15 51 52 53
+1d 19 54 55
+1e 19 54 55
 24 5 6 7 8 9 a b c d e f 10 11 12 13 14
-1f 19 51 52
-21 19 51 52
+1f 19 54 55
+21 19 54 55
 3 5 6 7 8 9 a b c
 25 5 6 7 8 9 a b c
 26 0 1
 27 5 6 7 8 9 a b c d e f 10 11 12 13 14
-28 4f 50
+28 52 53
 29 0 1
-11 3d 3e 3f 40 41 42 53 54 55 56
+11 3d 3e 3f 40 41 42 56 57 58 59
 2a 0 1
-2b 57 58 59
+2b 5a 5b 5c
 2c 6 7 8 9 a b c d
 2d 0 1
 1 2 4
@@ -284,11 +292,11 @@ f 0 1
 30 0 1
 31 0 1
 32 0 1
-15 47 48 5a
-1d 52 5b 5c
-1e 52 5b 5c
-1f 52 5b 5c
-21 52 5b 5c
+15 4a 4b 5d
+1d 55 5e 5f
+1e 55 5e 5f
+1f 55 5e 5f
+21 55 5e 5f
 3 5 6 7 8
 33 0 1
 34 0 1
@@ -298,45 +306,47 @@ f 0 1
 3 5 6 7
 37 0 1
 38 0 1
-39 5d 5e
+39 60 61
 3a 0 1
 3b 0 1
 a 1a 15 17 18 16
 3 5 6 7 8 9 a
 3 5 6
-3 5 6 7 8 9 a b c d e f 10 11 12 13 14 32 33 34 35 36 37 38 39 3a 5f
+3 5 6 7 8 9 a b c d e f 10 11 12 13 14 32 33 34 35 36 37 38 39 3a 62
 3c 6 7 8 9
 3d 5 6 7
 3e 6 7 8 9
-3f 52 60 61
+3f 55 63 64
 40 0 1
 41 0 1
 8 5 6 7 8 9 a b c
 42 0 1
-43 57 59 62 63
+43 5a 5c 65 66
 44 0 1
-39 64 65 66 67
-45 68 69 6a 6b 6c 6d 6e 6f 70 71 72 73
+39 67 68 69 6a
+45 6b 6c 6d 6e 6f 70 71 72 73 74 75 76
+39 77 78 79 7a
 6 5 6 7 8 9 a b c d
 46 5 6 7 8 9 a
 47 5 6 7 8 9
 48 6 7 8 9
-49 74 75 76
+49 7b 7c 7d
 4a 0 1
 4b 0 1
 4c 0 1
-4d 77 78 79 7a 7b
+4d 7e 7f 80 81 82
 4e 19 1a
 4f 0 1
 50 6 7 8 9
-51 52 7c 7d 7e
-52 0 1
+51 6 7 8 9
+52 55 83 84 85
 53 0 1
 54 0 1
-55 74 7f 75 80 81 76
-56 74 75 82 83
-57 0 1
-;block_state_properties;6e
+55 0 1
+56 7b 86 7c 87 88 7d
+57 7b 7c 89 8a
+58 0 1
+;block_state_properties;70
 
 0
 1
@@ -358,7 +368,7 @@ a 16
 f 18 19 1a 1b 1c 1d
 f
 1e 1f 20 21 22 23
-24 1 25
+1 24 25
 f 26 27 5
 f 28 5
 29 2a 2b 2c 2d
@@ -425,29 +435,31 @@ f 30 5d 5
 5e
 5f
 60
-f 61
-62
-63 30 5
+61
+f 62
+63
+64 30 5
 a 5
-2b 64 5
-f 2b 64 5
-65
-66 67 5
+2b 65 5
+f 2b 65 5
+66
+67 68 5
 30 e
 a e 5
-68 69 5
-53 6a
-6a
-f 6b
-f 6c 5
+69 6a 5
+53 6b
+6b
+f 6c
+f 6d
+f 6e 5
 f 14 5
-6d f 5
-6e 5f b
-6f 70
-f 6f 71
+6f f 5
+70 5f b
+71 72
+f 71 73
 59 40 41 42 43
-72
-;block_state;447
+74
+;block_state;450
 ~8 0
 1
 ~2 0
@@ -475,7 +487,7 @@ a
 ~10 b
 ~2 c
 d
-~5 0
+~8 0
 e
 d
 f
@@ -515,7 +527,7 @@ f
 24
 ~2 0
 25
-0
+~2 0
 25
 26
 27
@@ -696,10 +708,12 @@ e
 55
 56
 57
+0
+58
 3d
-~2 58
+~2 59
 ~5 0
-59
+5a
 ~6 0
 16
 32
@@ -715,10 +729,10 @@ e
 21
 32
 ~3 0
-~11 5a
+~11 5b
 ~11 23
 ~2 0
-~4 5b
+~4 5c
 0
 31
 16
@@ -732,12 +746,12 @@ e
 16
 32
 ~4 0
-5c
 5d
+5e
 0
 2f
-5e
 5f
+60
 ~12 0
 ~4 16
 ~4 31
@@ -747,18 +761,19 @@ e
 ~8 1d
 ~8 2b
 ~8 7
-~8 60
-61
+~8 61
 62
-0
 63
-64
-~4 0
-65
 0
-66
-1e
+64
+65
+~4 0
+~2 66
 67
+0
+68
+1e
+69
 7
 ~2 0
 2
@@ -783,16 +798,16 @@ e
 ~6 0
 ~3 2
 ~2 0
-68
-69
 6a
 6b
-7
-0
 6c
 6d
-~4 0
-;block_to_default_block_state;447
+7
+0
+6e
+6f
+~5 0
+;block_to_default_block_state;450
 ~8 0
 1
 ~2 0
@@ -827,7 +842,7 @@ a
 17
 10
 5
-~4 0
+~7 0
 1
 6
 7
@@ -843,8 +858,8 @@ c0
 22
 1e0
 0
-9
-d
+7
+15
 45
 49e
 87
@@ -874,7 +889,7 @@ e
 7
 ~2 0
 f
-0
+~2 0
 10
 1f
 ~3 0
@@ -1097,6 +1112,8 @@ f
 ~2 7
 c
 1
+3
+0
 8
 f
 ~2 17
@@ -1171,7 +1188,7 @@ e
 1
 33
 ~5 0
-f
+~3 f
 1
 1f
 9
@@ -1209,13 +1226,13 @@ b
 ~2 0
 a1
 1
-~3 0
-;block_item_to_block;569
+~4 0
+;block_item_to_block;574
 ~8 0
-413
+41b
 0
 3
-ffffff96
+ffffff94
 fffffff1
 ~3 0
 4
@@ -1224,19 +1241,19 @@ fffffffb
 1
 ~4 0
 55
-fffffbfb
+fffffbf5
 ~3 0
-40d
+415
 0
-ffffff23
+ffffff1f
 fffffff6
-fffffcd6
+fffffcd2
 ~7 0
 1
 ~2 0
-32e
+332
 0
-fffffcd0
+fffffccc
 ~a 0
 2
 0
@@ -1247,32 +1264,32 @@ fffffffd
 0
 fffffffc
 0
-396
+39c
 0
-fffffc64
+fffffc5e
 0
-d3
+d6
 0
-6a
+6b
 0
-fffffef9
+fffffef5
 0
-53
+56
 0
-ffffff73
-187
-1ac
-fffffea1
-229
+ffffff70
+18b
+1ae
+fffffe9f
+22d
 ~2 0
 b
-ffffff63
+ffffff61
 0
-fffffd06
-314
-fffffce9
+fffffd03
+317
+fffffce6
 12
-2a6
+2a9
 5c
 ~2 0
 9
@@ -1293,60 +1310,63 @@ fffffff3
 ~3 fffffffe
 6
 ~3 fffffffe
-fffffc4a
+fffffc44
 ~5 0
 1
 fffffffe
 1
 ~2 0
-2fe
+302
 fffffff6
-fffffd0a
+fffffd06
 7
 fffffff8
 ~6 0
 1
-2f5
+2f9
 fffffff6
-fffffd1c
+fffffd18
 ~8 0
-2e5
+2e9
 fffffff6
-fffffd11
+fffffd0d
 ~6 0
 ffffffc7
 38
 0
-2ed
+2f1
 fffffff6
-fffffd24
+fffffd20
 ~d 0
-352
-fffffcaf
+358
+fffffca9
 1
 ~2 0
 14
 ~2 0
-38c
+1
+390
 0
-fffffc72
-0
-269
-fffffd99
+fffffc6c
+3ca
+fffffc36
+~2 0
+26a
+fffffd98
 ~f 0
 1
-3a8
+3ad
 0
-fffffc57
+fffffc52
 ~9 0
 1
 fffffffe
 fffffff4
-1d8
-19a
-fffffc98
+1d9
+19c
+fffffc95
 0
-295
+296
 fffffff6
 e
 fffffff2
@@ -1355,16 +1375,17 @@ fffffff2
 1
 fffffdc5
 1b8
-150
-fffffffe
-1
+152
+~2 0
+fffffffc
+3
 2c
 0
 fffffffd
 ffffffd7
 fffffffc
 1
-fffffedb
+fffffed7
 ffffff3f
 ~a 0
 10a
@@ -1377,15 +1398,15 @@ ffffffa5
 0
 fffffffd
 fffffffe
-fffffe5f
+fffffe5e
 1
 0
-38b
-fffffc74
+390
+fffffc6f
 ~2 0
-1b8
+1b9
 ~5 0
-fffffe45
+fffffe44
 0
 1
 4
@@ -1394,7 +1415,7 @@ fffffe45
 b
 1
 34
-~4 0
+~5 0
 1
 0
 14d
@@ -1406,21 +1427,21 @@ ffffffcf
 0
 fffffff5
 ~4 0
-31f
-fffffce0
+323
+fffffcdc
 1
 25
 ~5 0
-2f0
-fffffd03
+2f4
+fffffcff
 ~5 0
-2ef
+2f3
 4
 fffffff6
 9
 fffffffd
 d
-fffffd04
+fffffd00
 ~5 0
 1
 4
@@ -1430,20 +1451,20 @@ fffffd04
 fffffff5
 ~4 0
 6
-224
+226
 fffffffe
-fffffddc
+fffffdda
 0
-25f
+261
 ~3 0
-fffffd9e
+fffffd9c
 6
 0
 10a
 fffffef5
 ~3 2
-ffffff47
-b8
+ffffff46
+b9
 ~2 0
 6c
 ~6 0
@@ -1453,19 +1474,19 @@ fffffe20
 ~3 0
 19b
 ~c 0
-4f
+51
 d
 fffffff9
-a7
+a9
 3
 7
 fffffffb
-fffffd87
+fffffd83
 ~2 0
 9
 fffffffe
-1c5
-fffffe3b
+1c7
+fffffe39
 0
 2
 ~f 0
@@ -1510,63 +1531,63 @@ fffffff6
 0
 6
 ~d 0
-117
+11b
 3
 7
 fffffffb
-fffffee0
+fffffedc
 ~c 0
-10b
+10f
 3
 7
 fffffffb
-fffffef9
-fffffd99
+fffffef5
+fffffd98
 46
-b5
+b6
 ffffff60
 9c
-fffffed1
-fffffff8
-166
-17a
-ffffff1d
+fffffed0
+fffffff5
+16a
+17c
+ffffff1b
 ffffff38
-fffffeaf
-155
+fffffeab
+159
 168
-36
-fffffd92
-317
-fffffdab
-203
+38
+fffffd8f
+31a
+fffffda9
+205
 0
-fffffdb2
+fffffdb0
 43
-fffffefa
-ba
-ffffff04
-95
-278
-fffffe1a
+fffffef9
+bb
+ffffff00
+98
+27b
+fffffe18
 ~9 0
 1b3
 0
-fffffd9d
-287
-fffffe37
+fffffd9c
+28a
+fffffe35
 0
-ffffff40
+ffffff3f
 ~9 0
-24b
+24c
 0
-fffffda8
+fffffda7
 ffffffd7
-195
+196
 ~8 0
 eb
 0
-92
+94
 0
 1
 fffffffe
@@ -1574,12 +1595,12 @@ fffffffe
 0
 1
 fffffffe
-fffffdf9
+fffffdf7
 ffffff3e
 ~9 0
 21b
 0
-a2
+a4
 0
 1
 fffffffe
@@ -1587,37 +1608,37 @@ fffffffe
 0
 1
 fffffffe
-fffffd55
+fffffd53
 101
 ~8 0
 f7
 0
-fffffd2c
+fffffd28
 0
-4e
-ef
-fffffe41
+51
+f0
+fffffe3d
 ~1d ffffffff
-35b
-0
-fffffca2
+35f
+~3 0
+fffffc9c
 ~37 ffffffff
-16e
-fffffe90
+172
+fffffe8c
 ffffffff
-be
-ffffff40
-~1f ffffffff
 c1
+ffffff3d
+~1f ffffffff
+c4
 ~2 0
 2
 fffffffd
 0
 1
 ~3 0
-28c
+28d
 0
-fffffd80
+fffffd7f
 ~2 0
 2
 fffffffd
@@ -1628,76 +1649,76 @@ fffffffd
 0
 fffffffc
 0
-ffffff1c
+ffffff19
 ~2 ffffffff
-3b8
-fffffc46
+3be
+fffffc40
 ~a ffffffff
-2c3
-fffffd3b
-~22 ffffffff
-168
-fffffe96
+2c7
+fffffd37
+~24 ffffffff
+16c
+fffffe92
 ~12 ffffffff
-116
-ffffff56
+11a
+ffffff52
 ~f 0
 ffffff82
-43b
-fffffbc3
+443
+fffffbbb
 ~3 ffffffff
-148
+14c
 0
-fffffeb5
+fffffeb1
 ~8 ffffffff
-15c
-fffffea2
+160
+fffffe9e
 ~5 ffffffff
-15e
+162
 0
-fffffe9f
+fffffe9b
 ~5b ffffffff
-177
+17b
 1c
 0
-fffffe69
+fffffe65
 ~3 ffffffff
-1a0
+1a4
 1
 3
 fffffffd
 3
 ~2 1
-fffffe52
+fffffe4e
 ~17 ffffffff
-20e
+212
 ~f 0
-fffffde1
+fffffddd
 ~2 ffffffff
-271
+275
 0
-fffffd8c
-274
-fffffd8a
+fffffd88
+278
+fffffd86
 ~24 ffffffff
-320
-fffffcde
+324
+fffffcda
 ~a ffffffff
-35d
-ffffffc3
+363
+ffffffc1
 ~5 0
 1
 ~4 0
 2
-dc
-ffffff20
+de
+ffffff1e
 0
 10
-fffffcbf
-35f
+fffffcbb
+365
 0
-fffffc9e
-362
+fffffc98
+368
 8
 fffffff9
 6
@@ -1718,28 +1739,30 @@ fffffff3
 16
 ~3 fffffffe
 65
-2a
+2c
 ~3 0
-fffffbc6
+fffffbbe
 ~2b ffffffff
-3f9
+3ff
 ~f 0
-33
-fffffbc2
+35
+fffffbba
 ffffffff
-43d
-fffffbc1
-;float32_table;22
+445
+fffffbb9
+;float32_table;2a
 0
 3f800000
 3f19999a
 3fc00000
+40c00000
 3f000000
 40000000
+40400000
 bf800000
+4a5bba00
 42c80000
 3e800000
-40400000
 40900000
 3f333333
 3e4ccccd
@@ -1749,14 +1772,20 @@ bf800000
 40800000
 40a00000
 42480000
+44960000
 41200000
 40200000
 3ecccccd
 3dcccccd
 3f7ae148
 3fa00000
+40866666
 3f400000
+41100000
 41b40000
+44160000
+4099999a
+4a5bba03
 3f266666
 3fb33333
 3fe66666
@@ -2301,262 +2330,269 @@ c 0 c d b d 11 b 11 3 e 3
 c 0 12 11 d 13 0 13 0 c d 1 c 13 0 1 d 12 c 13 13 1 d 1 11 13 12 1 d 13
 c 0 12 11 4 13 0 13 0 c 4 1 c 13 0 1 4 12 c 13 13 1 4 1 11 13 12 1 4 13
 c 0 12 11 4 13
-;block_settings_table#hardness blast_resistance slipperiness velocity_multiplier jump_velocity_multiplier;34
+;block_settings_table#hardness blast_resistance slipperiness velocity_multiplier jump_velocity_multiplier;39
 0 0 2 1 1
-3 0 2 1 1
+3 4 2 1 1
 2 2 2 1 1
-4 4 2 1 1
-5 0 2 1 1
 5 5 2 1 1
-6 0 2 1 1
-7 7 2 1 1
-8 8 2 1 1
-9 9 2 1 1
-a 9 2 1 1
+6 4 2 1 1
+6 7 2 1 1
+6 6 2 1 1
+8 9 2 1 1
+a a 2 1 1
 b b 2 1 1
-c c 2 1 1
+7 7 2 1 1
+c 7 2 1 1
 d d 2 1 1
 e e 2 1 1
 f f 2 1 1
-3 3 2 1 1
 10 10 2 1 1
-9 0 2 1 1
-11 0 2 1 1
-12 0 2 1 1
 11 11 2 1 1
-13 13 2 1 1
-5 9 2 1 1
-14 14 2 1 1
-1 1 2 1 1
-15 15 2 1 1
-16 16 2 1 1
-4 4 17 1 1
-4 4 2 15 1
-18 0 2 1 1
-1 9 2 1 1
-3 9 2 1 1
-19 19 2 1 1
-1 19 2 1 1
-c 9 2 1 1
-1a 0 2 1 1
-0 0 f 1 1
-1b 1b 2 1 1
-1c 1c 2 1 1
-1d 1d 2 1 1
-4 14 2 1 1
-1e 1e 1f 1 1
-0 0 2 15 4
-20 0 2 1 1
-3 1 2 1 1
-e 0 2 1 1
-3 19 2 1 1
-21 0 2 1 1
-3 e 2 1 1
+3 3 2 1 1
 12 12 2 1 1
-13 0 2 1 1
-;block_settings;447
+8 0 2 1 1
+7 4 2 1 1
+13 4 2 1 1
+14 15 2 1 1
+13 13 2 1 1
+16 16 2 1 1
+17 17 2 1 1
+1 1 2 1 1
+18 18 2 1 1
+19 19 2 1 1
+5 5 1a 1 1
+5 5 2 18 1
+1b 1c 2 1 1
+1 7 2 1 1
+3 7 2 1 1
+1d 1d 2 1 1
+1 1d 2 1 1
+13 15 2 1 1
+7 1e 2 1 1
+e 7 2 1 1
+1f 20 2 1 1
+7 21 2 1 1
+0 0 11 1 1
+8 22 2 1 1
+23 23 2 1 1
+24 24 2 1 1
+25 25 2 1 1
+5 17 2 1 1
+26 26 27 1 1
+0 0 2 18 5
+28 15 2 1 1
+3 1 2 1 1
+10 4 2 1 1
+3 1d 2 1 1
+29 15 2 1 1
+3 10 2 1 1
+14 14 2 1 1
+16 15 2 1 1
+;block_settings;450
 0
 ~7 1
 2
 ~3 3
-~8 4
-5
-~4 4
+4
+~7 5
+6
+~4 5
 ~9 0
-6
-~2 7
+7
+~2 8
 3
-8
+9
 3
 2
-8
 9
 a
-9
-a
-9
-a
-9
-~9 5
-~2 b
-~1c 5
-~b c
-~2 2
-d
-9
-a
-9
-e
-~4 f
-~10 c
-~2 b
-10
-11
-~5 0
-~2 10
-~10 f
-6
-~10 0
-12
-13
-4
-0
-~2 10
-4
-14
-~4 0
-15
-16
-17
-18
-0
-9
-a
-13
-18
-0
-2
-e
-~a 19
-9
-1a
 b
-4
-~22 19
-~2 3
-15
-~a 3
-9
 a
+b
+a
+b
+a
+~9 6
+~2 c
+~1c 6
+~b d
+~2 2
+e
+a
+b
+a
+f
+~4 10
+~10 d
+~2 c
+11
+12
+~8 0
+~2 11
+~10 10
+13
+~10 0
+14
+15
+4
+0
+~2 11
+4
+16
+~4 0
+17
+18
+5
+19
+0
+a
+b
+15
+19
+0
+2
+f
+~a 1a
+a
+1b
+c
+4
+~22 1a
+~2 3
+17
+~a 3
+a
+b
 ~2 0
 3
-1b
 1c
-c
-1a
+1d
+d
+1b
+0
 2
 0
 4
-17
-1a
-1d
+5
+1b
+1e
 3
-~2 1e
+~2 1f
 ~2 0
-d
-6
-~2 19
+e
+13
+~2 1a
 3
 0
-~10 d
-~a 9
+~10 e
+~a a
 ~4 1
-1f
 20
 21
 22
-~4 21
-~3 c
-~2 13
-d
-~2 19
+23
+~4 22
+~3 d
+~2 15
+e
+~2 1a
 ~4 0
-~2 c
+~2 d
 0
-17
+5
 4
 1
-20
+21
 2
 ~2 0
 ~5 1
 ~3 4
 0
-13
-3
-~4 5
-~2 6
-~2 12
-d
-23
-f
-9
-a
 24
+3
+~4 6
+~2 7
+~2 25
+e
+26
+10
+a
+b
+27
 ~2 0
-13
-~3 17
-6
-9
+15
+~3 5
+7
+a
 ~2 4
 ~1f 0
 ~a 3
-~e 19
-~3 13
-18
+~e 1a
+~3 24
+19
 ~2 3
 0
-c
-13
-9
-12
-~4 f
-b
-e
-~10 1e
-~10 d
-~7 17
-25
-~2 6
-15
-~9 1
 d
+15
+a
+28
+~4 10
+c
+f
+~10 1f
+~10 e
+~7 5
+29
+~2 2a
+17
+~9 1
+e
 3
-~10 1b
-1e
-13
-1c
+~10 1c
+1f
+15
+1d
 ~6 0
-~20 19
-~4 f
-~b 17
+~20 1a
+~4 10
+~b 5
 ~8 4
-20
+21
 ~9 4
-~12 17
-~9 9
+~12 5
+~9 a
 0
-~2 1a
+~2 1b
 ~3 1
-12
+25
 ~4 0
-26
-~3 6
-1c
+2b
+~3 7
+1d
 3
-19
+1a
 4
-5
+6
 0
-9
-~11 5
-~10 27
-~10 28
+a
+~11 6
+~10 2c
+~10 2d
 ~10 3
 ~2 0
-29
+2e
 ~2 3
 ~a 1
 ~1f 0
-2a
-9
-~2 19
+2f
+a
+~2 1a
 ~4 0
 1
 4
 ~2 1
 4
-12
+25
 1
 ~2 4
 ~2 1
@@ -2565,63 +2601,63 @@ d
 4
 ~2 1
 4
-12
+25
 ~2 4
 ~2 1
 4
 ~2 1
 4
 1
-f
+10
 ~3 1
-20
+21
 4
 1
 4
+10
+25
+1
+0
+~2 19
+~2 f
+~2 19
+4
+~2 19
 f
-12
-1
-0
-~2 18
-~2 e
-~2 18
-4
-~2 18
-e
-15
-~2 e
-~2 5
-0
-~4 5
-1a
-0
-19
-~2 0
-~4 5
-1a
-0
-19
-~5 0
-~4 17
-~2 3
-~2 17
-~2 9
-~4 17
-~2 3
-~2 9
-~4 19
+17
+~2 f
 ~2 6
+0
+~4 6
+1b
+0
+1a
+~2 0
+~4 6
+1b
+0
+1a
+~5 0
+~4 5
+~2 3
+~2 5
+~2 a
+~4 5
+~2 3
+~2 a
+~4 1a
+~4 7
 2
 3
-d
-2
-2b
-2
-14
-2c
-~2 14
-~4 0
 e
+2
+30
+2
+16
+31
+~2 16
+~4 0
+f
 ~3 1
 ~2 4
 ~3 1
@@ -2630,45 +2666,45 @@ e
 ~2 4
 ~2 3
 ~3 4
-f
-~11 1b
+10
+~11 1c
 ~11 3
-~6 10
+~6 11
 ~e 1
-21
-d
-8
-~2 10
-~2 c
-~2 9
-~4 12
+22
+e
 9
+~2 11
+~2 d
+~2 a
+~4 14
 a
-~45 12
-20
-2d
+b
+~45 14
+21
+32
 ~5 0
-1b
-0
-~3 1b
+1c
+~3 0
+~3 1c
 ~2 0
 ~2 3
-12
-~13 2e
-2f
-1e
-~3 13
+14
+~13 33
+34
+1f
+~3 15
 ~2 0
-~3 d
+~3 e
 0
-30
+35
 0
-31
-~2 32
-33
-~2 1b
-~5 0
-;block_state_flags#(has_sided_transparency lava_ignitable material_replaceable opaque tool_required exceeds_cube redstone_power_source has_comparator_output);6cda
+36
+~2 37
+38
+~2 1c
+~6 0
+;block_state_flags#(has_sided_transparency lava_ignitable material_replaceable opaque tool_required exceeds_cube redstone_power_source has_comparator_output);6d0a
 20
 ~7 18
 ~6 10
@@ -2696,7 +2732,7 @@ a
 ~6 90
 ~6 10
 8
-~3 60
+~6 60
 ~3 20
 ~6 90
 ~6 10
@@ -2722,7 +2758,7 @@ a
 ~5 0
 ~201 20
 8
-~c 11
+~12 11
 ~50 d0
 ~18 51
 ~510 2
@@ -2747,7 +2783,9 @@ a
 ~8 b8
 0
 18
-~11 10
+~10 10
+40
+10
 ~10 0
 ~2 53
 ~20 54
@@ -3067,8 +3105,8 @@ a
 ~4 18
 ~50 98
 18
-~2 0
-~2 4
+~3 0
+4
 0
 4
 0
@@ -3254,6 +3292,8 @@ a
 ~30 2
 ~d0 0
 ~10 18
+~4 10
+0
 ~9 51
 ~10 12
 ~30 51
@@ -3353,7 +3393,8 @@ a
 18
 ~39 0
 10
-~10 0
+~20 0
+~10 20
 ~21 10
 ~18 0
 ~2 60
@@ -3404,16 +3445,17 @@ a
 ~a3 50
 ~2 40
 ~4 0
-;block_state_luminance;6cda
+40
+;block_state_luminance;6d0a
 ~66 0
 ~10 f
-~7de 0
+~7e1 0
 1
 ~109 0
 ~5 e
 ~200 f
 a
-~599 0
+~59f 0
 d
 0
 d
@@ -3435,7 +3477,7 @@ d
 7
 0
 7
-~6f 0
+~70 0
 ~5 a
 f
 ~2 b
@@ -3530,7 +3572,7 @@ d
 ~4 a
 ~27 0
 f
-~346 0
+~34b 0
 a
 0
 3
@@ -3786,7 +3828,7 @@ e
 e
 0
 e
-~6cd 0
+~6ed 0
 ~9 f
 ~43 0
 4
@@ -3812,6 +3854,7 @@ e
 6
 ~3 c
 ~ab 0
+2
 ;block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape;30a
 
 4 0 0 0 0 0
@@ -4651,7 +4694,7 @@ f
 23b 23c 23b 23c 23d 23d
 23e 23f 240 241 242 243 244 245 246 247 248 249 24a 24b 24c 24d 24e 24f 250 251 252 253 254 255 256 257 258 259 25a 25b 25c 25d 25e 25f 260 261 262 263 264 265 266 267 268 269 26a 26b 26c 26d 26e 26f 270 271 272 273 274 275 276 277 278 279 27a 27b 27c 27d
 27e
-27f 27f 1 280 1 280 1 280 1 280
+1 27f 1 280 1 280 1 280 1 280
 281 281 281 282 282 282 282 282 282 282 282 282
 283
 3 1
@@ -4682,7 +4725,7 @@ d1
 306 219 306 219 306 219 306 219 306 219 306 219 306 219 306 219
 307 308
 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 309 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
-;block_state_static_bounds;447
+;block_state_static_bounds;450
 1
 ~18 2
 ~8 1
@@ -4700,7 +4743,7 @@ d1
 ~2 9
 a
 4
-~3 1
+~6 1
 ~2 4
 a
 b
@@ -4737,6 +4780,7 @@ d
 18
 2
 19
+1
 2
 1
 2
@@ -4904,7 +4948,8 @@ c
 ~2 11
 ~2 10
 ~2 14
-~2 2
+~3 2
+5
 47
 ~3 2
 48
@@ -4968,7 +5013,7 @@ d
 ~3 1
 ~2 54
 37
-1
+~3 1
 2
 55
 14
@@ -5005,3 +5050,4 @@ d
 59
 ~3 1
 ~2 2e
+1
