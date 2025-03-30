@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "2.0.5"
+version = "2.0.6"
 description = "minecraft data"
 edition.workspace = true
 authors.workspace = true
@@ -25,3 +25,6 @@ itoa = "1"
 ryu = "1"
 highway = { version = "1", default-features = false }
 nested = "0.1"
+
+[package.metadata]
+targets = ["x86_64-unknown-linux-gnu"]
