@@ -26,5 +26,5 @@ ryu = "1"
 highway = { version = "1", default-features = false }
 nested = "0.1"
 
-[package.metadata]
+[package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

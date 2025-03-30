@@ -24,3 +24,6 @@ flexstr = { version = "0.9", default-features = false }
 
 [build-dependencies]
 rustc_version = "0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
