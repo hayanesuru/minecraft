@@ -1,6 +1,6 @@
 [package]
 name = "mser"
-version = "2.0.5"
+version = "2.0.6"
 description = "mser"
 edition.workspace = true
 authors.workspace = true
@@ -13,14 +13,16 @@ build = "build.rs"
 
 [features]
 default = ["std"]
-std = ["simdutf8/std", "flexstr/std"]
+std = ["simdutf8/std", "smol_str/std"]
 
 [dependencies]
 uuid = { version = "1", default-features = false }
 itoa = "1"
 ryu = "1"
 simdutf8 = { version = "0", default-features = false }
-flexstr = { version = "0.9", default-features = false }
+smol_str = { version = "0", default-features = false }
+smallvec = "1"
+ptr-union = "2"
 
 [build-dependencies]
 rustc_version = "0"
