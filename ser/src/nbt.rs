@@ -1,14 +1,15 @@
 mod list;
-mod mutf8;
+pub mod mutf8;
 mod string;
 mod stringify;
 
 pub use self::list::List;
-pub use self::string::{MUTF8Tag, UTF8Tag};
+use self::string::UTF8Tag;
 pub use self::stringify::StringifyCompound;
 use crate::{Bytes, Read, UnsafeWriter, Write};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use smol_str::SmolStr;
 
 pub const END: u8 = 0;
 pub const BYTE: u8 = 1;
@@ -32,7 +33,7 @@ pub enum Tag {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(flexstr::SharedStr),
+    String(SmolStr),
     ByteArray(Vec<u8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
@@ -165,13 +166,48 @@ impl From<Vec<u8>> for Tag {
 impl From<Arc<str>> for Tag {
     #[inline]
     fn from(value: Arc<str>) -> Self {
-        Self::String(flexstr::SharedStr::from_heap(value))
+        Self::String(SmolStr::from(value))
     }
 }
 
-impl From<flexstr::SharedStr> for Tag {
+impl<'a> From<&'a str> for Tag {
     #[inline]
-    fn from(value: flexstr::SharedStr) -> Self {
+    fn from(value: &'a str) -> Self {
+        Self::String(SmolStr::new(value))
+    }
+}
+
+impl<'a> From<&'a mut str> for Tag {
+    #[inline]
+    fn from(value: &'a mut str) -> Self {
+        Self::String(SmolStr::new(value))
+    }
+}
+
+impl<'a> From<&'a alloc::string::String> for Tag {
+    #[inline]
+    fn from(value: &'a alloc::string::String) -> Self {
+        Self::String(SmolStr::from(value))
+    }
+}
+
+impl From<alloc::string::String> for Tag {
+    #[inline]
+    fn from(value: alloc::string::String) -> Self {
+        Self::String(SmolStr::from(value))
+    }
+}
+
+impl From<alloc::boxed::Box<str>> for Tag {
+    #[inline]
+    fn from(value: alloc::boxed::Box<str>) -> Self {
+        Self::String(SmolStr::from(value))
+    }
+}
+
+impl From<SmolStr> for Tag {
+    #[inline]
+    fn from(value: SmolStr) -> Self {
         Self::String(value)
     }
 }
@@ -206,18 +242,18 @@ impl From<Vec<i64>> for Tag {
 
 #[derive(Clone, Default)]
 #[repr(transparent)]
-pub struct Compound(Vec<(flexstr::SharedStr, Tag)>);
+pub struct Compound(Vec<(SmolStr, Tag)>);
 
-impl AsRef<[(flexstr::SharedStr, Tag)]> for Compound {
+impl AsRef<[(SmolStr, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(flexstr::SharedStr, Tag)] {
+    fn as_ref(&self) -> &[(SmolStr, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(flexstr::SharedStr, Tag)]> for Compound {
+impl AsMut<[(SmolStr, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(flexstr::SharedStr, Tag)] {
+    fn as_mut(&mut self) -> &mut [(SmolStr, Tag)] {
         self.0.as_mut_slice()
     }
 }
@@ -280,7 +316,7 @@ unsafe impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound(pub flexstr::SharedStr, pub Compound);
+pub struct NamedCompound(pub SmolStr, pub Compound);
 
 impl Read for NamedCompound {
     #[inline]
@@ -344,11 +380,11 @@ impl From<Compound> for UnamedCompound {
 impl From<Compound> for NamedCompound {
     #[inline]
     fn from(value: Compound) -> Self {
-        Self(flexstr::SharedStr::EMPTY, value)
+        Self(SmolStr::default(), value)
     }
 }
 
-impl<K: Into<flexstr::SharedStr>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<SmolStr>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -387,12 +423,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (flexstr::SharedStr, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (SmolStr, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (flexstr::SharedStr, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (SmolStr, Tag)> {
         self.0.iter_mut()
     }
 
@@ -430,12 +466,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: impl Into<flexstr::SharedStr>, v: impl Into<Tag>) {
+    pub fn push(&mut self, k: impl Into<SmolStr>, v: impl Into<Tag>) {
         self.push_(k.into(), v.into());
     }
 
     #[inline]
-    pub fn push_(&mut self, k: flexstr::SharedStr, v: Tag) {
+    pub fn push_(&mut self, k: SmolStr, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -450,7 +486,7 @@ impl Compound {
 
     #[deprecated]
     #[inline]
-    pub fn decode_named(buf: &mut &[u8]) -> Option<(flexstr::SharedStr, Self)> {
+    pub fn decode_named(buf: &mut &[u8]) -> Option<(SmolStr, Self)> {
         match NamedCompound::read(buf) {
             Some(x) => Some((x.0, x.1)),
             None => None,
@@ -491,7 +527,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(flexstr::SharedStr, Tag)> {
+    pub fn into_inner(self) -> Vec<(SmolStr, Tag)> {
         self.0
     }
 }
@@ -503,9 +539,9 @@ impl Read for Compound {
     }
 }
 
-impl From<Vec<(flexstr::SharedStr, Tag)>> for Compound {
+impl From<Vec<(SmolStr, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(flexstr::SharedStr, Tag)>) -> Self {
+    fn from(value: Vec<(SmolStr, Tag)>) -> Self {
         Self(value)
     }
 }
@@ -589,14 +625,12 @@ fn decode1(n: &mut &[u8]) -> Option<Compound> {
 }
 
 #[inline]
-pub(super) fn decode_string(b: &mut &[u8]) -> Option<flexstr::SharedStr> {
+pub(super) fn decode_string(b: &mut &[u8]) -> Option<SmolStr> {
     let len = b.u16()? as usize;
     let a = b.slice(len)?;
 
     match a.is_ascii() || simdutf8::basic::from_utf8(a).is_ok() {
-        true => Some(flexstr::SharedStr::from_ref(unsafe {
-            core::str::from_utf8_unchecked(a)
-        })),
+        true => Some(SmolStr::new(unsafe { core::str::from_utf8_unchecked(a) })),
         false => mutf8::decode(a),
     }
 }

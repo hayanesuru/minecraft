@@ -55,22 +55,18 @@ unsafe impl Write for UTF8Tag {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         let x = unsafe { self.0.as_ref() };
-        if super::mutf8::is_valid(x) {
+        if super::mutf8::is_mutf8(x) {
             MUTF8Tag(self.0).write(w);
         } else {
             unsafe {
-                (super::mutf8::len(x) as u16).write(w);
-                super::mutf8::encode(x, w);
+                (super::mutf8::len_mutf8(x) as u16).write(w);
+                super::mutf8::encode_mutf8(x, w);
             }
         }
     }
 
     #[inline]
     unsafe fn sz(&self) -> usize {
-        if super::mutf8::is_valid(unsafe { self.0.as_ref() }) {
-            MUTF8Tag(self.0).sz()
-        } else {
-            unsafe { 2 + super::mutf8::len(self.0.as_ref()) }
-        }
+        unsafe { 2 + super::mutf8::len_mutf8(self.0.as_ref()) }
     }
 }

@@ -1,9 +1,4 @@
-use super::{
-    decode_string, Compound, UTF8Tag, BYTE, BYTE_ARRAY, COMPOUND, DOUBLE, END, FLOAT, INT,
-    INT_ARRAY, LIST, LONG, LONG_ARRAY, SHORT, STRING,
-};
-use crate::{Bytes, UnsafeWriter, Write};
-use alloc::vec::Vec;
+use super::*;
 
 #[derive(Clone)]
 pub enum List {
@@ -14,7 +9,7 @@ pub enum List {
     Long(Vec<i64>),
     Float(Vec<f32>),
     Double(Vec<f64>),
-    String(Vec<flexstr::SharedStr>),
+    String(Vec<SmolStr>),
     ByteArray(Vec<Vec<u8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
@@ -64,9 +59,9 @@ impl From<Vec<f64>> for List {
     }
 }
 
-impl From<Vec<flexstr::SharedStr>> for List {
+impl From<Vec<SmolStr>> for List {
     #[inline]
-    fn from(value: Vec<flexstr::SharedStr>) -> Self {
+    fn from(value: Vec<SmolStr>) -> Self {
         Self::String(value)
     }
 }
