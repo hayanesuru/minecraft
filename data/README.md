@@ -1,14 +1,9 @@
 # minecraft_data
 
 minecraft version:
-`1.21.5`
+`1.21.6`
 
 # Usage
-
-```toml
-[dependencies]
-minecraft_data = "2.0"
-```
 
 ```rust
 pub use minecraft_data::*;

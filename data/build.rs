@@ -1,8 +1,8 @@
 use core::iter::repeat_n;
 use mser::*;
 use nested::ZString;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::env::var_os;
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -44,11 +44,10 @@ impl Repr {
 }
 
 fn read(buf: &mut String, path: PathBuf) -> std::io::Result<usize> {
-    let last = buf.chars().next_back();
-    if let Some(last) = last {
-        if last != '\n' {
-            buf.push('\n');
-        }
+    match buf.chars().next_back() {
+        Some('\n') => (),
+        Some(_) => buf.push('\n'),
+        _ => (),
     }
     let mut file = std::fs::File::open(path)?;
     let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
@@ -137,7 +136,7 @@ fn registries<'a>(
         if x.is_empty() {
             break;
         }
-        let (name, size, repr) = head(Some(x));
+        let (name, size, repr) = head(Some(x), "");
         let name = name.replace('/', "__");
         zhash.clear();
         zhash.reserve(size);
@@ -173,19 +172,19 @@ fn registries<'a>(
         if size <= V7MAX {
             *w += "1usize";
         } else if size <= V21MAX {
-            *w += "::mser::V21(*self as u32).sz()";
+            *w += "unsafe { ::mser::V21(*self as u32).sz() }";
         } else {
-            *w += "::mser::V32(*self as u32).sz()";
+            *w += "unsafe { ::mser::V32(*self as u32).sz() }";
         }
         *w += "\n}\n";
         *w += "#[inline]\n";
         *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
         if size <= V7MAX {
-            *w += "w.write_byte(*self as u8);";
+            *w += "unsafe { w.write_byte(*self as u8); }";
         } else if size <= V21MAX {
-            *w += "::mser::Write::write(&::mser::V21(*self as u32), w);";
+            *w += "unsafe { ::mser::Write::write(&::mser::V21(*self as u32), w); }";
         } else {
-            *w += "::mser::Write::write(&::mser::V32(*self as u32), w);";
+            *w += "unsafe { ::mser::Write::write(&::mser::V32(*self as u32), w); }";
         }
         *w += "\n}\n}\n";
         *w += "impl ::mser::Read for ";
@@ -283,8 +282,7 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
 fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
-    let (name, size, repr) = head(iter.next());
-    assert_eq!(name, "fluid_state");
+    let (name, size, repr) = head(iter.next(), "fluid_state");
     struct_head(w, repr, name);
     impl_common(w, name, repr, size, 0);
     *w += "impl ";
@@ -299,8 +297,7 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         *w += ");\n";
     }
     *w += "}\n";
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "fluid_to_block");
+    let (_, size, _) = head(iter.next(), "fluid_to_block");
     wn.reserve(size);
     *w += "const FLUID_STATE_TO_BLOCK: *const ";
     *w += bsrepr.to_arr();
@@ -317,8 +314,7 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         }
     }
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "fluid_state_level");
+    let (_, size, _) = head(iter.next(), "fluid_state_level");
     wn.reserve(size);
 
     *w += "const FLUID_STATE_LEVEL: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
@@ -330,9 +326,8 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         wn.push(n);
     }
 
-    let (name, size, _) = head(iter.next());
+    let (_, size, _) = head(iter.next(), "fluid_state_falling");
     wn.reserve(size);
-    assert_eq!(name, "fluid_state_falling");
     *w += "const FLUID_STATE_FALLING: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
@@ -342,8 +337,7 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         wn.push(n);
     }
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "fluid_state_to_fluid");
+    let (_, size, _) = head(iter.next(), "fluid_state_to_fluid");
     wn.reserve(size);
 
     *w += "const FLUID_STATE_TO_FLUID: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
@@ -355,9 +349,8 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         wn.push(n);
     }
 
-    let (name, size, _) = head(iter.next());
+    let (_, size, _) = head(iter.next(), "fluid_state_array");
     wn.reserve(size);
-    assert_eq!(name, "block_to_fluid_state");
 
     *w += "const FLUID_STATE: *const ";
     *w += "[u8; 1]";
@@ -377,8 +370,7 @@ fn block_state(
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
-    let (namek, sizek, reprk) = head(iter.next());
-    assert_eq!(namek, "block_state_property_key");
+    let (namek, sizek, reprk) = head(iter.next(), "block_state_property_key");
 
     let mut pk1 = Vec::with_capacity(sizek);
     let mut pk2 = vec![""; sizek];
@@ -393,8 +385,7 @@ fn block_state(
         pk3[before] = sorted;
     }
 
-    let (namev, sizev, reprv) = head(iter.next());
-    assert_eq!(namev, "block_state_property_value");
+    let (namev, sizev, reprv) = head(iter.next(), "block_state_property_value");
 
     let mut pv1 = Vec::with_capacity(sizev);
     let mut pv2 = vec![""; sizev];
@@ -409,8 +400,7 @@ fn block_state(
         pv3[before] = sorted;
     }
 
-    let (namekv, sizekv, reprkv) = head(iter.next());
-    assert_eq!(namekv, "block_state_property");
+    let (namekv, sizekv, reprkv) = head(iter.next(), "block_state_property");
 
     let kv = (0..sizekv)
         .map(|_| {
@@ -622,9 +612,8 @@ fn block_state(
 
     *w += "}\n";
 
-    let (name, size, _) = head(iter.next());
+    let (_, size, _) = head(iter.next(), "block_state_properties");
     let mut properties_size = Vec::with_capacity(size);
-    assert_eq!(name, "block_state_properties");
     let mut block_state_properties = Vec::with_capacity(size);
 
     for _ in 0..size {
@@ -997,8 +986,7 @@ fn block_state(
         *w += "}\n";
     }
 
-    let (bsname, bssize, _) = head(iter.next());
-    assert_eq!(bsname, "block_state");
+    let (bsname, bssize, _) = head(iter.next(), "block_state");
     assert_eq!(bssize, block_names.len());
 
     let mut offsets = Vec::with_capacity(block_names.len());
@@ -1050,8 +1038,8 @@ fn block_state(
     *w += "const PROPS: [&'static [";
     *w += reprkv.to_int();
     *w += "]; ";
-    *w += ib.format(block_state_properties.len() + 1);
-    *w += "] = [\n&[],\n";
+    *w += ib.format(block_state_properties.len());
+    *w += "] = [\n";
     for prop in &block_state_properties {
         *w += "&[";
         for &x in &**prop {
@@ -1067,20 +1055,6 @@ fn block_state(
     w.pop();
     w.pop();
     *w += "];\n";
-
-    *w += "#[inline]\n#[must_use]\n";
-    *w += "pub const fn state_index(self) -> ";
-    *w += bsrepr.to_int();
-    *w += " {\n";
-    *w += "unsafe { *Self::OFFSET.as_ptr().add(self as usize) }\n";
-    *w += "}\n";
-    *w += "#[inline]\n";
-    *w += "pub const fn props(self) -> &'static [";
-    *w += namekv;
-    *w += "] {\n";
-    *w += "let i = unsafe { *Self::PROPS_INDEX.as_ptr().add(self as usize) };\n";
-    *w += "unsafe { *Self::PROPS.as_ptr().add(i as usize).cast() }\n";
-    *w += "}\n";
     *w += "}\n";
 
     struct_head(w, bsrepr, bsname);
@@ -1094,19 +1068,19 @@ fn block_state(
     if bssize <= V7MAX {
         *w += "1usize";
     } else if bssize <= V21MAX {
-        *w += "::mser::V21(self.0 as u32).sz()";
+        *w += "unsafe { ::mser::V21(self.0 as u32).sz() }";
     } else {
-        *w += "::mser::V32(self.0 as u32).sz()";
+        *w += "unsafe { ::mser::V32(self.0 as u32).sz() }";
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
     *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
     if bssize <= V7MAX {
-        *w += "w.write_byte(self.0 as u8);";
+        *w += "unsafe { w.write_byte(self.0 as u8); }";
     } else if bssize <= V21MAX {
-        *w += "::mser::Write::write(&::mser::V21(self.0 as u32), w);";
+        *w += "unsafe { ::mser::Write::write(&::mser::V21(self.0 as u32), w); }";
     } else {
-        *w += "::mser::Write::write(&::mser::V32(self.0 as u32), w);";
+        *w += "unsafe { ::mser::Write::write(&::mser::V32(self.0 as u32), w); }";
     }
     *w += "\n}\n}\n";
 
@@ -1155,8 +1129,7 @@ fn block_state(
         }
     }
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_to_default_block_state");
+    let (_, size, _) = head(iter.next(), "block_to_default_block_state");
     assert_eq!(size, block_names.len());
 
     *w += "impl block {\n";
@@ -1179,8 +1152,7 @@ fn block_state(
     *w += "unsafe { block_state(*Self::DEFAULT.as_ptr().add(self as usize)) }\n";
     *w += "}\n";
     *w += "}\n";
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_item_to_block");
+    let (_, size, _) = head(iter.next(), "block_item_to_block");
 
     *w += "const ITEM: [raw_block; item::MAX as usize + 1] = [";
     prev = 0;
@@ -1193,16 +1165,14 @@ fn block_state(
     w.pop();
     *w += "];\n";
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "float32_table");
+    let (_, size, _) = head(iter.next(), "float32_table");
 
     let mut f32t = Vec::with_capacity(size);
     for _ in 0..size {
         let (x, _) = parse_hex::<u32>(iter.next().unwrap().as_bytes());
         f32t.push(x);
     }
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "float64_table");
+    let (_, size, _) = head(iter.next(), "float64_table");
 
     let mut f64t = Vec::with_capacity(size);
     for _ in 0..size {
@@ -1210,8 +1180,7 @@ fn block_state(
         let x = f64::from_be_bytes(x.to_be_bytes());
         f64t.push(x);
     }
-    let (name, size, shape_repr) = head(iter.next());
-    assert_eq!(name, "shape_table");
+    let (_, size, shape_repr) = head(iter.next(), "shape_table");
 
     *w += "const SHAPES: [&[[f64; 6]]; ";
     *w += ib.format(size);
@@ -1254,8 +1223,10 @@ fn block_state(
         shape.clear();
     }
     *w += "];\n";
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_settings_table#hardness blast_resistance slipperiness velocity_multiplier jump_velocity_multiplier");
+    let (_, size, _) = head(
+        iter.next(),
+        "block_settings_table#hardness blast_resistance slipperiness velocity_multiplier jump_velocity_multiplier",
+    );
 
     let mut bsettings = Vec::with_capacity(size);
     for _ in 0..size {
@@ -1291,8 +1262,7 @@ fn block_state(
     *w += "];\n";
 
     let repr = Repr::new(size);
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_settings");
+    let (_, size, _) = head(iter.next(), "block_settings");
 
     *w += "const BLOCK_SETTINGS_INDEX: [";
     *w += repr.to_int();
@@ -1307,8 +1277,10 @@ fn block_state(
     w.pop();
     *w += "];\n";
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_state_flags#(has_sided_transparency lava_ignitable material_replaceable opaque tool_required exceeds_cube redstone_power_source has_comparator_output)");
+    let (_, size, _) = head(
+        iter.next(),
+        "block_state_flags#(has_sided_transparency lava_ignitable material_replaceable opaque tool_required exceeds_cube redstone_power_source has_comparator_output)",
+    );
 
     *w += "const BLOCK_STATE_FLAGS: *const u8 = ";
     *w += "unsafe { NAMES.as_ptr().add(";
@@ -1316,8 +1288,7 @@ fn block_state(
     *w += ").cast() };\n";
     wn.extend(read_rl(size, &mut iter).map(|x| x as u8));
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_state_luminance");
+    let (_, size, _) = head(iter.next(), "block_state_luminance");
 
     *w += "const BLOCK_STATE_LUMINANCE: *const u8 = ";
     *w += "unsafe { NAMES.as_ptr().add(";
@@ -1325,8 +1296,10 @@ fn block_state(
     *w += ").cast() };\n";
     wn.extend(read_rl(size, &mut iter).map(|x| x as u8));
 
-    let (name, size, repr) = head(iter.next());
-    assert_eq!(name, "block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape");
+    let (_, size, repr) = head(
+        iter.next(),
+        "block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape",
+    );
 
     assert_eq!(shape_repr, Repr::U16);
     *w += "const BLOCK_STATE_BOUNDS: *const u8 = ";
@@ -1360,8 +1333,7 @@ fn block_state(
         wn.extend(x.to_le_bytes());
     }
 
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "block_state_static_bounds_map");
+    let (_, size, _) = head(iter.next(), "block_state_static_bounds_map");
 
     *w += "const BLOCK_BOUNDS: [&[";
     *w += repr.to_int();
@@ -1385,8 +1357,7 @@ fn block_state(
     }
     *w += "];\n";
 
-    let (name, size, repr) = head(iter.next());
-    assert_eq!(name, "block_state_static_bounds");
+    let (_, size, repr) = head(iter.next(), "block_state_static_bounds");
     *w += "const BLOCK_STATE_BOUNDS_INDEX: *const ";
     *w += repr.to_arr();
     *w += " = unsafe { NAMES.as_ptr().add(";
@@ -1406,8 +1377,7 @@ fn block_state(
 fn item(w: &mut String, data: &str) {
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
-    let (name, size, _) = head(iter.next());
-    assert_eq!(name, "item_max_count");
+    let (_, size, _) = head(iter.next(), "item_max_count");
 
     *w += "const ITEM_MAX_COUNT: [u8; ";
     *w += ib.format(size);
@@ -1447,11 +1417,8 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
     let mut rb = ryu::Buffer::new();
     let mut iter = data.split('\n');
 
-    let (name, size, _) = head(iter.next());
+    let (_, size, _) = head(iter.next(), "entity_type_height");
     wn.reserve(size);
-    if !name.starts_with("entity_type_height") {
-        panic!("{name}");
-    }
     *w += "const ENTITY_HEIGHT: [f32; ";
     *w += ib.format(size);
     *w += "] = [";
@@ -1464,11 +1431,8 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
     w.pop();
     *w += "];\n";
 
-    let (name, size, _) = head(iter.next());
+    let (_, size, _) = head(iter.next(), "entity_type_width");
     wn.reserve(size);
-    if !name.starts_with("entity_type_width") {
-        panic!("{name}");
-    }
     *w += "const ENTITY_WIDTH: [f32; ";
     *w += ib.format(size);
     *w += "] = [";
@@ -1482,11 +1446,8 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
 
     *w += "];\n";
 
-    let (name, size, _) = head(iter.next());
+    let (_, size, _) = head(iter.next(), "entity_type_fixed");
     wn.reserve(size);
-    if !name.starts_with("entity_type_fixed") {
-        panic!("{name}");
-    }
     *w += "const ENTITY_FIXED: [bool; ";
     *w += ib.format(size);
     *w += "] = [";
@@ -1498,15 +1459,18 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
     *w += "];\n";
 }
 
-fn head(raw: Option<&str>) -> (&str, usize, Repr) {
+fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
     let raw = raw.expect("EOF");
-    let (x, first) = raw.split_at(1);
-    if x != ";" {
+    let Some(first) = raw.strip_prefix(';') else {
         panic!("invalid head: {raw}");
-    }
-    let (name, size) = first.split_once(';').unwrap();
+    };
+    let (name, rest) = first.split_once(';').unwrap();
+    let (_ty, size) = rest.split_once(';').unwrap();
     let (size, _) = parse_hex::<u32>(size.as_bytes());
     let size = size as usize;
+    if !expected.is_empty() {
+        assert_eq!(expected, name);
+    }
     (name, size, Repr::new(size))
 }
 
@@ -1676,7 +1640,7 @@ impl GenerateHash {
     fn generate_hash(
         &mut self,
         entries: impl Iterator<Item = impl AsRef<str>> + Clone,
-    ) -> HashState {
+    ) -> HashState<'_> {
         'key: loop {
             let key = highway::Key([self.nx(), self.nx(), self.nx(), self.nx()]);
             let hasher = highway::HighwayHasher::new(key);

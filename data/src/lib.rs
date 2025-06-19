@@ -74,82 +74,66 @@ impl NameMap<u8> {
     }
 }
 
-pub fn read_block_state(
-    n: &mser::nbt::Compound,
-    buf: &mut [(block_state_property_key, block_state_property_value); 16],
-) -> block_state {
-    let block = match n.find("Name") {
-        Some(mser::nbt::Tag::String(x)) if x.as_bytes().starts_with(b"minecraft:") => {
-            match x.get(10..) {
-                Some(x) => block::parse(x.as_bytes()).unwrap_or(block::air),
-                None => block::air,
-            }
-        }
-        _ => block::air,
-    };
-    if block.props().is_empty() {
-        return block.state_default();
-    }
-    let Some(mser::nbt::Tag::Compound(props)) = n.find("Properties") else {
-        return block.state_default();
-    };
-    let mut len = 0;
-    for (k, v) in props.iter() {
-        let k = block_state_property_key::parse(k.as_bytes());
-        let Some(k) = k else { continue };
-        let v = match v {
-            mser::nbt::Tag::String(v) => block_state_property_value::parse(v.as_bytes()),
-            _ => None,
-        };
-        let Some(v) = v else { continue };
-        buf[len] = (k, v);
-        len += 1;
-    }
-    make_block_state(unsafe { buf.get_unchecked_mut(0..len) }, block)
-}
-
-pub fn make_block_state(
-    mut buf: &mut [(block_state_property_key, block_state_property_value)],
+fn make_block_state(
+    buf: &mut [(block_state_property_key, block_state_property_value)],
     block: block,
 ) -> block_state {
+    let def: raw_block_state = block.state_default().id() - block.state_index();
     let mut offset: raw_block_state = 0;
-    let mut index: raw_block_state = 0;
-
-    for &prop in block.props().iter().rev() {
+    let mut mul: raw_block_state = 1;
+    let ptr = buf.as_mut_ptr();
+    let mut len = buf.len();
+    let props = block.props();
+    let props_ptr = props.as_ptr();
+    let mut props_end = unsafe { props_ptr.add(props.len()) };
+    while props_end != props_ptr {
+        props_end = unsafe { props_end.sub(1) };
+        let prop = unsafe { *props_end };
         let key = prop.key();
         let vals = prop.val();
+        let vals_len = vals.len() as raw_block_state;
 
-        let val = buf.iter().position(|&(x, _)| x == key);
-        let val = if let Some(x) = val {
-            unsafe {
-                let y = buf.len() - 1;
-                let val = if x == y {
-                    *buf.get_unchecked_mut(x)
-                } else {
-                    let y = *buf.get_unchecked_mut(y);
-                    let x = buf.get_unchecked_mut(x);
-                    core::mem::replace(x, y)
-                };
-                buf = buf.get_unchecked_mut(0..y);
-                let val = val.1;
-                match vals.iter().position(|&v| v == val) {
-                    None => 0,
-                    Some(x) => x as raw_block_state,
-                }
+        let mut buf_ptr = ptr;
+        let buf_end = unsafe { ptr.add(len) };
+        loop {
+            if buf_ptr == buf_end {
+                let val = (def / mul) % vals_len;
+                offset += val * mul;
+                mul *= vals_len;
+                break;
             }
-        } else {
-            let def = block.state_default().id() - block.state_index();
-            let x = if index == 0 { def } else { def / index };
-            x % vals.len() as raw_block_state
-        };
-        if index == 0 {
-            offset = val;
-            index = vals.len() as raw_block_state;
-        } else {
-            offset += val * index;
-            index *= vals.len() as raw_block_state;
+            if unsafe { ((*buf_ptr).0) != key } {
+                buf_ptr = unsafe { buf_ptr.add(1) };
+                continue;
+            }
+            let last = unsafe { ptr.add(len - 1) };
+            if buf_ptr != last {
+                unsafe { core::ptr::swap(buf_ptr, last) };
+            }
+            let value = unsafe { (*last).1 };
+            len -= 1;
+            let mut val_ptr = vals.as_ptr();
+            let val_end = unsafe { val_ptr.add(vals.len()) };
+            loop {
+                if val_ptr == val_end {
+                    let val = (def / mul) % vals_len;
+                    offset += val * mul;
+                    mul *= vals_len;
+                    break;
+                }
+                if unsafe { (*val_ptr).id() != value.id() } {
+                    val_ptr = unsafe { val_ptr.add(1) };
+                    continue;
+                }
+                let val = unsafe { val_ptr.offset_from_unsigned(vals.as_ptr()) } as raw_block_state;
+                offset += val * mul;
+                mul *= vals_len;
+                break;
+            }
+            break;
         }
     }
+
     block_state(block.state_index() + offset)
 }
 
@@ -491,6 +475,14 @@ impl block_state {
             Some(*SHAPES.as_ptr().add(index))
         }
     }
+
+    #[inline]
+    pub fn parse(
+        block: block,
+        buf: &mut [(block_state_property_key, block_state_property_value)],
+    ) -> Self {
+        make_block_state(buf, block)
+    }
 }
 
 impl item {
@@ -545,6 +537,21 @@ impl block {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
             *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(4)
+        }
+    }
+    #[inline]
+    #[must_use]
+    pub const fn state_index(self) -> u16 {
+        unsafe { *Self::OFFSET.as_ptr().add(self as usize) }
+    }
+    #[inline]
+    pub const fn props(self) -> &'static [block_state_property] {
+        let i = unsafe { *Self::PROPS_INDEX.as_ptr().add(self as usize) };
+        unsafe {
+            *Self::PROPS
+                .as_ptr()
+                .add(i as usize)
+                .cast::<&'static [block_state_property]>()
         }
     }
 }
@@ -617,6 +624,12 @@ impl entity_type {
     }
 }
 
+impl core::fmt::Debug for block_state_property {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple(self.key().name()).field(&self.val()).finish()
+    }
+}
+
 #[test]
 fn test_block_state() {
     let x = encode_state!(white_concrete(white_concrete::new()));
@@ -663,4 +676,41 @@ fn test_block_state() {
     assert_eq!(x.side_solid_rigid(), Some(0b000000));
     assert_eq!(x.side_solid_center(), Some(0b000001));
     assert_eq!(x.full_cube(), Some(false));
+    assert_eq!(
+        block_state::parse(block::redstone_wire, &mut [][..]),
+        block::redstone_wire.state_default()
+    );
+    assert_eq!(
+        block_state::parse(
+            block::redstone_wire,
+            &mut [(
+                block_state_property_key::parse(b"east").unwrap(),
+                block_state_property_value::parse(b"side").unwrap()
+            )][..]
+        ),
+        encode_state!(redstone_wire(
+            decode_state!(redstone_wire(block::redstone_wire.state_default()))
+                .with_east(val_up_side_none::side)
+        ))
+    );
+    assert_eq!(
+        block_state::parse(
+            block::redstone_wire,
+            &mut [
+                (
+                    block_state_property_key::parse(b"east").unwrap(),
+                    block_state_property_value::parse(b"side").unwrap()
+                ),
+                (
+                    block_state_property_key::parse(b"power").unwrap(),
+                    block_state_property_value::parse(b"11").unwrap()
+                )
+            ][..]
+        ),
+        encode_state!(redstone_wire(
+            decode_state!(redstone_wire(block::redstone_wire.state_default()))
+                .with_east(prop_east_up_side_none::side)
+                .with_power(prop_power::d_11)
+        ))
+    );
 }

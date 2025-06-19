@@ -1,18 +1,15 @@
-package com.jvavav;
-
 import it.unimi.dsi.fastutil.doubles.Double2IntOpenHashMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.Float2IntOpenHashMap;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntArrays;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.SharedConstants;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.IdMap;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.PacketType;
@@ -32,16 +29,24 @@ import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
 public class Datagen {
+    private static final String STRING = "str";
+    private static final String INTEGER = "u32";
+    private static final String INTEGER_ARR = "[u32]";
+    private static final String LONG = "u64";
+    private static final char NL = '\n';
+    private static final char SP = ' ';
+
     public static void start() throws IOException {
         var b = new StringBuilder(0x10000);
 
@@ -77,15 +82,15 @@ public class Datagen {
     }
 
     private static void version(StringBuilder b) {
-        b.append(SharedConstants.getCurrentVersion().getName());
-        b.append('\n');
-        b.append(Integer.toHexString(SharedConstants.getCurrentVersion().getProtocolVersion()));
-        b.append('\n');
+        b.append(SharedConstants.getCurrentVersion().name());
+        b.append(NL);
+        b.append(Integer.toHexString(SharedConstants.getCurrentVersion().protocolVersion()));
+        b.append(NL);
     }
 
     private static void registries(StringBuilder b) {
         for (var registry : BuiltInRegistries.REGISTRY) {
-            writeHead(b, registry.key().location().getPath(), registry.size());
+            writeHead(b, registry.key().location().getPath(), STRING, registry.size());
             write_registry(b, registry);
         }
     }
@@ -93,21 +98,21 @@ public class Datagen {
     private static <T> void write_registry(StringBuilder b, Registry<T> registry) {
         for (final T t : registry) {
             b.append(Objects.requireNonNull(registry.getKey(t)).getPath());
-            b.append('\n');
+            b.append(NL);
         }
     }
 
     private static void entity(StringBuilder b) {
-        writeHead(b, "entity_type_height", BuiltInRegistries.ENTITY_TYPE.size());
-        writeRl(b, BuiltInRegistries.ENTITY_TYPE, e -> Float.floatToIntBits(e.getHeight()));
-        writeHead(b, "entity_type_width", BuiltInRegistries.ENTITY_TYPE.size());
-        writeRl(b, BuiltInRegistries.ENTITY_TYPE, e -> Float.floatToIntBits(e.getWidth()));
-        writeHead(b, "entity_type_fixed", BuiltInRegistries.ENTITY_TYPE.size());
-        writeRl(b, BuiltInRegistries.ENTITY_TYPE, e -> e.getDimensions().fixed() ? 1 : 0);
+        writeRl(b, "entity_type_height", BuiltInRegistries.ENTITY_TYPE,
+            e -> Float.floatToIntBits(e.getHeight()));
+        writeRl(b, "entity_type_width", BuiltInRegistries.ENTITY_TYPE,
+            e -> Float.floatToIntBits(e.getWidth()));
+        writeRl(b, "entity_type_fixed", BuiltInRegistries.ENTITY_TYPE,
+            e -> e.getDimensions().fixed() ? 1 : 0);
     }
 
     private static void fluid_state(StringBuilder b) {
-        writeHead(b, "fluid_state", Fluid.FLUID_STATE_REGISTRY.size());
+        writeHead(b, "fluid_state", STRING, Fluid.FLUID_STATE_REGISTRY.size());
         for (FluidState t : Fluid.FLUID_STATE_REGISTRY) {
             b.append(BuiltInRegistries.FLUID.getKey(t.getType()).getPath());
             if (!t.isEmpty()) {
@@ -120,30 +125,64 @@ public class Datagen {
                 b.append('_');
                 b.append(ih(t.getAmount()));
             }
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "fluid_to_block", Fluid.FLUID_STATE_REGISTRY.size());
+        writeHead(b, "fluid_to_block", INTEGER, Fluid.FLUID_STATE_REGISTRY.size());
         for (var f : Fluid.FLUID_STATE_REGISTRY) {
             b.append(ih(Block.BLOCK_STATE_REGISTRY.getId(f.createLegacyBlock())));
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "fluid_state_level", Fluid.FLUID_STATE_REGISTRY.size());
+        writeHead(b, "fluid_state_level", INTEGER, Fluid.FLUID_STATE_REGISTRY.size());
         for (var f : Fluid.FLUID_STATE_REGISTRY) {
             b.append(ih(f.getAmount()));
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "fluid_state_falling", Fluid.FLUID_STATE_REGISTRY.size());
+        writeHead(b, "fluid_state_falling", INTEGER, Fluid.FLUID_STATE_REGISTRY.size());
         for (var f : Fluid.FLUID_STATE_REGISTRY) {
             b.append(f.isEmpty() ? '0' : f.getValue(FlowingFluid.FALLING) ? '1' : '0');
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "fluid_state_to_fluid", Fluid.FLUID_STATE_REGISTRY.size());
+        writeHead(b, "fluid_state_to_fluid", INTEGER, Fluid.FLUID_STATE_REGISTRY.size());
         for (var f : Fluid.FLUID_STATE_REGISTRY) {
             b.append(ih(BuiltInRegistries.FLUID.getId(f.getType())));
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "block_to_fluid_state", Block.BLOCK_STATE_REGISTRY.size());
-        writeRl(b, Block.BLOCK_STATE_REGISTRY, state -> Fluid.FLUID_STATE_REGISTRY.getId(state.getFluidState()));
+        var fluidIdx = new Object2IntOpenHashMap<IntArrayList>(128);
+        var fluidIdx2 = new IntArrayList(128);
+        for (final Block block : BuiltInRegistries.BLOCK) {
+            var states = block.getStateDefinition().getPossibleStates();
+            var arr = new IntArrayList(states.size());
+            for (final var state : states) {
+                arr.push(Fluid.FLUID_STATE_REGISTRY.getId(state.getFluidState()));
+            }
+            int first = arr.getFirst();
+            if (arr.intStream().allMatch(x -> x == first)) {
+                var n = IntArrayList.of(first);
+                fluidIdx.putIfAbsent(n, fluidIdx.size());
+                fluidIdx2.push(fluidIdx.getInt(n));
+            } else {
+                fluidIdx.putIfAbsent(arr, fluidIdx.size());
+                fluidIdx2.push(fluidIdx.getInt(arr));
+            }
+        }
+        var fluids = new ObjectArrayList<IntArrayList>(fluidIdx.size());
+        fluids.size(fluidIdx.size());
+        for (final var ent : fluidIdx.object2IntEntrySet()) {
+            fluids.set(ent.getIntValue(), ent.getKey());
+        }
+        writeHead(b, "fluid_state_array", INTEGER_ARR, fluids.size());
+        for (var x : fluids) {
+            boolean first = true;
+            for (var y : x) {
+                if (!first) {
+                    b.append(SP);
+                }
+                first = false;
+                b.append(Integer.toHexString(y));
+            }
+            b.append(NL);
+        }
+        writeRl(b, "block_to_fluid_state", new IntegerIdMap(fluidIdx2), x -> x);
     }
 
     private static void block_state(StringBuilder b) {
@@ -179,10 +218,10 @@ public class Datagen {
         for (var key : keys.object2IntEntrySet()) {
             keyz.set(key.getIntValue(), key.getKey());
         }
-        writeHead(b, "block_state_property_key", keyz.size());
+        writeHead(b, "block_state_property_key", STRING, keyz.size());
         for (var name : keyz) {
             b.append(name);
-            b.append('\n');
+            b.append(NL);
         }
 
         var valz = new ObjectArrayList<String>(vals.size());
@@ -190,10 +229,10 @@ public class Datagen {
         for (var val : vals.object2IntEntrySet()) {
             valz.set(val.getIntValue(), val.getKey());
         }
-        writeHead(b, "block_state_property_value", valz.size());
+        writeHead(b, "block_state_property_value", STRING, valz.size());
         for (var name : valz) {
             b.append(name);
-            b.append('\n');
+            b.append(NL);
         }
 
         var kvz = new ObjectArrayList<IntArrayList>(kvs.size());
@@ -208,33 +247,32 @@ public class Datagen {
             pz.set(key.getIntValue(), key.getKey());
         }
 
-        writeHead(b, "block_state_property", kvz.size());
+        writeHead(b, "block_state_property", INTEGER_ARR, kvz.size());
         for (var x : kvz) {
             boolean first = true;
             for (var y : x) {
                 if (!first) {
-                    b.append(' ');
+                    b.append(SP);
                 }
                 first = false;
                 b.append(Integer.toHexString(y));
             }
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "block_state_properties", pz.size());
+        writeHead(b, "block_state_properties", INTEGER_ARR, pz.size());
         for (var x : pz) {
             boolean first = true;
             for (var x1 : x) {
                 if (!first) {
-                    b.append(' ');
+                    b.append(SP);
                 }
                 first = false;
                 b.append(ih(x1));
             }
-            b.append('\n');
+            b.append(NL);
         }
 
-        writeHead(b, "block_state",BuiltInRegistries.BLOCK.size());
-        writeRl(b, BuiltInRegistries.BLOCK, block -> {
+        writeRl(b, "block_state", BuiltInRegistries.BLOCK, block -> {
             var list = new IntArrayList(block.getStateDefinition().getProperties().size());
             for (var prop : block.getStateDefinition().getProperties()) {
                 var list2 = new IntArrayList(prop.getPossibleValues().size() + 1);
@@ -249,8 +287,7 @@ public class Datagen {
 
 
         final int[] prev = {-1};
-        writeHead(b, "block_to_default_block_state",BuiltInRegistries.BLOCK.size());
-        writeRl(b,BuiltInRegistries.BLOCK, block -> {
+        writeRl(b, "block_to_default_block_state", BuiltInRegistries.BLOCK, block -> {
             int val = Block.BLOCK_STATE_REGISTRY.getId(block.defaultBlockState());
             int diff = val - prev[0] - 1;
             prev[0] = val;
@@ -258,13 +295,12 @@ public class Datagen {
         });
 
         prev[0] = -1;
-        writeHead(b, "block_item_to_block",BuiltInRegistries.ITEM.size());
-        writeRl(b,BuiltInRegistries.ITEM, it -> {
+        writeRl(b, "block_item_to_block", BuiltInRegistries.ITEM, it -> {
             int val;
             if (it instanceof BlockItem item) {
-                val =BuiltInRegistries.BLOCK.getIdOrThrow(item.getBlock());
+                val = BuiltInRegistries.BLOCK.getIdOrThrow(item.getBlock());
             } else {
-                val =BuiltInRegistries.BLOCK.getIdOrThrow(Blocks.AIR);
+                val = BuiltInRegistries.BLOCK.getIdOrThrow(Blocks.AIR);
             }
             int diff = val - prev[0] - 1;
             prev[0] = val;
@@ -279,7 +315,7 @@ public class Datagen {
         f64s.put(0.0, 0);
         f64s.put(1.0, 1);
 
-        var bs = new Object2IntOpenCustomHashMap<>(IntArrays.HASH_STRATEGY);
+        var bs = new Object2IntOpenHashMap<IntArrayList>();
         var bx = new IntArrayList(BuiltInRegistries.BLOCK.size());
 
         for (var block : BuiltInRegistries.BLOCK) {
@@ -294,11 +330,11 @@ public class Datagen {
             float c1 = block.getFriction();
             float d1 = block.getSpeedFactor();
             float e1 = block.getJumpFactor();
-            int[] x = new int[]{f32s.get(a1), f32s.get(b1), f32s.get(c1), f32s.get(d1), f32s.get(e1)};
+            IntArrayList x = IntArrayList.of(f32s.get(a1), f32s.get(b1), f32s.get(c1), f32s.get(d1), f32s.get(e1));
             bs.putIfAbsent(x, bs.size());
             bx.push(bs.getInt(x));
         }
-        var bz = new ObjectArrayList<int[]>(bs.size());
+        var bz = new ObjectArrayList<IntArrayList>(bs.size());
         bz.size(bs.size());
         for (var e : bs.object2IntEntrySet()) {
             var k = e.getKey();
@@ -313,14 +349,14 @@ public class Datagen {
             f32z.set(v, k);
         }
 
-        writeHead(b, "float32_table", f32z.size());
+        writeHead(b, "float32_table", INTEGER, f32z.size());
         for (var e : f32z) {
             b.append(ih(Float.floatToIntBits(e)));
-            b.append('\n');
+            b.append(NL);
         }
 
         var shapes = new Object2IntOpenHashMap<List<AABB>>(128);
-        for (var block :BuiltInRegistries.BLOCK) {
+        for (var block : BuiltInRegistries.BLOCK) {
             if (block.hasDynamicShape()) {
                 continue;
             }
@@ -356,59 +392,56 @@ public class Datagen {
             var v = e.getIntValue();
             f64z.set(v, k);
         }
-        writeHead(b, "float64_table", f64z.size());
+        writeHead(b, "float64_table", LONG, f64z.size());
         for (var f64 : f64z) {
             b.append(Long.toHexString(Double.doubleToLongBits(f64)));
-            b.append('\n');
+            b.append(NL);
         }
-        writeHead(b, "shape_table", shapes.size());
+        writeHead(b, "shape_table", INTEGER_ARR, shapes.size());
         for (var e : shapes2) {
             boolean first = true;
             for (var x : e) {
                 if (!first) {
-                    b.append(' ');
+                    b.append(SP);
                 }
                 first = false;
 
                 b.append(ih(f64s.get(x.minX)));
-                b.append(' ');
+                b.append(SP);
                 b.append(ih(f64s.get(x.minY)));
-                b.append(' ');
+                b.append(SP);
                 b.append(ih(f64s.get(x.minZ)));
-                b.append(' ');
+                b.append(SP);
                 b.append(ih(f64s.get(x.maxX)));
-                b.append(' ');
+                b.append(SP);
                 b.append(ih(f64s.get(x.maxY)));
-                b.append(' ');
+                b.append(SP);
                 b.append(ih(f64s.get(x.maxZ)));
             }
-            b.append('\n');
+            b.append(NL);
         }
 
         writeHead(b, "block_settings_table#hardness " +
             "blast_resistance slipperiness velocity_multiplier " +
-            "jump_velocity_multiplier", bz.size());
+            "jump_velocity_multiplier", INTEGER_ARR, bz.size());
         for (var s : bz) {
             boolean first = true;
             for (var x : s) {
                 if (!first) {
-                    b.append(' ');
+                    b.append(SP);
                 }
                 first = false;
                 b.append(ih(x));
             }
-            b.append('\n');
+            b.append(NL);
         }
 
-        writeHead(b, "block_settings",BuiltInRegistries.BLOCK.size());
-        writeRl(b, bx, x -> x);
-
-        writeHead(b, "block_state_flags#" +
+        writeRl(b, "block_settings", new IntegerIdMap(bx), x -> x);
+        writeRl(b, "block_state_flags#" +
             "(has_sided_transparency lava_ignitable " +
             "material_replaceable opaque tool_required " +
             "exceeds_cube redstone_power_source " +
-            "has_comparator_output)", Block.BLOCK_STATE_REGISTRY.size());
-        writeRl(b, Block.BLOCK_STATE_REGISTRY, state ->
+            "has_comparator_output)", Block.BLOCK_STATE_REGISTRY, state ->
             (state.hasAnalogOutputSignal() ? 0b1 : 0) |
                 (state.isSignalSource() ? 0b10 : 0) |
                 (state.hasLargeCollisionShape() ? 0b100 : 0) |
@@ -419,25 +452,23 @@ public class Datagen {
                 (state.useShapeForLightOcclusion() ? 0b10000000 : 0)
         );
 
-        writeHead(b, "block_state_luminance", Block.BLOCK_STATE_REGISTRY.size());
-        writeRl(b, Block.BLOCK_STATE_REGISTRY, BlockBehaviour.BlockStateBase::getLightEmission);
+        writeRl(b, "block_state_luminance", Block.BLOCK_STATE_REGISTRY, BlockBehaviour.BlockStateBase::getLightEmission);
 
-        var bounds = new Object2IntOpenCustomHashMap<>(IntArrays.HASH_STRATEGY);
-        var bound2s = new Object2IntOpenCustomHashMap<>(IntArrays.HASH_STRATEGY);
+        var bounds = new Object2IntOpenHashMap<IntArrayList>();
+        var bound2s = new Object2IntOpenHashMap<IntArrayList>();
         var bound2x = new IntArrayList(BuiltInRegistries.BLOCK.size());
-        bounds.put(new int[0], 0);
-        bound2s.put(new int[0], 0);
+        bounds.put(new IntArrayList(), 0);
+        bound2s.put(new IntArrayList(), 0);
 
-        for (var block :BuiltInRegistries.BLOCK) {
+        for (var block : BuiltInRegistries.BLOCK) {
             var states = block.getStateDefinition().getPossibleStates();
             if (block.hasDynamicShape()) {
-                bound2s.putIfAbsent(new int[0], bound2s.size());
-                bound2x.push(bound2s.getInt(new int[0]));
+                bound2s.putIfAbsent(new IntArrayList(), bound2s.size());
+                bound2x.push(bound2s.getInt(new IntArrayList()));
                 continue;
             }
-            int[] z = new int[states.size()];
-            for (int i = 0; i < states.size(); i++) {
-                final var state = states.get(i);
+            var z = new IntArrayList(states.size());
+            for (final var state : states) {
                 int flags1 = 0;
                 if (state.isSolidRender()) {
                     flags1 |= 1;
@@ -473,28 +504,29 @@ public class Datagen {
                 }
                 int flags5 = shapes.getInt(state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs());
                 int flags6 = shapes.getInt(state.getOcclusionShape().toAabbs());
-                int[] x = new int[]{flags1, flags2, flags3, flags4, flags5, flags6};
+                var x = IntArrayList.of(flags1, flags2, flags3, flags4, flags5, flags6);
                 bounds.putIfAbsent(x, bounds.size());
-                z[i] = bounds.getInt(x);
+                z.push(bounds.getInt(x));
             }
-            int first = z[0];
-            if (Arrays.stream(z).allMatch(x -> x == first)) {
-                bound2s.putIfAbsent(new int[]{z[0]}, bound2s.size());
-                bound2x.push(bound2s.getInt(new int[]{z[0]}));
+            int first = z.getInt(0);
+            if (z.intStream().allMatch(x -> x == first)) {
+                var n = IntArrayList.of(first);
+                bound2s.putIfAbsent(n, bound2s.size());
+                bound2x.push(bound2s.getInt(n));
             } else {
                 bound2s.putIfAbsent(z, bound2s.size());
                 bound2x.push(bound2s.getInt(z));
             }
         }
 
-        var boundz = new ObjectArrayList<int[]>(bounds.size());
+        var boundz = new ObjectArrayList<IntArrayList>(bounds.size());
         boundz.size(bounds.size());
         for (var e : bounds.object2IntEntrySet()) {
             var k = e.getKey();
             var v = e.getIntValue();
             boundz.set(v, k);
         }
-        var bound2z = new ObjectArrayList<int[]>(bound2s.size());
+        var bound2z = new ObjectArrayList<IntArrayList>(bound2s.size());
         bound2z.size(bound2s.size());
         for (var e : bound2s.object2IntEntrySet()) {
             var k = e.getKey();
@@ -505,34 +537,32 @@ public class Datagen {
             "(opacity(4) solid_block translucent full_cube " +
             "opaque_full_cube) side_solid_full " +
             "side_solid_center side_solid_rigid " +
-            "collision_shape culling_shape", boundz.size());
+            "collision_shape culling_shape", INTEGER_ARR, boundz.size());
         for (var bound : boundz) {
             boolean first = true;
             for (var x : bound) {
                 if (!first) {
-                    b.append(' ');
+                    b.append(SP);
                 }
                 first = false;
                 b.append(ih(x));
             }
-            b.append('\n');
+            b.append(NL);
         }
 
-        writeHead(b, "block_state_static_bounds_map", bound2z.size());
+        writeHead(b, "block_state_static_bounds_map", INTEGER_ARR, bound2z.size());
         for (var bound : bound2z) {
             boolean first = true;
             for (var x : bound) {
                 if (!first) {
-                    b.append(' ');
+                    b.append(SP);
                 }
                 first = false;
                 b.append(ih(x));
             }
-            b.append('\n');
+            b.append(NL);
         }
-
-        writeHead(b, "block_state_static_bounds",BuiltInRegistries.BLOCK.size());
-        writeRl(b, bound2x, val -> val);
+        writeRl(b, "block_state_static_bounds", new IntegerIdMap(bound2x), val -> val);
     }
 
     private static void packet(StringBuilder b) {
@@ -550,8 +580,8 @@ public class Datagen {
             var details = factory.details();
 
             final int[] sz = new int[]{0};
-            details.listPackets((i, j) -> sz[0] += 1);
-            writeHead(b, details.flow().id() + "/" + details.id().id(), sz[0]);
+            details.listPackets((_, _) -> sz[0] += 1);
+            writeHead(b, details.flow().id() + "/" + details.id().id(), STRING, sz[0]);
             final PacketType<?>[] packets = new PacketType[sz[0]];
             details.listPackets((i, j) -> packets[j] = i);
             for (final PacketType<?> packetType : packets) {
@@ -559,25 +589,27 @@ public class Datagen {
                     throw new IllegalStateException("invalid packet type");
                 }
                 b.append(packetType.id().getPath());
-                b.append('\n');
+                b.append(NL);
             }
         }
     }
 
     private static void item(StringBuilder b) {
-        writeHead(b, "item_max_count",BuiltInRegistries.ITEM.size());
-        writeRl(b,BuiltInRegistries.ITEM, Item::getDefaultMaxStackSize);
+        writeRl(b, "item_max_count", BuiltInRegistries.ITEM, Item::getDefaultMaxStackSize);
     }
 
-    private static void writeHead(StringBuilder b, String name, int size) {
+    private static void writeHead(StringBuilder b, String name, String ty, int size) {
         b.append(';');
         b.append(name);
         b.append(';');
+        b.append(ty);
+        b.append(';');
         b.append(ih(size));
-        b.append('\n');
+        b.append(NL);
     }
 
-    private static <T> void writeRl(StringBuilder b, Iterable<T> registry, Function<T, Integer> function) {
+    private static <T> void writeRl(StringBuilder b, String name, IdMap<T> registry, Function<T, Integer> function) {
+        writeHead(b, name, "u32+rle", registry.size());
         int ncount = 0;
         int nval = 0;
         for (final T e : registry) {
@@ -589,31 +621,53 @@ public class Datagen {
                 ncount += 1;
             } else if (ncount == 1) {
                 b.append(ih(nval));
-                b.append('\n');
+                b.append(NL);
                 nval = val;
             } else {
                 b.append('~');
                 b.append(ih(ncount));
-                b.append(' ');
+                b.append(SP);
                 b.append(ih(nval));
-                b.append('\n');
+                b.append(NL);
                 ncount = 1;
                 nval = val;
             }
         }
         if (ncount == 1) {
             b.append(ih(nval));
-            b.append('\n');
+            b.append(NL);
         } else if (ncount != 0) {
             b.append('~');
             b.append(ih(ncount));
-            b.append(' ');
+            b.append(SP);
             b.append(ih(nval));
-            b.append('\n');
+            b.append(NL);
         }
     }
 
     private static String ih(int x) {
         return Integer.toHexString(x);
+    }
+
+    private record IntegerIdMap(IntArrayList bx) implements IdMap<Integer> {
+        @Override
+        public @NotNull Iterator<Integer> iterator() {
+            return bx.intIterator();
+        }
+
+        @Override
+        public int getId(final @NotNull Integer value) {
+            return value;
+        }
+
+        @Override
+        public @NotNull Integer byId(final int index) {
+            return index;
+        }
+
+        @Override
+        public int size() {
+            return bx.size();
+        }
     }
 }

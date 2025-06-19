@@ -1,6 +1,6 @@
 [package]
 name = "mser"
-version = "2.0.6"
+version = "2.0.7"
 description = "mser"
 edition.workspace = true
 authors.workspace = true
@@ -12,8 +12,9 @@ documentation = "https://docs.rs/mser"
 build = "build.rs"
 
 [features]
-default = ["std"]
+default = []
 std = ["simdutf8/std", "smol_str/std"]
+nbt = []
 
 [dependencies]
 uuid = { version = "1", default-features = false }

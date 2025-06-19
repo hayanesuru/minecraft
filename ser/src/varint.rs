@@ -81,13 +81,15 @@ impl Read for V21 {
 unsafe impl Write for V21 {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        let n = self.0;
-        if n & 0xFFFFFF80 == 0 {
-            w.write_byte(n as u8);
-        } else if n & 0xFFFFC000 == 0 {
-            w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
-        } else {
-            w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
+        unsafe {
+            let n = self.0;
+            if n & 0xFFFFFF80 == 0 {
+                w.write_byte(n as u8);
+            } else if n & 0xFFFFC000 == 0 {
+                w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
+            } else {
+                w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
+            }
         }
     }
 
@@ -126,28 +128,30 @@ impl V32 {
 unsafe impl Write for V32 {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        let n = self.0;
-        if n & 0xFFFFFF80 == 0 {
-            w.write_byte(n as u8);
-        } else if n & 0xFFFFC000 == 0 {
-            w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
-        } else if n & 0xFFE00000 == 0 {
-            w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
-        } else if n & 0xF0000000 == 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8,
-            ]);
-        } else {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8,
-            ]);
+        unsafe {
+            let n = self.0;
+            if n & 0xFFFFFF80 == 0 {
+                w.write_byte(n as u8);
+            } else if n & 0xFFFFC000 == 0 {
+                w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
+            } else if n & 0xFFE00000 == 0 {
+                w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
+            } else if n & 0xF0000000 == 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8,
+                ]);
+            } else {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8,
+                ]);
+            }
         }
     }
 
@@ -267,83 +271,85 @@ impl V64 {
 
 unsafe impl Write for V64 {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        let n = self.0;
-        if n & 0xFFFFFFFFFFFFFF80 == 0 {
-            w.write_byte(n as u8);
-        } else if n & 0x8000000000000000 != 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8 | 0x80,
-                (n >> 35) as u8 | 0x80,
-                (n >> 42) as u8 | 0x80,
-                (n >> 49) as u8 | 0x80,
-                (n >> 56) as u8 | 0x80,
-                (n >> 63) as u8,
-            ]);
-        } else if n & 0xFFFFFFFFFFFFC000 == 0 {
-            w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
-        } else if n & 0xFFFFFFFFFFE00000 == 0 {
-            w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
-        } else if n & 0xFFFFFFFFF0000000 == 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8,
-            ]);
-        } else if n & 0xFFFFFFF800000000 == 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8,
-            ]);
-        } else if n & 0xFFFFFC0000000000 == 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8 | 0x80,
-                (n >> 35) as u8,
-            ]);
-        } else if n & 0xFFFE000000000000 == 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8 | 0x80,
-                (n >> 35) as u8 | 0x80,
-                (n >> 42) as u8,
-            ]);
-        } else if n & 0xFF00000000000000 == 0 {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8 | 0x80,
-                (n >> 35) as u8 | 0x80,
-                (n >> 42) as u8 | 0x80,
-                (n >> 49) as u8,
-            ]);
-        } else {
-            w.write(&[
-                n as u8 | 0x80,
-                (n >> 7) as u8 | 0x80,
-                (n >> 14) as u8 | 0x80,
-                (n >> 21) as u8 | 0x80,
-                (n >> 28) as u8 | 0x80,
-                (n >> 35) as u8 | 0x80,
-                (n >> 42) as u8 | 0x80,
-                (n >> 49) as u8 | 0x80,
-                (n >> 56) as u8,
-            ]);
+        unsafe {
+            let n = self.0;
+            if n & 0xFFFFFFFFFFFFFF80 == 0 {
+                w.write_byte(n as u8);
+            } else if n & 0x8000000000000000 != 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8 | 0x80,
+                    (n >> 35) as u8 | 0x80,
+                    (n >> 42) as u8 | 0x80,
+                    (n >> 49) as u8 | 0x80,
+                    (n >> 56) as u8 | 0x80,
+                    (n >> 63) as u8,
+                ]);
+            } else if n & 0xFFFFFFFFFFFFC000 == 0 {
+                w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
+            } else if n & 0xFFFFFFFFFFE00000 == 0 {
+                w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
+            } else if n & 0xFFFFFFFFF0000000 == 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8,
+                ]);
+            } else if n & 0xFFFFFFF800000000 == 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8,
+                ]);
+            } else if n & 0xFFFFFC0000000000 == 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8 | 0x80,
+                    (n >> 35) as u8,
+                ]);
+            } else if n & 0xFFFE000000000000 == 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8 | 0x80,
+                    (n >> 35) as u8 | 0x80,
+                    (n >> 42) as u8,
+                ]);
+            } else if n & 0xFF00000000000000 == 0 {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8 | 0x80,
+                    (n >> 35) as u8 | 0x80,
+                    (n >> 42) as u8 | 0x80,
+                    (n >> 49) as u8,
+                ]);
+            } else {
+                w.write(&[
+                    n as u8 | 0x80,
+                    (n >> 7) as u8 | 0x80,
+                    (n >> 14) as u8 | 0x80,
+                    (n >> 21) as u8 | 0x80,
+                    (n >> 28) as u8 | 0x80,
+                    (n >> 35) as u8 | 0x80,
+                    (n >> 42) as u8 | 0x80,
+                    (n >> 49) as u8 | 0x80,
+                    (n >> 56) as u8,
+                ]);
+            }
         }
     }
 

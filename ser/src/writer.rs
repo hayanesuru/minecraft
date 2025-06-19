@@ -26,4 +26,10 @@ impl UnsafeWriter {
     pub unsafe fn ptr(&mut self) -> NonNull<u8> {
         self.0
     }
+
+    /// # Safety
+    #[inline(always)]
+    pub unsafe fn offset(&mut self, ptr: NonNull<u8>) -> usize {
+        unsafe { self.0.as_ptr().offset_from_unsigned(ptr.as_ptr()) }
+    }
 }

@@ -1202,16 +1202,16 @@ fn try_parse_19digits(s: &mut AsciiStr<'_>, x: &mut u64) {
 #[inline]
 fn try_parse_8digits(s: &mut AsciiStr<'_>, x: &mut u64) {
     // may cause overflows, to be handled later
-    if let Some(v) = s.try_read_u64() {
-        if is_8digits(v) {
+    if let Some(v) = s.try_read_u64()
+        && is_8digits(v)
+    {
+        *x = x.wrapping_mul(1_0000_0000).wrapping_add(parse_8digits(v));
+        s.step_by(8);
+        if let Some(v) = s.try_read_u64()
+            && is_8digits(v)
+        {
             *x = x.wrapping_mul(1_0000_0000).wrapping_add(parse_8digits(v));
             s.step_by(8);
-            if let Some(v) = s.try_read_u64() {
-                if is_8digits(v) {
-                    *x = x.wrapping_mul(1_0000_0000).wrapping_add(parse_8digits(v));
-                    s.step_by(8);
-                }
-            }
         }
     }
 }
@@ -1233,11 +1233,7 @@ fn parse_scientific(s: &mut AsciiStr<'_>) -> i64 {
                 exp_num = 10 * exp_num + digit as i64; // no overflows here
             }
         });
-        if neg_exp {
-            -exp_num
-        } else {
-            exp_num
-        }
+        if neg_exp { -exp_num } else { exp_num }
     } else {
         *s = start; // ignore 'e' and return back
         0

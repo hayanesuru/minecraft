@@ -4,6 +4,7 @@
 mod deserialize;
 mod serialize;
 
+#[cfg(feature = "nbt")]
 use alloc::string::String;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
@@ -14,6 +15,7 @@ mod kw {
     syn::custom_keyword!(varint);
 }
 
+#[cfg(feature = "nbt")]
 #[proc_macro]
 pub fn compound(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let mut data = alloc::format!("{{{token}}}");

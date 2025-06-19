@@ -7,7 +7,7 @@ authors = ["Jvavav"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/hayanesuru/minecraft"
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 mser = { path = "ser", version = "2.0", default-features = false }

@@ -1,4 +1,4 @@
-;entity_type_height;96
+;entity_type_height;u32+rle;97
 ~2 3f100000
 3f19999a
 3f000000
@@ -48,7 +48,7 @@
 3f333333
 3f000000
 3f333333
-40800000
+~2 40800000
 41400000
 3f000000
 3f4ccccd
@@ -130,7 +130,7 @@
 ~2 3ff9999a
 3fe66666
 3e800000
-;entity_type_width;96
+;entity_type_width;u32+rle;97
 ~2 3fb00000
 3eb33333
 40c00000
@@ -178,7 +178,7 @@
 3f19999a
 3f000000
 3f7ae148
-40800000
+~2 40800000
 40666666
 3f000000
 3f4ccccd
@@ -257,5 +257,5 @@
 3fb2c000
 ~3 3f19999a
 3e800000
-;entity_type_fixed;96
-~96 0
+;entity_type_fixed;u32+rle;97
+~97 0
