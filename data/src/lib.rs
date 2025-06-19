@@ -722,4 +722,24 @@ fn test_block_state() {
                 .with_power(prop_power::d_11)
         ))
     );
+    assert_eq!(
+        block::spruce_slab.state_default().to_fluid(),
+        fluid_state::empty
+    );
+    assert_eq!(
+        encode_state!(spruce_slab(
+            decode_state!(spruce_slab(block::spruce_slab.state_default()))
+                .with_waterlogged(prop_waterlogged::r#true)
+        ))
+        .to_fluid(),
+        fluid_state::water_s_8
+    );
+}
+
+impl core::fmt::Debug for fluid_state {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple(self.to_fluid().name())
+            .field(&self.id())
+            .finish()
+    }
 }
