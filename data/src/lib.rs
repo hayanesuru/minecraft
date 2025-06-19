@@ -204,12 +204,14 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "getLightEmission")]
     pub const fn luminance(self) -> u8 {
         unsafe { *BLOCK_STATE_LUMINANCE.add(self.0 as usize) }
     }
 
     #[inline]
     #[must_use]
+    #[doc(alias = "useShapeForLightOcclusion")]
     pub const fn has_sided_transparency(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 128 != 0
@@ -217,6 +219,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "ignitedByLava")]
     pub const fn lava_ignitable(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 64 != 0
@@ -224,6 +227,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "canBeReplaced")]
     pub const fn material_replaceable(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 32 != 0
@@ -231,6 +235,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "canOcclude")]
     pub const fn opaque(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 16 != 0
@@ -238,6 +243,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "requiresCorrectToolForDrops")]
     pub const fn tool_required(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 8 != 0
@@ -245,6 +251,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "hasLargeCollisionShape")]
     pub const fn exceeds_cube(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 4 != 0
@@ -252,6 +259,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "isSignalSource")]
     pub const fn redstone_power_source(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 2 != 0
@@ -259,6 +267,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "hasAnalogOutputSignal")]
     pub const fn has_comparator_output(self) -> bool {
         let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 1 != 0
@@ -266,6 +275,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "getLightBlock")]
     pub const fn opacity(self) -> Option<u8> {
         unsafe {
             // 1
@@ -294,6 +304,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "isSolidRender")]
     pub const fn solid(self) -> Option<bool> {
         unsafe {
             let b = self.to_block();
@@ -309,33 +320,13 @@ impl block_state {
             } else {
                 *bounds.as_ptr().add(offset as _)
             };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 8 != 0)
+            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 1 != 0)
         }
     }
 
     #[inline]
     #[must_use]
-    pub const fn transparent(self) -> Option<bool> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 4 != 0)
-        }
-    }
-
-    #[inline]
-    #[must_use]
+    #[doc(alias = "isCollisionShapeFullBlock")]
     pub const fn full_cube(self) -> Option<bool> {
         unsafe {
             let b = self.to_block();
@@ -357,6 +348,29 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "propagatesSkylightDown")]
+    pub const fn transparent(self) -> Option<bool> {
+        unsafe {
+            let b = self.to_block();
+            let index = b.id() as usize;
+            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
+            if ::mser::unlikely(index == 0) {
+                return None;
+            }
+            let offset = self.id() - b.state_index();
+            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
+            let index = if ::mser::unlikely(bounds.len() == 1) {
+                *bounds.as_ptr()
+            } else {
+                *bounds.as_ptr().add(offset as _)
+            };
+            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 4 != 0)
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    #[doc(alias = "isRedstoneConductor")]
     pub const fn opaque_full_cube(self) -> Option<bool> {
         unsafe {
             let b = self.to_block();
@@ -372,12 +386,13 @@ impl block_state {
             } else {
                 *bounds.as_ptr().add(offset as _)
             };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 1 != 0)
+            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 8 != 0)
         }
     }
 
     #[inline]
     #[must_use]
+    #[doc(alias = "isFaceSturdyFull")]
     pub const fn side_solid_full(self) -> Option<u8> {
         unsafe {
             let b = self.to_block();
@@ -399,6 +414,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "isFaceSturdyCenter")]
     pub const fn side_solid_center(self) -> Option<u8> {
         unsafe {
             let b = self.to_block();
@@ -420,6 +436,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "isFaceSturdyRigid")]
     pub const fn side_solid_rigid(self) -> Option<u8> {
         unsafe {
             let b = self.to_block();
@@ -441,6 +458,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "getCollisionShape")]
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         unsafe {
             let b = self.to_block();
@@ -466,6 +484,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
+    #[doc(alias = "getOcclusionShape")]
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         unsafe {
             let b = self.to_block();
@@ -514,6 +533,7 @@ impl item {
 impl block {
     #[inline]
     #[must_use]
+    #[doc(alias = "a")]
     pub const fn hardness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -646,6 +666,8 @@ fn test_block_state() {
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
     assert_eq!(x.side_solid_center(), Some(0b111111));
     assert_eq!(x.full_cube(), Some(true));
+    assert_eq!(x.solid(), Some(true));
+    assert!(x.tool_required());
 
     let b = x.to_block();
     assert_eq!(b.name(), "white_concrete");
@@ -678,12 +700,17 @@ fn test_block_state() {
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
     assert_eq!(x.side_solid_center(), Some(0b111111));
+    assert!(!x.redstone_power_source());
+    assert_eq!(x.opaque_full_cube(), Some(true));
     assert_eq!(x.full_cube(), Some(false));
 
     let x = block::cactus.state_default();
     assert_eq!(x.side_solid_full(), Some(0b000000));
     assert_eq!(x.side_solid_rigid(), Some(0b000000));
     assert_eq!(x.side_solid_center(), Some(0b000001));
+    assert_eq!(x.full_cube(), Some(false));
+    assert!(!x.exceeds_cube());
+    assert!(!x.tool_required());
     assert_eq!(x.full_cube(), Some(false));
     assert_eq!(
         block_state::parse(block::redstone_wire, &mut [][..]),
@@ -734,6 +761,7 @@ fn test_block_state() {
         .to_fluid(),
         fluid_state::water_s_8
     );
+    assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
 }
 
 impl core::fmt::Debug for fluid_state {
