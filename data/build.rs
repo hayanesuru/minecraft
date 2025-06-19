@@ -41,6 +41,13 @@ impl Repr {
             Self::U8 => "[u8; 1]",
         }
     }
+    fn write(self, b: &mut Vec<u8>, n: u32) {
+        match self {
+            Self::U32 => b.extend(n.to_le_bytes()),
+            Self::U16 => b.extend((n as u16).to_le_bytes()),
+            Self::U8 => b.push(n as u8),
+        }
+    }
 }
 
 fn read(buf: &mut String, path: PathBuf) -> std::io::Result<usize> {
@@ -298,7 +305,6 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     }
     *w += "}\n";
     let (_, size, _) = head(iter.next(), "fluid_to_block");
-    wn.reserve(size);
     *w += "const FLUID_STATE_TO_BLOCK: *const ";
     *w += bsrepr.to_arr();
     *w += " = unsafe { NAMES.as_ptr().add(";
@@ -307,16 +313,10 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     for _ in 0..size {
         let next = iter.next().unwrap().as_bytes();
         let (n, _) = parse_hex::<u32>(next);
-        match bsrepr {
-            Repr::U32 => wn.extend(n.to_le_bytes()),
-            Repr::U16 => wn.extend((n as u16).to_le_bytes()),
-            Repr::U8 => wn.push(n as u8),
-        }
+        bsrepr.write(wn, n);
     }
 
     let (_, size, _) = head(iter.next(), "fluid_state_level");
-    wn.reserve(size);
-
     *w += "const FLUID_STATE_LEVEL: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
@@ -327,7 +327,6 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     }
 
     let (_, size, _) = head(iter.next(), "fluid_state_falling");
-    wn.reserve(size);
     *w += "const FLUID_STATE_FALLING: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
@@ -338,8 +337,6 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     }
 
     let (_, size, _) = head(iter.next(), "fluid_state_to_fluid");
-    wn.reserve(size);
-
     *w += "const FLUID_STATE_TO_FLUID: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
@@ -349,15 +346,36 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
         wn.push(n);
     }
 
-    let (_, size, _) = head(iter.next(), "fluid_state_array");
-    wn.reserve(size);
+    let (_, size, repr) = head(iter.next(), "fluid_state_array");
+    *w += "const FLUID_STATE_ARRAY: [&'static [";
+    *w += repr.to_int();
+    *w += "]; ";
+    *w += ib.format(size);
+    *w += "] = [\n";
+    for x in (&mut iter)
+        .take(size)
+        .map(|arr| arr.split(' ').map(|x| parse_hex::<u32>(x.as_bytes()).0))
+    {
+        *w += "&[";
+        for y in x {
+            *w += ib.format(y);
+            *w += ", ";
+        }
+        w.pop();
+        w.pop();
+        *w += "],\n";
+    }
+    *w += "];\n";
 
-    *w += "const FLUID_STATE: *const ";
-    *w += "[u8; 1]";
+    let (_, size, _) = head(iter.next(), "block_to_fluid_state");
+    *w += "const FLUID_STATE_INDEX: *const ";
+    *w += repr.to_arr();
     *w += " = unsafe { NAMES.as_ptr().add(";
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
-    wn.extend(read_rl(size, &mut iter).map(|x| x as u8));
+    for n in read_rl(size, &mut iter) {
+        repr.write(wn, n);
+    }
 }
 
 fn block_state(
@@ -1115,17 +1133,9 @@ fn block_state(
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
 
-    if reprblock == Repr::U16 {
-        for (index, &offset) in block_state.iter().enumerate() {
-            for _ in 0..properties_size[offset as usize] {
-                wn.extend((index as u16).to_le_bytes());
-            }
-        }
-    } else {
-        for (index, &offset) in block_state.iter().enumerate() {
-            for _ in 0..properties_size[offset as usize] {
-                wn.extend((index as u32).to_le_bytes());
-            }
+    for (index, &offset) in block_state.iter().enumerate() {
+        for _ in 0..properties_size[offset as usize] {
+            reprblock.write(wn, index as u32);
         }
     }
 
@@ -1307,7 +1317,6 @@ fn block_state(
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
 
-    wn.reserve(8 * size);
     for _ in 0..size {
         let mut s = iter.next().unwrap().as_bytes();
         if s.is_empty() {
@@ -1364,11 +1373,7 @@ fn block_state(
     *w += ib.format(wn.len());
     *w += ").cast() };\n";
     for n in read_rl(size, &mut iter) {
-        match repr {
-            Repr::U32 => wn.extend(n.to_le_bytes()),
-            Repr::U16 => wn.extend((n as u16).to_le_bytes()),
-            Repr::U8 => wn.extend((n as u8).to_le_bytes()),
-        }
+        repr.write(wn, n);
     }
 
     bsrepr
@@ -1412,13 +1417,12 @@ fn item(w: &mut String, data: &str) {
     *w += "];\n";
 }
 
-fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
+fn entity(w: &mut String, _: &mut [u8], data: &str) {
     let mut ib = itoa::Buffer::new();
     let mut rb = ryu::Buffer::new();
     let mut iter = data.split('\n');
 
     let (_, size, _) = head(iter.next(), "entity_type_height");
-    wn.reserve(size);
     *w += "const ENTITY_HEIGHT: [f32; ";
     *w += ib.format(size);
     *w += "] = [";
@@ -1432,7 +1436,6 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
     *w += "];\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_width");
-    wn.reserve(size);
     *w += "const ENTITY_WIDTH: [f32; ";
     *w += ib.format(size);
     *w += "] = [";
@@ -1447,7 +1450,6 @@ fn entity(w: &mut String, wn: &mut Vec<u8>, data: &str) {
     *w += "];\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_fixed");
-    wn.reserve(size);
     *w += "const ENTITY_FIXED: [bool; ";
     *w += ib.format(size);
     *w += "] = [";

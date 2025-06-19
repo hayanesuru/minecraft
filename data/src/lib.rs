@@ -48,11 +48,7 @@ impl NameMap<u16> {
             u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
         };
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
-        if name == k {
-            Some(v)
-        } else {
-            None
-        }
+        if name == k { Some(v) } else { None }
     }
 }
 
@@ -66,11 +62,7 @@ impl NameMap<u8> {
             u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
         };
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
-        if name == k {
-            Some(v)
-        } else {
-            None
-        }
+        if name == k { Some(v) } else { None }
     }
 }
 
@@ -190,9 +182,23 @@ impl block_state {
     #[inline]
     pub const fn to_fluid(self) -> fluid_state {
         unsafe {
-            fluid_state(raw_fluid_state::from_le_bytes(
-                *FLUID_STATE.add(self.0 as usize),
-            ))
+            // 1
+            let b = self.to_block();
+            // 2
+            let i = *FLUID_STATE_INDEX.add(b as usize);
+            // 3
+            let a = *FLUID_STATE_ARRAY
+                .as_ptr()
+                .add(u8::from_le_bytes(i) as usize);
+            if a.len() == 1 {
+                // 4
+                fluid_state(*a.as_ptr())
+            } else {
+                // 4
+                let o = b.state_index();
+                // 5
+                fluid_state(*a.as_ptr().add((self.id() - o) as usize))
+            }
         }
     }
 
@@ -205,7 +211,7 @@ impl block_state {
     #[inline]
     #[must_use]
     pub const fn has_sided_transparency(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize).add(1) };
+        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
         x & 128 != 0
     }
 
@@ -262,19 +268,26 @@ impl block_state {
     #[must_use]
     pub const fn opacity(self) -> Option<u8> {
         unsafe {
+            // 1
             let b = self.to_block();
             let index = b.id() as usize;
+            // 2
             let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
             if ::mser::unlikely(index == 0) {
                 return None;
             }
-            let offset = self.id() - b.state_index();
+            // 3
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
             let index = if ::mser::unlikely(bounds.len() == 1) {
+                // 4
                 *bounds.as_ptr()
             } else {
-                *bounds.as_ptr().add(offset as _)
+                // 4
+                let offset = b.state_index();
+                // 5
+                *bounds.as_ptr().add((self.id() - offset) as _)
             };
+            // 5 / 6
             Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) >> 4)
         }
     }
@@ -587,11 +600,7 @@ impl fluid_state {
 impl From<bool> for val_true_false {
     #[inline]
     fn from(value: bool) -> Self {
-        if value {
-            Self::r#true
-        } else {
-            Self::r#false
-        }
+        if value { Self::r#true } else { Self::r#false }
     }
 }
 impl From<val_true_false> for bool {
