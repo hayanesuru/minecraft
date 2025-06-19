@@ -347,7 +347,7 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     }
 
     let (_, size, repr) = head(iter.next(), "fluid_state_array");
-    *w += "const FLUID_STATE_ARRAY: [&'static [";
+    *w += "const FLUID_STATE_ARRAY: [&[";
     *w += repr.to_int();
     *w += "]; ";
     *w += ib.format(size);
