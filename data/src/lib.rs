@@ -533,7 +533,7 @@ impl item {
 impl block {
     #[inline]
     #[must_use]
-    #[doc(alias = "a")]
+    #[doc(alias = "defaultDestroyTime", alias = "getDestroySpeed")]
     pub const fn hardness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -542,6 +542,7 @@ impl block {
     }
     #[inline]
     #[must_use]
+    #[doc(alias = "getExplosionResistance")]
     pub const fn blast_resistance(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -550,6 +551,7 @@ impl block {
     }
     #[inline]
     #[must_use]
+    #[doc(alias = "getFriction")]
     pub const fn slipperiness(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -558,6 +560,7 @@ impl block {
     }
     #[inline]
     #[must_use]
+    #[doc(alias = "getSpeedFactor")]
     pub const fn velocity_multiplier(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
@@ -566,6 +569,7 @@ impl block {
     }
     #[inline]
     #[must_use]
+    #[doc(alias = "getJumpFactor")]
     pub const fn jump_velocity_multiplier(self) -> f32 {
         unsafe {
             let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
