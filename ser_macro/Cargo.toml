@@ -1,6 +1,6 @@
 [package]
 name = "mser_macro"
-version = "2.0.3"
+version = "2.0.4"
 description = "mser_macro"
 authors.workspace = true
 readme.workspace = true
@@ -22,3 +22,6 @@ quote = "1"
 proc-macro2 = "1"
 mser = { workspace = true }
 itoa = "1"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

@@ -2,7 +2,6 @@
 
 use core::marker::PhantomData;
 use core::ops::{Add, Div, Mul, Neg};
-use core::ptr::{read_unaligned, write_unaligned};
 
 pub const SMALLEST_POWER_OF_FIVE: i32 = -342;
 pub const LARGEST_POWER_OF_FIVE: i32 = 308;
@@ -864,8 +863,8 @@ impl<'a> AsciiStr<'a> {
     #[inline]
     pub fn read_u64(&self) -> u64 {
         debug_assert!(self.check_len(8));
-        let src = self.ptr as *const u64;
-        u64::from_le(unsafe { read_unaligned(src) })
+        let src = self.ptr as *const [u8; 8];
+        u64::from_le_bytes(unsafe { core::ptr::read(src) })
     }
 
     #[inline]
@@ -930,15 +929,15 @@ pub trait ByteSlice: AsRef<[u8]> + AsMut<[u8]> {
     #[inline]
     fn read_u64(&self) -> u64 {
         debug_assert!(self.as_ref().len() >= 8);
-        let src = self.as_ref().as_ptr() as *const u64;
-        u64::from_le(unsafe { read_unaligned(src) })
+        let src = self.as_ref().as_ptr() as *const [u8; 8];
+        u64::from_le_bytes(unsafe { core::ptr::read(src) })
     }
 
     #[inline]
     fn write_u64(&mut self, value: u64) {
         debug_assert!(self.as_ref().len() >= 8);
-        let dst = self.as_mut().as_mut_ptr() as *mut u64;
-        unsafe { write_unaligned(dst, u64::to_le(value)) };
+        let dst = self.as_mut().as_mut_ptr() as *mut [u8; 8];
+        unsafe { core::ptr::write(dst, u64::to_le_bytes(value)) };
     }
 }
 
@@ -1202,16 +1201,16 @@ fn try_parse_19digits(s: &mut AsciiStr<'_>, x: &mut u64) {
 #[inline]
 fn try_parse_8digits(s: &mut AsciiStr<'_>, x: &mut u64) {
     // may cause overflows, to be handled later
-    if let Some(v) = s.try_read_u64()
-        && is_8digits(v)
-    {
-        *x = x.wrapping_mul(1_0000_0000).wrapping_add(parse_8digits(v));
-        s.step_by(8);
-        if let Some(v) = s.try_read_u64()
-            && is_8digits(v)
-        {
+    if let Some(v) = s.try_read_u64() {
+        if is_8digits(v) {
             *x = x.wrapping_mul(1_0000_0000).wrapping_add(parse_8digits(v));
             s.step_by(8);
+            if let Some(v) = s.try_read_u64() {
+                if is_8digits(v) {
+                    *x = x.wrapping_mul(1_0000_0000).wrapping_add(parse_8digits(v));
+                    s.step_by(8);
+                }
+            }
         }
     }
 }
@@ -1233,7 +1232,11 @@ fn parse_scientific(s: &mut AsciiStr<'_>) -> i64 {
                 exp_num = 10 * exp_num + digit as i64; // no overflows here
             }
         });
-        if neg_exp { -exp_num } else { exp_num }
+        if neg_exp {
+            -exp_num
+        } else {
+            exp_num
+        }
     } else {
         *s = start; // ignore 'e' and return back
         0

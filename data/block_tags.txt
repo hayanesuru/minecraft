@@ -1,0 +1,388 @@
+acacia_logs
+35 40 4b 53 
+air
+0 2fa 2fb 
+all_hanging_signs
+dd de df e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 
+all_signs
+c5 c6 c7 c8 c9 ca cb cc cd ce d3 d4 d5 d6 d7 d8 d9 da db dc dd de df e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 35d 35e 35f 360 
+ancient_city_replaceable
+93 424 425 42d 42f 430 431 432 433 434 436 437 
+animals_spawnable_on
+8 
+anvil
+1b3 1b4 1b5 
+armadillo_spawnable_on
+8 a 27 1c4 1c5 1c8 1cc 1d0 1d2 20a 
+axolotls_spawnable_on
+10c 
+azalea_grows_on
+8 9 a b 25 26 27 3b 109 156 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 3c0 41d 422 423 449 
+azalea_root_replaceable
+1 2 4 6 8 9 a b 25 27 28 3b 109 10c 156 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 3b0 3c0 41d 422 423 424 449 
+badlands_terracotta
+1c4 1c5 1c8 1cc 1d0 1d2 20a 
+bamboo_blocks
+3c 46 
+bamboo_plantable_on
+8 9 a b 25 26 27 28 29 3b 156 2f7 2f8 41d 422 423 449 
+banners
+213 214 215 216 217 218 219 21a 21b 21c 21d 21e 21f 220 221 222 223 224 225 226 227 228 229 22a 22b 22c 22d 22e 22f 230 231 232 
+base_stone_nether
+110 113 374 
+base_stone_overworld
+1 2 4 6 3b0 424 
+bats_spawnable_on
+1 2 4 6 3b0 424 
+beacon_base_blocks
+ad ae c0 174 36b 
+beds
+6e 6f 70 71 72 73 74 75 76 77 78 79 7a 7b 7c 7d 
+bee_attractive
+21 5d 62 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa 10b 20d 20e 20f 210 271 278 416 418 41a 41b 44c 
+bee_growables
+c2 14d 14e 199 19a 276 277 279 335 414 415 
+beehives
+367 368 
+big_dripleaf_placeable
+8 9 a b 3b c3 10c 156 41d 422 423 
+birch_logs
+33 3e 49 51 
+blocks_wind_charge_explosions
+22 1ec 
+buttons
+106 19b 19c 19d 19e 19f 1a0 1a1 1a2 1a3 1a4 359 35a 383 
+camel_sand_step_sound_blocks
+25 26 27 2b6 2b7 2b8 2b9 2ba 2bb 2bc 2bd 2be 2bf 2c0 2c1 2c2 2c3 2c4 2c5 
+camels_spawnable_on
+25 26 27 
+campfires
+333 334 
+candle_cakes
+399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 3a9 
+candles
+388 389 38a 38b 38c 38d 38e 38f 390 391 392 393 394 395 396 397 398 
+cauldrons
+164 165 166 167 
+cave_vines
+414 415 
+ceiling_hanging_signs
+dd de df e0 e1 e2 e3 e4 e5 e6 e7 e8 
+cherry_logs
+36 41 4c 54 
+climbable
+d0 14f 325 346 347 348 349 414 415 
+coal_ores
+2e 2f 
+combination_step_sound_blocks
+107 151 1fa 1fb 1fc 1fd 1fe 1ff 200 201 202 203 204 205 206 207 208 209 33d 33e 34a 419 44a 
+completes_find_tree_tutorial
+14 31 32 33 34 35 36 37 38 39 3d 3e 3f 40 41 42 43 44 45 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f 60 61 62 280 336 337 338 339 33c 33f 340 341 342 
+concrete_powder
+2b6 2b7 2b8 2b9 2ba 2bb 2bc 2bd 2be 2bf 2c0 2c1 2c2 2c3 2c4 2c5 
+convertable_to_mud
+9 a 422 
+copper_ores
+3cb 3cc 
+coral_blocks
+2d1 2d2 2d3 2d4 2d5 
+coral_plants
+2db 2dc 2dd 2de 2df 
+corals
+2db 2dc 2dd 2de 2df 2e5 2e6 2e7 2e8 2e9 
+crimson_stems
+33f 340 341 342 
+crops
+c2 14d 14e 199 19a 276 277 279 
+crystal_sound_blocks
+3aa 3ab 
+dampens_vibrations
+8c 8d 8e 8f 90 91 92 93 94 95 96 97 98 99 9a 9b 1fa 1fb 1fc 1fd 1fe 1ff 200 201 202 203 204 205 206 207 208 209 
+dark_oak_logs
+37 42 4d 55 
+deepslate_ore_replaceables
+3b0 424 
+diamond_ores
+be bf 
+dirt
+8 9 a b 3b 156 41d 422 423 449 
+does_not_block_hoppers
+367 368 
+doors
+cf f7 266 267 268 269 26a 26b 26c 26d 26e 35b 35c 3f1 3f2 3f3 3f4 3f5 3f6 3f7 3f8 
+dragon_immune
+22 9c b4 146 168 169 16a 178 1ec 27b 27c 27d 361 362 363 364 36d 36e 443 
+dragon_transparent
+b7 b8 1ed 
+dripstone_replaceable_blocks
+1 2 4 6 3b0 424 
+dry_vegetation_may_place_on
+8 9 a b 25 26 27 3b c3 156 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 41d 422 423 449 
+edible_for_sheep
+82 83 86 87 
+emerald_ores
+16f 170 
+enchantment_power_provider
+b1 
+enchantment_power_transmitter
+0 23 24 82 83 84 85 86 87 88 89 b7 b8 107 14f 150 151 1ed 211 212 283 2fa 2fb 2fc 33d 33e 34a 41c 421 
+enderman_holdable
+8 9 a b 25 27 28 3b 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac b0 10a 10b 10c 119 149 14a 156 33a 33b 33d 343 344 34a 41d 422 423 449 44c 44d 
+fall_damage_resetting
+81 d0 14f 325 335 346 347 348 349 414 415 
+features_cannot_replace
+22 b9 bc 169 443 446 447 
+fence_gates
+152 254 255 256 257 258 259 25a 25b 25c 355 356 
+fences
+10f 15f 25d 25e 25f 260 261 262 263 264 265 351 352 
+fire
+b7 b8 
+flower_pots
+17c 17d 17e 17f 180 181 182 183 184 185 186 187 188 189 18a 18b 18c 18d 18e 18f 190 191 192 193 194 195 196 197 198 2f9 36f 370 371 372 43d 43e 44e 44f 
+flowers
+21 5d 62 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa 10b 20d 20e 20f 210 271 278 416 418 41a 41b 44c 44d 
+foxes_spawnable_on
+8 a b 107 109 
+frog_prefer_jump_to
+157 41e 
+frogs_spawnable_on
+8 3a 3b 423 
+geode_invalid_blocks
+22 23 24 108 20c 2f5 
+goats_spawnable_on
+1 8 28 107 109 20c 
+gold_ores
+2a 2b 30 
+guarded_by_piglins
+2a 2b 30 ad bc 171 1b6 285 286 287 288 289 28a 28b 28c 28d 28e 28f 290 291 292 293 294 295 327 37f 43c 
+happy_ghast_avoids
+a9 b7 10a 27f 335 412 
+hoglin_repellents
+118 33b 36e 370 
+ice
+108 20c 27e 2f5 
+impermeable
+65 11d 11e 11f 120 121 122 123 124 125 126 127 128 129 12a 12b 12c 3bf 
+incorrect_for_diamond_tool
+
+incorrect_for_gold_tool
+2a 2b 2c 2d 66 67 68 ad ae b4 be bf c0 102 103 16f 170 174 36b 36c 36d 36e 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 3d6 3d7 3d8 3d9 3da 3db 3dc 3dd 3de 3df 3e0 3e1 3e2 3e3 3e4 3e5 3e6 3e7 3e8 3e9 3ea 3eb 3ec 3ed 3ee 3ef 3f0 3f9 3fa 3fb 3fc 3fd 3fe 3ff 400 401 402 403 404 405 406 407 408 409 40a 40b 40c 40d 40e 40f 410 411 43a 43b 43c 445 
+incorrect_for_iron_tool
+b4 36b 36c 36d 36e 
+incorrect_for_netherite_tool
+
+incorrect_for_stone_tool
+2a 2b ad b4 be bf c0 102 103 16f 170 174 36b 36c 36d 36e 43c 
+incorrect_for_wooden_tool
+2a 2b 2c 2d 66 67 68 ad ae b4 be bf c0 102 103 16f 170 174 36b 36c 36d 36e 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 3d6 3d7 3d8 3d9 3da 3db 3dc 3dd 3de 3df 3e0 3e1 3e2 3e3 3e4 3e5 3e6 3e7 3e8 3e9 3ea 3eb 3ec 3ed 3ee 3ef 3f0 3f9 3fa 3fb 3fc 3fd 3fe 3ff 400 401 402 403 404 405 406 407 408 409 40a 40b 40c 40d 40e 40f 410 411 43a 43b 43c 445 
+infiniburn_end
+22 110 27f 
+infiniburn_nether
+110 27f 
+infiniburn_overworld
+110 27f 
+inside_step_sound_blocks
+150 157 3af 3c0 3c4 41a 41b 41c 
+invalid_spawn_inside
+168 27b 
+iron_ores
+2c 2d 
+jungle_logs
+34 3f 4a 52 
+lapis_ores
+66 67 
+lava_pool_stone_cannot_replace
+14 22 31 32 33 34 35 36 37 38 39 3d 3e 3f 40 41 42 43 44 45 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f 60 61 62 b9 bc 169 336 337 338 339 33f 340 341 342 443 446 447 
+leaves
+58 59 5a 5b 5c 5d 5e 5f 60 61 62 
+logs
+14 31 32 33 34 35 36 37 38 39 3d 3e 3f 40 41 42 43 44 45 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 336 337 338 339 33f 340 341 342 
+logs_that_burn
+14 31 32 33 34 35 36 37 38 39 3d 3e 3f 40 41 42 43 44 45 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 
+lush_ground_replaceable
+1 2 4 6 8 9 a b 25 28 3b 10c 156 3b0 414 415 41d 422 423 424 449 
+maintains_farmland
+9e c2 14b 14c 14d 14e 199 19a 276 277 279 
+mangrove_logs
+39 45 4e 57 
+mangrove_logs_can_grow_through
+21 39 3a 3b 60 14f 419 423 
+mangrove_roots_can_grow_through
+21 3a 3b 107 14f 419 423 
+mineable/axe
+d e f 10 11 12 13 14 15 16 17 18 31 32 33 34 35 36 37 38 39 3a 3c 3d 3e 3f 40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 6d b1 b2 ba bb bc c1 c5 c6 c7 c8 c9 ca cb cc cd ce cf d0 d3 d4 d5 d6 d7 d8 d9 da db dc dd de df e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f8 f9 fa fb fc fd fe ff 100 101 10e 10f 119 11a 12d 12e 12f 130 131 132 133 134 135 136 143 144 145 149 14a 14f 150 152 16d 175 176 177 19b 19c 19d 19e 19f 1a0 1a1 1a2 1a3 1a4 1b6 1ba 1e4 1e5 1e6 1e7 1e8 1e9 1ea 213 214 215 216 217 218 219 21a 21b 21c 21d 21e 21f 220 221 222 223 224 225 226 227 228 229 22a 22b 22c 22d 22e 22f 230 231 232 237 238 239 23a 23b 23c 23d 23e 23f 240 241 254 255 256 257 258 259 25a 25b 25c 25d 25e 25f 260 261 262 263 264 265 266 267 268 269 26a 26b 26c 26d 26e 270 271 2f8 326 327 32a 32b 32d 32e 333 334 336 337 338 339 33f 340 341 342 34b 34c 34d 34e 34f 350 351 352 353 354 355 356 357 358 359 35a 35b 35c 35d 35e 35f 360 365 367 368 41e 41f 
+mineable/hoe
+58 59 5a 5b 5c 5d 5e 5f 60 61 62 63 64 1f9 280 2c8 33c 345 366 3c1 3c2 3c3 3c4 3c5 3c6 419 41d 449 44a 
+mineable/pickaxe
+1 2 3 4 5 6 7 c 2a 2b 2c 2d 2e 2f 30 66 67 68 69 6a 6b 6c 7e 7f 80 8a 8b ad ae af b3 b4 b9 be bf c0 c4 d1 d2 f6 f7 102 103 106 108 110 113 114 137 138 139 13a 13b 13c 13d 13e 13f 140 141 142 146 147 153 154 155 159 15a 15b 15c 15d 15e 15f 160 162 163 164 165 166 167 16a 16e 16f 170 171 174 17a 17b 1b3 1b4 1b5 1b7 1b8 1bb 1bc 1bd 1be 1bf 1c0 1c1 1c2 1c3 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 1ee 1ef 1f0 1f1 1f2 1f3 1f4 1f5 1f6 1f7 20a 20b 20c 233 234 235 236 242 243 244 245 246 247 248 249 24a 24b 24c 24d 24e 24f 250 251 252 253 272 273 274 275 27f 281 282 284 285 286 287 288 289 28a 28b 28c 28d 28e 28f 290 291 292 293 294 295 296 297 298 299 29a 29b 29c 29d 29e 29f 2a0 2a1 2a2 2a3 2a4 2a5 2a6 2a7 2a8 2a9 2aa 2ab 2ac 2ad 2ae 2af 2b0 2b1 2b2 2b3 2b4 2b5 2cc 2cd 2ce 2cf 2d0 2d1 2d2 2d3 2d4 2d5 2d6 2d7 2d8 2d9 2da 2e0 2e1 2e2 2e3 2e4 2ea 2eb 2ec 2ed 2ee 2f5 2f6 2fd 2fe 2ff 300 301 302 303 304 305 306 307 308 309 30a 30b 30c 30d 30e 30f 310 311 312 313 314 315 316 317 318 319 31a 31b 31c 31d 31e 31f 320 321 322 323 324 328 329 32c 32f 330 331 332 33a 343 36b 36c 36d 36e 373 374 375 376 377 378 379 37a 37b 37c 37d 37e 37f 380 381 382 383 384 385 386 387 3aa 3ab 3ac 3ad 3ae 3af 3b0 3b1 3b2 3b3 3b4 3b5 3b6 3b7 3b8 3b9 3ba 3bb 3bc 3bd 3be 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 3d6 3d7 3d8 3d9 3da 3db 3dc 3dd 3de 3df 3e0 3e1 3e2 3e3 3e4 3e5 3e6 3e7 3e8 3e9 3ea 3eb 3ec 3ed 3ee 3ef 3f0 3f1 3f2 3f3 3f4 3f5 3f6 3f7 3f8 3f9 3fa 3fb 3fc 3fd 3fe 3ff 400 401 402 403 404 405 406 407 408 409 40a 40b 40c 40d 40e 40f 410 411 412 413 424 425 426 427 428 429 42a 42b 42c 42d 42e 42f 430 431 432 433 434 435 436 437 438 439 43a 43b 43c 445 448 
+mineable/shovel
+8 9 a b 25 26 27 28 29 3b c3 107 109 10c 111 112 156 27a 2b6 2b7 2b8 2b9 2ba 2bb 2bc 2bd 2be 2bf 2c0 2c1 2c2 2c3 2c4 2c5 422 423 
+mob_interactable_doors
+cf 266 267 268 269 26a 26b 26c 26d 26e 35b 35c 3f1 3f2 3f3 3f4 3f5 3f6 3f7 3f8 
+mooshrooms_spawnable_on
+156 
+moss_replaceable
+1 2 4 6 8 9 a b 3b 156 3b0 414 415 41d 422 423 424 449 
+mushroom_grow_block
+b 156 33a 343 
+needs_diamond_tool
+b4 36b 36c 36d 36e 
+needs_iron_tool
+2a 2b ad be bf c0 102 103 16f 170 174 43c 
+needs_stone_tool
+2c 2d 66 67 68 ae 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 3d6 3d7 3d8 3d9 3da 3db 3dc 3dd 3de 3df 3e0 3e1 3e2 3e3 3e4 3e5 3e6 3e7 3e8 3e9 3ea 3eb 3ec 3ed 3ee 3ef 3f0 3f9 3fa 3fb 3fc 3fd 3fe 3ff 400 401 402 403 404 405 406 407 408 409 40a 40b 40c 40d 40e 40f 410 411 43a 43b 445 
+nether_carver_replaceables
+1 2 4 6 8 9 a b 3b 110 111 112 113 156 280 33a 33c 343 374 3b0 41d 422 423 424 449 
+nylium
+33a 343 
+oak_logs
+31 44 47 4f 
+occludes_vibration_signals
+8c 8d 8e 8f 90 91 92 93 94 95 96 97 98 99 9a 9b 
+overworld_carver_replaceables
+1 2 4 6 8 9 a b 23 25 26 27 28 29 2c 2d 3b 6a 107 109 156 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 20c 233 3b0 3be 3c0 3cb 3cc 41d 422 423 424 43a 43b 449 
+overworld_natural_logs
+31 32 33 34 35 36 37 38 39 
+pale_oak_logs
+14 38 43 56 
+parrots_spawnable_on
+0 8 14 31 32 33 34 35 36 37 38 39 3d 3e 3f 40 41 42 43 44 45 47 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f 60 61 62 336 337 338 339 33f 340 341 342 
+piglin_repellents
+b8 115 116 332 334 
+planks
+d e f 10 11 12 13 15 16 17 34b 34c 
+polar_bears_spawnable_on_alternate
+108 
+portals
+118 168 27b 
+pressure_plates
+f6 f8 f9 fa fb fc fd fe ff 100 101 1b7 1b8 34f 350 382 
+prevent_mob_spawning_inside
+7e 7f d1 1c2 
+rabbits_spawnable_on
+8 25 107 109 
+rails
+7e 7f d1 1c2 
+redstone_ores
+102 103 
+replaceable
+0 23 24 82 83 84 85 86 87 88 89 b7 b8 107 14f 150 151 1ed 211 212 283 2fa 2fb 2fc 33d 33e 34a 41c 421 
+replaceable_by_mushrooms
+23 58 59 5a 5b 5c 5d 5e 5f 60 61 62 82 83 84 85 86 87 88 89 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac 143 144 14f 150 20d 20e 20f 210 211 212 278 33d 33e 34a 41c 421 44a 44c 44d 450 
+replaceable_by_trees
+23 58 59 5a 5b 5c 5d 5e 5f 60 61 62 82 83 84 85 86 87 88 89 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa 14f 150 20d 20e 20f 210 211 212 278 33d 33e 34a 41c 421 44a 44c 44d 450 
+sand
+25 26 27 
+saplings
+19 1a 1b 1c 1d 1e 1f 20 21 417 418 
+sculk_replaceable
+1 2 4 6 8 9 a b 25 27 28 3b 6a 10c 110 111 112 113 156 16a 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 233 33a 343 374 3b0 3be 413 41d 422 423 424 439 449 
+sculk_replaceable_world_gen
+1 2 4 6 8 9 a b 25 27 28 3b 6a 10c 110 111 112 113 156 16a 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 233 33a 343 374 3b0 3be 413 41d 422 423 424 425 429 42d 431 436 437 439 449 
+shulker_boxes
+285 286 287 288 289 28a 28b 28c 28d 28e 28f 290 291 292 293 294 295 
+signs
+c5 c6 c7 c8 c9 ca cb cc cd ce d3 d4 d5 d6 d7 d8 d9 da db dc 35d 35e 35f 360 
+slabs
+15b 1f5 1f6 1f7 237 238 239 23a 23b 23c 23d 23e 23f 240 241 242 243 244 245 246 247 248 249 24a 24b 24c 24d 24e 24f 30b 30c 30d 30e 30f 310 311 312 313 314 315 316 317 34d 34e 377 37c 381 3b1 3b5 3ba 3dd 3de 3df 3e0 3ed 3ee 3ef 3f0 427 42b 42f 433 
+small_dripleaf_placeable
+10c 41d 
+small_flowers
+9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa 44c 44d 
+smelts_to_glass
+25 27 
+snaps_goat_horn
+1 2c 2e 31 32 33 34 35 36 37 38 39 16f 20c 3cb 
+sniffer_diggable_block
+8 9 a b 3b 41d 422 423 449 
+sniffer_egg_hatch_boost
+41d 
+snow
+107 109 3c0 
+snow_layer_can_survive_on
+111 369 423 
+snow_layer_cannot_survive_on
+108 1ec 20c 
+soul_fire_base_blocks
+111 112 
+soul_speed_blocks
+111 112 
+spruce_logs
+32 3d 48 50 
+stairs
+bb d2 153 154 155 15a 160 16e 175 176 177 1c1 1e4 1e5 1e6 1e7 1e8 1e9 1ea 1f2 1f3 1f4 236 274 2fd 2fe 2ff 300 301 302 303 304 305 306 307 308 309 30a 357 358 375 37d 380 3b2 3b6 3bb 3d9 3da 3db 3dc 3e9 3ea 3eb 3ec 426 42a 42e 432 
+standing_signs
+c5 c6 c7 c8 c9 ca cb cc cd ce 35d 35e 
+stone_bricks
+137 138 139 13a 
+stone_buttons
+106 383 
+stone_ore_replaceables
+1 2 4 6 
+stone_pressure_plates
+f6 382 
+strider_warm_blocks
+24 
+sword_efficient
+58 59 5a 5b 5c 5d 5e 5f 60 61 62 119 11a 149 14a 14f 150 16d 270 271 41e 41f 
+sword_instantly_mines
+2f7 2f8 
+terracotta
+1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 
+trail_ruins_replaceable
+28 
+trapdoors
+12d 12e 12f 130 131 132 133 134 135 136 1ee 353 354 3f9 3fa 3fb 3fc 3fd 3fe 3ff 400 
+triggers_ambient_desert_dry_vegetation_block_sounds
+25 27 1c4 1c5 1c6 1c7 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 20a 
+triggers_ambient_desert_sand_block_sounds
+25 27 
+triggers_ambient_dried_ghast_block_sounds
+111 112 
+underwater_bonemeals
+88 2db 2dc 2dd 2de 2df 2e5 2e6 2e7 2e8 2e9 2ef 2f0 2f1 2f2 2f3 
+unstable_bottom_center
+152 254 255 256 257 258 259 25a 25b 25c 355 356 
+valid_spawn
+8 b 
+vibration_resonators
+3aa 
+wall_corals
+2ef 2f0 2f1 2f2 2f3 
+wall_hanging_signs
+e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 
+wall_post_override
+b5 c5 c6 c7 c8 c9 ca cb cc cd ce d3 d4 d5 d6 d7 d8 d9 da db dc f6 f8 f9 fa fb fc fd fe ff 100 101 104 10b 115 173 1b7 1b8 213 214 215 216 217 218 219 21a 21b 21c 21d 21e 21f 220 221 222 223 224 225 226 227 228 229 22a 22b 22c 22d 22e 22f 230 231 232 34f 350 35d 35e 35f 360 382 
+wall_signs
+d3 d4 d5 d6 d7 d8 d9 da db dc 35f 360 
+walls
+15c 17a 17b 318 319 31a 31b 31c 31d 31e 31f 320 321 322 323 324 376 37e 384 3b3 3b7 3bc 428 42c 430 434 
+warped_stems
+336 337 338 339 
+wart_blocks
+280 33c 
+wither_immune
+22 9c 168 169 178 1ec 1ed 27b 27c 27d 361 362 363 364 443 
+wither_summon_base_blocks
+111 112 
+wolves_spawnable_on
+8 a b 107 109 
+wooden_buttons
+19b 19c 19d 19e 19f 1a0 1a1 1a2 1a3 1a4 359 35a 
+wooden_doors
+cf 266 267 268 269 26a 26b 26c 26d 26e 35b 35c 
+wooden_fences
+10f 25d 25e 25f 260 261 262 263 264 265 351 352 
+wooden_pressure_plates
+f8 f9 fa fb fc fd fe ff 100 101 34f 350 
+wooden_slabs
+237 238 239 23a 23b 23c 23d 23e 23f 240 34d 34e 
+wooden_stairs
+bb 175 176 177 1e4 1e5 1e6 1e7 1e8 1e9 357 358 
+wooden_trapdoors
+12d 12e 12f 130 131 132 133 134 135 136 353 354 
+wool
+8c 8d 8e 8f 90 91 92 93 94 95 96 97 98 99 9a 9b 
+wool_carpets
+1fa 1fb 1fc 1fd 1fe 1ff 200 201 202 203 204 205 206 207 208 209 

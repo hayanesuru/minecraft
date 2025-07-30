@@ -48,7 +48,11 @@ impl NameMap<u16> {
             u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
         };
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
-        if name == k { Some(v) } else { None }
+        if name == k {
+            Some(v)
+        } else {
+            None
+        }
     }
 }
 
@@ -62,7 +66,11 @@ impl NameMap<u8> {
             u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
         };
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
-        if name == k { Some(v) } else { None }
+        if name == k {
+            Some(v)
+        } else {
+            None
+        }
     }
 }
 
@@ -624,7 +632,11 @@ impl fluid_state {
 impl From<bool> for val_true_false {
     #[inline]
     fn from(value: bool) -> Self {
-        if value { Self::r#true } else { Self::r#false }
+        if value {
+            Self::r#true
+        } else {
+            Self::r#false
+        }
     }
 }
 impl From<val_true_false> for bool {
@@ -765,6 +777,7 @@ fn test_block_state() {
         .to_fluid(),
         fluid_state::water_s_8
     );
+    assert!(!block::dispenser.is_air());
     assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
 }
 

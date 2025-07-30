@@ -1,0 +1,78 @@
+aquatic
+7 1a 21 26 3b 3d 66 69 7a 7d 83 84 
+arrows
+6 76 
+arthropod
+b 15 28 6d 77 
+axolotl_always_hostiles
+24 26 3d 
+axolotl_hunt_targets
+1a 3b 66 69 7a 7d 83 
+beehive_inhabitors
+b 
+boat
+0 9 c 16 1f 48 4f 55 5a 78 
+can_breathe_under_water
+5 7 10 1a 24 26 35 3b 3d 41 5e 66 69 6e 6f 7a 7b 7d 83 84 8c 8d 90 91 92 93 94 
+can_equip_harness
+38 
+can_equip_saddle
+13 22 40 54 5f 6f 7c 92 
+can_turn_in_boats
+11 
+can_wear_horse_armor
+40 
+deflects_projectiles
+11 
+dismounts_underwater
+13 19 22 38 40 4c 54 5f 68 77 7c 81 92 
+fall_damage_immune
+2 a b e 11 14 19 37 38 44 4e 57 5d 5e 6b 74 8c 
+followable_friendly_mobs
+4 b 13 14 19 1c 22 34 38 3c 40 4c 54 57 5c 5d 5f 63 67 6a 6f 72 7c 86 8f 
+freeze_hurts_extra_types
+e 4e 7c 
+freeze_immune_entity_types
+63 74 7b 8c 
+frog_food
+4e 70 
+ignores_poison_and_regen
+10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+illager
+2c 42 62 87 
+illager_friends
+2c 42 62 87 
+immune_to_infested
+6d 
+immune_to_oozing
+70 
+impact_projectiles
+6 12 23 25 32 33 71 73 76 82 8a 8e 
+inverted_healing_and_harm
+10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+no_anger_from_wind_charge
+10 11 15 41 6e 70 77 7b 91 
+non_controlling_rider
+4e 70 
+not_scary_for_pufferfish
+1a 21 26 3b 3d 66 69 7a 7d 83 84 
+powder_snow_walkable_mobs
+28 34 67 6d 
+raiders
+2c 42 62 68 87 8b 
+redirectable_projectile
+12 32 8a 
+sensitive_to_bane_of_arthropods
+b 15 28 6d 77 
+sensitive_to_impaling
+7 1a 21 26 3b 3d 66 69 7a 7d 83 84 
+sensitive_to_smite
+10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+skeletons
+10 6e 6f 7b 8d 
+undead
+10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+wither_friends
+10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+zombies
+24 41 90 91 92 93 94 

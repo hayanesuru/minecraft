@@ -3,11 +3,11 @@ members = ["data", "ser", "ser_macro"]
 resolver = "2"
 
 [workspace.package]
-authors = ["Jvavav"]
+authors = ["hayanesuru"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/hayanesuru/minecraft"
-edition = "2024"
+edition = "2021"
 
 [workspace.dependencies]
 mser = { path = "ser", version = "2.0", default-features = false }

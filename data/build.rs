@@ -1,8 +1,8 @@
 use core::iter::repeat_n;
 use mser::*;
 use nested::ZString;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::env::var_os;
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -92,20 +92,32 @@ fn main() -> std::io::Result<()> {
     let pac = read(&mut data, path.join("packet.txt"))?;
     let pac = ent.end..ent.end + pac;
 
-    let block_names = registries(&mut w, &mut wn, data.get(reg).unwrap(), &mut gen_hash);
-    registries(&mut w, &mut wn, data.get(pac).unwrap(), &mut gen_hash);
+    let blt = read(&mut data, path.join("block_tags.txt"))?;
+    let blt = pac.end..pac.end + blt;
 
-    item(&mut w, data.get(ite).unwrap());
-    entity(&mut w, &mut wn, data.get(ent).unwrap());
+    let itt = read(&mut data, path.join("item_tags.txt"))?;
+    let itt = blt.end..blt.end + itt;
 
-    let bsrepr = block_state(
-        &mut w,
-        &mut wn,
-        data.get(blo).unwrap(),
-        &mut gen_hash,
-        &block_names,
-    );
-    fluid_state(&mut w, &mut wn, data.get(flu).unwrap(), bsrepr);
+    let ett = read(&mut data, path.join("entity_tags.txt"))?;
+    let ett = itt.end..itt.end + ett;
+
+    let gat = read(&mut data, path.join("game_event_tags.txt"))?;
+    let gat = ett.end..ett.end + gat;
+
+    let block_names = registries(&mut w, &mut wn, &data[reg], &mut gen_hash);
+    registries(&mut w, &mut wn, &data[pac], &mut gen_hash);
+
+    item(&mut w, &data[ite]);
+    entity(&mut w, &mut wn, &data[ent]);
+
+    let bsrepr = block_state(&mut w, &mut wn, &data[blo], &mut gen_hash, &block_names);
+    fluid_state(&mut w, &mut wn, &data[flu], bsrepr);
+
+    block_tags(&mut w, &data[blt]);
+    item_tags(&mut w, &data[itt]);
+    entity_tags(&mut w, &data[ett]);
+    game_event_tags(&mut w, &data[gat]);
+
     w += "const NAMES: &[u8; ";
     w += itoa::Buffer::new().format(wn.len());
     w += "] = include_bytes!(\"";
@@ -352,10 +364,10 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     *w += "]; ";
     *w += ib.format(size);
     *w += "] = [\n";
-    for x in (&mut iter)
-        .take(size)
-        .map(|arr| arr.split(' ').map(|x| parse_hex::<u32>(x.as_bytes()).0))
-    {
+    for x in (&mut iter).take(size).map(|arr| {
+        arr.split_ascii_whitespace()
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0)
+    }) {
         *w += "&[";
         for y in x {
             *w += ib.format(y);
@@ -376,6 +388,161 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     for n in read_rl(size, &mut iter) {
         repr.write(wn, n);
     }
+}
+
+fn block_tags(w: &mut String, data: &str) {
+    let mut iter = data.split('\n');
+    *w += "impl block {\n";
+    let mut ib = itoa::Buffer::new();
+    while let Some(tag) = iter.next() {
+        let tag = tag.trim_ascii();
+        if tag.is_empty() {
+            break;
+        }
+        let list = iter.next().unwrap();
+        *w += "#[inline]\n#[must_use]\npub const fn is_";
+        let mut last_end = 0;
+        for (start, part) in tag.match_indices(['.', '/']) {
+            *w += unsafe { tag.get_unchecked(last_end..start) };
+            w.push('_');
+            last_end = start + part.len();
+        }
+        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
+        *w += "(self) -> bool {\n";
+        let mut vals = list
+            .split_ascii_whitespace()
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0);
+        if let Some(val) = vals.next() {
+            *w += "let i = self as raw_block;\n";
+            *w += "i == ";
+            *w += ib.format(val);
+            for val in vals {
+                *w += " || i == ";
+                *w += ib.format(val);
+            }
+        } else {
+            *w += "false";
+        }
+        *w += "\n}\n";
+    }
+    *w += "}\n";
+}
+
+fn item_tags(w: &mut String, data: &str) {
+    let mut iter = data.split('\n');
+    *w += "impl item {\n";
+    let mut ib = itoa::Buffer::new();
+    while let Some(tag) = iter.next() {
+        let tag = tag.trim_ascii();
+        if tag.is_empty() {
+            break;
+        }
+        let list = iter.next().unwrap();
+        *w += "#[inline]\n#[must_use]\npub const fn is_";
+        let mut last_end = 0;
+        for (start, part) in tag.match_indices(['.', '/']) {
+            *w += unsafe { tag.get_unchecked(last_end..start) };
+            w.push('_');
+            last_end = start + part.len();
+        }
+        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
+        *w += "(self) -> bool {\n";
+
+        let mut vals = list
+            .split_ascii_whitespace()
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0);
+        if let Some(val) = vals.next() {
+            *w += "let i = self as raw_item;\n";
+            *w += "i == ";
+            *w += ib.format(val);
+            for val in vals {
+                *w += " || i == ";
+                *w += ib.format(val);
+            }
+        } else {
+            *w += "false";
+        }
+        *w += "\n}\n";
+    }
+    *w += "}\n";
+}
+
+fn entity_tags(w: &mut String, data: &str) {
+    let mut iter = data.split('\n');
+    *w += "impl entity_type {\n";
+    let mut ib = itoa::Buffer::new();
+    while let Some(tag) = iter.next() {
+        let tag = tag.trim_ascii();
+        if tag.is_empty() {
+            break;
+        }
+        let list = iter.next().unwrap();
+        *w += "#[inline]\n#[must_use]\npub const fn is_";
+        let mut last_end = 0;
+        for (start, part) in tag.match_indices(['.', '/']) {
+            *w += unsafe { tag.get_unchecked(last_end..start) };
+            w.push('_');
+            last_end = start + part.len();
+        }
+        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
+        *w += "(self) -> bool {\n";
+
+        let mut vals = list
+            .split_ascii_whitespace()
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0);
+        if let Some(val) = vals.next() {
+            *w += "let i = self as raw_entity_type;\n";
+            *w += "i == ";
+            *w += ib.format(val);
+            for val in vals {
+                *w += " || i == ";
+                *w += ib.format(val);
+            }
+        } else {
+            *w += "false";
+        }
+        *w += "\n}\n";
+    }
+    *w += "}\n";
+}
+
+fn game_event_tags(w: &mut String, data: &str) {
+    let mut iter = data.split('\n');
+    *w += "impl game_event {\n";
+    let mut ib = itoa::Buffer::new();
+    while let Some(tag) = iter.next() {
+        let tag = tag.trim_ascii();
+        if tag.is_empty() {
+            break;
+        }
+        let list = iter.next().unwrap();
+        *w += "#[inline]\n#[must_use]\npub const fn is_";
+        let mut last_end = 0;
+        for (start, part) in tag.match_indices(['.', '/']) {
+            *w += unsafe { tag.get_unchecked(last_end..start) };
+            w.push('_');
+            last_end = start + part.len();
+        }
+        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
+        *w += "(self) -> bool {\n";
+
+        let mut vals = list
+            .split_ascii_whitespace()
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0);
+        if let Some(val) = vals.next() {
+            *w += "let i = self as raw_game_event;\n";
+            *w += "i == ";
+            *w += ib.format(val);
+            for val in vals {
+                *w += " || i == ";
+                *w += ib.format(val);
+            }
+        } else {
+            *w += "false";
+        }
+        *w += "\n}\n";
+    }
+    *w += "}\n";
 }
 
 fn block_state(
@@ -1311,6 +1478,9 @@ fn block_state(
         "block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape",
     );
 
+    while wn.len() % 8 != 0 {
+        wn.push(0);
+    }
     assert_eq!(shape_repr, Repr::U16);
     *w += "const BLOCK_STATE_BOUNDS: *const u8 = ";
     *w += "unsafe { NAMES.as_ptr().add(";
@@ -1349,10 +1519,10 @@ fn block_state(
     *w += "]; ";
     *w += ib.format(size);
     *w += "] = [\n";
-    for x in (&mut iter)
-        .take(size)
-        .map(|arr| arr.split(' ').map(|x| parse_hex::<u32>(x.as_bytes()).0))
-    {
+    for x in (&mut iter).take(size).map(|arr| {
+        arr.split_ascii_whitespace()
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0)
+    }) {
         *w += "&[";
         let mut first = true;
         for x in x {
@@ -1517,16 +1687,32 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     }
     *w += "] };\n";
 
+    while w2.len() % 4 != 0 {
+        w2.push(0);
+    }
     let start = w2.len();
     w2.reserve(names.len() * 16);
     let mut offset = names.len() * 4;
+    let mut aligned_offsets = Vec::new();
+
     for val in names {
-        w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
-        offset += val.len() + 2;
+        aligned_offsets.push(offset);
+        offset += 2;
+        offset += val.len();
+        offset = (offset + 1) & !1;
     }
-    for val in names {
+    for &offset in &aligned_offsets {
+        w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
+    }
+
+    for (i, val) in names.iter().enumerate() {
         w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
         w2.extend(val.as_bytes());
+        if i < names.len() - 1 {
+            while w2.len() % 2 != 0 {
+                w2.push(0);
+            }
+        }
     }
     *w += "const N: *const u8 = ";
     if start != 0 {
