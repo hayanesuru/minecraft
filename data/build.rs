@@ -1478,7 +1478,7 @@ fn block_state(
         "block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape",
     );
 
-    while wn.len() % 8 != 0 {
+    while !wn.len().is_multiple_of(8) {
         wn.push(0);
     }
     assert_eq!(shape_repr, Repr::U16);
@@ -1687,7 +1687,7 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     }
     *w += "] };\n";
 
-    while w2.len() % 4 != 0 {
+    while !w2.len().is_multiple_of(4) {
         w2.push(0);
     }
     let start = w2.len();
@@ -1709,7 +1709,7 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
         w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
         w2.extend(val.as_bytes());
         if i < names.len() - 1 {
-            while w2.len() % 2 != 0 {
+            while !w2.len().is_multiple_of(2) {
                 w2.push(0);
             }
         }
