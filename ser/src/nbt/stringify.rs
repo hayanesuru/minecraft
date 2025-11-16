@@ -8,7 +8,7 @@ use core::ptr::NonNull;
 use smallvec::SmallVec;
 use smol_str::{SmolStr, SmolStrBuilder};
 
-const CAP: usize = 32;
+const CAP: usize = 24;
 
 #[derive(Clone, Default)]
 #[repr(transparent)]
@@ -829,15 +829,12 @@ const DELIMITER: &str = ", ";
 unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
     let mut itoa_buf = itoa::Buffer::new();
     let mut ryu_buf = ryu::Buffer::new();
-    let mut ptrs = SmallVec::<[Block; CAP]>::new();
-    let mut idxs = SmallVec::<[usize; CAP]>::new();
-    ptrs.push(Block::C(n));
-    idxs.push(0);
+    let mut ptrs = SmallVec::<[(Block, usize); CAP]>::new();
+    ptrs.push((Block::C(n), 0));
 
     buf.push('{');
     loop {
-        let ptr = ptrs.pop().unwrap_unchecked();
-        let x = idxs.pop().unwrap_unchecked();
+        let (ptr, x) = ptrs.pop().unwrap_unchecked();
         match ptr {
             Block::C(y) => {
                 let (name, tag) = match y.as_ref().get(x) {
@@ -858,8 +855,7 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                     buf.push(',');
                 }
                 buf.push('\n');
-                ptrs.push(Block::C(y));
-                idxs.push(x + 1);
+                ptrs.push((Block::C(y), x + 1));
                 for _ in 0..ptrs.len() {
                     buf.push_str(SPACE);
                 }
@@ -944,13 +940,11 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                     }
                     Tag::List(x) => {
                         buf.push('[');
-                        ptrs.push(Block::L(NonNull::new_unchecked(x as *const _ as _)));
-                        idxs.push(0);
+                        ptrs.push((Block::L(NonNull::new_unchecked(x as *const _ as _)), 0));
                     }
                     Tag::Compound(x) => {
                         buf.push('{');
-                        ptrs.push(Block::C(NonNull::new_unchecked(x as *const _ as _)));
-                        idxs.push(0);
+                        ptrs.push((Block::C(NonNull::new_unchecked(x as *const _ as _)), 0));
                     }
                 }
             }
@@ -1107,10 +1101,8 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                             if x != 0 {
                                 buf.push_str(DELIMITER);
                             }
-                            ptrs.push(Block::L(y));
-                            idxs.push(x + 1);
-                            ptrs.push(Block::L(NonNull::new_unchecked(l as *const _ as _)));
-                            idxs.push(0);
+                            ptrs.push((Block::L(y), x + 1));
+                            ptrs.push((Block::L(NonNull::new_unchecked(l as *const _ as _)), 0));
                             buf.push('[');
                             continue;
                         }
@@ -1123,10 +1115,8 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                                     buf.push_str(SPACE);
                                 }
                             }
-                            ptrs.push(Block::L(y));
-                            idxs.push(x + 1);
-                            ptrs.push(Block::C(NonNull::new_unchecked(l as *const _ as _)));
-                            idxs.push(0);
+                            ptrs.push((Block::L(y), x + 1));
+                            ptrs.push((Block::C(NonNull::new_unchecked(l as *const _ as _)), 0));
                             buf.push_str("{\n");
                             for _ in 0..=ptrs.len() {
                                 buf.push_str(SPACE);
