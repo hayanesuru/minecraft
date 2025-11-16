@@ -33,7 +33,10 @@ impl StringifyCompound {
     }
 }
 
-type E = ptr_union::Union2<NonNull<Compound>, NonNull<List>>;
+enum Block {
+    C(NonNull<Compound>),
+    L(NonNull<List>),
+}
 
 #[inline]
 fn find_ascii(n: &[u8], mut p: impl FnMut(u8) -> bool) -> Option<usize> {
@@ -149,8 +152,8 @@ fn darr(n: &mut &[u8]) -> Option<Tag> {
 unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
     let len_start = n.len();
     let mut root = Compound::default();
-    let mut ptrs = SmallVec::<[E; CAP]>::new();
-    ptrs.push(E::new_a(NonNull::new_unchecked(&mut root as *mut _)).unwrap_unchecked());
+    let mut ptrs = SmallVec::<[Block; CAP]>::new();
+    ptrs.push(Block::C(NonNull::new_unchecked(&mut root as *mut _)));
     let mut on_start = true;
     let mut on_end = false;
 
@@ -160,7 +163,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
 
         if on_start {
             on_start = false;
-            if ptr.is_a() {
+            if matches!(ptr, Block::C(..)) {
                 if n.u8()? != b'{' {
                     return None;
                 }
@@ -180,7 +183,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                 }
             }
         } else if on_end {
-        } else if ptr.is_a() {
+        } else if matches!(ptr, Block::C(..)) {
             match n.u8()? {
                 b'}' => on_end = true,
                 b',' => (),
@@ -196,7 +199,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
             dw(n);
         }
         if !on_end {
-            if ptr.is_a() {
+            if matches!(ptr, Block::C(..)) {
                 if *n.first()? == b'}' {
                     on_end = true;
                     *n = n.get_unchecked(1..);
@@ -208,9 +211,9 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
         }
         if on_end {
             on_end = false;
-            match ptr.into_a() {
-                Ok(mut x) => x.as_mut().shrink_to_fit(),
-                Err(e) => match e.into_b().unwrap_unchecked().as_mut() {
+            match ptr {
+                Block::C(mut x) => x.as_mut().shrink_to_fit(),
+                Block::L(mut x) => match x.as_mut() {
                     List::List(x) => x.shrink_to_fit(),
                     List::Compound(x) => x.shrink_to_fit(),
                     List::String(x) => x.shrink_to_fit(),
@@ -233,8 +236,8 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
             }
         }
 
-        match ptr.into_a() {
-            Ok(mut c) => {
+        match ptr {
+            Block::C(mut c) => {
                 let curr = c.as_mut();
                 let k = match *n.first()? {
                     b'\"' => dqstr2(n)?,
@@ -259,8 +262,8 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                         let (_, Tag::Compound(last)) = curr.get_unchecked_mut(index) else {
                             unreachable_unchecked()
                         };
-                        ptrs.push(E::new_a(c).unwrap_unchecked());
-                        ptrs.push(E::new_a(NonNull::new_unchecked(last)).unwrap_unchecked());
+                        ptrs.push(Block::C(c));
+                        ptrs.push(Block::C(NonNull::new_unchecked(last)));
                         on_start = true;
                     }
                     b'[' => {
@@ -272,38 +275,35 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                             let (_, Tag::List(last)) = curr.get_unchecked_mut(index) else {
                                 unreachable_unchecked()
                             };
-                            ptrs.push(E::new_a(c).unwrap_unchecked());
-                            ptrs.push(E::new_b(NonNull::new_unchecked(last)).unwrap_unchecked());
+                            ptrs.push(Block::C(c));
+                            ptrs.push(Block::L(NonNull::new_unchecked(last)));
                             on_start = true;
                         }
                     }
                     b'"' => {
                         let s = dqstr2(n)?;
                         curr.push(k, s);
-                        ptrs.push(E::new_a(c).unwrap_unchecked());
+                        ptrs.push(Block::C(c));
                     }
                     b'\'' => {
                         let s = dqstr1(n)?;
                         curr.push(k, s);
-                        ptrs.push(E::new_a(c).unwrap_unchecked());
+                        ptrs.push(Block::C(c));
                     }
                     _ => {
-                        let s = n
-                            .slice(find_ascii(n, |x| {
-                                matches!(x, b',' | b'}' | b' ' | b'\n' | b'\t' | b'\r')
-                            })?)
-                            .unwrap_unchecked();
+                        let s = n.slice(find_ascii(n, |x| {
+                            matches!(x, b',' | b'}' | b' ' | b'\n' | b'\t' | b'\r')
+                        })?)?;
                         let v = match dnum(s) {
                             Some(x) => x,
                             None => Tag::String(SmolStr::new(core::str::from_utf8_unchecked(s))),
                         };
                         curr.push(k, v);
-                        ptrs.push(E::new_a(c).unwrap_unchecked());
+                        ptrs.push(Block::C(c));
                     }
                 }
             }
-            Err(l) => {
-                let mut l = l.into_b().unwrap_unchecked();
+            Block::L(mut l) => {
                 let ch = *n.first()?;
                 if ch == b'{' {
                     if let List::None = l.as_ref() {
@@ -316,10 +316,8 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                     let index = comp.len();
                     comp.push(Compound::default());
                     let last = comp.get_unchecked_mut(index);
-                    ptrs.push(E::new_b(l).unwrap_unchecked());
-                    ptrs.push(
-                        E::new_a(NonNull::new_unchecked(last as *const _ as _)).unwrap_unchecked(),
-                    );
+                    ptrs.push(Block::L(l));
+                    ptrs.push(Block::C(NonNull::new_unchecked(last as *const _ as _)));
                     on_start = true;
                 } else if ch == b'[' {
                     if let Some(arr) = darr(n) {
@@ -353,7 +351,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                             }
                             _ => unreachable_unchecked(),
                         }
-                        ptrs.push(E::new_b(l).unwrap_unchecked());
+                        ptrs.push(Block::L(l));
                     } else {
                         if let List::None = l.as_ref() {
                             *l.as_mut() = List::List(Vec::new());
@@ -365,11 +363,8 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                         let index = list.len();
                         list.push(List::None);
                         let last = list.get_unchecked_mut(index);
-                        ptrs.push(E::new_b(l).unwrap_unchecked());
-                        ptrs.push(
-                            E::new_b(NonNull::new_unchecked(last as *const _ as _))
-                                .unwrap_unchecked(),
-                        );
+                        ptrs.push(Block::L(l));
+                        ptrs.push(Block::L(NonNull::new_unchecked(last as *const _ as _)));
                         on_start = true;
                     }
                 } else {
@@ -388,7 +383,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                                 matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
                             })?;
 
-                            let s = n.slice(i).unwrap_unchecked();
+                            let s = n.slice(i)?;
                             match dnum(s) {
                                 Some(x) => x,
                                 None => {
@@ -641,7 +636,7 @@ unsafe fn decode(n: &mut &[u8]) -> Option<(Compound, usize)> {
                     } else {
                         unreachable_unchecked()
                     }
-                    ptrs.push(E::new_b(l).unwrap_unchecked());
+                    ptrs.push(Block::L(l));
                 }
             }
         }
@@ -834,17 +829,17 @@ const DELIMITER: &str = ", ";
 unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
     let mut itoa_buf = itoa::Buffer::new();
     let mut ryu_buf = ryu::Buffer::new();
-    let mut ptrs = SmallVec::<[E; CAP]>::new();
+    let mut ptrs = SmallVec::<[Block; CAP]>::new();
     let mut idxs = SmallVec::<[usize; CAP]>::new();
-    ptrs.push(E::new_a(n).unwrap_unchecked());
+    ptrs.push(Block::C(n));
     idxs.push(0);
 
     buf.push('{');
     loop {
         let ptr = ptrs.pop().unwrap_unchecked();
         let x = idxs.pop().unwrap_unchecked();
-        match ptr.into_a() {
-            Ok(y) => {
+        match ptr {
+            Block::C(y) => {
                 let (name, tag) = match y.as_ref().get(x) {
                     Some(t) => t,
                     None => {
@@ -863,7 +858,7 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                     buf.push(',');
                 }
                 buf.push('\n');
-                ptrs.push(E::new_a(y).unwrap_unchecked());
+                ptrs.push(Block::C(y));
                 idxs.push(x + 1);
                 for _ in 0..ptrs.len() {
                     buf.push_str(SPACE);
@@ -949,22 +944,17 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                     }
                     Tag::List(x) => {
                         buf.push('[');
-                        ptrs.push(
-                            E::new_b(NonNull::new_unchecked(x as *const _ as _)).unwrap_unchecked(),
-                        );
+                        ptrs.push(Block::L(NonNull::new_unchecked(x as *const _ as _)));
                         idxs.push(0);
                     }
                     Tag::Compound(x) => {
                         buf.push('{');
-                        ptrs.push(
-                            E::new_a(NonNull::new_unchecked(x as *const _ as _)).unwrap_unchecked(),
-                        );
+                        ptrs.push(Block::C(NonNull::new_unchecked(x as *const _ as _)));
                         idxs.push(0);
                     }
                 }
             }
-            Err(y) => {
-                let y = y.into_b().unwrap_unchecked();
+            Block::L(y) => {
                 match y.as_ref() {
                     List::None => {}
                     List::Byte(x) => {
@@ -1117,12 +1107,9 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                             if x != 0 {
                                 buf.push_str(DELIMITER);
                             }
-                            ptrs.push(E::new_b(y).unwrap_unchecked());
+                            ptrs.push(Block::L(y));
                             idxs.push(x + 1);
-                            ptrs.push(
-                                E::new_b(NonNull::new_unchecked(l as *const _ as _))
-                                    .unwrap_unchecked(),
-                            );
+                            ptrs.push(Block::L(NonNull::new_unchecked(l as *const _ as _)));
                             idxs.push(0);
                             buf.push('[');
                             continue;
@@ -1136,12 +1123,9 @@ unsafe fn encode(buf: &mut String, n: NonNull<Compound>) {
                                     buf.push_str(SPACE);
                                 }
                             }
-                            ptrs.push(E::new_b(y).unwrap_unchecked());
+                            ptrs.push(Block::L(y));
                             idxs.push(x + 1);
-                            ptrs.push(
-                                E::new_a(NonNull::new_unchecked(l as *const _ as _))
-                                    .unwrap_unchecked(),
-                            );
+                            ptrs.push(Block::C(NonNull::new_unchecked(l as *const _ as _)));
                             idxs.push(0);
                             buf.push_str("{\n");
                             for _ in 0..=ptrs.len() {

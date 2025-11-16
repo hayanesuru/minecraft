@@ -15,7 +15,7 @@ macro_rules! encode_state {
 #[macro_export]
 macro_rules! decode_state {
     ($b:ident($x:expr)) => {
-        $b::decode((($x.id() - block::$b.state_index()) as _))
+        $b::decode(($x.id() - block::$b.state_index()) as _)
     };
 }
 

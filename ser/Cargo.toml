@@ -23,7 +23,6 @@ ryu = "1"
 simdutf8 = { version = "0", default-features = false }
 smol_str = { version = "0", default-features = false }
 smallvec = "1"
-ptr-union = "2"
 
 [build-dependencies]
 rustc_version = "0"
