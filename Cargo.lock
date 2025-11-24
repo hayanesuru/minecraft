@@ -31,7 +31,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "minecraft_data"
-version = "2.1.0-pre.0+1.21.11-pre2"
+version = "2.1.0-rc.0+1.21.11-pre2"
 dependencies = [
  "highway",
  "itoa",
