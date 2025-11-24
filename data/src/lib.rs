@@ -7,7 +7,10 @@ include!(concat!(env!("OUT_DIR"), "/data.rs"));
 #[macro_export]
 macro_rules! encode_state {
     ($b:ident($x:expr)) => {
-        block_state::new($x.encode() as raw_block_state + block::$b.state_index()).unwrap()
+        $crate::block_state::new(
+            $x.encode() as $crate::raw_block_state + $crate::block::$b.state_index(),
+        )
+        .unwrap()
     };
 }
 
@@ -15,7 +18,7 @@ macro_rules! encode_state {
 #[macro_export]
 macro_rules! decode_state {
     ($b:ident($x:expr)) => {
-        $b::decode(($x.id() - block::$b.state_index()) as _)
+        $crate::$b::decode(($x.id() - $crate::block::$b.state_index()) as _)
     };
 }
 
