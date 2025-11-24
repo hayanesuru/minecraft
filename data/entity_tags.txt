@@ -1,78 +1,92 @@
+accepts_iron_golem_gift
+1c 
 aquatic
-7 1a 21 26 3b 3d 66 69 7a 7d 83 84 
+7 1b 23 28 3d 3f 58 6b 6e 7f 82 88 89 98 
 arrows
-6 76 
+6 7b 
 arthropod
-b 15 28 6d 77 
+b 16 2a 72 7c 
 axolotl_always_hostiles
-24 26 3d 
+26 28 3f 
 axolotl_hunt_targets
-1a 3b 66 69 7a 7d 83 
+1b 3d 6b 6e 7f 82 88 
 beehive_inhabitors
 b 
 boat
-0 9 c 16 1f 48 4f 55 5a 78 
+0 9 c 17 21 4a 51 59 5e 7d 
+burn_in_daylight
+10 26 63 73 80 92 96 97 98 99 
 can_breathe_under_water
-5 7 10 1a 24 26 35 3b 3d 41 5e 66 69 6e 6f 7a 7b 7d 83 84 8c 8d 90 91 92 93 94 
+5 7 10 14 1b 1c 26 28 37 3d 3f 43 58 61 63 6b 6e 73 74 7f 80 82 88 89 91 92 95 96 97 98 99 9a 
 can_equip_harness
-38 
+3a 
 can_equip_saddle
-13 22 40 54 5f 6f 7c 92 
+13 14 24 42 57 58 64 74 81 97 98 
+can_float_while_ridden
+13 14 24 42 57 97 
 can_turn_in_boats
 11 
 can_wear_horse_armor
-40 
+42 97 
+can_wear_nautilus_armor
+58 98 
+candidate_for_iron_golem_gift
+1c 8b 
+cannot_be_pushed_onto_boats
+1b 1f 23 28 3d 58 6b 6e 7f 82 88 98 9b 
 deflects_projectiles
 11 
 dismounts_underwater
-13 19 22 38 40 4c 54 5f 68 77 7c 81 92 
+13 1a 24 3a 42 4e 57 64 6d 7c 81 86 97 
 fall_damage_immune
-2 a b e 11 14 19 37 38 44 4e 57 5d 5e 6b 74 8c 
+2 a b e 11 15 1a 1c 39 3a 46 50 5b 62 63 70 79 91 
 followable_friendly_mobs
-4 b 13 14 19 1c 22 34 38 3c 40 4c 54 57 5c 5d 5f 63 67 6a 6f 72 7c 86 8f 
+4 b 13 15 1a 1e 24 36 3a 3e 42 4e 57 5b 60 62 64 68 6c 6f 74 77 81 8b 94 
 freeze_hurts_extra_types
-e 4e 7c 
+e 50 81 
 freeze_immune_entity_types
-63 74 7b 8c 
+68 79 80 91 
 frog_food
-4e 70 
+50 75 
 ignores_poison_and_regen
-10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+10 14 26 43 61 63 73 74 80 91 92 95 96 97 98 99 9a 
 illager
-2c 42 62 87 
+2e 44 67 8c 
 illager_friends
-2c 42 62 87 
+2e 44 67 8c 
 immune_to_infested
-6d 
+72 
 immune_to_oozing
-70 
+75 
 impact_projectiles
-6 12 23 25 32 33 71 73 76 82 8a 8e 
+6 12 25 27 34 35 76 78 7b 87 8f 93 
 inverted_healing_and_harm
-10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+10 14 26 43 61 63 73 74 80 91 92 95 96 97 98 99 9a 
+nautilus_hostiles
+6b 
 no_anger_from_wind_charge
-10 11 15 41 6e 70 77 7b 91 
+10 11 16 43 73 75 7c 80 96 
 non_controlling_rider
-4e 70 
+50 75 
 not_scary_for_pufferfish
-1a 21 26 3b 3d 66 69 7a 7d 83 84 
+1b 23 28 3d 3f 58 6b 6e 7f 82 88 89 98 
 powder_snow_walkable_mobs
-28 34 67 6d 
+2a 36 6c 72 
 raiders
-2c 42 62 68 87 8b 
+2e 44 67 6d 8c 90 
 redirectable_projectile
-12 32 8a 
+12 34 8f 
 sensitive_to_bane_of_arthropods
-b 15 28 6d 77 
+b 16 2a 72 7c 
 sensitive_to_impaling
-7 1a 21 26 3b 3d 66 69 7a 7d 83 84 
+7 1b 23 28 3d 3f 58 6b 6e 7f 82 88 89 98 
 sensitive_to_smite
-10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+10 14 26 43 61 63 73 74 80 91 92 95 96 97 98 99 9a 
 skeletons
-10 6e 6f 7b 8d 
+10 61 73 74 80 92 
 undead
-10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+10 14 26 43 61 63 73 74 80 91 92 95 96 97 98 99 9a 
 wither_friends
-10 24 41 5e 6e 6f 7b 8c 8d 90 91 92 93 94 
+10 14 26 43 61 63 73 74 80 91 92 95 96 97 98 99 9a 
 zombies
-24 41 90 91 92 93 94 
+14 26 43 95 96 97 98 99 9a 

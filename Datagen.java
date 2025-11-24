@@ -1,23 +1,31 @@
+package hayanesuru.ya;
+
 import it.unimi.dsi.fastutil.doubles.Double2IntOpenHashMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.Float2IntOpenHashMap;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntComparators;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import net.minecraft.SharedConstants;
-import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.IdMap;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.PacketType;
 import net.minecraft.network.protocol.configuration.ConfigurationProtocols;
 import net.minecraft.network.protocol.game.GameProtocols;
 import net.minecraft.network.protocol.handshake.HandshakeProtocols;
 import net.minecraft.network.protocol.login.LoginProtocols;
 import net.minecraft.network.protocol.status.StatusProtocols;
+import net.minecraft.server.WorldStem;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.EmptyBlockGetter;
@@ -28,18 +36,20 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.validation.ContentValidationException;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
-public class Datagen {
+public final class Datagen {
     private static final String STRING = "str";
     private static final String INTEGER = "u32";
     private static final String INTEGER_ARR = "[u32]";
@@ -47,7 +57,7 @@ public class Datagen {
     private static final char NL = '\n';
     private static final char SP = ' ';
 
-    public static void start() throws IOException {
+    public static void start(WorldStem stem) throws IOException, ContentValidationException {
         var b = new StringBuilder(0x10000);
 
         b.setLength(0);
@@ -78,7 +88,46 @@ public class Datagen {
         item(b);
         Files.writeString(Path.of("item.txt"), b.toString());
 
+        var access = stem.registries().compositeAccess();
+
         b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.BLOCK));
+        Files.writeString(Path.of("block_tags.txt"), b.toString());
+
+        b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.ITEM));
+        Files.writeString(Path.of("item_tags.txt"), b.toString());
+
+        b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.ENTITY_TYPE));
+        Files.writeString(Path.of("entity_tags.txt"), b.toString());
+
+        b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.GAME_EVENT));
+        Files.writeString(Path.of("game_event_tags.txt"), b.toString());
+    }
+
+    private static <E> void tags(final StringBuilder b, final Registry<@NotNull E> registryLookup) {
+        IntArrayList l = new IntArrayList();
+        @SuppressWarnings("unchecked")
+        HolderSet.Named<@NotNull E>[] a = registryLookup.listTags().toArray(HolderSet.Named[]::new);
+        ObjectArrays.quickSort(a, Comparator.comparing(j -> j.key().location().getPath()));
+        for (final HolderSet.Named<@NotNull E> tag : a) {
+            b.append(tag.key().location().getPath());
+            b.append(NL);
+            for (final Holder<@NotNull E> holder : tag) {
+                var n = holder.value();
+                l.add(registryLookup.getIdOrThrow(n));
+            }
+            l.unstableSort(IntComparators.NATURAL_COMPARATOR);
+            var raw = l.elements();
+            for (int i = 0, j = l.size(); i < j; i++) {
+                b.append(ih(raw[i]));
+                b.append(' ');
+            }
+            l.clear();
+            b.append(NL);
+        }
     }
 
     private static void version(StringBuilder b) {
@@ -90,12 +139,12 @@ public class Datagen {
 
     private static void registries(StringBuilder b) {
         for (var registry : BuiltInRegistries.REGISTRY) {
-            writeHead(b, registry.key().location().getPath(), STRING, registry.size());
+            writeHead(b, registry.key().identifier().getPath(), STRING, registry.size());
             write_registry(b, registry);
         }
     }
 
-    private static <T> void write_registry(StringBuilder b, Registry<T> registry) {
+    private static <T> void write_registry(StringBuilder b, Registry<@NotNull T> registry) {
         for (final T t : registry) {
             b.append(Objects.requireNonNull(registry.getKey(t)).getPath());
             b.append(NL);
@@ -608,7 +657,7 @@ public class Datagen {
         b.append(NL);
     }
 
-    private static <T> void writeRl(StringBuilder b, String name, IdMap<T> registry, Function<T, Integer> function) {
+    private static <T> void writeRl(StringBuilder b, String name, IdMap<@NotNull T> registry, Function<T, Integer> function) {
         writeHead(b, name, "u32+rle", registry.size());
         int ncount = 0;
         int nval = 0;
@@ -649,7 +698,7 @@ public class Datagen {
         return Integer.toHexString(x);
     }
 
-    private record IntegerIdMap(IntArrayList bx) implements IdMap<Integer> {
+    private record IntegerIdMap(IntArrayList bx) implements IdMap<@NotNull Integer> {
         @Override
         public @NotNull Iterator<Integer> iterator() {
             return bx.intIterator();
