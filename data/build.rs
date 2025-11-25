@@ -183,17 +183,17 @@ fn registries<'a>(
         }
 
         *w += "}\n";
-        *w += "unsafe impl ::mser::Write for ";
+        *w += "impl ::mser::Write for ";
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
-        *w += "unsafe fn sz(&self) -> usize {\n";
+        *w += "fn sz(&self) -> usize {\n";
         if size <= V7MAX {
             *w += "1usize";
         } else if size <= V21MAX {
-            *w += "unsafe { ::mser::V21(*self as u32).sz() }";
+            *w += "::mser::V21(*self as u32).sz()";
         } else {
-            *w += "unsafe { ::mser::V32(*self as u32).sz() }";
+            *w += "::mser::V32(*self as u32).sz()";
         }
         *w += "\n}\n";
         *w += "#[inline]\n";
@@ -206,11 +206,11 @@ fn registries<'a>(
             *w += "unsafe { ::mser::Write::write(&::mser::V32(*self as u32), w); }";
         }
         *w += "\n}\n}\n";
-        *w += "impl ::mser::Read for ";
+        *w += "impl ::mser::Read<'_> for ";
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
-        *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
+        *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
         if size <= V7MAX {
             *w += "let x = <u8 as ::mser::Read>::read(n)?;\n";
         } else if size <= V21MAX {
@@ -224,9 +224,10 @@ fn registries<'a>(
             *w += repr.to_int();
             *w += ";\n";
         }
-        *w += "Self::new(x)";
-        *w += "}\n";
-        *w += "}\n";
+        *w += "match Self::new(x) {\n";
+        *w += "    Some(x) => Ok(x),\n";
+        *w += "    None => Err(::mser::Error),\n";
+        *w += "}\n}\n}\n";
         *w += "impl ";
         *w += &name;
         *w += " {\n";
@@ -259,13 +260,13 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "#[inline]\n#[must_use]\n";
     *w += "pub const fn new(n: ";
     *w += repr.to_int();
-    *w += ") -> Option<Self> {\n";
+    *w += ") -> ::core::option::Option<Self> {\n";
     if size == 1 {
         *w += "if ::mser::likely(n == Self::MAX) {\n";
     } else {
         *w += "if ::mser::likely(n <= Self::MAX) {\n";
     }
-    *w += "unsafe {\nSome(::core::mem::transmute::<";
+    *w += "unsafe {\ncore::option::Option::Some(::core::mem::transmute::<";
     *w += repr.to_int();
     *w += ", Self>(n))";
     *w += "\n}\n";
@@ -1245,17 +1246,17 @@ fn block_state(
     struct_head(w, bsrepr, bsname);
     impl_common(w, bsname, bsrepr, bssize, 0);
 
-    *w += "unsafe impl ::mser::Write for ";
+    *w += "impl ::mser::Write for ";
     *w += bsname;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "unsafe fn sz(&self) -> usize {\n";
+    *w += "fn sz(&self) -> usize {\n";
     if bssize <= V7MAX {
         *w += "1usize";
     } else if bssize <= V21MAX {
-        *w += "unsafe { ::mser::V21(self.0 as u32).sz() }";
+        *w += "::mser::V21(self.0 as u32).sz()";
     } else {
-        *w += "unsafe { ::mser::V32(self.0 as u32).sz() }";
+        *w += "::mser::V32(self.0 as u32).sz()";
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
@@ -1269,11 +1270,11 @@ fn block_state(
     }
     *w += "\n}\n}\n";
 
-    *w += "impl ::mser::Read for ";
+    *w += "impl ::mser::Read<'_> for ";
     *w += bsname;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
+    *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
     *w += "let x = <";
     if bssize <= V7MAX {
         *w += "u8 as ::mser::Read>::read(n)?";
@@ -1285,8 +1286,10 @@ fn block_state(
     *w += " as ";
     *w += bsrepr.to_int();
     *w += ";\n";
-    *w += "Self::new(x)";
-    *w += "\n}\n}\n";
+    *w += "match Self::new(x) {\n";
+    *w += "    Some(x) => Ok(x),\n";
+    *w += "    None => Err(::mser::Error),\n";
+    *w += "}\n}\n}\n";
 
     let reprblock = Repr::new(offsets.len());
     *w += "const BLOCK_STATE_TO_BLOCK: *const [u8; ";
@@ -1760,7 +1763,7 @@ let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as
 }
 #[inline]
 #[must_use]
-pub fn parse(name: &[u8]) -> Option<Self> {
+pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {
 match Self::M.get(name) {
 Some(x) => unsafe { Some(::core::mem::transmute::<raw_";
     *w += name;

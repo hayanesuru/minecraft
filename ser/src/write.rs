@@ -8,7 +8,7 @@ use core::ptr::NonNull;
 
 macro_rules! primitive {
     ($type:ty) => {
-        unsafe impl Write for $type {
+        impl Write for $type {
             #[inline(always)]
             unsafe fn write(&self, w: &mut UnsafeWriter) {
                 unsafe {
@@ -17,7 +17,7 @@ macro_rules! primitive {
             }
 
             #[inline(always)]
-            unsafe fn sz(&self) -> usize {
+            fn sz(&self) -> usize {
                 ::core::mem::size_of::<Self>()
             }
         }
@@ -26,7 +26,7 @@ macro_rules! primitive {
 
 macro_rules! non_zero {
     ($type:ty) => {
-        unsafe impl Write for $type {
+        impl Write for $type {
             #[inline(always)]
             unsafe fn write(&self, w: &mut UnsafeWriter) {
                 unsafe {
@@ -35,7 +35,7 @@ macro_rules! non_zero {
             }
 
             #[inline(always)]
-            unsafe fn sz(&self) -> usize {
+            fn sz(&self) -> usize {
                 ::core::mem::size_of::<Self>()
             }
         }
@@ -47,7 +47,7 @@ pub struct Write2<'a, A: ?Sized, B: ?Sized> {
     pub b: &'a B,
 }
 
-unsafe impl<A: Write + ?Sized, B: Write + ?Sized> Write for Write2<'_, A, B> {
+impl<A: Write + ?Sized, B: Write + ?Sized> Write for Write2<'_, A, B> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -57,8 +57,8 @@ unsafe impl<A: Write + ?Sized, B: Write + ?Sized> Write for Write2<'_, A, B> {
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
-        unsafe { self.a.sz() + self.b.sz() }
+    fn sz(&self) -> usize {
+        self.a.sz() + self.b.sz()
     }
 }
 
@@ -68,7 +68,7 @@ pub struct Write3<'a, A: ?Sized, B: ?Sized, C: ?Sized> {
     pub c: &'a C,
 }
 
-unsafe impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'_, A, B, C> {
+impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'_, A, B, C> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -79,36 +79,36 @@ unsafe impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for W
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
-        unsafe { self.a.sz() + self.b.sz() + self.c.sz() }
+    fn sz(&self) -> usize {
+        self.a.sz() + self.b.sz() + self.c.sz()
     }
 }
 
-unsafe impl<T: Write> Write for alloc::slice::Iter<'_, T> {
+impl<T: Write> Write for alloc::slice::Iter<'_, T> {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.clone().for_each(|x| unsafe { x.write(w) });
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
-        self.clone().map(|x| unsafe { x.sz() }).sum()
+    fn sz(&self) -> usize {
+        self.clone().map(|x| x.sz()).sum()
     }
 }
 
-unsafe impl<T: Write> Write for alloc::slice::IterMut<'_, T> {
+impl<T: Write> Write for alloc::slice::IterMut<'_, T> {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.as_slice().iter().for_each(|x| unsafe { x.write(w) });
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
-        self.as_slice().iter().map(|x| unsafe { x.sz() }).sum()
+    fn sz(&self) -> usize {
+        self.as_slice().iter().map(|x| x.sz()).sum()
     }
 }
 
-unsafe impl Write for bool {
+impl Write for bool {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -117,12 +117,12 @@ unsafe impl Write for bool {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1
     }
 }
 
-unsafe impl Write for NonZeroI8 {
+impl Write for NonZeroI8 {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -131,12 +131,12 @@ unsafe impl Write for NonZeroI8 {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1
     }
 }
 
-unsafe impl Write for NonZeroU8 {
+impl Write for NonZeroU8 {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -145,12 +145,12 @@ unsafe impl Write for NonZeroU8 {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1
     }
 }
 
-unsafe impl Write for u8 {
+impl Write for u8 {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -159,12 +159,12 @@ unsafe impl Write for u8 {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1
     }
 }
 
-unsafe impl Write for i8 {
+impl Write for i8 {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -173,7 +173,7 @@ unsafe impl Write for i8 {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1
     }
 }
@@ -195,7 +195,7 @@ non_zero!(NonZeroU32);
 non_zero!(NonZeroU64);
 non_zero!(NonZeroU128);
 
-unsafe impl Write for str {
+impl Write for str {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -204,12 +204,12 @@ unsafe impl Write for str {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         str::len(self)
     }
 }
 
-unsafe impl Write for [u8] {
+impl Write for [u8] {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -218,12 +218,12 @@ unsafe impl Write for [u8] {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         <[u8]>::len(self)
     }
 }
 
-unsafe impl Write for &str {
+impl Write for &str {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -232,24 +232,24 @@ unsafe impl Write for &str {
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         str::len(self)
     }
 }
 
-unsafe impl Write for uuid::Uuid {
+impl Write for uuid::Uuid {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe { w.write(self.as_bytes()) }
     }
 
     #[inline(always)]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         16
     }
 }
 
-unsafe impl Write for &[u8] {
+impl Write for &[u8] {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -258,12 +258,12 @@ unsafe impl Write for &[u8] {
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         <[u8]>::len(self)
     }
 }
 
-unsafe impl<T: Write + ?Sized> Write for NonNull<T> {
+impl<T: Write + ?Sized> Write for NonNull<T> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -272,12 +272,12 @@ unsafe impl<T: Write + ?Sized> Write for NonNull<T> {
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         unsafe { self.as_ref().sz() }
     }
 }
 
-unsafe impl<T: ?Sized + Write + ToOwned> Write for Cow<'_, T> {
+impl<T: ?Sized + Write + ToOwned> Write for Cow<'_, T> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -286,12 +286,12 @@ unsafe impl<T: ?Sized + Write + ToOwned> Write for Cow<'_, T> {
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
-        unsafe { <Self as AsRef<T>>::as_ref(self).sz() }
+    fn sz(&self) -> usize {
+        <Self as AsRef<T>>::as_ref(self).sz()
     }
 }
 
-unsafe impl<T: Write> Write for Option<T> {
+impl<T: Write> Write for Option<T> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -308,12 +308,10 @@ unsafe impl<T: Write> Write for Option<T> {
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
-        unsafe {
-            match self.as_ref() {
-                Some(x) => 1 + x.sz(),
-                None => 1,
-            }
+    fn sz(&self) -> usize {
+        match self.as_ref() {
+            Some(x) => 1 + x.sz(),
+            None => 1,
         }
     }
 }

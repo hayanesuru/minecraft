@@ -34,7 +34,7 @@ pub fn serialize_struct(
 
     Ok(quote! {
         #[automatically_derived]
-        unsafe impl #impl_generics #cratename::Write for #name #ty_generics #where_clause {
+        impl #impl_generics #cratename::Write for #name #ty_generics #where_clause {
             #[inline]
             unsafe fn write(&self, __w: &mut #cratename::UnsafeWriter) {
                 unsafe {
@@ -43,12 +43,10 @@ pub fn serialize_struct(
             }
 
             #[inline]
-            unsafe fn sz(&self) -> usize {
-                unsafe {
-                    let mut __l = 0usize;
-                    #(__l += #sz;)*
-                    __l
-                }
+            fn sz(&self) -> usize {
+                let mut __l = 0usize;
+                #(__l += #sz;)*
+                __l
             }
         }
     })
@@ -125,7 +123,7 @@ pub fn serialize_enum(
 
     Ok(quote! {
         #[automatically_derived]
-        unsafe impl #impl_generics #cratename::Write for #name #ty_generics #where_clause {
+        impl #impl_generics #cratename::Write for #name #ty_generics #where_clause {
             #[inline]
             unsafe fn write(&self, w: &mut #cratename::UnsafeWriter) {
                 unsafe {
@@ -134,10 +132,8 @@ pub fn serialize_enum(
             }
 
             #[inline]
-            unsafe fn sz(&self) -> usize {
-                unsafe {
-                    #cratename::Write::sz(&(#repr))
-                }
+            fn sz(&self) -> usize {
+                #cratename::Write::sz(&(#repr))
             }
         }
     })

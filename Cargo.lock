@@ -3,21 +3,6 @@
 version = 4
 
 [[package]]
-name = "borsh"
-version = "1.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad8646f98db542e39fc66e68a20b2144f6a732636df7c2354e74645faaa433ce"
-dependencies = [
- "cfg_aliases",
-]
-
-[[package]]
-name = "cfg_aliases"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
-
-[[package]]
 name = "highway"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -31,7 +16,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "minecraft_data"
-version = "2.1.0-rc.0+1.21.11-pre2"
+version = "2.1.0-rc.1+1.21.11-pre2"
 dependencies = [
  "highway",
  "itoa",
@@ -41,21 +26,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "minecraft_data_protocol"
+version = "0.1.0-rc.0+1.21.11-pre2"
+dependencies = [
+ "minecraft_data",
+ "mser",
+ "mser_macro",
+]
+
+[[package]]
 name = "mser"
-version = "2.0.9"
+version = "2.1.0-rc.0"
 dependencies = [
  "itoa",
  "rustc_version",
  "ryu",
- "simdutf8",
  "smallvec",
- "smol_str",
  "uuid",
 ]
 
 [[package]]
 name = "mser_macro"
-version = "2.0.4"
+version = "2.1.0-rc.0"
 dependencies = [
  "itoa",
  "mser",
@@ -110,46 +102,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56e6fa9c48d24d85fb3de5ad847117517440f6beceb7798af16b4a87d616b8d0"
 
 [[package]]
-name = "serde"
-version = "1.0.219"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
-dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde_derive"
-version = "1.0.219"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "simdutf8"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
-
-[[package]]
 name = "smallvec"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
-
-[[package]]
-name = "smol_str"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9676b89cd56310a87b93dec47b11af744f34d5fc9f367b829474eec0a891350d"
-dependencies = [
- "borsh",
- "serde",
-]
 
 [[package]]
 name = "syn"

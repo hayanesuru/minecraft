@@ -1,19 +1,19 @@
 [package]
 name = "minecraft_data"
-version = "2.1.0-rc.0+1.21.11-pre2"
+version = "2.1.0-rc.1+1.21.11-pre2"
 description = "minecraft data"
 edition.workspace = true
 authors.workspace = true
 readme = "README.md"
 license.workspace = true
 repository.workspace = true
-categories = ["no-std"]
+categories = ["game-engines", "no-std"]
 keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_data"
 
 [features]
 default = []
-std = ["highway/std", "mser/std"]
+std = ["highway/std"]
 
 [dependencies]
 mser = { workspace = true, default-features = false }

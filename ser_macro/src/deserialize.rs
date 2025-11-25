@@ -3,23 +3,32 @@ use quote::quote;
 
 pub fn deserialize_struct(
     input: syn::DeriveInput,
-    cratename: syn::Path,
+    mser: syn::Path,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let generics = &input.generics;
+    let has_lifetimes = generics.lifetimes().next().is_some();
+    let tok = if has_lifetimes {
+        quote!(<'__a>)
+    } else {
+        quote!()
+    };
+    let type_params1 = generics.lifetimes();
+    let type_params2 = generics.type_params();
+    let type_params3 = generics.const_params();
     let fields = match &input.data {
         syn::Data::Struct(data) => &data.fields,
         _ => unreachable!(),
     };
     let read = fields
         .members()
-        .map(|field| quote!(#field: #cratename::Read::read(r)?,));
+        .map(|field| quote!(#field: #mser::Read::read(r)?,));
     Ok(quote! {
         #[automatically_derived]
-        impl #impl_generics #cratename::Read for #name #ty_generics #where_clause {
+        impl <'__a, #(#type_params1),* #(#type_params2),* #(#type_params3),*> #mser::Read<'__a> for #name #tok {
             #[inline]
-            fn read(r: &mut &[u8]) -> Option<Self> {
-                Some(Self {
+            fn read(r: &mut &'__a [u8]) -> ::core::result::Result<Self, ::mser::Error> {
+                ::core::result::Result::Ok(Self {
                     #(#read)*
                 })
             }
@@ -29,7 +38,7 @@ pub fn deserialize_struct(
 
 pub fn deserialize_enum(
     input: syn::DeriveInput,
-    cratename: syn::Path,
+    mser: syn::Path,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
     let mut read = None;
@@ -67,21 +76,21 @@ pub fn deserialize_enum(
                     if varint && len > mser::V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <#cratename::V21 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V21 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u8, Self>(x.0 as u8) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u8, Self>(x.0 as u8) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u8, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u8, Self>(0) ) }
                             }
                         });
                     } else {
                         let len = len as u8;
                         read = Some(quote! {
-                            let x = <u8 as #cratename::Read>::read(r)?;
+                            let x = <u8 as #mser::Read>::read(r)?;
                             if x < #len {
-                                unsafe { Some(::core::mem::transmute::<u8, Self>(x) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u8, Self>(x) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u8, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u8, Self>(0) ) }
                             }
                         });
                     }
@@ -89,31 +98,31 @@ pub fn deserialize_enum(
                     if varint && len > mser::V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <#cratename::V21 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V21 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u16, Self>(x.0 as u16) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u16, Self>(x.0 as u16) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u16, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u16, Self>(0) ) }
                             }
                         });
                     } else if varint {
                         let len = len as u8;
                         read = Some(quote! {
-                            let x = <u8 as #cratename::Read>::read(r)?;
+                            let x = <u8 as #mser::Read>::read(r)?;
                             if x < #len {
-                                unsafe { Some(::core::mem::transmute::<u16, Self>(x as u16) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u16, Self>(x as u16) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u16, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u16, Self>(0) ) }
                             }
                         });
                     } else {
                         let len = len as u16;
                         read = Some(quote! {
-                            let x = <u16 as #cratename::Read>::read(r)?;
+                            let x = <u16 as #mser::Read>::read(r)?;
                             if x < #len {
-                                unsafe { Some(::core::mem::transmute::<u16, Self>(x) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u16, Self>(x) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u16, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u16, Self>(0) ) }
                             }
                         });
                     }
@@ -121,31 +130,31 @@ pub fn deserialize_enum(
                     if varint && len > mser::V21MAX {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <#cratename::V32 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V32 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u32, Self>(x.0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(x.0) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u32, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(0) ) }
                             }
                         });
                     } else if varint && len > mser::V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <#cratename::V21 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V21 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u32, Self>(x.0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(x.0) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u32, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(0) ) }
                             }
                         });
                     } else {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <u32 as #cratename::Read>::read(r)?;
+                            let x = <u32 as #mser::Read>::read(r)?;
                             if x < #len {
-                                unsafe { Some(::core::mem::transmute::<u32, Self>(x) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(x) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u32, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(0) ) }
                             }
                         });
                     }
@@ -153,51 +162,51 @@ pub fn deserialize_enum(
                     if varint && len > u32::MAX as usize {
                         let len = len as u64;
                         read = Some(quote! {
-                            let x = <#cratename::V64 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V64 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(x.0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(x.0) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
                     } else if varint && len > mser::V21MAX {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <#cratename::V32 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V32 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(x.0 as u64) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(x.0 as u64) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
                     } else if varint && len > mser::V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
-                            let x = <#cratename::V21 as #cratename::Read>::read(r)?;
+                            let x = <#mser::V21 as #mser::Read>::read(r)?;
                             if x.0 < #len {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(x.0 as u64) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(x.0 as u64) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
                     } else if varint {
                         let len = len as u8;
                         read = Some(quote! {
-                            let x = <u8 as #cratename::Read>::read(r)?;
+                            let x = <u8 as #mser::Read>::read(r)?;
                             if x < #len {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(x as u64) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(x as u64) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
                     } else {
                         let len = len as u64;
                         read = Some(quote! {
-                            let x = <u64 as #cratename::Read>::read(r)?;
+                            let x = <u64 as #mser::Read>::read(r)?;
                             if x < #len {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(x) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(x) ) }
                             } else {
-                                unsafe { Some(::core::mem::transmute::<u64, Self>(0) ) }
+                                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
                     }
@@ -217,13 +226,22 @@ pub fn deserialize_enum(
     }
     let read =
         read.ok_or_else(|| syn::Error::new_spanned(&input, "expected `#[repr(...)]` attribute"))?;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
+    let generics = &input.generics;
+    let has_lifetimes = generics.lifetimes().next().is_some();
+    let tok = if has_lifetimes {
+        quote!(<'__a>)
+    } else {
+        quote!()
+    };
+    let type_params2 = generics.type_params();
+    let type_params3 = generics.const_params();
 
     Ok(quote! {
         #[automatically_derived]
-        impl #impl_generics #cratename::Read for #name #ty_generics #where_clause {
+        impl <'__a, #(#type_params2),* #(#type_params3),*> #mser::Read<'__a> for #name #tok {
             #[inline]
-            fn read(r: &mut &[u8]) -> Option<Self> {
+            fn read(r: &mut &'__a [u8]) -> ::core::result::Result<Self, ::mser::Error> {
                 #read
             }
         }

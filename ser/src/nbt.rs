@@ -6,10 +6,10 @@ mod stringify;
 pub use self::list::List;
 use self::string::UTF8Tag;
 pub use self::stringify::StringifyCompound;
-use crate::{Bytes, Read, UnsafeWriter, Write};
-use alloc::sync::Arc;
+use crate::nbt::mutf8::is_mutf8;
+use crate::str::SmolStr;
+use crate::{Bytes, Error, Read, UnsafeWriter, Write};
 use alloc::vec::Vec;
-use smol_str::SmolStr;
 
 pub const END: u8 = 0;
 pub const BYTE: u8 = 1;
@@ -41,35 +41,37 @@ pub enum Tag {
     Compound(Compound),
 }
 
-unsafe impl Write for Tag {
+impl Write for Tag {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        w.write_byte(self.id());
-        match self {
-            Tag::Byte(x) => x.write(w),
-            Tag::Short(x) => x.write(w),
-            Tag::Int(x) => x.write(w),
-            Tag::Long(x) => x.write(w),
-            Tag::Float(x) => x.write(w),
-            Tag::Double(x) => x.write(w),
-            Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).write(w) },
-            Tag::ByteArray(x) => {
-                (x.len() as u32).write(w);
-                w.write(x);
+        unsafe {
+            w.write_byte(self.id());
+            match self {
+                Tag::Byte(x) => x.write(w),
+                Tag::Short(x) => x.write(w),
+                Tag::Int(x) => x.write(w),
+                Tag::Long(x) => x.write(w),
+                Tag::Float(x) => x.write(w),
+                Tag::Double(x) => x.write(w),
+                Tag::String(x) => UTF8Tag(x).write(w),
+                Tag::ByteArray(x) => {
+                    (x.len() as u32).write(w);
+                    w.write(x);
+                }
+                Tag::IntArray(x) => {
+                    (x.len() as u32).write(w);
+                    x.iter().write(w);
+                }
+                Tag::LongArray(x) => {
+                    (x.len() as u32).write(w);
+                    x.iter().write(w);
+                }
+                Tag::List(x) => x.write(w),
+                Tag::Compound(x) => x.write(w),
             }
-            Tag::IntArray(x) => {
-                (x.len() as u32).write(w);
-                x.iter().write(w);
-            }
-            Tag::LongArray(x) => {
-                (x.len() as u32).write(w);
-                x.iter().write(w);
-            }
-            Tag::List(x) => x.write(w),
-            Tag::Compound(x) => x.write(w),
         }
     }
 
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1 + match self {
             Tag::Byte(_) => 1,
             Tag::Short(_) => 2,
@@ -77,7 +79,7 @@ unsafe impl Write for Tag {
             Tag::Long(_) => 8,
             Tag::Float(_) => 4,
             Tag::Double(_) => 8,
-            Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).sz() },
+            Tag::String(x) => UTF8Tag(x).sz(),
             Tag::ByteArray(x) => 4 + x.len(),
             Tag::IntArray(x) => 4 + x.len() * 4,
             Tag::LongArray(x) => 4 + x.len() * 8,
@@ -163,10 +165,10 @@ impl From<Vec<u8>> for Tag {
     }
 }
 
-impl From<Arc<str>> for Tag {
+impl From<alloc::sync::Arc<str>> for Tag {
     #[inline]
-    fn from(value: Arc<str>) -> Self {
-        Self::String(SmolStr::from(value))
+    fn from(value: alloc::sync::Arc<str>) -> Self {
+        Self::String(SmolStr::new(value))
     }
 }
 
@@ -187,7 +189,7 @@ impl<'a> From<&'a mut str> for Tag {
 impl<'a> From<&'a alloc::string::String> for Tag {
     #[inline]
     fn from(value: &'a alloc::string::String) -> Self {
-        Self::String(SmolStr::from(value))
+        Self::String(SmolStr::new(value))
     }
 }
 
@@ -202,6 +204,20 @@ impl From<alloc::boxed::Box<str>> for Tag {
     #[inline]
     fn from(value: alloc::boxed::Box<str>) -> Self {
         Self::String(SmolStr::from(value))
+    }
+}
+
+impl From<alloc::borrow::Cow<'_, str>> for Tag {
+    #[inline]
+    fn from(value: alloc::borrow::Cow<str>) -> Self {
+        Self::String(SmolStr::from(value))
+    }
+}
+
+impl From<alloc::rc::Rc<str>> for Tag {
+    #[inline]
+    fn from(value: alloc::rc::Rc<str>) -> Self {
+        Self::String(SmolStr::new(&*value))
     }
 }
 
@@ -258,44 +274,44 @@ impl AsMut<[(SmolStr, Tag)]> for Compound {
     }
 }
 
-unsafe impl Write for Compound {
+impl Write for Compound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        for (name, tag) in &self.0 {
-            w.write_byte(tag.id());
-            unsafe {
-                UTF8Tag::new_unchecked(name.as_bytes()).write(w);
+        unsafe {
+            for (name, tag) in &self.0 {
+                w.write_byte(tag.id());
+                UTF8Tag(name).write(w);
+                match tag {
+                    Tag::Byte(x) => x.write(w),
+                    Tag::Short(x) => x.write(w),
+                    Tag::Int(x) => x.write(w),
+                    Tag::Long(x) => x.write(w),
+                    Tag::Float(x) => x.write(w),
+                    Tag::Double(x) => x.write(w),
+                    Tag::String(x) => UTF8Tag(x).write(w),
+                    Tag::ByteArray(x) => {
+                        (x.len() as u32).write(w);
+                        w.write(x)
+                    }
+                    Tag::IntArray(x) => {
+                        (x.len() as u32).write(w);
+                        x.iter().for_each(|&x| x.write(w));
+                    }
+                    Tag::LongArray(x) => {
+                        (x.len() as u32).write(w);
+                        x.iter().for_each(|&x| x.write(w));
+                    }
+                    Tag::List(x) => x.write(w),
+                    Tag::Compound(x) => x.write(w),
+                }
             }
-            match tag {
-                Tag::Byte(x) => x.write(w),
-                Tag::Short(x) => x.write(w),
-                Tag::Int(x) => x.write(w),
-                Tag::Long(x) => x.write(w),
-                Tag::Float(x) => x.write(w),
-                Tag::Double(x) => x.write(w),
-                Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).write(w) },
-                Tag::ByteArray(x) => {
-                    (x.len() as u32).write(w);
-                    w.write(x)
-                }
-                Tag::IntArray(x) => {
-                    (x.len() as u32).write(w);
-                    x.iter().for_each(|&x| x.write(w));
-                }
-                Tag::LongArray(x) => {
-                    (x.len() as u32).write(w);
-                    x.iter().for_each(|&x| x.write(w));
-                }
-                Tag::List(x) => x.write(w),
-                Tag::Compound(x) => x.write(w),
-            }
+            w.write_byte(END);
         }
-        w.write_byte(END);
     }
 
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += unsafe { UTF8Tag::new_unchecked(name.as_bytes()).sz() };
+            w += UTF8Tag(name).sz();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -303,7 +319,7 @@ unsafe impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => unsafe { UTF8Tag::new_unchecked(x.as_bytes()).sz() },
+                Tag::String(x) => UTF8Tag(x).sz(),
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
@@ -318,54 +334,56 @@ unsafe impl Write for Compound {
 #[derive(Clone)]
 pub struct NamedCompound(pub SmolStr, pub Compound);
 
-impl Read for NamedCompound {
+impl Read<'_> for NamedCompound {
     #[inline]
-    fn read(n: &mut &[u8]) -> Option<Self> {
+    fn read(n: &mut &[u8]) -> Result<Self, Error> {
         if n.u8()? != COMPOUND {
-            return None;
+            return Err(Error);
         }
-        Some(Self(decode_string(n)?, decode1(n)?))
+        Ok(Self(decode_string(n)?, decode1(n)?))
     }
 }
 
-unsafe impl Write for NamedCompound {
+impl Write for NamedCompound {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        w.write_byte(COMPOUND);
         unsafe {
-            UTF8Tag::new_unchecked(self.0.as_bytes()).write(w);
+            w.write_byte(COMPOUND);
+            UTF8Tag(self.0.as_str()).write(w);
+            self.1.write(w);
         }
-        self.1.write(w);
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
-        1 + unsafe { Write::sz(&UTF8Tag::new_unchecked(self.0.as_bytes())) } + Write::sz(&self.1)
+    fn sz(&self) -> usize {
+        1 + Write::sz(&UTF8Tag(self.0.as_str())) + Write::sz(&self.1)
     }
 }
 
 #[derive(Clone)]
 pub struct UnamedCompound(pub Compound);
 
-impl Read for UnamedCompound {
+impl Read<'_> for UnamedCompound {
     #[inline]
-    fn read(n: &mut &[u8]) -> Option<Self> {
+    fn read(n: &mut &[u8]) -> Result<Self, Error> {
         if n.u8()? != COMPOUND {
-            return None;
+            return Err(Error);
         }
-        Some(Self(decode1(n)?))
+        Ok(Self(decode1(n)?))
     }
 }
 
-unsafe impl Write for UnamedCompound {
+impl Write for UnamedCompound {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        w.write_byte(COMPOUND);
-        self.0.write(w);
+        unsafe {
+            w.write_byte(COMPOUND);
+            self.0.write(w);
+        }
     }
 
     #[inline]
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         1 + Write::sz(&self.0)
     }
 }
@@ -455,7 +473,7 @@ impl Compound {
     ///
     /// [`len`]: Self::len
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> (&str, &mut Tag) {
-        let (x, y) = self.0.get_unchecked_mut(index);
+        let (x, y) = unsafe { self.0.get_unchecked_mut(index) };
         (x.as_str(), y)
     }
 
@@ -477,19 +495,19 @@ impl Compound {
 
     #[deprecated]
     #[inline]
-    pub fn decode(buf: &mut &[u8]) -> Option<Self> {
+    pub fn decode(buf: &mut &[u8]) -> Result<Self, Error> {
         match UnamedCompound::read(buf) {
-            Some(x) => Some(x.0),
-            None => None,
+            Ok(x) => Ok(x.0),
+            Err(e) => Err(e),
         }
     }
 
     #[deprecated]
     #[inline]
-    pub fn decode_named(buf: &mut &[u8]) -> Option<(SmolStr, Self)> {
+    pub fn decode_named(buf: &mut &[u8]) -> Result<(SmolStr, Self), Error> {
         match NamedCompound::read(buf) {
-            Some(x) => Some((x.0, x.1)),
-            None => None,
+            Ok(x) => Ok((x.0, x.1)),
+            Err(e) => Err(e),
         }
     }
 
@@ -532,9 +550,9 @@ impl Compound {
     }
 }
 
-impl Read for Compound {
+impl Read<'_> for Compound {
     #[inline]
-    fn read(buf: &mut &[u8]) -> Option<Self> {
+    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
         decode1(buf)
     }
 }
@@ -546,13 +564,13 @@ impl From<Vec<(SmolStr, Tag)>> for Compound {
     }
 }
 
-fn decode1(n: &mut &[u8]) -> Option<Compound> {
+fn decode1(n: &mut &[u8]) -> Result<Compound, Error> {
     let mut compound = Compound(Default::default());
     loop {
         match n.u8()? {
             END => {
                 compound.0.shrink_to_fit();
-                return Some(compound);
+                return Ok(compound);
             }
             BYTE => {
                 let k = decode_string(n)?;
@@ -619,18 +637,18 @@ fn decode1(n: &mut &[u8]) -> Option<Compound> {
                 }
                 compound.push(k, v);
             }
-            _ => return None,
+            _ => return Err(Error),
         }
     }
 }
 
 #[inline]
-pub(super) fn decode_string(b: &mut &[u8]) -> Option<SmolStr> {
+pub(super) fn decode_string(b: &mut &[u8]) -> Result<SmolStr, Error> {
     let len = b.u16()? as usize;
     let a = b.slice(len)?;
 
-    match a.is_ascii() || simdutf8::basic::from_utf8(a).is_ok() {
-        true => Some(SmolStr::new(unsafe { core::str::from_utf8_unchecked(a) })),
+    match is_mutf8(a) {
+        true => Ok(SmolStr::new(unsafe { core::str::from_utf8_unchecked(a) })),
         false => mutf8::decode(a),
     }
 }
