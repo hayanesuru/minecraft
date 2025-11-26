@@ -16,7 +16,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "minecraft_data"
-version = "2.1.0-rc.1+1.21.11-pre2"
+version = "2.1.0-rc.2+1.21.11-pre3"
 dependencies = [
  "highway",
  "itoa",
@@ -32,6 +32,7 @@ dependencies = [
  "minecraft_data",
  "mser",
  "mser_macro",
+ "uuid",
 ]
 
 [[package]]

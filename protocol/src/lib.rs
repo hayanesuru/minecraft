@@ -1,15 +1,20 @@
+#![no_std]
+
 use minecraft_data::{
     clientbound__configuration, clientbound__login, clientbound__play, clientbound__status,
     serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__play,
     serverbound__status,
 };
 use mser::{Bytes, Error, Read, Write, V21};
+use uuid::Uuid;
 
 pub mod clientbound;
 pub mod serverbound;
 
 #[macro_use]
 extern crate mser_macro;
+
+extern crate alloc;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ClientIntent {
@@ -68,7 +73,7 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
             return Err(Error);
         }
         let bytes = buf.slice(len)?;
-        let s = match std::str::from_utf8(bytes) {
+        let s = match core::str::from_utf8(bytes) {
             Ok(x) => x,
             Err(_) => return Err(Error),
         };
@@ -78,6 +83,39 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
             Err(Error)
         }
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ByteArray<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
+
+impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
+    unsafe fn write(&self, w: &mut mser::UnsafeWriter) {
+        unsafe {
+            V21(self.0.len() as u32).write(w);
+            w.write(self.0);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        V21(self.0.len() as u32).sz() + self.0.len()
+    }
+}
+
+impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let len = V21::read(buf)?.0 as usize;
+        if len > MAX {
+            return Err(Error);
+        }
+        let bytes = buf.slice(len)?;
+        Ok(ByteArray(bytes))
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameProfile<'a> {
+    pub id: Uuid,
+    pub name: Utf8<'a, 16>,
 }
 
 #[derive(Clone, Debug)]

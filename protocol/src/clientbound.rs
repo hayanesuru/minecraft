@@ -1,5 +1,6 @@
-use minecraft_data::clientbound__status;
+use minecraft_data::{clientbound__login, clientbound__status};
 
+pub mod login;
 pub mod status;
 
 macro_rules! packets {
@@ -19,4 +20,8 @@ packets! {
     clientbound__status,
     status::StatusResponse<'_> => clientbound__status::status_response,
     status::PongResponse => clientbound__status::pong_response,
+}
+packets! {
+    clientbound__login,
+    login::LoginDisconnect<'_> => clientbound__login::login_disconnect,
 }
