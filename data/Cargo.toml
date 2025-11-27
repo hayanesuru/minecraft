@@ -13,17 +13,14 @@ documentation = "https://docs.rs/minecraft_data"
 
 [features]
 default = []
-std = ["highway/std"]
 
 [dependencies]
 mser = { workspace = true, default-features = false }
-highway = { version = "1", default-features = false }
 
 [build-dependencies]
 mser = { workspace = true, default-features = false }
 itoa = "1"
 ryu = "1"
-highway = { version = "1", default-features = false }
 nested = "0.1"
 
 [package.metadata.docs.rs]

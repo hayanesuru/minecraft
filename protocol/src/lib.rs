@@ -336,6 +336,7 @@ impl PacketId for serverbound__play {}
 
 #[test]
 fn test_write() {
+    use crate::clientbound::login::LoginFinished;
     let packet: LoginFinished<'_, Global> = LoginFinished {
         game_profile: GameProfile {
             id: Uuid::nil(),

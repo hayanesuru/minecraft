@@ -24,26 +24,56 @@ macro_rules! decode_state {
 
 #[derive(Copy, Clone)]
 struct NameMap<T: 'static> {
-    key: [u64; 4],
+    key: u128,
     disps: &'static [(u32, u32)],
     names: *const u8,
     vals: &'static [T],
 }
 
 #[inline]
-fn hash(key: [u64; 4], name: &[u8], disps: &'static [(u32, u32)], len: u32) -> u32 {
-    let hasher = highway::HighwayHasher::new(highway::Key(key));
-    let [a, b] = highway::HighwayHash::hash128(hasher, name);
+fn hash(key: u128, name: &[u8], disps: &'static [(u32, u32)], rem1: u32, rem2: u32) -> u32 {
+    let x = name;
+    let x = match x.len() {
+        len @ 0..16 => unsafe {
+            let mut p = [0u8; 16];
+            p.get_unchecked_mut(0..len).copy_from_slice(x);
+            u128::from_le_bytes(p)
+        },
+        16 => unsafe { u128::from_le_bytes(x.try_into().unwrap_unchecked()) },
+        len @ 17..=32 => unsafe {
+            let mut p = [0u8; 16];
+            p.copy_from_slice(x.get_unchecked(0..16));
+            for (i, v) in x.get_unchecked(17..len).iter().enumerate() {
+                p[i] ^= v;
+            }
+            u128::from_le_bytes(p)
+        },
+        len => unsafe {
+            let mut p = [0u8; 16];
+            p.copy_from_slice(x.get_unchecked(0..16));
+            let p1 = u128::from_le_bytes(p);
+            p.copy_from_slice(x.get_unchecked(16..32));
+            let p2 = u128::from_le_bytes(p);
+            p = (p1 | p2).to_le_bytes();
+            for (i, v) in x.get_unchecked(32..len.min(48)).iter().enumerate() {
+                p[i] ^= v;
+            }
+            u128::from_le_bytes(p)
+        },
+    };
+    let x = x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128;
+    let e = x.wrapping_mul(key);
+    let [a, b] = [(e >> 64) as u64, e as u64];
     let g = (a >> 32) as u32;
     let f1 = a as u32;
     let f2 = b as u32;
-    let (d1, d2) = disps[(g % (disps.len() as u32)) as usize];
-    d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % len
+    let (d1, d2) = disps[(g % rem1) as usize];
+    d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % rem2
 }
 
 impl NameMap<u16> {
-    fn get(&self, name: &[u8]) -> Option<u16> {
-        let index = hash(self.key, name, self.disps, self.vals.len() as u32);
+    fn get<const REM1: u32, const REM2: u32>(&self, name: &[u8]) -> Option<u16> {
+        let index = hash(self.key, name, self.disps, REM1, REM2);
         let v = unsafe { *self.vals.get_unchecked(index as usize) };
         let offset =
             unsafe { u32::from_le_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
@@ -60,8 +90,8 @@ impl NameMap<u16> {
 }
 
 impl NameMap<u8> {
-    fn get(&self, name: &[u8]) -> Option<u8> {
-        let index = hash(self.key, name, self.disps, self.vals.len() as u32);
+    fn get<const REM1: u32, const REM2: u32>(&self, name: &[u8]) -> Option<u8> {
+        let index = hash(self.key, name, self.disps, REM1, REM2);
         let v = unsafe { *self.vals.get_unchecked(index as usize) };
         let offset =
             unsafe { u32::from_le_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
@@ -680,6 +710,11 @@ impl core::fmt::Debug for block_state_property {
 
 #[test]
 fn test_block_state() {
+    assert_eq!(
+        sound_event::block_bamboo_wood_pressure_plate_click_on,
+        sound_event::parse(b"block.bamboo_wood_pressure_plate.click_on").unwrap()
+    );
+
     let x = encode_state!(white_concrete(white_concrete::new()));
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));

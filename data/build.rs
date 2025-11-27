@@ -1652,21 +1652,18 @@ fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
 fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
     let mut ib = itoa::Buffer::new();
 
+    let state = g.generate_hash(names);
+    *w += "const M1: u32 = ";
+    *w += ib.format(state.disps.len() as u32);
+    *w += ";\n";
+    *w += "const M2: u32 = ";
+    *w += ib.format(names.len() as u32);
+    *w += ";\n";
     *w += "const M: crate::NameMap<";
     *w += repr.to_int();
-    *w += "> = crate::NameMap { key: [";
-
-    let state = g.generate_hash(names.iter());
-
-    let mut flag = true;
-    for x in state.key.0 {
-        if !flag {
-            *w += ", ";
-        }
-        flag = false;
-        *w += ib.format(x);
-    }
-    *w += "], disps: &[";
+    *w += "> = crate::NameMap { key: ";
+    *w += ib.format(state.key);
+    *w += ", disps: &[";
 
     for &(x, y) in state.disps {
         *w += "(";
@@ -1764,7 +1761,7 @@ let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as
 #[inline]
 #[must_use]
 pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {
-match Self::M.get(name) {
+match Self::M.get::<{ Self::M1 }, { Self::M2 }>(name) {
 ::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<raw_";
     *w += name;
     *w += ", Self>(x)) },
@@ -1809,12 +1806,14 @@ struct GenerateHash {
     map: Vec<Option<u32>>,
     disps: Vec<(u32, u32)>,
     try_map: Vec<u64>,
+    e: Vec<u128>,
+    test: Vec<u128>,
 }
 
 impl GenerateHash {
     fn new() -> Self {
         Self {
-            wy_rand: 0xE3D172B05F73CBC3u64
+            wy_rand: 0x3BD39E10CB0EF593u64
                 ^ SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
@@ -1825,20 +1824,69 @@ impl GenerateHash {
             map: Vec::new(),
             try_map: Vec::new(),
             disps: Vec::new(),
+            e: Vec::new(),
+            test: Vec::new(),
         }
     }
 
-    fn generate_hash(
-        &mut self,
-        entries: impl Iterator<Item = impl AsRef<str>> + Clone,
-    ) -> HashState<'_> {
+    fn generate_hash(&mut self, entries: &[&str]) -> HashState<'_> {
+        self.e.clear();
+        self.test.clear();
+        self.e.extend(
+            entries
+                .iter()
+                .map(|x| {
+                    let x = x.as_bytes();
+                    match x.len() {
+                        len @ 0..=16 => {
+                            let mut p = [0u8; 16];
+                            p[0..len].copy_from_slice(x);
+                            u128::from_le_bytes(p)
+                        }
+                        len @ 17..=32 => {
+                            let mut p = [0u8; 16];
+                            p.copy_from_slice(&x[0..16]);
+                            for (i, v) in x[17..len].iter().enumerate() {
+                                p[i] ^= v;
+                            }
+                            u128::from_le_bytes(p)
+                        }
+                        len => {
+                            let mut p = [0u8; 16];
+                            let mut q = [0u8; 16];
+                            p.copy_from_slice(&x[0..16]);
+                            q.copy_from_slice(&x[16..32]);
+                            p = (u128::from_le_bytes(p) | u128::from_le_bytes(q)).to_le_bytes();
+                            for (i, v) in x[32..len.min(48)].iter().enumerate() {
+                                p[i] ^= v;
+                            }
+                            u128::from_le_bytes(p)
+                        }
+                    }
+                })
+                .map(|x| x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128),
+        );
+        self.test.extend(&self.e);
+        self.test.sort_unstable();
+        for x in self.test.windows(2) {
+            if x[0] == x[1] {
+                panic!("duplicate entry {} {}", x[0], x[1]);
+            }
+        }
         'key: loop {
-            let key = highway::Key([self.nx(), self.nx(), self.nx(), self.nx()]);
-            let hasher = highway::HighwayHasher::new(key);
+            let [kb1, kb2, kb3, kb4, kb5, kb6, kb7, kb8] = self.nx().to_le_bytes();
+            let [kb9, kb10, kb11, kb12, kb13, kb14, kb15, kb16] = self.nx().to_le_bytes();
+            let key = u128::from_le_bytes([
+                kb1, kb2, kb3, kb4, kb5, kb6, kb7, kb8, kb9, kb10, kb11, kb12, kb13, kb14, kb15,
+                kb16,
+            ]);
             self.hashes.clear();
-            self.hashes.extend(entries.clone().map(|entry| {
-                highway::HighwayHash::hash128(hasher.clone(), entry.as_ref().as_bytes())
-            }));
+            self.hashes.extend(
+                self.e
+                    .iter()
+                    .map(|&entry| entry.wrapping_mul(key))
+                    .map(|e| [(e >> 64) as u64, e as u64]),
+            );
 
             let buckets_len = self.hashes.len().div_ceil(DEFAULT_LAMBDA);
             let table_len = self.hashes.len();
@@ -1925,7 +1973,7 @@ impl GenerateHash {
 const DEFAULT_LAMBDA: usize = 5;
 
 struct HashState<'a> {
-    key: highway::Key,
+    key: u128,
     disps: &'a [(u32, u32)],
     map: &'a [Option<u32>],
 }
