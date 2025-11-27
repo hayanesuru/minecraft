@@ -39,7 +39,6 @@ dependencies = [
  "minecraft_data",
  "mser",
  "mser_macro",
- "rustc_version",
  "uuid",
 ]
 

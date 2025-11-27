@@ -21,6 +21,3 @@ allocator-api2 = { version = "0.2.9", optional = true, default-features = false,
 targets = ["x86_64-unknown-linux-gnu"]
 features = ["allocator-api2"]
 all-features = true
-
-[build-dependencies]
-rustc_version = "0"
