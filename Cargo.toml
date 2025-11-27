@@ -10,6 +10,6 @@ repository = "https://github.com/hayanesuru/minecraft"
 edition = "2021"
 
 [workspace.dependencies]
-mser = { path = "ser", version = "2.1.0-rc.0", default-features = false }
-mser_macro = { path = "ser_macro", version = "2.1.0-rc.0", default-features = false }
-minecraft_data = { path = "data", version = "2.1.0-rc.1", default-features = false }
+mser = { path = "ser", version = "2.1.0-rc.1", default-features = false }
+mser_macro = { path = "ser_macro", version = "2.1.0-rc.1", default-features = false }
+minecraft_data = { path = "data", version = "2.1.0-rc.3", default-features = false }

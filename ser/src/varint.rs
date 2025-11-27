@@ -562,7 +562,7 @@ fn test_varint() {
             let sz = y.sz();
             assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
             let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
-            assert_eq!(V64::read(&mut sl), Some(y));
+            assert_eq!(V64::read(&mut sl).unwrap(), y);
             assert!(sl.is_empty());
 
             let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
@@ -571,7 +571,7 @@ fn test_varint() {
             let sz = y.sz();
             assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
             let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
-            assert_eq!(V32::read(&mut sl), Some(y));
+            assert_eq!(V32::read(&mut sl).unwrap(), y);
             assert!(sl.is_empty());
 
             let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
@@ -580,7 +580,7 @@ fn test_varint() {
             let sz = y.sz();
             assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
             let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
-            assert_eq!(V21::read(&mut sl), Some(y));
+            assert_eq!(V21::read(&mut sl).unwrap(), y);
             assert!(sl.is_empty());
         }
     }

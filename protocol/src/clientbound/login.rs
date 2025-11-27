@@ -1,4 +1,7 @@
-use crate::{ByteArray, GameProfile, Utf8};
+use alloc::alloc::{Allocator, Global};
+use mser::V32;
+
+use crate::{ByteArray, GameProfile, Rest, Utf8};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {
@@ -14,6 +17,18 @@ pub struct Hello<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct LoginFinished<'a> {
-    pub game_profile: GameProfile<'a>,
+pub struct LoginFinished<'a, A: Allocator = Global> {
+    pub game_profile: GameProfile<'a, A>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LoginCompression {
+    pub compression_threshold: V32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomQuery<'a> {
+    pub transaction_id: V32,
+    pub id: Utf8<'a>,
+    pub payload: Rest<'a, 1048576>,
 }

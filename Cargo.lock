@@ -3,6 +3,12 @@
 version = 4
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
+
+[[package]]
 name = "highway"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -16,7 +22,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "minecraft_data"
-version = "2.1.0-rc.2+1.21.11-pre3"
+version = "2.1.0-rc.3+1.21.11-pre3"
 dependencies = [
  "highway",
  "itoa",
@@ -27,18 +33,21 @@ dependencies = [
 
 [[package]]
 name = "minecraft_data_protocol"
-version = "0.1.0-rc.0+1.21.11-pre2"
+version = "0.1.0-rc.0+1.21.11-pre3"
 dependencies = [
+ "allocator-api2",
  "minecraft_data",
  "mser",
  "mser_macro",
+ "rustc_version",
  "uuid",
 ]
 
 [[package]]
 name = "mser"
-version = "2.1.0-rc.0"
+version = "2.1.0-rc.1"
 dependencies = [
+ "allocator-api2",
  "itoa",
  "rustc_version",
  "ryu",
@@ -48,7 +57,7 @@ dependencies = [
 
 [[package]]
 name = "mser_macro"
-version = "2.1.0-rc.0"
+version = "2.1.0-rc.1"
 dependencies = [
  "itoa",
  "mser",

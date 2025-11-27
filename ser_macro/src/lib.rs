@@ -41,7 +41,7 @@ pub fn compound(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
     core::str::FromStr::from_str(&o).unwrap()
 }
 
-fn check_attrs(input: &DeriveInput) -> Result<syn::Path, syn::Error> {
+fn crate_name(input: &DeriveInput) -> Result<syn::Path, syn::Error> {
     let mut find = None;
     for attr in input.attrs.iter() {
         if attr.path().is_ident("mser") {
@@ -58,7 +58,7 @@ fn check_attrs(input: &DeriveInput) -> Result<syn::Path, syn::Error> {
 #[proc_macro_derive(Serialize, attributes(mser))]
 pub fn serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
-    let cratename = match check_attrs(&input) {
+    let cratename = match crate_name(&input) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();
@@ -79,7 +79,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Deserialize, attributes(mser))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
-    let cratename = match check_attrs(&input) {
+    let cratename = match crate_name(&input) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();

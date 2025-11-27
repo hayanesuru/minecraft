@@ -1287,8 +1287,8 @@ fn block_state(
     *w += bsrepr.to_int();
     *w += ";\n";
     *w += "match Self::new(x) {\n";
-    *w += "    Some(x) => Ok(x),\n";
-    *w += "    None => Err(::mser::Error),\n";
+    *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
+    *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
     *w += "}\n}\n}\n";
 
     let reprblock = Repr::new(offsets.len());
@@ -1765,10 +1765,10 @@ let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as
 #[must_use]
 pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {
 match Self::M.get(name) {
-Some(x) => unsafe { Some(::core::mem::transmute::<raw_";
+::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<raw_";
     *w += name;
     *w += ", Self>(x)) },
-None => None,
+::core::option::Option::None => ::core::option::Option::None,
 }
 }
 }

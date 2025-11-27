@@ -1,5 +1,4 @@
 use crate::{u8_to_hex, UnsafeWriter, Write};
-use alloc::string::String;
 
 const B: u8 = b'b'; // \x08
 const T: u8 = b't'; // \x09
@@ -20,19 +19,6 @@ const ESCAPE: [u8; 256] = [
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 ];
-
-pub fn json_str_escape(buf: &mut String, b: &[u8]) {
-    unsafe {
-        let e = JsonStr(b);
-        let wlen = e.sz();
-        buf.reserve(wlen);
-        e.write(&mut UnsafeWriter(core::ptr::NonNull::new_unchecked(
-            buf.as_mut_ptr().add(buf.len()),
-        )));
-        let len = buf.len() + wlen;
-        buf.as_mut_vec().set_len(len);
-    }
-}
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
