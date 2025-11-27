@@ -208,6 +208,82 @@ pub struct PropertyMap<'a> {
     pub signature: Option<Utf8<'a, 1024>>,
 }
 
+#[derive(Clone)]
+pub struct Identifier<'a> {
+    pub namespace: &'a str,
+    pub path: &'a str,
+}
+
+impl Identifier<'_> {
+    pub fn is_valid_path(c: char) -> bool {
+        matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.' | '/')
+    }
+
+    pub fn is_valid_namespace(c: char) -> bool {
+        matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.')
+    }
+}
+
+impl<'a> Read<'a> for Identifier<'a> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let identifier = Utf8::<32767>::read(buf)?.0;
+        match identifier.strip_prefix("minecraft:") {
+            Some(path) => {
+                if path.chars().all(Self::is_valid_path) {
+                    Ok(Self {
+                        namespace: "minecraft",
+                        path,
+                    })
+                } else {
+                    Err(Error)
+                }
+            }
+            None => match identifier.split_once(':') {
+                Some((namespace, path)) => {
+                    if namespace.chars().all(Self::is_valid_namespace)
+                        && path.chars().all(Self::is_valid_path)
+                    {
+                        Ok(Self {
+                            namespace: if !namespace.is_empty() {
+                                namespace
+                            } else {
+                                "minecraft"
+                            },
+                            path,
+                        })
+                    } else {
+                        Err(Error)
+                    }
+                }
+                None => {
+                    if identifier.chars().all(Self::is_valid_path) {
+                        Ok(Self {
+                            namespace: "minecraft",
+                            path: identifier,
+                        })
+                    } else {
+                        Err(Error)
+                    }
+                }
+            },
+        }
+    }
+}
+
+impl Write for Identifier<'_> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            w.write(self.namespace.as_bytes());
+            w.write_byte(b':');
+            w.write(self.path.as_bytes());
+        }
+    }
+
+    fn sz(&self) -> usize {
+        self.namespace.len() + 1 + self.path.len()
+    }
+}
+
 #[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Packet<'a, I: PacketId, T: Id<I> + 'a>(pub T, core::marker::PhantomData<&'a I>);

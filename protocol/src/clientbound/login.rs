@@ -1,7 +1,7 @@
 use alloc::alloc::{Allocator, Global};
 use mser::V32;
 
-use crate::{ByteArray, GameProfile, Rest, Utf8};
+use crate::{ByteArray, GameProfile, Identifier, Rest, Utf8};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {
@@ -29,6 +29,6 @@ pub struct LoginCompression {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CustomQuery<'a> {
     pub transaction_id: V32,
-    pub id: Utf8<'a>,
+    pub id: Identifier<'a>,
     pub payload: Rest<'a, 1048576>,
 }

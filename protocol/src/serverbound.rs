@@ -1,6 +1,9 @@
-use minecraft_data::{serverbound__handshake, serverbound__status};
+use minecraft_data::{serverbound__handshake, serverbound__login, serverbound__status};
 
+pub mod cookie;
 pub mod handshake;
+pub mod login;
+pub mod ping;
 pub mod status;
 
 macro_rules! packets {
@@ -56,5 +59,13 @@ packets! {
 packets! {
     serverbound__status,
     status::StatusRequest => serverbound__status::status_request,
-    status::PingRequest => serverbound__status::ping_request,
+    ping::PingRequest => serverbound__status::ping_request,
+}
+packets! {
+    serverbound__login,
+    login::Hello<'_> => serverbound__login::hello,
+    login::Key<'_> => serverbound__login::key,
+    login::CustomQueryAnswer<'_> => serverbound__login::custom_query_answer,
+    login::LoginAcknowledged => serverbound__login::login_acknowledged,
+    cookie::CookieResponse<'_> => serverbound__login::cookie_response,
 }

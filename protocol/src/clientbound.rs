@@ -1,7 +1,9 @@
 use alloc::alloc::Allocator;
 use minecraft_data::{clientbound__login, clientbound__status};
 
+pub mod cookie;
 pub mod login;
+pub mod ping;
 pub mod status;
 
 macro_rules! packets {
@@ -53,7 +55,7 @@ macro_rules! packets {
 packets! {
     clientbound__status,
     status::StatusResponse<'_> => clientbound__status::status_response,
-    status::PongResponse => clientbound__status::pong_response,
+    ping::PongResponse => clientbound__status::pong_response,
 }
 packets! {
     clientbound__login,
@@ -62,5 +64,5 @@ packets! {
     login::LoginFinished<'_, A> where Allocator => clientbound__login::login_finished,
     login::LoginCompression => clientbound__login::login_compression,
     login::CustomQuery<'_> => clientbound__login::custom_query,
-    
+    cookie::CookieRequest<'_> => clientbound__login::cookie_request,
 }
