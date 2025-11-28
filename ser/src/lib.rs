@@ -5,14 +5,12 @@
 
 #[cfg(feature = "allocator_api")]
 use alloc::alloc::Allocator;
-
 use alloc::borrow::{Cow, ToOwned};
+use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 #[cfg(all(feature = "allocator-api2", not(feature = "allocator_api")))]
 use allocator_api2::alloc::Allocator;
-
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 
 extern crate alloc;
 

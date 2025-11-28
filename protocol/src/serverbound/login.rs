@@ -1,7 +1,6 @@
+use crate::{ByteArray, Rest, Utf8};
 use mser::V32;
 use uuid::Uuid;
-
-use crate::{ByteArray, Rest, Utf8};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Hello<'a> {

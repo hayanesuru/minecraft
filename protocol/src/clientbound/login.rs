@@ -1,7 +1,6 @@
+use crate::{ByteArray, GameProfile, Identifier, Rest, Utf8};
 use alloc::alloc::{Allocator, Global};
 use mser::V32;
-
-use crate::{ByteArray, GameProfile, Identifier, Rest, Utf8};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {

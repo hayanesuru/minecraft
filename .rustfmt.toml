@@ -1,1 +1,4 @@
+unstable_features = true
 newline_style = "Unix"
+imports_granularity = "Module"
+group_imports = "One"

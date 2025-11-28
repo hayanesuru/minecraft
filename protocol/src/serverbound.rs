@@ -15,7 +15,7 @@ macro_rules! packets {
         $($tail:tt)*
     ) => {
         #[automatically_derived]
-        impl<A: Allocator> crate::Id<$m> for $type {
+        impl<A: Allocator> crate::types::Id<$m> for $type {
             fn id() -> $m { $variant }
         }
         packets!(@munch $m; $($tail)*);
@@ -24,7 +24,7 @@ macro_rules! packets {
         $type:ty where Allocator => $variant:path
     ) => {
         #[automatically_derived]
-        impl<A: Allocator> crate::Id<$m> for $type {
+        impl<A: Allocator> crate::types::Id<$m> for $type {
             fn id() -> $m { $variant }
         }
     };
@@ -33,7 +33,7 @@ macro_rules! packets {
         $($tail:tt)*
     ) => {
         #[automatically_derived]
-        impl crate::Id<$m> for $type {
+        impl crate::types::Id<$m> for $type {
             fn id() -> $m { $variant }
         }
         packets!(@munch $m; $($tail)*);
@@ -42,7 +42,7 @@ macro_rules! packets {
         $type:ty => $variant:path
     ) => {
         #[automatically_derived]
-        impl crate::Id<$m> for $type {
+        impl crate::types::Id<$m> for $type {
             fn id() -> $m { $variant }
         }
     };

@@ -12,7 +12,7 @@ default = ["allocator-api2"]
 
 [dependencies]
 minecraft_data = { workspace = true }
-mser = { workspace = true }
+mser = { workspace = true, features = ["nbt"] }
 mser_macro = { workspace = true }
 uuid = { version = "1", default-features = false }
 allocator-api2 = { version = "0.2.9", optional = true, default-features = false, features = ["alloc"] }

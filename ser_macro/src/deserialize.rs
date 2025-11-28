@@ -1,8 +1,6 @@
 use crate::kw;
 use proc_macro2::TokenStream;
-use quote::quote;
-use quote::ToTokens;
-use quote::TokenStreamExt;
+use quote::{quote, ToTokens, TokenStreamExt};
 
 pub fn deserialize_struct(
     input: syn::DeriveInput,
