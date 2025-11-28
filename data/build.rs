@@ -5,7 +5,6 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::env::var_os;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Repr {
@@ -1813,11 +1812,7 @@ struct GenerateHash {
 impl GenerateHash {
     fn new() -> Self {
         Self {
-            wy_rand: 0x3BD39E10CB0EF593u64
-                ^ SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos() as u64,
+            wy_rand: 0x3BD39E10CB0EF593u64,
             hashes: Vec::new(),
             buckets: Vec::new(),
             values_to_add: Vec::new(),
