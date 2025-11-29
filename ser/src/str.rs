@@ -5,6 +5,7 @@ use core::convert::Infallible;
 use core::str::FromStr;
 use core::{fmt, hash, iter, mem, ops};
 
+#[repr(transparent)]
 pub struct SmolStr(Repr);
 
 impl SmolStr {

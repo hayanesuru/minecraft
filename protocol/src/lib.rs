@@ -7,6 +7,7 @@ use alloc::vec::Vec;
 use mser::{Bytes, Error, Read, UnsafeWriter, Write, V21, V32};
 use uuid::Uuid;
 
+pub mod chat;
 pub mod clientbound;
 pub mod serverbound;
 pub mod types;
@@ -209,6 +210,8 @@ pub struct Identifier<'a> {
 }
 
 impl Identifier<'_> {
+    pub const MINECRAFT: &'static str = "minecraft";
+
     pub fn is_valid_path(c: char) -> bool {
         matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.' | '/')
     }
@@ -225,7 +228,7 @@ impl<'a> Read<'a> for Identifier<'a> {
             Some(path) => {
                 if path.chars().all(Self::is_valid_path) {
                     Ok(Self {
-                        namespace: "minecraft",
+                        namespace: Self::MINECRAFT,
                         path,
                     })
                 } else {
@@ -241,7 +244,7 @@ impl<'a> Read<'a> for Identifier<'a> {
                             namespace: if !namespace.is_empty() {
                                 namespace
                             } else {
-                                "minecraft"
+                                Self::MINECRAFT
                             },
                             path,
                         })
@@ -252,7 +255,7 @@ impl<'a> Read<'a> for Identifier<'a> {
                 None => {
                     if identifier.chars().all(Self::is_valid_path) {
                         Ok(Self {
-                            namespace: "minecraft",
+                            namespace: Self::MINECRAFT,
                             path: identifier,
                         })
                     } else {
@@ -277,10 +280,6 @@ impl Write for Identifier<'_> {
         self.namespace.len() + 1 + self.path.len()
     }
 }
-
-#[derive(Clone)]
-#[allow(dead_code)]
-pub struct Component<A: Allocator = Global>(mser::nbt::Compound, A);
 
 #[test]
 fn test_write() {
