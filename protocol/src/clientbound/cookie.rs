@@ -1,5 +1,5 @@
-use crate::Identifier;
+use crate::Ident;
 
 pub struct CookieRequest<'a> {
-    pub key: Identifier<'a>,
+    pub key: Ident<'a>,
 }

@@ -4,11 +4,12 @@
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Bytes, Error, Read, UnsafeWriter, Write, V21, V32};
+use mser::{Bytes, Error, Read, SmolStr, UnsafeWriter, Write, V21, V32};
 use uuid::Uuid;
 
 pub mod chat;
 pub mod clientbound;
+pub mod dialog;
 pub mod serverbound;
 pub mod types;
 
@@ -204,12 +205,12 @@ pub struct PropertyMap<'a> {
 }
 
 #[derive(Clone)]
-pub struct Identifier<'a> {
+pub struct Ident<'a> {
     pub namespace: &'a str,
     pub path: &'a str,
 }
 
-impl Identifier<'_> {
+impl Ident<'_> {
     pub const MINECRAFT: &'static str = "minecraft";
 
     pub fn is_valid_path(c: char) -> bool {
@@ -221,7 +222,7 @@ impl Identifier<'_> {
     }
 }
 
-impl<'a> Read<'a> for Identifier<'a> {
+impl<'a> Read<'a> for Ident<'a> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let identifier = Utf8::<32767>::read(buf)?.0;
         match identifier.strip_prefix("minecraft:") {
@@ -267,7 +268,7 @@ impl<'a> Read<'a> for Identifier<'a> {
     }
 }
 
-impl Write for Identifier<'_> {
+impl Write for Ident<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             w.write(self.namespace.as_bytes());
@@ -279,6 +280,13 @@ impl Write for Identifier<'_> {
     fn sz(&self) -> usize {
         self.namespace.len() + 1 + self.path.len()
     }
+}
+
+#[derive(Clone)]
+pub struct Identifier<A: Allocator = Global> {
+    pub namespace: SmolStr,
+    pub path: SmolStr,
+    pub alloc: A,
 }
 
 #[test]

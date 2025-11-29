@@ -1,6 +1,10 @@
+use crate::dialog::Dialog;
+use crate::{GameProfile, Identifier};
 use alloc::alloc::{Allocator, Global};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::SmolStr;
+use uuid::Uuid;
 
 const TEXT: &str = "text";
 const TRANSLATE: &str = "translate";
@@ -56,9 +60,62 @@ const HEX_PREFIX: u8 = b'#';
 #[derive(Clone)]
 pub enum Component<A: Allocator = Global> {
     Literal {
-        content: SmolStr,
         children: Vec<Component<A>, A>,
-        style: Style,
+        style: Style<A>,
+        content: SmolStr,
+    },
+    Translatable {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        key: SmolStr,
+        fallback: SmolStr,
+        args: Vec<Component<A>, A>,
+    },
+    Score {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        name: SmolStr,
+        objective: SmolStr,
+    },
+    Selector {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        pattern: SmolStr,
+        separator: Option<Box<Component<A>, A>>,
+    },
+    Keybind {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        keybind: SmolStr,
+    },
+    BlockNbt {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        nbt_path: SmolStr,
+        interpret: Option<bool>,
+        separator: Option<Box<Component<A>, A>>,
+        pos: SmolStr,
+    },
+    EntityNbt {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        nbt_path: SmolStr,
+        interpret: Option<bool>,
+        separator: Option<Box<Component<A>, A>>,
+        selector: SmolStr,
+    },
+    StorageNbt {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        nbt_path: SmolStr,
+        interpret: Option<bool>,
+        separator: Option<Box<Component<A>, A>>,
+        storage: Identifier<A>,
+    },
+    Objects {
+        children: Vec<Component<A>, A>,
+        style: Style<A>,
+        contents: ObjectContents<A>,
     },
 }
 
@@ -71,16 +128,22 @@ impl Component {
             color: None,
             shadow_color: None,
             decorations: DecorationMap::new(),
+            click_event: None,
+            hover_event: None,
+            insertion: None,
         },
     };
 }
 
 #[derive(Clone)]
-pub struct Style {
+pub struct Style<A: Allocator = Global> {
     pub font: Option<SmolStr>,
     pub color: Option<TextColor>,
     pub shadow_color: Option<ShadowColor>,
     pub decorations: DecorationMap,
+    pub click_event: Option<ClickEvent<A>>,
+    pub hover_event: Option<HoverEvent>,
+    pub insertion: Option<SmolStr>,
 }
 
 #[derive(Clone, Copy)]
@@ -192,6 +255,27 @@ impl TextColorNamed {
                 green: 255,
                 blue: 255,
             },
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Black => "black",
+            Self::DarkBlue => "dark_blue",
+            Self::DarkGreen => "dark_green",
+            Self::DarkAqua => "dark_aqua",
+            Self::DarkRed => "dark_red",
+            Self::DarkPurple => "dark_purple",
+            Self::Gold => "gold",
+            Self::Gray => "gray",
+            Self::DarkGray => "dark_gray",
+            Self::Blue => "blue",
+            Self::Green => "green",
+            Self::Aqua => "aqua",
+            Self::Red => "red",
+            Self::LightPurple => "light_purple",
+            Self::Yellow => "yellow",
+            Self::White => "white",
         }
     }
 }
@@ -350,4 +434,49 @@ impl DecorationMap {
             value: (self.value & !0x0300) | n,
         }
     }
+}
+
+#[derive(Clone)]
+pub enum ClickEvent<A: Allocator = Global> {
+    OpenUrl(SmolStr),
+    OpenFile(SmolStr),
+    RunCommand(SmolStr),
+    SuggestCommand(SmolStr),
+    ChangePage(u32),
+    CopyToClipboard(SmolStr),
+    ShowDialog(ShowDialog<A>),
+    Custom(Identifier<A>, SmolStr),
+}
+
+#[derive(Clone)]
+pub enum ShowDialog<A: Allocator = Global> {
+    Id(Identifier<A>),
+    Dialog(Box<Dialog<A>, A>),
+}
+
+#[derive(Clone)]
+pub enum HoverEvent {}
+
+#[derive(Clone)]
+pub enum ObjectContents<A: Allocator = Global> {
+    Atlas {
+        atlas: Option<Identifier<A>>,
+        sprite: Identifier<A>,
+    },
+    Player {
+        name: Option<SmolStr>,
+        id: Option<Uuid>,
+        texture: Option<SmolStr>,
+        cape: Option<SmolStr>,
+        model: Option<SmolStr>,
+        profile_properties: Option<Vec<Property, A>>,
+        hat: Option<bool>,
+    },
+}
+
+#[derive(Clone)]
+pub struct Property {
+    pub name: SmolStr,
+    pub value: SmolStr,
+    pub signature: Option<SmolStr>,
 }
