@@ -1,12 +1,14 @@
+use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
-use alloc::string::String;
+use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::convert::Infallible;
+use core::mem::MaybeUninit;
 use core::str::FromStr;
 use core::{fmt, hash, iter, mem, ops};
 
 #[repr(transparent)]
-pub struct SmolStr(Repr);
+pub struct SmolStr<A: Allocator = Global>(Repr<A>);
 
 impl SmolStr {
     /// Constructs an inline variant of `SmolStr`.
@@ -52,12 +54,6 @@ impl SmolStr {
         SmolStr(Repr::new(text.as_ref()))
     }
 
-    /// Returns a `&str` slice of this `SmolStr`.
-    #[inline(always)]
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
-
     /// Returns the length of `self` in bytes.
     #[inline(always)]
     pub fn len(&self) -> usize {
@@ -69,20 +65,30 @@ impl SmolStr {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
-
+}
+impl<A: Allocator> SmolStr<A> {
     /// Returns `true` if `self` is heap-allocated.
     #[inline(always)]
     pub const fn is_heap_allocated(&self) -> bool {
         matches!(self.0, Repr::Heap(..))
     }
+
+    /// Returns a `&str` slice of this `SmolStr`.
+    #[inline(always)]
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
 }
 
-impl Clone for SmolStr {
+impl<A: Allocator> Clone for SmolStr<A>
+where
+    A: Clone,
+{
     #[inline]
     fn clone(&self) -> Self {
         if !self.is_heap_allocated() {
             // SAFETY: We verified that the payload of `Repr` is a POD
-            return unsafe { core::ptr::read(self as *const SmolStr) };
+            return unsafe { core::ptr::read(self as *const SmolStr<A>) };
         }
         Self(self.0.clone())
     }
@@ -98,7 +104,7 @@ impl Default for SmolStr {
     }
 }
 
-impl ops::Deref for SmolStr {
+impl<A: Allocator> ops::Deref for SmolStr<A> {
     type Target = str;
 
     #[inline(always)]
@@ -109,95 +115,67 @@ impl ops::Deref for SmolStr {
 
 // region: PartialEq implementations
 
-impl Eq for SmolStr {}
-impl PartialEq<SmolStr> for SmolStr {
-    fn eq(&self, other: &SmolStr) -> bool {
+impl<A: Allocator> Eq for SmolStr<A> {}
+
+impl<A: Allocator> PartialEq<SmolStr<A>> for SmolStr<A> {
+    fn eq(&self, other: &SmolStr<A>) -> bool {
         self.0.ptr_eq(&other.0) || self.as_str() == other.as_str()
     }
 }
 
-impl PartialEq<str> for SmolStr {
+impl<A: Allocator> PartialEq<str> for SmolStr<A> {
     #[inline(always)]
     fn eq(&self, other: &str) -> bool {
         self.as_str() == other
     }
 }
 
-impl PartialEq<SmolStr> for str {
+impl<A: Allocator> PartialEq<SmolStr<A>> for str {
     #[inline(always)]
-    fn eq(&self, other: &SmolStr) -> bool {
+    fn eq(&self, other: &SmolStr<A>) -> bool {
         other == self
     }
 }
 
-impl<'a> PartialEq<&'a str> for SmolStr {
+impl<'a, A: Allocator> PartialEq<&'a str> for SmolStr<A> {
     #[inline(always)]
     fn eq(&self, other: &&'a str) -> bool {
         self == *other
     }
 }
 
-impl PartialEq<SmolStr> for &str {
+impl<A: Allocator> PartialEq<SmolStr<A>> for &str {
     #[inline(always)]
-    fn eq(&self, other: &SmolStr) -> bool {
+    fn eq(&self, other: &SmolStr<A>) -> bool {
         *self == other
     }
 }
 
-impl PartialEq<String> for SmolStr {
-    #[inline(always)]
-    fn eq(&self, other: &String) -> bool {
-        self.as_str() == other
-    }
-}
-
-impl PartialEq<SmolStr> for String {
-    #[inline(always)]
-    fn eq(&self, other: &SmolStr) -> bool {
-        other == self
-    }
-}
-
-impl<'a> PartialEq<&'a String> for SmolStr {
-    #[inline(always)]
-    fn eq(&self, other: &&'a String) -> bool {
-        self == *other
-    }
-}
-
-impl PartialEq<SmolStr> for &String {
-    #[inline(always)]
-    fn eq(&self, other: &SmolStr) -> bool {
-        *self == other
-    }
-}
-// endregion: PartialEq implementations
-
-impl Ord for SmolStr {
-    fn cmp(&self, other: &SmolStr) -> Ordering {
+impl<A: Allocator> Ord for SmolStr<A> {
+    fn cmp(&self, other: &SmolStr<A>) -> Ordering {
         self.as_str().cmp(other.as_str())
     }
 }
 
-impl PartialOrd for SmolStr {
-    fn partial_cmp(&self, other: &SmolStr) -> Option<Ordering> {
+impl<A: Allocator> PartialOrd for SmolStr<A> {
+    fn partial_cmp(&self, other: &SmolStr<A>) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl hash::Hash for SmolStr {
+impl<A: Allocator> hash::Hash for SmolStr<A> {
     fn hash<H: hash::Hasher>(&self, hasher: &mut H) {
         self.as_str().hash(hasher);
     }
 }
 
-impl fmt::Debug for SmolStr {
+impl<A: Allocator> fmt::Debug for SmolStr<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(self.as_str(), f)
     }
 }
 
-impl fmt::Display for SmolStr {
+impl<A: Allocator> fmt::Display for SmolStr<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self.as_str(), f)
     }
@@ -212,12 +190,26 @@ impl iter::FromIterator<char> for SmolStr {
 fn from_char_iter(mut iter: impl Iterator<Item = char>) -> SmolStr {
     let (min_size, _) = iter.size_hint();
     if min_size > INLINE_CAP {
-        let heap = iter.collect::<Box<str>>();
+        let mut heap = Vec::with_capacity(min_size);
+        for ch in iter {
+            let len = ch.len_utf8();
+            if len == 1 {
+                heap.push(ch as u8);
+            } else {
+                heap.reserve(len);
+                unsafe {
+                    ch.encode_utf8(
+                        &mut *(heap.spare_capacity_mut() as *mut [MaybeUninit<u8>] as *mut [u8]),
+                    );
+                    heap.set_len(heap.len() + len);
+                }
+            }
+        }
         if heap.len() <= INLINE_CAP {
             // size hint lied
-            return SmolStr::new_inline(&heap);
+            return SmolStr::new_inline(unsafe { core::str::from_utf8_unchecked(&heap) });
         }
-        return SmolStr(Repr::Heap(heap));
+        return SmolStr(Repr::Heap(heap.into_boxed_slice()));
     }
     let mut len = 0;
     let mut buf = [0u8; INLINE_CAP];
@@ -225,13 +217,41 @@ fn from_char_iter(mut iter: impl Iterator<Item = char>) -> SmolStr {
         let size = ch.len_utf8();
         if size + len > INLINE_CAP {
             let (min_remaining, _) = iter.size_hint();
-            let mut heap = String::with_capacity(size + len + min_remaining);
-            heap.push_str(core::str::from_utf8(&buf[..len]).unwrap());
-            heap.push(ch);
-            heap.extend(iter);
-            return SmolStr(Repr::Heap(heap.into_boxed_str()));
+            let mut heap = Vec::with_capacity(size + len + min_remaining);
+            heap.extend(unsafe { buf.get_unchecked(..len) });
+            {
+                let len = ch.len_utf8();
+                if len == 1 {
+                    heap.push(ch as u8);
+                } else {
+                    heap.reserve(len);
+                    unsafe {
+                        ch.encode_utf8(
+                            &mut *(heap.spare_capacity_mut() as *mut [MaybeUninit<u8>]
+                                as *mut [u8]),
+                        );
+                        heap.set_len(heap.len() + len);
+                    }
+                }
+            }
+            for ch in iter {
+                let len = ch.len_utf8();
+                if len == 1 {
+                    heap.push(ch as u8);
+                } else {
+                    heap.reserve(len);
+                    unsafe {
+                        ch.encode_utf8(
+                            &mut *(heap.spare_capacity_mut() as *mut [MaybeUninit<u8>]
+                                as *mut [u8]),
+                        );
+                        heap.set_len(heap.len() + len);
+                    }
+                }
+            }
+            return SmolStr(Repr::Heap(heap.into_boxed_slice()));
         }
-        ch.encode_utf8(&mut buf[len..]);
+        ch.encode_utf8(unsafe { buf.get_unchecked_mut(len..) });
         len += size;
     }
     SmolStr(Repr::Inline {
@@ -242,60 +262,14 @@ fn from_char_iter(mut iter: impl Iterator<Item = char>) -> SmolStr {
     })
 }
 
-fn build_from_str_iter<T>(mut iter: impl Iterator<Item = T>) -> SmolStr
-where
-    T: AsRef<str>,
-    String: iter::Extend<T>,
-{
-    let mut len = 0;
-    let mut buf = [0u8; INLINE_CAP];
-    while let Some(slice) = iter.next() {
-        let slice = slice.as_ref();
-        let size = slice.len();
-        if size + len > INLINE_CAP {
-            let mut heap = String::with_capacity(size + len);
-            heap.push_str(core::str::from_utf8(&buf[..len]).unwrap());
-            heap.push_str(slice);
-            heap.extend(iter);
-            return SmolStr(Repr::Heap(heap.into_boxed_str()));
-        }
-        buf[len..][..size].copy_from_slice(slice.as_bytes());
-        len += size;
-    }
-    SmolStr(Repr::Inline {
-        // SAFETY: We know that `len` is less than or equal to the maximum value of `InlineSize`
-        // as we otherwise return early.
-        len: unsafe { InlineSize::transmute_from_u8(len as u8) },
-        buf,
-    })
-}
-
-impl iter::FromIterator<String> for SmolStr {
-    fn from_iter<I: iter::IntoIterator<Item = String>>(iter: I) -> SmolStr {
-        build_from_str_iter(iter.into_iter())
-    }
-}
-
-impl<'a> iter::FromIterator<&'a String> for SmolStr {
-    fn from_iter<I: iter::IntoIterator<Item = &'a String>>(iter: I) -> SmolStr {
-        SmolStr::from_iter(iter.into_iter().map(|x| x.as_str()))
-    }
-}
-
-impl<'a> iter::FromIterator<&'a str> for SmolStr {
-    fn from_iter<I: iter::IntoIterator<Item = &'a str>>(iter: I) -> SmolStr {
-        build_from_str_iter(iter.into_iter())
-    }
-}
-
-impl AsRef<str> for SmolStr {
+impl<A: Allocator> AsRef<str> for SmolStr<A> {
     #[inline(always)]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
-impl AsRef<[u8]> for SmolStr {
+impl<A: Allocator> AsRef<[u8]> for SmolStr<A> {
     #[inline(always)]
     fn as_ref(&self) -> &[u8] {
         self.as_str().as_bytes()
@@ -354,13 +328,13 @@ impl InlineSize {
 }
 
 #[derive(Clone, Debug)]
-enum Repr {
+enum Repr<A: Allocator = Global> {
     Inline {
         len: InlineSize,
         buf: [u8; INLINE_CAP],
     },
     Static(&'static str),
-    Heap(Box<str>),
+    Heap(Box<[u8], A>),
 }
 
 impl Repr {
@@ -390,7 +364,10 @@ impl Repr {
     }
 
     fn new(text: &str) -> Self {
-        Self::new_on_stack(text).unwrap_or_else(|| Repr::Heap(Box::from(text)))
+        match Self::new_on_stack(text) {
+            Some(x) => x,
+            None => Self::Heap(Box::from(text.as_bytes())),
+        }
     }
 
     #[inline(always)]
@@ -410,22 +387,9 @@ impl Repr {
             &Repr::Inline { len, .. } => len as u8 == 0,
         }
     }
+}
 
-    #[inline]
-    fn as_str(&self) -> &str {
-        match self {
-            Repr::Heap(data) => data,
-            Repr::Static(data) => data,
-            Repr::Inline { len, buf } => {
-                let len = *len as usize;
-                // SAFETY: len is guaranteed to be <= INLINE_CAP
-                let buf = unsafe { buf.get_unchecked(..len) };
-                // SAFETY: buf is guaranteed to be valid utf8 for ..len bytes
-                unsafe { ::core::str::from_utf8_unchecked(buf) }
-            }
-        }
-    }
-
+impl<A: Allocator> Repr<A> {
     fn ptr_eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Heap(l0), Self::Heap(r0)) => core::ptr::eq(l0.as_ptr(), r0.as_ptr()),
@@ -443,126 +407,47 @@ impl Repr {
             _ => false,
         }
     }
+    #[inline]
+    fn as_str(&self) -> &str {
+        match self {
+            Repr::Heap(data) => unsafe { core::str::from_utf8_unchecked(data) },
+            Repr::Static(data) => data,
+            Repr::Inline { len, buf } => {
+                let len = *len as usize;
+                // SAFETY: len is guaranteed to be <= INLINE_CAP
+                let buf = unsafe { buf.get_unchecked(..len) };
+                // SAFETY: buf is guaranteed to be valid utf8 for ..len bytes
+                unsafe { ::core::str::from_utf8_unchecked(buf) }
+            }
+        }
+    }
 }
-
 /// Convert value to [`SmolStr`] using [`fmt::Display`], potentially without allocating.
 ///
 /// Almost identical to [`ToString`], but converts to `SmolStr` instead.
-pub trait ToSmolStr {
-    fn to_smolstr(&self) -> SmolStr;
+pub trait ToString1 {
+    fn to_string1(&self) -> SmolStr;
 }
 
-/// [`str`] methods producing [`SmolStr`]s.
-pub trait StrExt: private::Sealed {
-    /// Returns the lowercase equivalent of this string slice as a new [`SmolStr`],
-    /// potentially without allocating.
-    ///
-    /// See [`str::to_lowercase`].
-    #[must_use = "this returns a new SmolStr without modifying the original"]
-    fn to_lowercase_smolstr(&self) -> SmolStr;
-
-    /// Returns the uppercase equivalent of this string slice as a new [`SmolStr`],
-    /// potentially without allocating.
-    ///
-    /// See [`str::to_uppercase`].
-    #[must_use = "this returns a new SmolStr without modifying the original"]
-    fn to_uppercase_smolstr(&self) -> SmolStr;
-
-    /// Returns the ASCII lowercase equivalent of this string slice as a new [`SmolStr`],
-    /// potentially without allocating.
-    ///
-    /// See [`str::to_ascii_lowercase`].
-    #[must_use = "this returns a new SmolStr without modifying the original"]
-    fn to_ascii_lowercase_smolstr(&self) -> SmolStr;
-
-    /// Returns the ASCII uppercase equivalent of this string slice as a new [`SmolStr`],
-    /// potentially without allocating.
-    ///
-    /// See [`str::to_ascii_uppercase`].
-    #[must_use = "this returns a new SmolStr without modifying the original"]
-    fn to_ascii_uppercase_smolstr(&self) -> SmolStr;
-
-    /// Replaces all matches of a &str with another &str returning a new [`SmolStr`],
-    /// potentially without allocating.
-    ///
-    /// See [`str::replace`].
-    #[must_use = "this returns a new SmolStr without modifying the original"]
-    fn replace_smolstr(&self, from: &str, to: &str) -> SmolStr;
-
-    /// Replaces first N matches of a &str with another &str returning a new [`SmolStr`],
-    /// potentially without allocating.
-    ///
-    /// See [`str::replacen`].
-    #[must_use = "this returns a new SmolStr without modifying the original"]
-    fn replacen_smolstr(&self, from: &str, to: &str, count: usize) -> SmolStr;
-}
-
-impl StrExt for str {
-    #[inline]
-    fn to_lowercase_smolstr(&self) -> SmolStr {
-        from_char_iter(self.chars().flat_map(|c| c.to_lowercase()))
-    }
-
-    #[inline]
-    fn to_uppercase_smolstr(&self) -> SmolStr {
-        from_char_iter(self.chars().flat_map(|c| c.to_uppercase()))
-    }
-
-    #[inline]
-    fn to_ascii_lowercase_smolstr(&self) -> SmolStr {
-        from_char_iter(self.chars().map(|c| c.to_ascii_lowercase()))
-    }
-
-    #[inline]
-    fn to_ascii_uppercase_smolstr(&self) -> SmolStr {
-        from_char_iter(self.chars().map(|c| c.to_ascii_uppercase()))
-    }
-
-    #[inline]
-    fn replace_smolstr(&self, from: &str, to: &str) -> SmolStr {
-        self.replacen_smolstr(from, to, usize::MAX)
-    }
-
-    #[inline]
-    fn replacen_smolstr(&self, from: &str, to: &str, count: usize) -> SmolStr {
-        let mut result = SmolStrBuilder::new();
-        let mut last_end = 0;
-        for (start, part) in self.match_indices(from).take(count) {
-            // SAFETY: `start` is guaranteed to be within the bounds of `self` as per
-            // `match_indices` and last_end is always less than or equal to `start`
-            result.push_str(unsafe { self.get_unchecked(last_end..start) });
-            result.push_str(to);
-            last_end = start + part.len();
-        }
-        // SAFETY: `self.len()` is guaranteed to be within the bounds of `self` and last_end is
-        // always less than or equal to `self.len()`
-        result.push_str(unsafe { self.get_unchecked(last_end..self.len()) });
-        SmolStr::from(result)
-    }
-}
-
-impl<T> ToSmolStr for T
+impl<T> ToString1 for T
 where
     T: fmt::Display + ?Sized,
 {
-    fn to_smolstr(&self) -> SmolStr {
-        crate::format_smolstr!("{}", self)
+    fn to_string1(&self) -> SmolStr {
+        let mut w = StringBuilder::new();
+        fmt::Write::write_fmt(&mut w, format_args!("{}", self))
+            .expect("a formatting trait implementation returned an error");
+        w.finish()
     }
-}
-
-mod private {
-    /// No downstream impls allowed.
-    pub trait Sealed {}
-    impl Sealed for str {}
 }
 
 /// Formats arguments to a [`SmolStr`], potentially without allocating.
 ///
 /// See [`alloc::format!`] or [`format_args!`] for syntax documentation.
 #[macro_export]
-macro_rules! format_smolstr {
+macro_rules! format {
     ($($tt:tt)*) => {{
-        let mut w = $crate::SmolStrBuilder::new();
+        let mut w = $crate::str::StringBuilder::new();
         ::core::fmt::Write::write_fmt(&mut w, format_args!($($tt)*)).expect("a formatting trait implementation returned an error");
         w.finish()
     }};
@@ -571,30 +456,36 @@ macro_rules! format_smolstr {
 /// A builder that can be used to efficiently build a [`SmolStr`].
 ///
 /// This won't allocate if the final string fits into the inline buffer.
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
-pub struct SmolStrBuilder(SmolStrBuilderRepr);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StringBuilder<A: Allocator = Global>(StringBuilderRepr<A>);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum SmolStrBuilderRepr {
+enum StringBuilderRepr<A: Allocator = Global> {
     Inline { len: usize, buf: [u8; INLINE_CAP] },
-    Heap(String),
+    Heap(Vec<u8, A>),
 }
 
-impl Default for SmolStrBuilderRepr {
+impl Default for StringBuilderRepr {
     #[inline]
     fn default() -> Self {
-        SmolStrBuilderRepr::Inline {
+        StringBuilderRepr::Inline {
             buf: [0; INLINE_CAP],
             len: 0,
         }
     }
 }
 
-impl SmolStrBuilder {
-    /// Creates a new empty [`SmolStrBuilder`].
+impl Default for StringBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl StringBuilder {
+    /// Creates a new empty [`StringBuilder`].
     #[must_use]
     pub const fn new() -> Self {
-        Self(SmolStrBuilderRepr::Inline {
+        Self(StringBuilderRepr::Inline {
             buf: [0; INLINE_CAP],
             len: 0,
         })
@@ -604,7 +495,7 @@ impl SmolStrBuilder {
     #[must_use]
     pub fn finish(&self) -> SmolStr {
         SmolStr(match &self.0 {
-            &SmolStrBuilderRepr::Inline { len, buf } => {
+            &StringBuilderRepr::Inline { len, buf } => {
                 debug_assert!(len <= INLINE_CAP);
                 Repr::Inline {
                     // SAFETY: We know that `value.len` is less than or equal to the maximum value of `InlineSize`
@@ -612,79 +503,105 @@ impl SmolStrBuilder {
                     buf,
                 }
             }
-            SmolStrBuilderRepr::Heap(heap) => Repr::new(heap),
+            StringBuilderRepr::Heap(heap) => unsafe {
+                Repr::new(core::str::from_utf8_unchecked(heap))
+            },
         })
     }
 
     /// Appends the given [`char`] to the end of `self`'s buffer.
-    pub fn push(&mut self, c: char) {
+    pub fn push_char(&mut self, c: char) {
         match &mut self.0 {
-            SmolStrBuilderRepr::Inline { len, buf } => {
+            StringBuilderRepr::Inline { len, buf } => {
                 let char_len = c.len_utf8();
                 let new_len = *len + char_len;
                 if new_len <= INLINE_CAP {
-                    c.encode_utf8(&mut buf[*len..]);
+                    unsafe { c.encode_utf8(buf.get_unchecked_mut(*len..)) };
                     *len += char_len;
                 } else {
-                    let mut heap = String::with_capacity(new_len);
+                    let mut heap = Vec::with_capacity(new_len);
                     // copy existing inline bytes over to the heap
                     // SAFETY: inline data is guaranteed to be valid utf8 for `old_len` bytes
-                    unsafe { heap.as_mut_vec().extend_from_slice(&buf[..*len]) };
-                    heap.push(c);
-                    self.0 = SmolStrBuilderRepr::Heap(heap);
+                    unsafe { heap.extend(buf.get_unchecked(..*len)) };
+                    unsafe {
+                        c.encode_utf8(
+                            &mut *(heap.spare_capacity_mut() as *mut [MaybeUninit<u8>]
+                                as *mut [u8]),
+                        );
+                        heap.set_len(new_len);
+                    }
+                    self.0 = StringBuilderRepr::Heap(heap);
                 }
             }
-            SmolStrBuilderRepr::Heap(h) => h.push(c),
+            StringBuilderRepr::Heap(h) => {
+                let mut dst = [0; 4];
+                let s = c.encode_utf8(&mut dst);
+                h.extend(s.as_bytes());
+            }
+        }
+    }
+
+    pub fn push2(&mut self, c: u8) {
+        match &mut self.0 {
+            StringBuilderRepr::Inline { len, buf } => {
+                let new_len = *len + 1;
+                if new_len <= INLINE_CAP {
+                    unsafe {
+                        *buf.get_unchecked_mut(*len) = c;
+                    }
+                    *len += 1;
+                } else {
+                    let mut heap = Vec::with_capacity(new_len);
+                    // copy existing inline bytes over to the heap
+                    // SAFETY: inline data is guaranteed to be valid utf8 for `old_len` bytes
+                    unsafe { heap.extend(buf.get_unchecked(..*len)) };
+                    heap.push(c);
+                    self.0 = StringBuilderRepr::Heap(heap);
+                }
+            }
+            StringBuilderRepr::Heap(h) => {
+                h.push(c);
+            }
         }
     }
 
     /// Appends a given string slice onto the end of `self`'s buffer.
-    pub fn push_str(&mut self, s: &str) {
+    pub fn extend(&mut self, s: &[u8]) {
         match &mut self.0 {
-            SmolStrBuilderRepr::Inline { len, buf } => {
+            StringBuilderRepr::Inline { len, buf } => {
                 let old_len = *len;
                 *len += s.len();
 
                 // if the new length will fit on the stack (even if it fills it entirely)
                 if *len <= INLINE_CAP {
-                    buf[old_len..*len].copy_from_slice(s.as_bytes());
+                    unsafe { buf.get_unchecked_mut(old_len..*len).copy_from_slice(s) }
                     return; // skip the heap push below
                 }
 
-                let mut heap = String::with_capacity(*len);
+                let mut heap = Vec::with_capacity(*len);
 
                 // copy existing inline bytes over to the heap
                 // SAFETY: inline data is guaranteed to be valid utf8 for `old_len` bytes
-                unsafe { heap.as_mut_vec().extend_from_slice(&buf[..old_len]) };
-                heap.push_str(s);
-                self.0 = SmolStrBuilderRepr::Heap(heap);
+                unsafe { heap.extend_from_slice(buf.get_unchecked(..old_len)) };
+                heap.extend(s);
+                self.0 = StringBuilderRepr::Heap(heap);
             }
-            SmolStrBuilderRepr::Heap(heap) => heap.push_str(s),
+            StringBuilderRepr::Heap(heap) => heap.extend(s),
         }
     }
 }
 
-impl fmt::Write for SmolStrBuilder {
+impl fmt::Write for StringBuilder {
     #[inline]
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.push_str(s);
+        self.extend(s.as_bytes());
         Ok(())
     }
 }
 
-impl From<SmolStrBuilder> for SmolStr {
-    fn from(value: SmolStrBuilder) -> Self {
+impl From<StringBuilder> for SmolStr {
+    fn from(value: StringBuilder) -> Self {
         value.finish()
-    }
-}
-
-impl From<String> for SmolStr {
-    #[inline]
-    fn from(value: String) -> Self {
-        Self(match Repr::new_on_stack(&*value) {
-            Some(x) => x,
-            None => Repr::Heap(value.into_boxed_str()),
-        })
     }
 }
 
@@ -693,20 +610,7 @@ impl From<Box<str>> for SmolStr {
     fn from(value: Box<str>) -> Self {
         Self(match Repr::new_on_stack(&*value) {
             Some(x) => x,
-            None => Repr::Heap(value),
-        })
-    }
-}
-
-impl From<alloc::borrow::Cow<'_, str>> for SmolStr {
-    #[inline]
-    fn from(value: alloc::borrow::Cow<str>) -> Self {
-        Self(match Repr::new_on_stack(&*value) {
-            Some(x) => x,
-            None => match value {
-                alloc::borrow::Cow::Borrowed(s) => Repr::Heap(Box::from(s)),
-                alloc::borrow::Cow::Owned(s) => Repr::Heap(s.into_boxed_str()),
-            },
+            None => Repr::Heap(unsafe { Box::from_raw(Box::into_raw(value) as *mut [u8]) }),
         })
     }
 }

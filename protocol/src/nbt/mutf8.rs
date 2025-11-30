@@ -1,4 +1,5 @@
-use crate::{Error, SmolStr, SmolStrBuilder, UnsafeWriter};
+use crate::str::{SmolStr, StringBuilder};
+use crate::{Error, UnsafeWriter};
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -102,7 +103,7 @@ pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
 }
 
 pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
-    let mut buf = SmolStrBuilder::new();
+    let mut buf = StringBuilder::new();
     let mut index = 0;
     let mut start = 0;
 
@@ -118,10 +119,8 @@ pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
                 if !(byte == 0xC0 && sec == 0x80) {
                     index += 2;
                 } else {
-                    buf.push_str(core::str::from_utf8_unchecked(
-                        bytes.get_unchecked(start..index),
-                    ));
-                    buf.push('\0');
+                    buf.extend(bytes.get_unchecked(start..index));
+                    buf.push2(b'\0');
                     index += 2;
                     start = index;
                 }
@@ -141,7 +140,7 @@ pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
                     | (0xED, 0x80..=0x9F) => {
                         index += 3;
                     }
-                    (0xED, 0xA0..=0xAF) => unsafe {
+                    (0xED, 0xA0..=0xAF) => {
                         match bytes.get(index + 3) {
                             Some(0xED) => (),
                             _ => return Err(Error),
@@ -157,13 +156,13 @@ pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
                         let s1 = 0xD000 | (u32::from(sec & 0x3F) << 6) | u32::from(third & 0x3F);
                         let s2 = 0xD000 | (u32::from(fifth) << 6) | u32::from(sixth);
                         let point = 0x10000 + (((s1 - 0xD800) << 10) | (s2 - 0xDC00));
-                        buf.push_str(core::str::from_utf8_unchecked(&[
+                        buf.extend(&[
                             0xF0 | ((point & 0x1C0000) >> 18) as u8,
                             0x80 | ((point & 0x3F000) >> 12) as u8,
                             0x80 | ((point & 0xFC0) >> 6) as u8,
                             0x80 | (point & 0x3F) as u8,
-                        ]));
-                    },
+                        ]);
+                    }
                     _ => return Err(Error),
                 }
             }
@@ -172,9 +171,7 @@ pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
     }
 
     unsafe {
-        buf.push_str(core::str::from_utf8_unchecked(
-            bytes.get_unchecked(start..index),
-        ));
+        buf.extend(bytes.get_unchecked(start..index));
     }
     Ok(buf.finish())
 }

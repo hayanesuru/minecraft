@@ -1,11 +1,10 @@
 use crate::dialog::Dialog;
 use crate::profile::Profile;
-use crate::{GameProfile, Identifier};
+use crate::str::SmolStr;
+use crate::Identifier;
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::SmolStr;
-use uuid::Uuid;
 
 const TEXT: &str = "text";
 const TRANSLATE: &str = "translate";
@@ -63,52 +62,52 @@ pub enum Component<A: Allocator = Global> {
     Literal {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        content: SmolStr,
+        content: SmolStr<A>,
     },
     Translatable {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        key: SmolStr,
-        fallback: SmolStr,
+        key: SmolStr<A>,
+        fallback: SmolStr<A>,
         args: Vec<Component<A>, A>,
     },
     Score {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        name: SmolStr,
-        objective: SmolStr,
+        name: SmolStr<A>,
+        objective: SmolStr<A>,
     },
     Selector {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        pattern: SmolStr,
+        pattern: SmolStr<A>,
         separator: Option<Box<Component<A>, A>>,
     },
     Keybind {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        keybind: SmolStr,
+        keybind: SmolStr<A>,
     },
     BlockNbt {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        nbt_path: SmolStr,
+        nbt_path: SmolStr<A>,
         interpret: Option<bool>,
         separator: Option<Box<Component<A>, A>>,
-        pos: SmolStr,
+        pos: SmolStr<A>,
     },
     EntityNbt {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        nbt_path: SmolStr,
+        nbt_path: SmolStr<A>,
         interpret: Option<bool>,
         separator: Option<Box<Component<A>, A>>,
-        selector: SmolStr,
+        selector: SmolStr<A>,
     },
     StorageNbt {
         children: Vec<Component<A>, A>,
         style: Style<A>,
-        nbt_path: SmolStr,
+        nbt_path: SmolStr<A>,
         interpret: Option<bool>,
         separator: Option<Box<Component<A>, A>>,
         storage: Identifier<A>,
@@ -138,13 +137,13 @@ impl Component {
 
 #[derive(Clone)]
 pub struct Style<A: Allocator = Global> {
-    pub font: Option<SmolStr>,
+    pub font: Option<SmolStr<A>>,
     pub color: Option<TextColor>,
     pub shadow_color: Option<ShadowColor>,
     pub decorations: DecorationMap,
     pub click_event: Option<ClickEvent<A>>,
     pub hover_event: Option<HoverEvent>,
-    pub insertion: Option<SmolStr>,
+    pub insertion: Option<SmolStr<A>>,
 }
 
 #[derive(Clone, Copy)]
@@ -439,14 +438,14 @@ impl DecorationMap {
 
 #[derive(Clone)]
 pub enum ClickEvent<A: Allocator = Global> {
-    OpenUrl(SmolStr),
-    OpenFile(SmolStr),
-    RunCommand(SmolStr),
-    SuggestCommand(SmolStr),
+    OpenUrl(SmolStr<A>),
+    OpenFile(SmolStr<A>),
+    RunCommand(SmolStr<A>),
+    SuggestCommand(SmolStr<A>),
     ChangePage(u32),
-    CopyToClipboard(SmolStr),
+    CopyToClipboard(SmolStr<A>),
     ShowDialog(ShowDialog<A>),
-    Custom(Identifier<A>, SmolStr),
+    Custom(Identifier<A>, SmolStr<A>),
 }
 
 #[derive(Clone)]

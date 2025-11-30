@@ -1,18 +1,21 @@
 #![no_std]
 #![cfg_attr(not(feature = "allocator-api2"), feature(allocator_api))]
 
+use crate::str::SmolStr;
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Bytes, Error, Read, SmolStr, UnsafeWriter, Write, V21, V32};
+use mser::{Bytes, Error, Read, UnsafeWriter, Write, V21, V32};
 use uuid::Uuid;
 
 pub mod chat;
 pub mod clientbound;
 pub mod dialog;
 pub mod item;
+pub mod nbt;
 pub mod profile;
 pub mod serverbound;
+pub mod str;
 pub mod types;
 
 #[macro_use]
@@ -286,9 +289,8 @@ impl Write for Ident<'_> {
 
 #[derive(Clone)]
 pub struct Identifier<A: Allocator = Global> {
-    pub namespace: SmolStr,
-    pub path: SmolStr,
-    pub alloc: A,
+    pub namespace: SmolStr<A>,
+    pub path: SmolStr<A>,
 }
 
 #[test]

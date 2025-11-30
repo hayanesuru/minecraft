@@ -1,9 +1,9 @@
 use crate::chat::Component;
+use crate::nbt::Compound;
+use crate::str::SmolStr;
 use crate::Identifier;
 use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
-use mser::nbt::Compound;
-use mser::SmolStr;
 
 #[derive(Clone)]
 pub enum Dialog<A: Allocator = Global> {
@@ -52,33 +52,33 @@ pub struct Description<A: Allocator = Global> {
 #[derive(Clone)]
 pub enum Input<A: Allocator = Global> {
     Text {
-        key: SmolStr,
+        key: SmolStr<A>,
         label: Component<A>,
         width: u32,
         label_visible: bool,
-        initial: Option<SmolStr>,
+        initial: Option<SmolStr<A>>,
         max_length: u32,
         multiline: Option<Multiline>,
     },
     Boolean {
-        key: SmolStr,
+        key: SmolStr<A>,
         label: Component<A>,
         initial: bool,
-        on_true: Option<SmolStr>,
-        on_false: Option<SmolStr>,
+        on_true: Option<SmolStr<A>>,
+        on_false: Option<SmolStr<A>>,
     },
     SingleOption {
-        key: SmolStr,
+        key: SmolStr<A>,
         label: Component<A>,
         width: u32,
         label_visible: bool,
         options: Vec<SingleOptionEntry, A>,
     },
     NumberRange {
-        key: SmolStr,
+        key: SmolStr<A>,
         label: Component<A>,
         width: u32,
-        label_format: Option<SmolStr>,
+        label_format: Option<SmolStr<A>>,
         start: f32,
         end: f32,
         initial: Option<f32>,
@@ -94,7 +94,7 @@ pub struct Multiline {
 
 #[derive(Clone)]
 pub struct SingleOptionEntry<A: Allocator = Global> {
-    pub id: SmolStr,
+    pub id: SmolStr<A>,
     pub display: Component<A>,
     pub initial: bool,
 }

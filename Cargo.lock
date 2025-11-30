@@ -29,9 +29,12 @@ name = "minecraft_data_protocol"
 version = "0.1.0-rc.0+1.21.11-pre3"
 dependencies = [
  "allocator-api2",
+ "itoa",
  "minecraft_data",
  "mser",
  "mser_macro",
+ "ryu",
+ "smallvec",
  "uuid",
 ]
 
@@ -40,10 +43,7 @@ name = "mser"
 version = "2.1.0-rc.1"
 dependencies = [
  "allocator-api2",
- "itoa",
  "rustc_version",
- "ryu",
- "smallvec",
  "uuid",
 ]
 

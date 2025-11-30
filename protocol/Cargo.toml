@@ -12,10 +12,13 @@ default = ["allocator-api2"]
 
 [dependencies]
 minecraft_data = { workspace = true }
-mser = { workspace = true, features = ["nbt"] }
+mser = { workspace = true }
 mser_macro = { workspace = true }
 uuid = { version = "1", default-features = false }
 allocator-api2 = { version = "0.2.9", optional = true, default-features = false, features = ["alloc"] }
+smallvec = "1"
+itoa = "1"
+ryu = "1"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

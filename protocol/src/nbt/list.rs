@@ -2,20 +2,20 @@ use super::*;
 use crate::SmolStr;
 
 #[derive(Clone)]
-pub enum List {
+pub enum List<A: Allocator = Global> {
     None,
-    Byte(Vec<u8>),
-    Short(Vec<i16>),
-    Int(Vec<i32>),
-    Long(Vec<i64>),
-    Float(Vec<f32>),
-    Double(Vec<f64>),
-    String(Vec<SmolStr>),
-    ByteArray(Vec<Vec<u8>>),
-    IntArray(Vec<Vec<i32>>),
-    LongArray(Vec<Vec<i64>>),
-    List(Vec<Self>),
-    Compound(Vec<Compound>),
+    Byte(Vec<u8, A>),
+    Short(Vec<i16, A>),
+    Int(Vec<i32, A>),
+    Long(Vec<i64, A>),
+    Float(Vec<f32, A>),
+    Double(Vec<f64, A>),
+    String(Vec<SmolStr<A>, A>),
+    ByteArray(Vec<Vec<u8>, A>),
+    IntArray(Vec<Vec<i32>, A>),
+    LongArray(Vec<Vec<i64>, A>),
+    List(Vec<List<A>, A>),
+    Compound(Vec<Compound<A>, A>),
 }
 
 impl From<Vec<u8>> for List {
@@ -202,7 +202,7 @@ impl Write for List {
 pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
     match id {
         END => Ok(List::None),
-        BYTE => Ok(List::Byte(n.slice(len)?.to_vec())),
+        BYTE => Ok(List::Byte(Vec::from(n.slice(len)?))),
         SHORT => {
             let mut slice = n.slice(len << 1)?;
             let mut v = Vec::with_capacity(len);
@@ -251,7 +251,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             for _ in 0..len {
                 let len = n.i32()? as usize;
                 let slice = n.slice(len)?;
-                list.push(slice.to_vec());
+                list.push(Vec::from(slice));
             }
             Ok(List::ByteArray(list))
         }

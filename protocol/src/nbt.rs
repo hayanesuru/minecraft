@@ -9,6 +9,7 @@ pub use self::stringify::StringifyCompound;
 use crate::nbt::mutf8::is_mutf8;
 use crate::str::SmolStr;
 use crate::{Bytes, Error, Read, UnsafeWriter, Write};
+use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
 
 pub const END: u8 = 0;
@@ -26,19 +27,19 @@ pub const INT_ARRAY: u8 = 11;
 pub const LONG_ARRAY: u8 = 12;
 
 #[derive(Clone)]
-pub enum Tag {
+pub enum Tag<A: Allocator = Global> {
     Byte(u8),
     Short(i16),
     Int(i32),
     Long(i64),
     Float(f32),
     Double(f64),
-    String(SmolStr),
-    ByteArray(Vec<u8>),
-    IntArray(Vec<i32>),
-    LongArray(Vec<i64>),
-    List(List),
-    Compound(Compound),
+    String(SmolStr<A>),
+    ByteArray(Vec<u8, A>),
+    IntArray(Vec<i32, A>),
+    LongArray(Vec<i64, A>),
+    List(List<A>),
+    Compound(Compound<A>),
 }
 
 impl Write for Tag {
@@ -165,13 +166,6 @@ impl From<Vec<u8>> for Tag {
     }
 }
 
-impl From<alloc::sync::Arc<str>> for Tag {
-    #[inline]
-    fn from(value: alloc::sync::Arc<str>) -> Self {
-        Self::String(SmolStr::new(value))
-    }
-}
-
 impl<'a> From<&'a str> for Tag {
     #[inline]
     fn from(value: &'a str) -> Self {
@@ -186,38 +180,10 @@ impl<'a> From<&'a mut str> for Tag {
     }
 }
 
-impl<'a> From<&'a alloc::string::String> for Tag {
-    #[inline]
-    fn from(value: &'a alloc::string::String) -> Self {
-        Self::String(SmolStr::new(value))
-    }
-}
-
-impl From<alloc::string::String> for Tag {
-    #[inline]
-    fn from(value: alloc::string::String) -> Self {
-        Self::String(SmolStr::from(value))
-    }
-}
-
 impl From<alloc::boxed::Box<str>> for Tag {
     #[inline]
     fn from(value: alloc::boxed::Box<str>) -> Self {
         Self::String(SmolStr::from(value))
-    }
-}
-
-impl From<alloc::borrow::Cow<'_, str>> for Tag {
-    #[inline]
-    fn from(value: alloc::borrow::Cow<str>) -> Self {
-        Self::String(SmolStr::from(value))
-    }
-}
-
-impl From<alloc::rc::Rc<str>> for Tag {
-    #[inline]
-    fn from(value: alloc::rc::Rc<str>) -> Self {
-        Self::String(SmolStr::new(&*value))
     }
 }
 
@@ -256,9 +222,9 @@ impl From<Vec<i64>> for Tag {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 #[repr(transparent)]
-pub struct Compound(Vec<(SmolStr, Tag)>);
+pub struct Compound<A: Allocator = Global>(Vec<(SmolStr<A>, Tag), A>);
 
 impl AsRef<[(SmolStr, Tag)]> for Compound {
     #[inline]
@@ -413,6 +379,12 @@ where
                 .map(|(x, y)| (x.into(), Tag::from(y)))
                 .collect(),
         )
+    }
+}
+
+impl Default for Compound {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -13,19 +13,15 @@ build = "build.rs"
 
 [features]
 default = []
-nbt = []
 allocator_api = []
 
 [dependencies]
 uuid = { version = "1", default-features = false }
-itoa = "1"
-ryu = "1"
-smallvec = "1"
 allocator-api2 = { version = "0.2.9", optional = true, default-features = false, features = ["alloc"] }
 
 [build-dependencies]
 rustc_version = "0"
 
 [package.metadata.docs.rs]
-features = ["nbt", "allocator-api2"]
+features = ["allocator-api2"]
 targets = ["x86_64-unknown-linux-gnu"]
