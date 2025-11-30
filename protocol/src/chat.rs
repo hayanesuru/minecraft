@@ -1,4 +1,5 @@
 use crate::dialog::Dialog;
+use crate::profile::Profile;
 use crate::{GameProfile, Identifier};
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
@@ -464,19 +465,7 @@ pub enum ObjectContents<A: Allocator = Global> {
         sprite: Identifier<A>,
     },
     Player {
-        name: Option<SmolStr>,
-        id: Option<Uuid>,
-        texture: Option<SmolStr>,
-        cape: Option<SmolStr>,
-        model: Option<SmolStr>,
-        profile_properties: Option<Vec<Property, A>>,
+        player: Profile<A>,
         hat: Option<bool>,
     },
-}
-
-#[derive(Clone)]
-pub struct Property {
-    pub name: SmolStr,
-    pub value: SmolStr,
-    pub signature: Option<SmolStr>,
 }

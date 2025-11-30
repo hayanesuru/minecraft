@@ -10,6 +10,8 @@ use uuid::Uuid;
 pub mod chat;
 pub mod clientbound;
 pub mod dialog;
+pub mod item;
+pub mod profile;
 pub mod serverbound;
 pub mod types;
 
