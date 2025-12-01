@@ -293,6 +293,30 @@ pub struct Identifier<A: Allocator = Global> {
     pub path: SmolStr<A>,
 }
 
+#[derive(Clone)]
+pub struct ResourceKey<A: Allocator = Global> {
+    pub registry_name: Identifier<A>,
+    pub identifier: Identifier<A>,
+}
+
+#[derive(Clone)]
+pub struct TagKey<A: Allocator = Global> {
+    pub registry: ResourceKey<A>,
+    pub location: Identifier<A>,
+}
+
+#[derive(Clone)]
+pub enum HolderSet<T, A: Allocator = Global> {
+    Direct(Vec<Holder<T, A>, A>),
+    Named(TagKey<A>),
+}
+
+#[derive(Clone)]
+pub enum Holder<T, A: Allocator = Global> {
+    Direct(T),
+    Reference(ResourceKey<A>),
+}
+
 #[test]
 fn test_write() {
     use crate::clientbound::login::LoginFinished;

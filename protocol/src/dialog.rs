@@ -1,16 +1,42 @@
-use crate::chat::Component;
+use crate::chat::{ClickEvent, Component};
 use crate::item::ItemStack;
+use crate::nbt::Compound;
 use crate::str::SmolStr;
+use crate::{HolderSet, Identifier};
 use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
 
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum Dialog<A: Allocator = Global> {
-    Notice { common: CommonDialog<A> },
-    Confirmation { common: CommonDialog<A> },
-    MultiAction { common: CommonDialog<A> },
-    ServerLinks { common: CommonDialog<A> },
-    DialogList { common: CommonDialog<A> },
+    Notice {
+        common: CommonDialog<A>,
+        action: ActionButton<A>,
+    },
+    Confirmation {
+        common: CommonDialog<A>,
+        yes_button: ActionButton<A>,
+        no_button: ActionButton<A>,
+    },
+    MultiAction {
+        common: CommonDialog<A>,
+        actions: Vec<ActionButton<A>, A>,
+        exit_action: Option<ActionButton<A>>,
+        columns: u32,
+    },
+    ServerLinks {
+        common: CommonDialog<A>,
+        exit_action: Option<ActionButton<A>>,
+        columns: u32,
+        button_width: u32,
+    },
+    DialogList {
+        common: CommonDialog<A>,
+        dialogs: HolderSet<Dialog, A>,
+        exit_action: Option<ActionButton<A>>,
+        columns: u32,
+        button_width: u32,
+    },
 }
 
 #[derive(Clone)]
@@ -49,7 +75,7 @@ pub struct Description<A: Allocator = Global> {
 #[derive(Clone)]
 pub enum Input<A: Allocator = Global> {
     Text {
-        key: SmolStr<A>,
+        key: ParsedTemplate<A>,
         label: Component<A>,
         width: u32,
         label_visible: bool,
@@ -58,21 +84,21 @@ pub enum Input<A: Allocator = Global> {
         multiline: Option<Multiline>,
     },
     Boolean {
-        key: SmolStr<A>,
+        key: ParsedTemplate<A>,
         label: Component<A>,
         initial: bool,
         on_true: Option<SmolStr<A>>,
         on_false: Option<SmolStr<A>>,
     },
     SingleOption {
-        key: SmolStr<A>,
+        key: ParsedTemplate<A>,
         label: Component<A>,
         width: u32,
         label_visible: bool,
         options: Vec<SingleOptionEntry, A>,
     },
     NumberRange {
-        key: SmolStr<A>,
+        key: ParsedTemplate<A>,
         label: Component<A>,
         width: u32,
         label_format: Option<SmolStr<A>>,
@@ -101,4 +127,36 @@ pub enum AfterAction {
     Close,
     None,
     WaitForResponse,
+}
+
+#[derive(Clone)]
+pub struct ActionButton<A: Allocator = Global> {
+    pub botton: Botton<A>,
+    pub action: Option<Action<A>>,
+}
+
+#[derive(Clone)]
+pub struct Botton<A: Allocator = Global> {
+    pub label: Component<A>,
+    pub tooltip: Option<Component<A>>,
+    pub width: u32,
+}
+
+#[derive(Clone)]
+pub enum Action<A: Allocator = Global> {
+    CommandTemplate {
+        template: ParsedTemplate<A>,
+    },
+    CustomAll {
+        id: Identifier<A>,
+        additions: Option<Compound<A>>,
+    },
+    Static {
+        value: ClickEvent<A>,
+    },
+}
+
+#[derive(Clone)]
+pub struct ParsedTemplate<A: Allocator = Global> {
+    pub raw: SmolStr<A>,
 }

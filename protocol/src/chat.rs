@@ -1,61 +1,64 @@
 use crate::dialog::Dialog;
+use crate::item::ItemStack;
 use crate::profile::Profile;
 use crate::str::SmolStr;
-use crate::Identifier;
+use crate::{Holder, Identifier};
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use minecraft_data::entity_type;
+use uuid::Uuid;
 
-const TEXT: &str = "text";
-const TRANSLATE: &str = "translate";
-const TRANSLATE_FALLBACK: &str = "fallback";
-const TRANSLATE_WITH: &str = "with";
-const SCORE: &str = "score";
-const SCORE_NAME: &str = "name";
-const SCORE_OBJECTIVE: &str = "objective";
-const SELECTOR: &str = "selector";
-const KEYBIND: &str = "keybind";
-const EXTRA: &str = "extra";
-const NBT: &str = "nbt";
-const NBT_INTERPRET: &str = "interpret";
-const NBT_BLOCK: &str = "block";
-const NBT_ENTITY: &str = "entity";
-const NBT_STORAGE: &str = "storage";
-const SEPARATOR: &str = "separator";
-const OBJECT_ATLAS: &str = "atlas";
-const OBJECT_SPRITE: &str = "sprite";
-const OBJECT_HAT: &str = "hat";
-const OBJECT_PLAYER: &str = "player";
-const OBJECT_PLAYER_NAME: &str = "name";
-const OBJECT_PLAYER_ID: &str = "id";
-const OBJECT_PLAYER_PROPERTIES: &str = "properties";
-const OBJECT_PLAYER_TEXTURE: &str = "texture";
-const PROFILE_PROPERTY_NAME: &str = "name";
-const PROFILE_PROPERTY_VALUE: &str = "value";
-const PROFILE_PROPERTY_SIGNATURE: &str = "signature";
-const FONT: &str = "font";
-const COLOR: &str = "color";
-const SHADOW_COLOR: &str = "shadow_color";
-const INSERTION: &str = "insertion";
-const CLICK_EVENT_SNAKE: &str = "click_event";
-const CLICK_EVENT_ACTION: &str = "action";
-const CLICK_EVENT_VALUE: &str = "value";
-const CLICK_EVENT_URL: &str = "url";
-const CLICK_EVENT_PATH: &str = "path";
-const CLICK_EVENT_COMMAND: &str = "command";
-const CLICK_EVENT_PAGE: &str = "page";
-const CLICK_EVENT_ID: &str = "id";
-const CLICK_EVENT_PAYLOAD: &str = "payload";
-const HOVER_EVENT_SNAKE: &str = "hover_event";
-const HOVER_EVENT_ACTION: &str = "action";
-const SHOW_ENTITY_ID: &str = "id";
-const SHOW_ENTITY_UUID: &str = "uuid";
-const SHOW_ENTITY_NAME: &str = "name";
-const SHOW_ITEM_ID: &str = "id";
-const SHOW_ITEM_COUNT: &str = "count";
-const SHOW_ITEM_COMPONENTS: &str = "components";
+pub const TEXT: &str = "text";
+pub const TRANSLATE: &str = "translate";
+pub const TRANSLATE_FALLBACK: &str = "fallback";
+pub const TRANSLATE_WITH: &str = "with";
+pub const SCORE: &str = "score";
+pub const SCORE_NAME: &str = "name";
+pub const SCORE_OBJECTIVE: &str = "objective";
+pub const SELECTOR: &str = "selector";
+pub const KEYBIND: &str = "keybind";
+pub const EXTRA: &str = "extra";
+pub const NBT: &str = "nbt";
+pub const NBT_INTERPRET: &str = "interpret";
+pub const NBT_BLOCK: &str = "block";
+pub const NBT_ENTITY: &str = "entity";
+pub const NBT_STORAGE: &str = "storage";
+pub const SEPARATOR: &str = "separator";
+pub const OBJECT_ATLAS: &str = "atlas";
+pub const OBJECT_SPRITE: &str = "sprite";
+pub const OBJECT_HAT: &str = "hat";
+pub const OBJECT_PLAYER: &str = "player";
+pub const OBJECT_PLAYER_NAME: &str = "name";
+pub const OBJECT_PLAYER_ID: &str = "id";
+pub const OBJECT_PLAYER_PROPERTIES: &str = "properties";
+pub const OBJECT_PLAYER_TEXTURE: &str = "texture";
+pub const PROFILE_PROPERTY_NAME: &str = "name";
+pub const PROFILE_PROPERTY_VALUE: &str = "value";
+pub const PROFILE_PROPERTY_SIGNATURE: &str = "signature";
+pub const FONT: &str = "font";
+pub const COLOR: &str = "color";
+pub const SHADOW_COLOR: &str = "shadow_color";
+pub const INSERTION: &str = "insertion";
+pub const CLICK_EVENT_SNAKE: &str = "click_event";
+pub const CLICK_EVENT_ACTION: &str = "action";
+pub const CLICK_EVENT_VALUE: &str = "value";
+pub const CLICK_EVENT_URL: &str = "url";
+pub const CLICK_EVENT_PATH: &str = "path";
+pub const CLICK_EVENT_COMMAND: &str = "command";
+pub const CLICK_EVENT_PAGE: &str = "page";
+pub const CLICK_EVENT_ID: &str = "id";
+pub const CLICK_EVENT_PAYLOAD: &str = "payload";
+pub const HOVER_EVENT_SNAKE: &str = "hover_event";
+pub const HOVER_EVENT_ACTION: &str = "action";
+pub const SHOW_ENTITY_ID: &str = "id";
+pub const SHOW_ENTITY_UUID: &str = "uuid";
+pub const SHOW_ENTITY_NAME: &str = "name";
+pub const SHOW_ITEM_ID: &str = "id";
+pub const SHOW_ITEM_COUNT: &str = "count";
+pub const SHOW_ITEM_COMPONENTS: &str = "components";
 
-const HEX_PREFIX: u8 = b'#';
+pub const HEX_PREFIX: u8 = b'#';
 
 #[derive(Clone)]
 pub enum Component<A: Allocator = Global> {
@@ -142,7 +145,7 @@ pub struct Style<A: Allocator = Global> {
     pub shadow_color: Option<ShadowColor>,
     pub decorations: DecorationMap,
     pub click_event: Option<ClickEvent<A>>,
-    pub hover_event: Option<HoverEvent>,
+    pub hover_event: Option<HoverEvent<A>>,
     pub insertion: Option<SmolStr<A>>,
 }
 
@@ -444,18 +447,24 @@ pub enum ClickEvent<A: Allocator = Global> {
     SuggestCommand(SmolStr<A>),
     ChangePage(u32),
     CopyToClipboard(SmolStr<A>),
-    ShowDialog(ShowDialog<A>),
+    ShowDialog(Holder<Box<Dialog<A>, A>, A>),
     Custom(Identifier<A>, SmolStr<A>),
 }
 
 #[derive(Clone)]
-pub enum ShowDialog<A: Allocator = Global> {
-    Id(Identifier<A>),
-    Dialog(Box<Dialog<A>, A>),
+pub enum HoverEvent<A: Allocator = Global> {
+    ShowEntity {
+        id: entity_type,
+        uuid: Uuid,
+        name: Option<Box<Component<A>, A>>,
+    },
+    ShowItem {
+        item: ItemStack<A>,
+    },
+    ShowText {
+        value: Box<Component<A>, A>,
+    },
 }
-
-#[derive(Clone)]
-pub enum HoverEvent {}
 
 #[derive(Clone)]
 pub enum ObjectContents<A: Allocator = Global> {
