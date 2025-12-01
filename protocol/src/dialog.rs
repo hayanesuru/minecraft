@@ -1,7 +1,6 @@
 use crate::chat::Component;
-use crate::nbt::Compound;
+use crate::item::ItemStack;
 use crate::str::SmolStr;
-use crate::Identifier;
 use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
 
@@ -32,14 +31,12 @@ pub enum DialogBody<A: Allocator = Global> {
         width: u32,
     },
     Item {
-        id: Identifier<A>,
-        count: u32,
-        components: Compound,
+        item: ItemStack<A>,
         description: Description<A>,
-        show_decoration: Option<bool>,
-        show_tooltip: Option<bool>,
-        width: Option<u32>,
-        height: Option<u32>,
+        show_decoration: bool,
+        show_tooltip: bool,
+        width: u32,
+        height: u32,
     },
 }
 
