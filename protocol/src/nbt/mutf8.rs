@@ -40,7 +40,7 @@ pub fn is_mutf8(bytes: &[u8]) -> bool {
 
 #[inline]
 const fn has_zero(bytes: &[u8]) -> bool {
-    const CHUNK_SIZE: usize = 8;
+    const CHUNK_SIZE: usize = 16;
 
     let mut i = 0;
 
