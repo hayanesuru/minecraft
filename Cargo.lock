@@ -16,7 +16,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "minecraft_data"
-version = "2.1.0-rc.3+1.21.11-pre3"
+version = "2.1.0-rc.3+1.21.11-pre4"
 dependencies = [
  "itoa",
  "mser",
@@ -26,7 +26,7 @@ dependencies = [
 
 [[package]]
 name = "minecraft_data_protocol"
-version = "0.1.0-rc.0+1.21.11-pre3"
+version = "0.1.0-rc.0+1.21.11-pre4"
 dependencies = [
  "allocator-api2",
  "itoa",
