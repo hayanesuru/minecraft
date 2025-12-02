@@ -66,7 +66,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             dw(n);
             if n.peek1()? == b']' {
                 *n = n.get_unchecked(1..);
-                return Ok(Tag::ByteArray(vec));
+                return Ok(Tag::from(vec));
             }
             loop {
                 dw(n);
@@ -91,7 +91,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(Tag::ByteArray(vec))
+            Ok(Tag::from(vec))
         },
         b'I' if n.at(2)? == b';' => unsafe {
             let mut vec = Vec::<i32>::new();
@@ -412,7 +412,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                                                 if let b'b' | b'B' = n.peek1()? {
                                                     *n = n.get_unchecked(1..);
                                                 }
-                                                list.push(a as u8);
+                                                list.push(a);
                                             }
                                             b't' | b'T' => {
                                                 n.slice(4)?;
@@ -675,7 +675,7 @@ fn dnum(n: &[u8]) -> Result<Tag, Error> {
                 if b != rest.len() {
                     Err(Error)
                 } else {
-                    Ok(Tag::Byte(a as u8))
+                    Ok(Tag::Byte(a))
                 }
             }
             b'S' | b's' => {
@@ -869,7 +869,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: NonNull<Compound>) {
                     buf.extend(b"\": ");
                     match &tag {
                         Tag::Byte(x) => {
-                            let s = itoa_buf.format(*x as i8);
+                            let s = itoa_buf.format(*x);
                             buf.extend(s.as_bytes());
                             buf.push(b'B');
                         }
@@ -910,7 +910,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: NonNull<Compound>) {
                                     buf.extend(DELIMITER);
                                 }
                                 flag = true;
-                                let s = itoa_buf.format(y as i8);
+                                let s = itoa_buf.format(y);
                                 buf.extend(s.as_bytes());
                                 buf.push(b'b');
                             }
@@ -963,7 +963,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: NonNull<Compound>) {
                                     buf.extend(DELIMITER);
                                 }
                                 flag = true;
-                                let s = itoa_buf.format(y as i8);
+                                let s = itoa_buf.format(y);
                                 buf.extend(s.as_bytes());
                                 buf.push(b'b');
                             }
@@ -1053,7 +1053,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: NonNull<Compound>) {
                                         buf.extend(DELIMITER);
                                     }
                                     flag1 = true;
-                                    let s = itoa_buf.format(z as i8);
+                                    let s = itoa_buf.format(z);
                                     buf.extend(s.as_bytes());
                                     buf.push(b'b');
                                 }

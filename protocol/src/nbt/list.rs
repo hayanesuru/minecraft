@@ -4,14 +4,14 @@ use crate::SmolStr;
 #[derive(Clone)]
 pub enum List<A: Allocator = Global> {
     None,
-    Byte(Vec<u8, A>),
+    Byte(Vec<i8, A>),
     Short(Vec<i16, A>),
     Int(Vec<i32, A>),
     Long(Vec<i64, A>),
     Float(Vec<f32, A>),
     Double(Vec<f64, A>),
     String(Vec<SmolStr<A>, A>),
-    ByteArray(Vec<Vec<u8>, A>),
+    ByteArray(Vec<Vec<i8>, A>),
     IntArray(Vec<Vec<i32>, A>),
     LongArray(Vec<Vec<i64>, A>),
     List(Vec<List<A>, A>),
@@ -21,6 +21,16 @@ pub enum List<A: Allocator = Global> {
 impl From<Vec<u8>> for List {
     #[inline]
     fn from(value: Vec<u8>) -> Self {
+        let mut me = core::mem::ManuallyDrop::new(value);
+        Self::Byte(unsafe {
+            Vec::from_raw_parts(me.as_mut_ptr().cast::<i8>(), me.len(), me.capacity())
+        })
+    }
+}
+
+impl From<Vec<i8>> for List {
+    #[inline]
+    fn from(value: Vec<i8>) -> Self {
         Self::Byte(value)
     }
 }
@@ -67,9 +77,9 @@ impl From<Vec<SmolStr>> for List {
     }
 }
 
-impl From<Vec<Vec<u8>>> for List {
+impl From<Vec<Vec<i8>>> for List {
     #[inline]
-    fn from(value: Vec<Vec<u8>>) -> Self {
+    fn from(value: Vec<Vec<i8>>) -> Self {
         Self::ByteArray(value)
     }
 }
@@ -106,44 +116,48 @@ impl Write for List {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             match self {
-                Self::None => w.write(&[END, 0, 0, 0, 0]),
+                Self::None => {
+                    TagType::End.write(w);
+                    w.write(&[0, 0, 0, 0]);
+                }
+
                 Self::Byte(x) => {
-                    w.write_byte(BYTE);
+                    TagType::Byte.write(w);
                     (x.len() as u32).write(w);
-                    w.write(x);
+                    w.write(&*(x.as_slice() as *const [i8] as *const [u8]));
                 }
                 Self::Short(x) => {
-                    w.write_byte(SHORT);
+                    TagType::Short.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Int(x) => {
-                    w.write_byte(INT);
+                    TagType::Int.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Long(x) => {
-                    w.write_byte(LONG);
+                    TagType::Long.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Float(x) => {
-                    w.write_byte(FLOAT);
+                    TagType::Float.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Double(x) => {
-                    w.write_byte(DOUBLE);
+                    TagType::Double.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::String(x) => {
-                    (STRING).write(w);
+                    TagType::String.write(w);
                     (x.len() as u32).write(w);
-                    x.iter().for_each(|x| UTF8Tag(x).write(w));
+                    x.iter().for_each(|x| StringTagWriter(x).write(w));
                 }
                 Self::ByteArray(x) => {
-                    w.write_byte(BYTE_ARRAY);
+                    TagType::ByteArray.write(w);
                     (x.len() as u32).write(w);
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
@@ -151,7 +165,7 @@ impl Write for List {
                     });
                 }
                 Self::IntArray(x) => {
-                    w.write_byte(INT_ARRAY);
+                    TagType::IntArray.write(w);
                     (x.len() as u32).write(w);
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
@@ -159,7 +173,7 @@ impl Write for List {
                     });
                 }
                 Self::LongArray(x) => {
-                    w.write_byte(LONG_ARRAY);
+                    TagType::LongArray.write(w);
                     (x.len() as u32).write(w);
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
@@ -167,12 +181,12 @@ impl Write for List {
                     });
                 }
                 Self::List(x) => {
-                    w.write_byte(LIST);
+                    TagType::List.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Compound(x) => {
-                    (COMPOUND).write(w);
+                    TagType::Compound.write(w);
                     (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
@@ -189,7 +203,7 @@ impl Write for List {
             Self::Long(x) => x.len() * 8,
             Self::Float(x) => x.len() * 4,
             Self::Double(x) => x.len() * 8,
-            Self::String(x) => x.iter().map(|x| UTF8Tag(x).sz()).sum::<usize>(),
+            Self::String(x) => x.iter().map(|x| StringTagWriter(x).sz()).sum::<usize>(),
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
@@ -202,7 +216,11 @@ impl Write for List {
 pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
     match id {
         END => Ok(List::None),
-        BYTE => Ok(List::Byte(Vec::from(n.slice(len)?))),
+        BYTE => unsafe {
+            Ok(List::Byte(Vec::from(
+                &*(n.slice(len)? as *const [u8] as *const [i8]),
+            )))
+        },
         SHORT => {
             let mut slice = n.slice(len << 1)?;
             let mut v = Vec::with_capacity(len);
@@ -243,18 +261,18 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Double(v))
         }
-        BYTE_ARRAY => {
+        BYTE_ARRAY => unsafe {
             if len * 4 > n.len() {
                 return Err(Error);
             }
             let mut list = Vec::with_capacity(len);
             for _ in 0..len {
                 let len = n.i32()? as usize;
-                let slice = n.slice(len)?;
+                let slice = &*(n.slice(len)? as *const [u8] as *const [i8]);
                 list.push(Vec::from(slice));
             }
             Ok(List::ByteArray(list))
-        }
+        },
         STRING => {
             if len * 2 > n.len() {
                 return Err(Error);

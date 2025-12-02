@@ -38,9 +38,9 @@ impl<'a> Read<'a> for MUTF8Tag<'a> {
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct UTF8Tag<'a>(pub &'a str);
+pub struct StringTagWriter<'a>(pub &'a str);
 
-impl<'a> Write for UTF8Tag<'a> {
+impl<'a> Write for StringTagWriter<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {

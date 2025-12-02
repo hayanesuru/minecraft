@@ -23,6 +23,10 @@ const CHAR_WIDTH: &[u8; 256] = &[
 
 #[must_use]
 pub fn is_mutf8(bytes: &[u8]) -> bool {
+    if bytes.is_ascii() && !has_zero(bytes) {
+        return true;
+    }
+
     let mut index = 0;
     while let Some(&byte) = bytes.get(index) {
         let w = unsafe { *CHAR_WIDTH.get_unchecked(byte as usize) };
@@ -32,6 +36,35 @@ pub fn is_mutf8(bytes: &[u8]) -> bool {
         index += w as usize;
     }
     true
+}
+
+#[inline]
+const fn has_zero(bytes: &[u8]) -> bool {
+    const CHUNK_SIZE: usize = 8;
+
+    let mut i = 0;
+
+    while i + CHUNK_SIZE <= bytes.len() {
+        let chunk_end = i + CHUNK_SIZE;
+
+        let mut flag = false;
+        while i < chunk_end {
+            flag |= bytes[i] == 0;
+            i += 1;
+        }
+
+        if flag {
+            return true;
+        }
+    }
+
+    let mut flag = false;
+    while i < bytes.len() {
+        flag |= bytes[i] == 0;
+        i += 1;
+    }
+
+    flag
 }
 
 pub fn len_mutf8(bytes: &str) -> usize {

@@ -1,5 +1,6 @@
 use crate::dialog::Dialog;
 use crate::item::ItemStack;
+use crate::nbt::{StringTag, StringTagWriter, TagType};
 use crate::profile::Profile;
 use crate::str::SmolStr;
 use crate::{Holder, Identifier};
@@ -7,6 +8,7 @@ use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use minecraft_data::entity_type;
+use mser::{Error, Read, UnsafeWriter, Write};
 use uuid::Uuid;
 
 pub const TEXT: &str = "text";
@@ -124,7 +126,7 @@ pub enum Component<A: Allocator = Global> {
 
 impl Component {
     pub const EMPTY: Self = Self::Literal {
-        content: SmolStr::new_static(""),
+        content: SmolStr::EMPTY,
         children: Vec::new(),
         style: Style {
             font: None,
@@ -149,6 +151,19 @@ pub struct Style<A: Allocator = Global> {
     pub insertion: Option<SmolStr<A>>,
 }
 
+impl Style {
+    pub const fn new() -> Self {
+        Self {
+            font: None,
+            color: None,
+            shadow_color: None,
+            decorations: DecorationMap::new(),
+            click_event: None,
+            hover_event: None,
+            insertion: None,
+        }
+    }
+}
 #[derive(Clone, Copy)]
 pub enum TextColor {
     Named(TextColorNamed),
@@ -476,4 +491,45 @@ pub enum ObjectContents<A: Allocator = Global> {
         player: Profile<A>,
         hat: Option<bool>,
     },
+}
+
+impl<A: Allocator> Write for Component<A> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        match self {
+            Self::Literal {
+                children: _,
+                style: _,
+                content,
+            } => {
+                StringTagWriter(content).write(w);
+            }
+            _ => StringTagWriter("").write(w),
+        }
+    }
+
+    fn sz(&self) -> usize {
+        match self {
+            Self::Literal {
+                children: _,
+                style: _,
+                content,
+            } => StringTagWriter(content).sz(),
+            _ => StringTagWriter("").sz(),
+        }
+    }
+}
+
+impl<'a> Read<'a> for Component {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        match TagType::read(buf)? {
+            TagType::String => Ok(Self::Literal {
+                children: Vec::new(),
+                style: Style::new(),
+                content: StringTag::read(buf)?.0,
+            }),
+            TagType::List => Err(Error),
+            TagType::Compound => Err(Error),
+            _ => Err(Error),
+        }
+    }
 }

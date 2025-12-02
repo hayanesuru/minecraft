@@ -11,6 +11,8 @@ use core::{fmt, hash, iter, mem, ops};
 pub struct SmolStr<A: Allocator = Global>(Repr<A>);
 
 impl SmolStr {
+    pub const EMPTY: Self = Self::new_inline("");
+
     /// Constructs an inline variant of `SmolStr`.
     ///
     /// This never allocates.
@@ -66,6 +68,7 @@ impl SmolStr {
         self.0.is_empty()
     }
 }
+
 impl<A: Allocator> SmolStr<A> {
     /// Returns `true` if `self` is heap-allocated.
     #[inline(always)]

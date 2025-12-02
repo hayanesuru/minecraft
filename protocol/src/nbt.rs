@@ -4,7 +4,7 @@ mod string;
 mod stringify;
 
 pub use self::list::List;
-use self::string::UTF8Tag;
+pub use self::string::StringTagWriter;
 pub use self::stringify::StringifyCompound;
 use crate::nbt::mutf8::is_mutf8;
 use crate::str::SmolStr;
@@ -26,16 +26,58 @@ pub const COMPOUND: u8 = 10;
 pub const INT_ARRAY: u8 = 11;
 pub const LONG_ARRAY: u8 = 12;
 
+#[derive(Clone, Copy)]
+#[repr(u8)]
+pub enum TagType {
+    End,
+    Byte,
+    Short,
+    Int,
+    Long,
+    Float,
+    Double,
+    ByteArray,
+    String,
+    List,
+    Compound,
+    IntArray,
+    LongArray,
+}
+
+impl Read<'_> for TagType {
+    #[inline]
+    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+        let t = buf.u8()?;
+        if t <= 12 {
+            unsafe { Ok(core::mem::transmute::<u8, Self>(t)) }
+        } else {
+            Err(Error)
+        }
+    }
+}
+
+impl Write for TagType {
+    #[inline]
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        w.write_byte(*self as u8);
+    }
+
+    #[inline]
+    fn sz(&self) -> usize {
+        1
+    }
+}
+
 #[derive(Clone)]
 pub enum Tag<A: Allocator = Global> {
-    Byte(u8),
+    Byte(i8),
     Short(i16),
     Int(i32),
     Long(i64),
     Float(f32),
     Double(f64),
     String(SmolStr<A>),
-    ByteArray(Vec<u8, A>),
+    ByteArray(Vec<i8, A>),
     IntArray(Vec<i32, A>),
     LongArray(Vec<i64, A>),
     List(List<A>),
@@ -45,7 +87,7 @@ pub enum Tag<A: Allocator = Global> {
 impl Write for Tag {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            w.write_byte(self.id());
+            self.id().write(w);
             match self {
                 Tag::Byte(x) => x.write(w),
                 Tag::Short(x) => x.write(w),
@@ -53,10 +95,10 @@ impl Write for Tag {
                 Tag::Long(x) => x.write(w),
                 Tag::Float(x) => x.write(w),
                 Tag::Double(x) => x.write(w),
-                Tag::String(x) => UTF8Tag(x).write(w),
+                Tag::String(x) => StringTagWriter(x).write(w),
                 Tag::ByteArray(x) => {
                     (x.len() as u32).write(w);
-                    w.write(x);
+                    w.write(&*(x.as_slice() as *const [i8] as *const [u8]));
                 }
                 Tag::IntArray(x) => {
                     (x.len() as u32).write(w);
@@ -80,7 +122,7 @@ impl Write for Tag {
             Tag::Long(_) => 8,
             Tag::Float(_) => 4,
             Tag::Double(_) => 8,
-            Tag::String(x) => UTF8Tag(x).sz(),
+            Tag::String(x) => StringTagWriter(x).sz(),
             Tag::ByteArray(x) => 4 + x.len(),
             Tag::IntArray(x) => 4 + x.len() * 4,
             Tag::LongArray(x) => 4 + x.len() * 8,
@@ -92,20 +134,20 @@ impl Write for Tag {
 
 impl Tag {
     #[inline]
-    pub const fn id(&self) -> u8 {
+    pub const fn id(&self) -> TagType {
         match self {
-            Tag::Byte(_) => BYTE,
-            Tag::Short(_) => SHORT,
-            Tag::Int(_) => INT,
-            Tag::Long(_) => LONG,
-            Tag::Float(_) => FLOAT,
-            Tag::Double(_) => DOUBLE,
-            Tag::String(_) => STRING,
-            Tag::ByteArray(_) => BYTE_ARRAY,
-            Tag::IntArray(_) => INT_ARRAY,
-            Tag::LongArray(_) => LONG_ARRAY,
-            Tag::List(_) => LIST,
-            Tag::Compound(_) => COMPOUND,
+            Tag::Byte(_) => TagType::Byte,
+            Tag::Short(_) => TagType::Short,
+            Tag::Int(_) => TagType::Int,
+            Tag::Long(_) => TagType::Long,
+            Tag::Float(_) => TagType::Float,
+            Tag::Double(_) => TagType::Double,
+            Tag::String(_) => TagType::String,
+            Tag::ByteArray(_) => TagType::ByteArray,
+            Tag::IntArray(_) => TagType::IntArray,
+            Tag::LongArray(_) => TagType::LongArray,
+            Tag::List(_) => TagType::List,
+            Tag::Compound(_) => TagType::Compound,
         }
     }
 }
@@ -113,17 +155,22 @@ impl Tag {
 impl From<bool> for Tag {
     #[inline]
     fn from(value: bool) -> Self {
-        Self::Byte(value as u8)
+        Self::Byte(value as i8)
     }
 }
 
 impl From<u8> for Tag {
     #[inline]
     fn from(value: u8) -> Self {
-        Self::Byte(value)
+        Self::Byte(value as i8)
     }
 }
 
+impl From<i8> for Tag {
+    fn from(value: i8) -> Self {
+        Self::Byte(value)
+    }
+}
 impl From<i16> for Tag {
     #[inline]
     fn from(value: i16) -> Self {
@@ -162,6 +209,16 @@ impl From<f64> for Tag {
 impl From<Vec<u8>> for Tag {
     #[inline]
     fn from(value: Vec<u8>) -> Self {
+        let mut me = core::mem::ManuallyDrop::new(value);
+        Self::ByteArray(unsafe {
+            Vec::from_raw_parts(me.as_mut_ptr().cast::<i8>(), me.len(), me.capacity())
+        })
+    }
+}
+
+impl From<Vec<i8>> for Tag {
+    #[inline]
+    fn from(value: Vec<i8>) -> Self {
         Self::ByteArray(value)
     }
 }
@@ -244,8 +301,8 @@ impl Write for Compound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             for (name, tag) in &self.0 {
-                w.write_byte(tag.id());
-                UTF8Tag(name).write(w);
+                tag.id().write(w);
+                StringTagWriter(name).write(w);
                 match tag {
                     Tag::Byte(x) => x.write(w),
                     Tag::Short(x) => x.write(w),
@@ -253,10 +310,10 @@ impl Write for Compound {
                     Tag::Long(x) => x.write(w),
                     Tag::Float(x) => x.write(w),
                     Tag::Double(x) => x.write(w),
-                    Tag::String(x) => UTF8Tag(x).write(w),
+                    Tag::String(x) => StringTagWriter(x).write(w),
                     Tag::ByteArray(x) => {
                         (x.len() as u32).write(w);
-                        w.write(x)
+                        w.write(&*(x.as_slice() as *const [i8] as *const [u8]))
                     }
                     Tag::IntArray(x) => {
                         (x.len() as u32).write(w);
@@ -270,14 +327,14 @@ impl Write for Compound {
                     Tag::Compound(x) => x.write(w),
                 }
             }
-            w.write_byte(END);
+            TagType::End.write(w);
         }
     }
 
     fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += UTF8Tag(name).sz();
+            w += StringTagWriter(name).sz();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -285,7 +342,7 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => UTF8Tag(x).sz(),
+                Tag::String(x) => StringTagWriter(x).sz(),
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
@@ -315,14 +372,14 @@ impl Write for NamedCompound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             w.write_byte(COMPOUND);
-            UTF8Tag(self.0.as_str()).write(w);
+            StringTagWriter(self.0.as_str()).write(w);
             self.1.write(w);
         }
     }
 
     #[inline]
     fn sz(&self) -> usize {
-        1 + Write::sz(&UTF8Tag(self.0.as_str())) + Write::sz(&self.1)
+        1 + Write::sz(&StringTagWriter(self.0.as_str())) + Write::sz(&self.1)
     }
 }
 
@@ -539,57 +596,57 @@ impl From<Vec<(SmolStr, Tag)>> for Compound {
 fn decode1(n: &mut &[u8]) -> Result<Compound, Error> {
     let mut compound = Compound(Default::default());
     loop {
-        match n.u8()? {
-            END => {
+        match TagType::read(n)? {
+            TagType::End => {
                 compound.0.shrink_to_fit();
                 return Ok(compound);
             }
-            BYTE => {
+            TagType::Byte => {
                 let k = decode_string(n)?;
                 compound.push(k, n.u8()?);
             }
-            SHORT => {
+            TagType::Short => {
                 let k = decode_string(n)?;
-                compound.push(k, n.i16()?)
+                compound.push(k, n.i16()?);
             }
-            INT => {
+            TagType::Int => {
                 let k = decode_string(n)?;
-                compound.push(k, n.i32()?)
+                compound.push(k, n.i32()?);
             }
-            LONG => {
+            TagType::Long => {
                 let k = decode_string(n)?;
-                compound.push(k, n.i64()?)
+                compound.push(k, n.i64()?);
             }
-            FLOAT => {
+            TagType::Float => {
                 let k = decode_string(n)?;
-                compound.push(k, n.f32()?)
+                compound.push(k, n.f32()?);
             }
-            DOUBLE => {
+            TagType::Double => {
                 let k = decode_string(n)?;
-                compound.push(k, n.f64()?)
+                compound.push(k, n.f64()?);
             }
-            BYTE_ARRAY => {
+            TagType::ByteArray => {
                 let k = decode_string(n)?;
                 let len = n.i32()? as usize;
                 let v = Vec::from(n.slice(len)?);
                 compound.push(k, v);
             }
-            STRING => {
+            TagType::String => {
                 let k = decode_string(n)?;
-                compound.push(k, decode_string(n)?)
+                compound.push(k, decode_string(n)?);
             }
-            LIST => {
+            TagType::List => {
                 let k = decode_string(n)?;
                 let id = n.u8()?;
                 let len = n.i32()? as usize;
                 compound.push(k, list::decode2(n, id, len)?);
             }
-            COMPOUND => {
+            TagType::Compound => {
                 let k = decode_string(n)?;
                 let v = decode1(n)?;
                 compound.push(k, v);
             }
-            INT_ARRAY => {
+            TagType::IntArray => {
                 let k = decode_string(n)?;
                 let len = n.i32()? as usize;
                 let mut slice = n.slice(len * 4)?;
@@ -599,7 +656,7 @@ fn decode1(n: &mut &[u8]) -> Result<Compound, Error> {
                 }
                 compound.push(k, v);
             }
-            LONG_ARRAY => {
+            TagType::LongArray => {
                 let k = decode_string(n)?;
                 let len = n.i32()? as usize;
                 let mut slice = n.slice(len * 8)?;
@@ -609,13 +666,35 @@ fn decode1(n: &mut &[u8]) -> Result<Compound, Error> {
                 }
                 compound.push(k, v);
             }
-            _ => return Err(Error),
         }
     }
 }
 
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct StringTag(pub SmolStr);
+
+impl Read<'_> for StringTag {
+    #[inline]
+    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+        decode_string(buf).map(Self)
+    }
+}
+
+impl Write for StringTag {
+    #[inline]
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        StringTagWriter(&self.0).write(w);
+    }
+
+    #[inline]
+    fn sz(&self) -> usize {
+        StringTagWriter(&self.0).sz()
+    }
+}
+
 #[inline]
-pub(super) fn decode_string(b: &mut &[u8]) -> Result<SmolStr, Error> {
+fn decode_string(b: &mut &[u8]) -> Result<SmolStr, Error> {
     let len = b.u16()? as usize;
     let a = b.slice(len)?;
 
