@@ -109,10 +109,12 @@ pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
             index += 1;
             start = index;
         } else {
-            let code_point = unsafe { core::str::from_utf8_unchecked(&bytes[index..index + 4]) }
-                .chars()
-                .next()
-                .unwrap() as u32;
+            let code_point = unsafe {
+                core::str::from_utf8_unchecked(&bytes[index..index + 4])
+                    .chars()
+                    .next()
+                    .unwrap_unchecked() as u32
+            };
             let code_point = code_point - 0x10000;
             let first = ((code_point >> 10) as u16) | 0xD800;
             let second = ((code_point & 0x3FF) as u16) | 0xDC00;

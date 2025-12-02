@@ -151,6 +151,12 @@ pub struct Style<A: Allocator = Global> {
     pub insertion: Option<SmolStr<A>>,
 }
 
+impl Default for Style {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Style {
     pub const fn new() -> Self {
         Self {
