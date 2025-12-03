@@ -1658,11 +1658,13 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     *w += "const M2: u32 = ";
     *w += ib.format(names.len() as u32);
     *w += ";\n";
+    *w += "const M0: u128 = ";
+    *w += ib.format(state.key);
+    *w += ";\n";
     *w += "const M: crate::NameMap<";
     *w += repr.to_int();
-    *w += "> = crate::NameMap { key: ";
-    *w += ib.format(state.key);
-    *w += ", disps: &[";
+    *w += "> = crate::NameMap { ";
+    *w += "disps: &[";
 
     for &(x, y) in state.disps {
         *w += "(";
@@ -1686,32 +1688,21 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     }
     *w += "] };\n";
 
-    while !w2.len().is_multiple_of(4) {
+    while !w2.len().is_multiple_of(8) {
         w2.push(0);
     }
     let start = w2.len();
-    w2.reserve(names.len() * 16);
-    let mut offset = names.len() * 4;
-    let mut aligned_offsets = Vec::new();
-
-    for val in names {
-        aligned_offsets.push(offset);
-        offset += 2;
-        offset += val.len();
-        offset = (offset + 1) & !1;
+    w2.reserve(names.len() * 24);
+    let mut offset = names.len() * 8;
+    for &name in names {
+        let a = offset as u32;
+        let b = name.len() as u32;
+        let c = (a as u64) | ((b as u64) << 32);
+        w2.extend(c.to_le_bytes());
+        offset += name.len();
     }
-    for &offset in &aligned_offsets {
-        w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
-    }
-
-    for (i, val) in names.iter().enumerate() {
-        w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
+    for &val in names {
         w2.extend(val.as_bytes());
-        if i < names.len() - 1 {
-            while !w2.len().is_multiple_of(2) {
-                w2.push(0);
-            }
-        }
     }
     *w += "const N: *const u8 = ";
     if start != 0 {
@@ -1752,15 +1743,16 @@ fn impl_name(w: &mut String, name: &str) {
 #[must_use]
 pub const fn name(self) -> &'static str {
 unsafe {
-let offset = u32::from_le_bytes(*Self::N.add(4 * self as usize).cast::<[u8; 4]>());
-let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as usize;
-::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset as usize + 2), len))
+let packed = u64::from_le_bytes(*Self::N.add(8 * self as usize).cast::<[u8; 8]>());
+let len = (packed >> 32) as usize;
+let offset = (packed as u32) as usize;
+::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset), len))
 }
 }
 #[inline]
 #[must_use]
 pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {
-match Self::M.get::<{ Self::M1 }, { Self::M2 }>(name) {
+match Self::M.get::<{ Self::M0 }, { Self::M1 }, { Self::M2 }>(name) {
 ::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<raw_";
     *w += name;
     *w += ", Self>(x)) },
@@ -1832,31 +1824,38 @@ impl GenerateHash {
                 .iter()
                 .map(|x| {
                     let x = x.as_bytes();
-                    match x.len() {
+                    let pl;
+                    let ptr;
+                    let x = match x.len() {
                         len @ 0..=16 => {
-                            let mut p = [0u8; 16];
-                            p[0..len].copy_from_slice(x);
-                            u128::from_le_bytes(p)
+                            pl = len;
+                            ptr = x.as_ptr();
+                            0u128
                         }
-                        len @ 17..=32 => {
-                            let mut p = [0u8; 16];
-                            p.copy_from_slice(&x[0..16]);
-                            for (i, v) in x[17..len].iter().enumerate() {
-                                p[i] ^= v;
-                            }
-                            u128::from_le_bytes(p)
-                        }
-                        len => {
-                            let mut p = [0u8; 16];
-                            let mut q = [0u8; 16];
-                            p.copy_from_slice(&x[0..16]);
-                            q.copy_from_slice(&x[16..32]);
-                            p = (u128::from_le_bytes(p) | u128::from_le_bytes(q)).to_le_bytes();
-                            for (i, v) in x[32..len.min(48)].iter().enumerate() {
-                                p[i] ^= v;
-                            }
-                            u128::from_le_bytes(p)
-                        }
+                        len @ 17..=32 => unsafe {
+                            pl = len - 16;
+                            ptr = x.as_ptr().add(16);
+                            u128::from_le_bytes(
+                                x.get_unchecked(0..16).try_into().unwrap_unchecked(),
+                            )
+                        },
+                        len => unsafe {
+                            let n = u128::from_le_bytes(
+                                x.get_unchecked(0..16).try_into().unwrap_unchecked(),
+                            );
+                            let m = u128::from_le_bytes(
+                                x.get_unchecked(16..32).try_into().unwrap_unchecked(),
+                            );
+                            let len = len - 32;
+                            pl = if len <= 16 { len } else { 16 };
+                            ptr = x.as_ptr().add(32);
+                            n ^ m
+                        },
+                    };
+                    unsafe {
+                        let mut p = [0u8; 16];
+                        core::ptr::copy_nonoverlapping(ptr, p.as_mut_ptr(), pl);
+                        x ^ u128::from_le_bytes(p)
                     }
                 })
                 .map(|x| x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128),
