@@ -213,15 +213,15 @@ impl Write for List {
     }
 }
 
-pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
+pub fn decode2(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
     match id {
-        END => Ok(List::None),
-        BYTE => unsafe {
+        TagType::End => Ok(List::None),
+        TagType::Byte => unsafe {
             Ok(List::Byte(Vec::from(
                 &*(n.slice(len)? as *const [u8] as *const [i8]),
             )))
         },
-        SHORT => {
+        TagType::Short => {
             let mut slice = n.slice(len << 1)?;
             let mut v = Vec::with_capacity(len);
             for _ in 0..len {
@@ -229,7 +229,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Short(v))
         }
-        INT => {
+        TagType::Int => {
             let mut slice = n.slice(len << 2)?;
             let mut v = Vec::with_capacity(len);
             for _ in 0..len {
@@ -237,7 +237,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Int(v))
         }
-        LONG => {
+        TagType::Long => {
             let mut slice = n.slice(len << 3)?;
             let mut v = Vec::with_capacity(len);
             for _ in 0..len {
@@ -245,7 +245,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Long(v))
         }
-        FLOAT => {
+        TagType::Float => {
             let mut slice = n.slice(len << 2)?;
             let mut v = Vec::with_capacity(len);
             for _ in 0..len {
@@ -253,7 +253,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Float(v))
         }
-        DOUBLE => {
+        TagType::Double => {
             let mut slice = n.slice(len << 3)?;
             let mut v = Vec::with_capacity(len);
             for _ in 0..len {
@@ -261,7 +261,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Double(v))
         }
-        BYTE_ARRAY => unsafe {
+        TagType::ByteArray => unsafe {
             if len * 4 > n.len() {
                 return Err(Error);
             }
@@ -273,7 +273,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::ByteArray(list))
         },
-        STRING => {
+        TagType::String => {
             if len * 2 > n.len() {
                 return Err(Error);
             }
@@ -284,19 +284,19 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::String(list))
         }
-        LIST => {
+        TagType::List => {
             if len << 2 > n.len() {
                 return Err(Error);
             }
             let mut list = Vec::with_capacity(len);
             for _ in 0..len {
-                let id = n.u8()?;
+                let id = TagType::read(n)?;
                 let len = n.i32()? as usize;
                 list.push(decode2(n, id, len)?);
             }
             Ok(List::List(list))
         }
-        COMPOUND => {
+        TagType::Compound => {
             if len > n.len() {
                 return Err(Error);
             }
@@ -306,7 +306,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::Compound(list))
         }
-        INT_ARRAY => {
+        TagType::IntArray => {
             if len * 4 > n.len() {
                 return Err(Error);
             }
@@ -322,7 +322,7 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::IntArray(list))
         }
-        LONG_ARRAY => {
+        TagType::LongArray => {
             if len * 4 > n.len() {
                 return Err(Error);
             }
@@ -338,6 +338,5 @@ pub fn decode2(n: &mut &[u8], id: u8, len: usize) -> Result<List, Error> {
             }
             Ok(List::LongArray(list))
         }
-        _ => Err(Error),
     }
 }

@@ -170,6 +170,19 @@ impl Style {
         }
     }
 }
+
+impl<A: Allocator> Style<A> {
+    pub const fn is_empty(&self) -> bool {
+        self.font.is_none()
+            && self.color.is_none()
+            && self.shadow_color.is_none()
+            && self.decorations.is_empty()
+            && self.click_event.is_none()
+            && self.hover_event.is_none()
+            && self.insertion.is_none()
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum TextColor {
     Named(TextColorNamed),
@@ -339,7 +352,7 @@ impl TextColorRgb {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct ShadowColor {
     pub value: u32,
 }
@@ -362,6 +375,10 @@ impl Default for DecorationMap {
 impl DecorationMap {
     pub const fn new() -> Self {
         Self { value: 0 }
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.value == 0
     }
 
     pub const fn obfuscated(self) -> Option<bool> {
@@ -503,11 +520,15 @@ impl<A: Allocator> Write for Component<A> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         match self {
             Self::Literal {
-                children: _,
-                style: _,
+                children,
+                style,
                 content,
             } => {
-                StringTagWriter(content).write(w);
+                if style.is_empty() && children.is_empty() {
+                    StringTagWriter(content).write(w);
+                } else {
+                    StringTagWriter("").write(w);
+                }
             }
             _ => StringTagWriter("").write(w),
         }
@@ -516,10 +537,16 @@ impl<A: Allocator> Write for Component<A> {
     fn sz(&self) -> usize {
         match self {
             Self::Literal {
-                children: _,
-                style: _,
+                children,
+                style,
                 content,
-            } => StringTagWriter(content).sz(),
+            } => {
+                if style.is_empty() && children.is_empty() {
+                    StringTagWriter(content).sz()
+                } else {
+                    StringTagWriter("").sz()
+                }
+            }
             _ => StringTagWriter("").sz(),
         }
     }

@@ -12,21 +12,7 @@ use crate::{Bytes, Error, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
 
-pub const END: u8 = 0;
-pub const BYTE: u8 = 1;
-pub const SHORT: u8 = 2;
-pub const INT: u8 = 3;
-pub const LONG: u8 = 4;
-pub const FLOAT: u8 = 5;
-pub const DOUBLE: u8 = 6;
-pub const BYTE_ARRAY: u8 = 7;
-pub const STRING: u8 = 8;
-pub const LIST: u8 = 9;
-pub const COMPOUND: u8 = 10;
-pub const INT_ARRAY: u8 = 11;
-pub const LONG_ARRAY: u8 = 12;
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum TagType {
     End,
@@ -360,10 +346,11 @@ pub struct NamedCompound(pub SmolStr, pub Compound);
 impl Read<'_> for NamedCompound {
     #[inline]
     fn read(n: &mut &[u8]) -> Result<Self, Error> {
-        if n.u8()? != COMPOUND {
-            return Err(Error);
+        if matches!(TagType::read(n)?, TagType::Compound) {
+            Ok(Self(decode_string(n)?, decode1(n)?))
+        } else {
+            Err(Error)
         }
-        Ok(Self(decode_string(n)?, decode1(n)?))
     }
 }
 
@@ -371,7 +358,7 @@ impl Write for NamedCompound {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            w.write_byte(COMPOUND);
+            TagType::Compound.write(w);
             StringTagWriter(self.0.as_str()).write(w);
             self.1.write(w);
         }
@@ -389,10 +376,11 @@ pub struct UnamedCompound(pub Compound);
 impl Read<'_> for UnamedCompound {
     #[inline]
     fn read(n: &mut &[u8]) -> Result<Self, Error> {
-        if n.u8()? != COMPOUND {
-            return Err(Error);
+        if matches!(TagType::read(n)?, TagType::Compound) {
+            Ok(Self(decode1(n)?))
+        } else {
+            Err(Error)
         }
-        Ok(Self(decode1(n)?))
     }
 }
 
@@ -400,7 +388,7 @@ impl Write for UnamedCompound {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            w.write_byte(COMPOUND);
+            TagType::Compound.write(w);
             self.0.write(w);
         }
     }
@@ -637,7 +625,7 @@ fn decode1(n: &mut &[u8]) -> Result<Compound, Error> {
             }
             TagType::List => {
                 let k = decode_string(n)?;
-                let id = n.u8()?;
+                let id = TagType::read(n)?;
                 let len = n.i32()? as usize;
                 compound.push(k, list::decode2(n, id, len)?);
             }
