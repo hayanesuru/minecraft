@@ -1,6 +1,5 @@
 mod list;
 pub mod mutf8;
-mod scanner;
 mod string;
 mod stringify;
 

@@ -83,7 +83,7 @@ impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'
     }
 }
 
-impl<T: Write> Write for alloc::slice::Iter<'_, T> {
+impl<T: Write> Write for core::slice::Iter<'_, T> {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.clone().for_each(|x| unsafe { x.write(w) });
@@ -95,7 +95,7 @@ impl<T: Write> Write for alloc::slice::Iter<'_, T> {
     }
 }
 
-impl<T: Write> Write for alloc::slice::IterMut<'_, T> {
+impl<T: Write> Write for core::slice::IterMut<'_, T> {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         self.as_slice().iter().for_each(|x| unsafe { x.write(w) });

@@ -18,7 +18,7 @@ macro_rules! packets {
     ) => {
         #[automatically_derived]
         impl<A: Allocator> crate::types::Id<$m> for $type {
-            fn id() -> $m { $variant }
+            const ID: $m = $variant;
         }
         packets!(@munch $m; $($tail)*);
     };
@@ -27,7 +27,7 @@ macro_rules! packets {
     ) => {
         #[automatically_derived]
         impl<A: Allocator> crate::types::Id<$m> for $type {
-            fn id() -> $m { $variant }
+            const ID: $m = $variant;
         }
     };
     (@munch $m:ty;
@@ -36,7 +36,7 @@ macro_rules! packets {
     ) => {
         #[automatically_derived]
         impl crate::types::Id<$m> for $type {
-            fn id() -> $m { $variant }
+            const ID: $m = $variant;
         }
         packets!(@munch $m; $($tail)*);
     };
@@ -45,7 +45,7 @@ macro_rules! packets {
     ) => {
         #[automatically_derived]
         impl crate::types::Id<$m> for $type {
-            fn id() -> $m { $variant }
+            const ID: $m = $variant;
         }
     };
     (@munch $m:ty; , $($tail:tt)*) => {

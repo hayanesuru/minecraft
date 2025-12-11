@@ -20,7 +20,7 @@ impl<'a, I: PacketId, T: Id<I> + 'a> Packet<'a, I, T> {
 impl<'a, I: PacketId, T: Id<I> + 'a + Read<'a>> Read<'a> for Packet<'a, I, T> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let id = I::read(buf)?;
-        if id == T::id() {
+        if id == T::ID {
             Ok(Packet(T::read(buf)?, core::marker::PhantomData))
         } else {
             Err(Error)
@@ -31,18 +31,18 @@ impl<'a, I: PacketId, T: Id<I> + 'a + Read<'a>> Read<'a> for Packet<'a, I, T> {
 impl<'a, I: PacketId, T: Id<I> + 'a + Write> Write for Packet<'a, I, T> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            T::id().write(w);
+            T::ID.write(w);
             self.0.write(w);
         }
     }
 
     fn sz(&self) -> usize {
-        T::id().sz() + self.0.sz()
+        T::ID.sz() + self.0.sz()
     }
 }
 
 pub trait Id<T: PacketId> {
-    fn id() -> T;
+    const ID: T;
 }
 
 impl PacketId for clientbound__status {}

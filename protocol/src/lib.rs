@@ -128,7 +128,7 @@ where
     A: 'a,
 {
     Borrowed(&'a [T]),
-    Owned(Box<[T], A>),
+    Ref(Box<[T], A>),
 }
 
 impl<'a, T: Write + 'a, A: Allocator, const MAX: usize> Write for List<'a, T, A, MAX> {
@@ -136,7 +136,7 @@ impl<'a, T: Write + 'a, A: Allocator, const MAX: usize> Write for List<'a, T, A,
         unsafe {
             let x = match self {
                 Self::Borrowed(x) => x,
-                Self::Owned(x) => &x[..],
+                Self::Ref(x) => &x[..],
             };
             V21(x.len() as u32).write(w);
             for y in x {
@@ -148,7 +148,7 @@ impl<'a, T: Write + 'a, A: Allocator, const MAX: usize> Write for List<'a, T, A,
     fn sz(&self) -> usize {
         let x = match self {
             Self::Borrowed(x) => x,
-            Self::Owned(x) => &x[..],
+            Self::Ref(x) => &x[..],
         };
         let mut len = V21(x.len() as u32).sz();
         for y in x {
@@ -168,7 +168,7 @@ impl<'a, T: Read<'a> + 'a, const MAX: usize> Read<'a> for List<'a, T, Global, MA
         for _ in 0..len {
             vec.push(T::read(buf)?);
         }
-        Ok(List::Owned(vec.into_boxed_slice()))
+        Ok(List::Ref(vec.into_boxed_slice()))
     }
 }
 
@@ -331,12 +331,18 @@ fn test_write() {
         },
     };
     let packet = Packet::new(packet);
-    let data = mser::boxed(&packet);
+    let len = packet.sz();
+    let data = unsafe {
+        let mut data = alloc::vec::Vec::with_capacity(len);
+        packet.write(&mut mser::UnsafeWriter::new(data.as_mut_ptr()));
+        data.set_len(len);
+        data.into_boxed_slice()
+    };
     let mut data = &data[..];
     let id = data.v32().unwrap();
     assert_eq!(
         clientbound__login::new(id as _).unwrap(),
-        LoginFinished::<'_, Global>::id()
+        LoginFinished::<'_, Global>::ID
     );
     assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
     assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");

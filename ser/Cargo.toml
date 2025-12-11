@@ -1,6 +1,6 @@
 [package]
 name = "mser"
-version = "2.1.0-rc.1"
+version = "2.1.0"
 description = "mser"
 edition.workspace = true
 authors.workspace = true
@@ -12,16 +12,13 @@ documentation = "https://docs.rs/mser"
 build = "build.rs"
 
 [features]
-default = []
-allocator_api = []
 
 [dependencies]
 uuid = { version = "1", default-features = false }
-allocator-api2 = { version = "0.2.9", optional = true, default-features = false, features = ["alloc"] }
 
 [build-dependencies]
 rustc_version = "0"
 
 [package.metadata.docs.rs]
-features = ["allocator-api2"]
+features = []
 targets = ["x86_64-unknown-linux-gnu"]
