@@ -213,7 +213,7 @@ impl Write for List {
     }
 }
 
-pub fn decode2(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
+pub fn decode_raw(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
     match id {
         TagType::End => Ok(List::None),
         TagType::Byte => unsafe {
@@ -279,8 +279,7 @@ pub fn decode2(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
             }
             let mut list = Vec::with_capacity(len);
             for _ in 0..len {
-                let v = decode_string(n)?;
-                list.push(v);
+                list.push(StringTag::read(n)?.0);
             }
             Ok(List::String(list))
         }
@@ -292,7 +291,7 @@ pub fn decode2(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
             for _ in 0..len {
                 let id = TagType::read(n)?;
                 let len = n.i32()? as usize;
-                list.push(decode2(n, id, len)?);
+                list.push(decode_raw(n, id, len)?);
             }
             Ok(List::List(list))
         }
@@ -302,7 +301,7 @@ pub fn decode2(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
             }
             let mut list = Vec::with_capacity(len);
             for _ in 0..len {
-                list.push(super::decode1(n)?);
+                list.push(super::decode_raw(n)?);
             }
             Ok(List::Compound(list))
         }

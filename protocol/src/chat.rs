@@ -1,6 +1,6 @@
 use crate::dialog::Dialog;
 use crate::item::ItemStack;
-use crate::nbt::{StringTag, StringTagWriter, TagType};
+use crate::nbt::{StringTag, StringTagRaw, StringTagWriter, TagType};
 use crate::profile::Profile;
 use crate::str::SmolStr;
 use crate::{Holder, Identifier};
@@ -11,54 +11,54 @@ use minecraft_data::entity_type;
 use mser::{Error, Read, UnsafeWriter, Write};
 use uuid::Uuid;
 
-pub const TEXT: &str = "text";
-pub const TRANSLATE: &str = "translate";
-pub const TRANSLATE_FALLBACK: &str = "fallback";
-pub const TRANSLATE_WITH: &str = "with";
-pub const SCORE: &str = "score";
-pub const SCORE_NAME: &str = "name";
-pub const SCORE_OBJECTIVE: &str = "objective";
-pub const SELECTOR: &str = "selector";
-pub const KEYBIND: &str = "keybind";
-pub const EXTRA: &str = "extra";
-pub const NBT: &str = "nbt";
-pub const NBT_INTERPRET: &str = "interpret";
-pub const NBT_BLOCK: &str = "block";
-pub const NBT_ENTITY: &str = "entity";
-pub const NBT_STORAGE: &str = "storage";
-pub const SEPARATOR: &str = "separator";
-pub const OBJECT_ATLAS: &str = "atlas";
-pub const OBJECT_SPRITE: &str = "sprite";
-pub const OBJECT_HAT: &str = "hat";
-pub const OBJECT_PLAYER: &str = "player";
-pub const OBJECT_PLAYER_NAME: &str = "name";
-pub const OBJECT_PLAYER_ID: &str = "id";
-pub const OBJECT_PLAYER_PROPERTIES: &str = "properties";
-pub const OBJECT_PLAYER_TEXTURE: &str = "texture";
-pub const PROFILE_PROPERTY_NAME: &str = "name";
-pub const PROFILE_PROPERTY_VALUE: &str = "value";
-pub const PROFILE_PROPERTY_SIGNATURE: &str = "signature";
-pub const FONT: &str = "font";
-pub const COLOR: &str = "color";
-pub const SHADOW_COLOR: &str = "shadow_color";
-pub const INSERTION: &str = "insertion";
-pub const CLICK_EVENT_SNAKE: &str = "click_event";
-pub const CLICK_EVENT_ACTION: &str = "action";
-pub const CLICK_EVENT_VALUE: &str = "value";
-pub const CLICK_EVENT_URL: &str = "url";
-pub const CLICK_EVENT_PATH: &str = "path";
-pub const CLICK_EVENT_COMMAND: &str = "command";
-pub const CLICK_EVENT_PAGE: &str = "page";
-pub const CLICK_EVENT_ID: &str = "id";
-pub const CLICK_EVENT_PAYLOAD: &str = "payload";
-pub const HOVER_EVENT_SNAKE: &str = "hover_event";
-pub const HOVER_EVENT_ACTION: &str = "action";
-pub const SHOW_ENTITY_ID: &str = "id";
-pub const SHOW_ENTITY_UUID: &str = "uuid";
-pub const SHOW_ENTITY_NAME: &str = "name";
-pub const SHOW_ITEM_ID: &str = "id";
-pub const SHOW_ITEM_COUNT: &str = "count";
-pub const SHOW_ITEM_COMPONENTS: &str = "components";
+pub const TEXT: StringTagRaw<'static> = StringTagRaw::new("text");
+pub const TRANSLATE: StringTagRaw<'static> = StringTagRaw::new("translate");
+pub const TRANSLATE_FALLBACK: StringTagRaw<'static> = StringTagRaw::new("fallback");
+pub const TRANSLATE_WITH: StringTagRaw<'static> = StringTagRaw::new("with");
+pub const SCORE: StringTagRaw<'static> = StringTagRaw::new("score");
+pub const SCORE_NAME: StringTagRaw<'static> = StringTagRaw::new("name");
+pub const SCORE_OBJECTIVE: StringTagRaw<'static> = StringTagRaw::new("objective");
+pub const SELECTOR: StringTagRaw<'static> = StringTagRaw::new("selector");
+pub const KEYBIND: StringTagRaw<'static> = StringTagRaw::new("keybind");
+pub const EXTRA: StringTagRaw<'static> = StringTagRaw::new("extra");
+pub const NBT: StringTagRaw<'static> = StringTagRaw::new("nbt");
+pub const NBT_INTERPRET: StringTagRaw<'static> = StringTagRaw::new("interpret");
+pub const NBT_BLOCK: StringTagRaw<'static> = StringTagRaw::new("block");
+pub const NBT_ENTITY: StringTagRaw<'static> = StringTagRaw::new("entity");
+pub const NBT_STORAGE: StringTagRaw<'static> = StringTagRaw::new("storage");
+pub const SEPARATOR: StringTagRaw<'static> = StringTagRaw::new("separator");
+pub const OBJECT_ATLAS: StringTagRaw<'static> = StringTagRaw::new("atlas");
+pub const OBJECT_SPRITE: StringTagRaw<'static> = StringTagRaw::new("sprite");
+pub const OBJECT_HAT: StringTagRaw<'static> = StringTagRaw::new("hat");
+pub const OBJECT_PLAYER: StringTagRaw<'static> = StringTagRaw::new("player");
+pub const OBJECT_PLAYER_NAME: StringTagRaw<'static> = StringTagRaw::new("name");
+pub const OBJECT_PLAYER_ID: StringTagRaw<'static> = StringTagRaw::new("id");
+pub const OBJECT_PLAYER_PROPERTIES: StringTagRaw<'static> = StringTagRaw::new("properties");
+pub const OBJECT_PLAYER_TEXTURE: StringTagRaw<'static> = StringTagRaw::new("texture");
+pub const PROFILE_PROPERTY_NAME: StringTagRaw<'static> = StringTagRaw::new("name");
+pub const PROFILE_PROPERTY_VALUE: StringTagRaw<'static> = StringTagRaw::new("value");
+pub const PROFILE_PROPERTY_SIGNATURE: StringTagRaw<'static> = StringTagRaw::new("signature");
+pub const FONT: StringTagRaw<'static> = StringTagRaw::new("font");
+pub const COLOR: StringTagRaw<'static> = StringTagRaw::new("color");
+pub const SHADOW_COLOR: StringTagRaw<'static> = StringTagRaw::new("shadow_color");
+pub const INSERTION: StringTagRaw<'static> = StringTagRaw::new("insertion");
+pub const CLICK_EVENT_SNAKE: StringTagRaw<'static> = StringTagRaw::new("click_event");
+pub const CLICK_EVENT_ACTION: StringTagRaw<'static> = StringTagRaw::new("action");
+pub const CLICK_EVENT_VALUE: StringTagRaw<'static> = StringTagRaw::new("value");
+pub const CLICK_EVENT_URL: StringTagRaw<'static> = StringTagRaw::new("url");
+pub const CLICK_EVENT_PATH: StringTagRaw<'static> = StringTagRaw::new("path");
+pub const CLICK_EVENT_COMMAND: StringTagRaw<'static> = StringTagRaw::new("command");
+pub const CLICK_EVENT_PAGE: StringTagRaw<'static> = StringTagRaw::new("page");
+pub const CLICK_EVENT_ID: StringTagRaw<'static> = StringTagRaw::new("id");
+pub const CLICK_EVENT_PAYLOAD: StringTagRaw<'static> = StringTagRaw::new("payload");
+pub const HOVER_EVENT_SNAKE: StringTagRaw<'static> = StringTagRaw::new("hover_event");
+pub const HOVER_EVENT_ACTION: StringTagRaw<'static> = StringTagRaw::new("action");
+pub const SHOW_ENTITY_ID: StringTagRaw<'static> = StringTagRaw::new("id");
+pub const SHOW_ENTITY_UUID: StringTagRaw<'static> = StringTagRaw::new("uuid");
+pub const SHOW_ENTITY_NAME: StringTagRaw<'static> = StringTagRaw::new("name");
+pub const SHOW_ITEM_ID: StringTagRaw<'static> = StringTagRaw::new("id");
+pub const SHOW_ITEM_COUNT: StringTagRaw<'static> = StringTagRaw::new("count");
+pub const SHOW_ITEM_COMPONENTS: StringTagRaw<'static> = StringTagRaw::new("components");
 
 pub const HEX_PREFIX: u8 = b'#';
 
@@ -527,7 +527,12 @@ impl<A: Allocator> Write for Component<A> {
                 if style.is_empty() && children.is_empty() {
                     StringTagWriter(content).write(w);
                 } else {
-                    StringTagWriter("").write(w);
+                    TagType::Compound.write(w);
+                    TagType::String.write(w);
+                    TEXT.write(w);
+                    StringTagWriter(content).write(w);
+                    style.write(w);
+                    TagType::End.write(w);
                 }
             }
             _ => StringTagWriter("").write(w),
@@ -535,6 +540,7 @@ impl<A: Allocator> Write for Component<A> {
     }
 
     fn sz(&self) -> usize {
+        let mut w = 0usize;
         match self {
             Self::Literal {
                 children,
@@ -542,10 +548,16 @@ impl<A: Allocator> Write for Component<A> {
                 content,
             } => {
                 if style.is_empty() && children.is_empty() {
-                    StringTagWriter(content).sz()
+                    w += StringTagWriter(content).sz();
                 } else {
-                    StringTagWriter("").sz()
+                    w += TagType::Compound.sz();
+                    w += TagType::String.sz();
+                    w += TEXT.sz();
+                    w += StringTagWriter(content).sz();
+                    w += style.sz();
+                    w += TagType::End.sz();
                 }
+                w
             }
             _ => StringTagWriter("").sz(),
         }
@@ -564,5 +576,47 @@ impl<'a> Read<'a> for Component {
             TagType::Compound => Err(Error),
             _ => Err(Error),
         }
+    }
+}
+
+impl<A: Allocator> Style<A> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        if let Some(color) = self.color {
+            TagType::String.write(w);
+            COLOR.write(w);
+            match color {
+                TextColor::Named(named) => {
+                    StringTagRaw::new(named.name()).write(w);
+                }
+                TextColor::Rgb(rgb) => {
+                    let (a, b) = mser::u8_to_hex(rgb.red);
+                    let (c, d) = mser::u8_to_hex(rgb.green);
+                    let (e, f) = mser::u8_to_hex(rgb.blue);
+                    let s = [b'#', a, b, c, d, e, f];
+                    StringTagRaw::new_unchecked(&s).write(w);
+                }
+            }
+        }
+    }
+
+    fn sz(&self) -> usize {
+        let mut w = 0;
+        if let Some(color) = self.color {
+            w += TagType::String.sz();
+            w += COLOR.sz();
+            match color {
+                TextColor::Named(named) => {
+                    w += StringTagRaw::new(named.name()).sz();
+                }
+                TextColor::Rgb(rgb) => {
+                    let (a, b) = mser::u8_to_hex(rgb.red);
+                    let (c, d) = mser::u8_to_hex(rgb.green);
+                    let (e, f) = mser::u8_to_hex(rgb.blue);
+                    let s = [b'#', a, b, c, d, e, f];
+                    w += StringTagRaw::new_unchecked(&s).sz();
+                }
+            }
+        }
+        w
     }
 }

@@ -22,19 +22,21 @@ const CHAR_WIDTH: &[u8; 256] = &[
 ];
 
 #[must_use]
-pub fn is_mutf8(bytes: &[u8]) -> bool {
+pub const fn is_mutf8(bytes: &[u8]) -> bool {
     if bytes.is_ascii() && !has_zero(bytes) {
         return true;
     }
 
     let mut index = 0;
-    while let Some(&byte) = bytes.get(index) {
-        let w = unsafe { *CHAR_WIDTH.get_unchecked(byte as usize) };
+    while index <= bytes.len() {
+        let byte = bytes[index];
+        let w = unsafe { *CHAR_WIDTH.as_ptr().add(byte as usize) };
         if w == 0 {
             return false;
         }
         index += w as usize;
     }
+
     true
 }
 

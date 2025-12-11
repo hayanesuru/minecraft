@@ -1,10 +1,11 @@
 mod list;
 pub mod mutf8;
+mod scanner;
 mod string;
 mod stringify;
 
 pub use self::list::List;
-pub use self::string::StringTagWriter;
+pub use self::string::{StringTagRaw, StringTagWriter};
 pub use self::stringify::StringifyCompound;
 use crate::nbt::mutf8::is_mutf8;
 use crate::str::SmolStr;
@@ -347,7 +348,7 @@ impl Read<'_> for NamedCompound {
     #[inline]
     fn read(n: &mut &[u8]) -> Result<Self, Error> {
         if matches!(TagType::read(n)?, TagType::Compound) {
-            Ok(Self(decode_string(n)?, decode1(n)?))
+            Ok(Self(StringTag::read(n)?.0, decode_raw(n)?))
         } else {
             Err(Error)
         }
@@ -377,7 +378,7 @@ impl Read<'_> for UnamedCompound {
     #[inline]
     fn read(n: &mut &[u8]) -> Result<Self, Error> {
         if matches!(TagType::read(n)?, TagType::Compound) {
-            Ok(Self(decode1(n)?))
+            Ok(Self(decode_raw(n)?))
         } else {
             Err(Error)
         }
@@ -506,7 +507,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push_(&mut self, k: SmolStr, v: Tag) {
+    fn push_(&mut self, k: SmolStr, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -570,7 +571,7 @@ impl Compound {
 impl Read<'_> for Compound {
     #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        decode1(buf)
+        decode_raw(buf)
     }
 }
 
@@ -581,80 +582,55 @@ impl From<Vec<(SmolStr, Tag)>> for Compound {
     }
 }
 
-fn decode1(n: &mut &[u8]) -> Result<Compound, Error> {
+fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
     let mut compound = Compound(Default::default());
     loop {
-        match TagType::read(n)? {
-            TagType::End => {
-                compound.0.shrink_to_fit();
-                return Ok(compound);
-            }
-            TagType::Byte => {
-                let k = decode_string(n)?;
-                compound.push(k, n.u8()?);
-            }
-            TagType::Short => {
-                let k = decode_string(n)?;
-                compound.push(k, n.i16()?);
-            }
-            TagType::Int => {
-                let k = decode_string(n)?;
-                compound.push(k, n.i32()?);
-            }
-            TagType::Long => {
-                let k = decode_string(n)?;
-                compound.push(k, n.i64()?);
-            }
-            TagType::Float => {
-                let k = decode_string(n)?;
-                compound.push(k, n.f32()?);
-            }
-            TagType::Double => {
-                let k = decode_string(n)?;
-                compound.push(k, n.f64()?);
-            }
+        let ty = TagType::read(n)?;
+        if mser::unlikely(matches!(ty, TagType::End)) {
+            compound.0.shrink_to_fit();
+            return Ok(compound);
+        }
+        let k = StringTag::read(n)?.0;
+        let v = match ty {
+            TagType::Byte => Tag::from(n.u8()?),
+            TagType::Short => Tag::from(n.i16()?),
+            TagType::Int => Tag::from(n.i32()?),
+            TagType::Long => Tag::from(n.i64()?),
+            TagType::Float => Tag::from(n.f32()?),
+            TagType::Double => Tag::from(n.f64()?),
             TagType::ByteArray => {
-                let k = decode_string(n)?;
                 let len = n.i32()? as usize;
                 let v = Vec::from(n.slice(len)?);
-                compound.push(k, v);
+                Tag::from(v)
             }
-            TagType::String => {
-                let k = decode_string(n)?;
-                compound.push(k, decode_string(n)?);
-            }
+            TagType::String => Tag::from(StringTag::read(n)?.0),
             TagType::List => {
-                let k = decode_string(n)?;
                 let id = TagType::read(n)?;
                 let len = n.i32()? as usize;
-                compound.push(k, list::decode2(n, id, len)?);
+                Tag::from(list::decode_raw(n, id, len)?)
             }
-            TagType::Compound => {
-                let k = decode_string(n)?;
-                let v = decode1(n)?;
-                compound.push(k, v);
-            }
+            TagType::Compound => Tag::from(decode_raw(n)?),
             TagType::IntArray => {
-                let k = decode_string(n)?;
                 let len = n.i32()? as usize;
                 let mut slice = n.slice(len * 4)?;
                 let mut v = Vec::with_capacity(len);
                 for _ in 0..len {
                     v.push(slice.i32()?);
                 }
-                compound.push(k, v);
+                Tag::from(v)
             }
             TagType::LongArray => {
-                let k = decode_string(n)?;
                 let len = n.i32()? as usize;
                 let mut slice = n.slice(len * 8)?;
                 let mut v = Vec::with_capacity(len);
                 for _ in 0..len {
                     v.push(slice.i64()?);
                 }
-                compound.push(k, v);
+                Tag::from(v)
             }
-        }
+            TagType::End => unsafe { core::hint::unreachable_unchecked() },
+        };
+        compound.push_(k, v);
     }
 }
 

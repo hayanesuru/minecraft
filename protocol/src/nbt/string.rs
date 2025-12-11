@@ -1,10 +1,26 @@
+use crate::nbt::mutf8::is_mutf8;
 use crate::{Bytes, Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct MUTF8Tag<'a>(pub &'a str);
+pub struct StringTagRaw<'a>(&'a [u8]);
 
-impl<'a> Write for MUTF8Tag<'a> {
+impl<'a> StringTagRaw<'a> {
+    pub const fn new(n: &'a str) -> Self {
+        debug_assert!(is_mutf8(n.as_bytes()));
+        Self(n.as_bytes())
+    }
+
+    pub const fn new_unchecked(n: &'a [u8]) -> Self {
+        Self(n)
+    }
+
+    pub const fn inner(&self) -> &'a [u8] {
+        self.0
+    }
+}
+
+impl<'a> Write for StringTagRaw<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -19,16 +35,12 @@ impl<'a> Write for MUTF8Tag<'a> {
     }
 }
 
-impl<'a> Read<'a> for MUTF8Tag<'a> {
+impl<'a> Read<'a> for StringTagRaw<'a> {
     #[inline]
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let len = buf.u16()?;
         let data = buf.slice(len as usize)?;
-        let data = match core::str::from_utf8(data) {
-            Ok(x) => x,
-            Err(_) => return Err(Error),
-        };
-        if super::mutf8::is_mutf8(data.as_bytes()) {
+        if super::mutf8::is_mutf8(data) {
             Ok(Self(data))
         } else {
             Err(Error)
@@ -45,7 +57,7 @@ impl<'a> Write for StringTagWriter<'a> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             if super::mutf8::is_mutf8(self.0.as_bytes()) {
-                MUTF8Tag(self.0).write(w);
+                StringTagRaw(self.0.as_bytes()).write(w);
             } else {
                 (super::mutf8::len_mutf8(self.0) as u16).write(w);
                 super::mutf8::encode_mutf8(self.0.as_bytes(), w);
@@ -55,6 +67,10 @@ impl<'a> Write for StringTagWriter<'a> {
 
     #[inline]
     fn sz(&self) -> usize {
-        2 + super::mutf8::len_mutf8(self.0)
+        if super::mutf8::is_mutf8(self.0.as_bytes()) {
+            StringTagRaw(self.0.as_bytes()).sz()
+        } else {
+            2 + super::mutf8::len_mutf8(self.0)
+        }
     }
 }
