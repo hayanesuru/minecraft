@@ -163,15 +163,16 @@ fn make_block_state(
 
 pub fn block_state_props(
     state: block_state,
-    buf: &mut [(block_state_property_key, block_state_property_value)],
+    buf: &mut [(block_state_property_key, block_state_property_value); 16],
 ) -> &[(block_state_property_key, block_state_property_value)] {
     let mut iter = buf.iter_mut();
     let kind = state.to_block();
     let mut raw = state.id() - kind.state_index();
     for prop in kind.props().iter().rev() {
         let v = prop.val();
-        let idx = raw % v.len() as raw_block_state;
-        raw /= v.len() as raw_block_state;
+        let l = v.len() as raw_block_state;
+        let idx = raw % l;
+        raw /= l;
         match iter.next_back() {
             Some(x) => *x = (prop.key(), unsafe { *v.get_unchecked(idx as usize) }),
             None => break,
