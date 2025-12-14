@@ -747,12 +747,12 @@ unsafe fn dqstr1(n: &mut &[u8]) -> Result<SmolStr, Error> {
             if x == ESCAPE {
                 let y = n.at(cur + 1)?;
                 if y == ESCAPE {
-                    buf.extend(n.get_unchecked(last..cur));
+                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
                     buf.push2(ESCAPE);
                     cur += 2;
                     last = cur;
                 } else if y == b'\'' {
-                    buf.extend(n.get_unchecked(last..cur));
+                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
                     buf.push2(b'\'');
                     cur += 2;
                     last = cur;
@@ -771,7 +771,7 @@ unsafe fn dqstr1(n: &mut &[u8]) -> Result<SmolStr, Error> {
                 cur += 4;
             }
         }
-        buf.extend(n.get_unchecked(last..cur));
+        buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
         n.slice(1 + cur)?;
         Ok(buf.finish())
     }
@@ -789,12 +789,12 @@ unsafe fn dqstr2(n: &mut &[u8]) -> Result<SmolStr, Error> {
             if x == ESCAPE {
                 let y = n.at(cur + 1)?;
                 if y == ESCAPE {
-                    buf.extend(n.get_unchecked(last..cur));
+                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
                     buf.push2(ESCAPE);
                     cur += 2;
                     last = cur;
                 } else if y == b'\"' {
-                    buf.extend(n.get_unchecked(last..cur));
+                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
                     buf.push2(b'\"');
                     cur += 2;
                     last = cur;
@@ -813,7 +813,7 @@ unsafe fn dqstr2(n: &mut &[u8]) -> Result<SmolStr, Error> {
                 cur += 4;
             }
         }
-        buf.extend(n.get_unchecked(last..cur));
+        buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
         n.slice(1 + cur)?;
         Ok(buf.finish())
     }

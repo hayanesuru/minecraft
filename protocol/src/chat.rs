@@ -11,133 +11,126 @@ use minecraft_data::entity_type;
 use mser::{Error, Read, UnsafeWriter, Write};
 use uuid::Uuid;
 
-pub const TEXT: &str = "text" ;
-pub const TRANSLATE: &str = "translate" ;
-pub const TRANSLATE_FALLBACK: &str = "fallback" ;
-pub const TRANSLATE_WITH: &str = "with" ;
-pub const SCORE: &str = "score" ;
-pub const SCORE_NAME: &str = "name" ;
-pub const SCORE_OBJECTIVE: &str = "objective" ;
-pub const SELECTOR: &str = "selector" ;
-pub const KEYBIND: &str = "keybind" ;
-pub const EXTRA: &str = "extra" ;
-pub const NBT: &str = "nbt" ;
-pub const NBT_INTERPRET: &str = "interpret" ;
-pub const NBT_BLOCK: &str = "block" ;
-pub const NBT_ENTITY: &str = "entity" ;
-pub const NBT_STORAGE: &str = "storage" ;
-pub const SEPARATOR: &str = "separator" ;
-pub const OBJECT_ATLAS: &str = "atlas" ;
-pub const OBJECT_SPRITE: &str = "sprite" ;
-pub const OBJECT_HAT: &str = "hat" ;
-pub const OBJECT_PLAYER: &str = "player" ;
-pub const OBJECT_PLAYER_NAME: &str = "name" ;
-pub const OBJECT_PLAYER_ID: &str = "id" ;
-pub const OBJECT_PLAYER_PROPERTIES: &str = "properties" ;
-pub const OBJECT_PLAYER_TEXTURE: &str = "texture" ;
-pub const PROFILE_PROPERTY_NAME: &str = "name" ;
-pub const PROFILE_PROPERTY_VALUE: &str = "value" ;
-pub const PROFILE_PROPERTY_SIGNATURE: &str = "signature" ;
-pub const FONT: &str = "font" ;
-pub const COLOR: &str = "color" ;
-pub const SHADOW_COLOR: &str = "shadow_color" ;
-pub const INSERTION: &str = "insertion" ;
-pub const CLICK_EVENT_SNAKE: &str = "click_event" ;
-pub const CLICK_EVENT_ACTION: &str = "action" ;
-pub const CLICK_EVENT_VALUE: &str = "value" ;
-pub const CLICK_EVENT_URL: &str = "url" ;
-pub const CLICK_EVENT_PATH: &str = "path" ;
-pub const CLICK_EVENT_COMMAND: &str = "command" ;
-pub const CLICK_EVENT_PAGE: &str = "page" ;
-pub const CLICK_EVENT_ID: &str = "id" ;
-pub const CLICK_EVENT_PAYLOAD: &str = "payload" ;
-pub const HOVER_EVENT_SNAKE: &str = "hover_event" ;
-pub const HOVER_EVENT_ACTION: &str = "action" ;
-pub const SHOW_ENTITY_ID: &str = "id" ;
-pub const SHOW_ENTITY_UUID: &str = "uuid" ;
-pub const SHOW_ENTITY_NAME: &str = "name" ;
-pub const SHOW_ITEM_ID: &str = "id" ;
-pub const SHOW_ITEM_COUNT: &str = "count" ;
-pub const SHOW_ITEM_COMPONENTS: &str = "components" ;
+pub const TEXT: StringTagRaw = StringTagRaw::new_unchecked(b"text");
+pub const TRANSLATE: StringTagRaw = StringTagRaw::new_unchecked(b"translate");
+pub const TRANSLATE_FALLBACK: StringTagRaw = StringTagRaw::new_unchecked(b"fallback");
+pub const TRANSLATE_WITH: StringTagRaw = StringTagRaw::new_unchecked(b"with");
+pub const SCORE: StringTagRaw = StringTagRaw::new_unchecked(b"score");
+pub const SCORE_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
+pub const SCORE_OBJECTIVE: StringTagRaw = StringTagRaw::new_unchecked(b"objective");
+pub const SELECTOR: StringTagRaw = StringTagRaw::new_unchecked(b"selector");
+pub const KEYBIND: StringTagRaw = StringTagRaw::new_unchecked(b"keybind");
+pub const EXTRA: StringTagRaw = StringTagRaw::new_unchecked(b"extra");
+pub const NBT: StringTagRaw = StringTagRaw::new_unchecked(b"nbt");
+pub const NBT_INTERPRET: StringTagRaw = StringTagRaw::new_unchecked(b"interpret");
+pub const NBT_BLOCK: StringTagRaw = StringTagRaw::new_unchecked(b"block");
+pub const NBT_ENTITY: StringTagRaw = StringTagRaw::new_unchecked(b"entity");
+pub const NBT_STORAGE: StringTagRaw = StringTagRaw::new_unchecked(b"storage");
+pub const SEPARATOR: StringTagRaw = StringTagRaw::new_unchecked(b"separator");
+pub const OBJECT_ATLAS: StringTagRaw = StringTagRaw::new_unchecked(b"atlas");
+pub const OBJECT_SPRITE: StringTagRaw = StringTagRaw::new_unchecked(b"sprite");
+pub const OBJECT_HAT: StringTagRaw = StringTagRaw::new_unchecked(b"hat");
+pub const OBJECT_PLAYER: StringTagRaw = StringTagRaw::new_unchecked(b"player");
+pub const OBJECT_PLAYER_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
+pub const OBJECT_PLAYER_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
+pub const OBJECT_PLAYER_PROPERTIES: StringTagRaw = StringTagRaw::new_unchecked(b"properties");
+pub const OBJECT_PLAYER_TEXTURE: StringTagRaw = StringTagRaw::new_unchecked(b"texture");
+pub const PROFILE_PROPERTY_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
+pub const PROFILE_PROPERTY_VALUE: StringTagRaw = StringTagRaw::new_unchecked(b"value");
+pub const PROFILE_PROPERTY_SIGNATURE: StringTagRaw = StringTagRaw::new_unchecked(b"signature");
+pub const FONT: StringTagRaw = StringTagRaw::new_unchecked(b"font");
+pub const COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"color");
+pub const SHADOW_COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"shadow_color");
+pub const INSERTION: StringTagRaw = StringTagRaw::new_unchecked(b"insertion");
+pub const CLICK_EVENT_SNAKE: StringTagRaw = StringTagRaw::new_unchecked(b"click_event");
+pub const CLICK_EVENT_ACTION: StringTagRaw = StringTagRaw::new_unchecked(b"action");
+pub const CLICK_EVENT_VALUE: StringTagRaw = StringTagRaw::new_unchecked(b"value");
+pub const CLICK_EVENT_URL: StringTagRaw = StringTagRaw::new_unchecked(b"url");
+pub const CLICK_EVENT_PATH: StringTagRaw = StringTagRaw::new_unchecked(b"path");
+pub const CLICK_EVENT_COMMAND: StringTagRaw = StringTagRaw::new_unchecked(b"command");
+pub const CLICK_EVENT_PAGE: StringTagRaw = StringTagRaw::new_unchecked(b"page");
+pub const CLICK_EVENT_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
+pub const CLICK_EVENT_PAYLOAD: StringTagRaw = StringTagRaw::new_unchecked(b"payload");
+pub const HOVER_EVENT_SNAKE: StringTagRaw = StringTagRaw::new_unchecked(b"hover_event");
+pub const HOVER_EVENT_ACTION: StringTagRaw = StringTagRaw::new_unchecked(b"action");
+pub const SHOW_ENTITY_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
+pub const SHOW_ENTITY_UUID: StringTagRaw = StringTagRaw::new_unchecked(b"uuid");
+pub const SHOW_ENTITY_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
+pub const SHOW_ITEM_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
+pub const SHOW_ITEM_COUNT: StringTagRaw = StringTagRaw::new_unchecked(b"count");
+pub const SHOW_ITEM_COMPONENTS: StringTagRaw = StringTagRaw::new_unchecked(b"components");
 
 pub const HEX_PREFIX: u8 = b'#';
 
 #[derive(Clone)]
-pub enum Component<A: Allocator = Global> {
+pub struct Component<A: Allocator = Global> {
+    pub content: Content<A>,
+    pub style: Style<A>,
+    pub children: Vec<Component<A>, A>,
+}
+
+#[derive(Clone)]
+pub enum Content<A: Allocator = Global> {
     Literal {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         content: SmolStr<A>,
     },
     Translatable {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         key: SmolStr<A>,
         fallback: SmolStr<A>,
         args: Vec<Component<A>, A>,
     },
     Score {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         name: SmolStr<A>,
         objective: SmolStr<A>,
     },
     Selector {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         pattern: SmolStr<A>,
         separator: Option<Box<Component<A>, A>>,
     },
     Keybind {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         keybind: SmolStr<A>,
     },
     BlockNbt {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         nbt_path: SmolStr<A>,
         interpret: Option<bool>,
         separator: Option<Box<Component<A>, A>>,
         pos: SmolStr<A>,
     },
     EntityNbt {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         nbt_path: SmolStr<A>,
         interpret: Option<bool>,
         separator: Option<Box<Component<A>, A>>,
         selector: SmolStr<A>,
     },
     StorageNbt {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         nbt_path: SmolStr<A>,
         interpret: Option<bool>,
         separator: Option<Box<Component<A>, A>>,
         storage: Identifier<A>,
     },
     Objects {
-        children: Vec<Component<A>, A>,
-        style: Style<A>,
         contents: ObjectContents<A>,
     },
 }
 
 impl Component {
-    pub const EMPTY: Self = Self::Literal {
-        content: SmolStr::EMPTY,
-        children: Vec::new(),
-        style: Style {
-            font: None,
-            color: None,
-            shadow_color: None,
-            decorations: DecorationMap::new(),
-            click_event: None,
-            hover_event: None,
-            insertion: None,
-        },
-    };
+    pub const fn empty() -> Self {
+        Self {
+            content: Content::Literal {
+                content: SmolStr::EMPTY,
+            },
+            children: Vec::new(),
+            style: Style {
+                font: None,
+                color: None,
+                shadow_color: None,
+                decorations: DecorationMap::new(),
+                click_event: None,
+                hover_event: None,
+                insertion: None,
+            },
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -511,7 +504,7 @@ pub enum ObjectContents<A: Allocator = Global> {
         sprite: Identifier<A>,
     },
     Player {
-        player: Profile<A>,
+        player: Box<Profile<A>, A>,
         hat: Option<bool>,
     },
 }
@@ -519,22 +512,26 @@ pub enum ObjectContents<A: Allocator = Global> {
 impl<A: Allocator> Write for Component<A> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            match self {
-                Self::Literal {
-                    children,
-                    style,
-                    content,
-                } => {
-                    if style.is_empty() && children.is_empty() {
-                        StringTagWriter(content).write(w);
-                    } else {
-                        TagType::Compound.write(w);
-                        TagType::String.write(w);
-                        TEXT.write(w);
-                        StringTagWriter(content).write(w);
-                        style.write(w);
-                        TagType::End.write(w);
-                    }
+            let Self {
+                content,
+                style,
+                children,
+            } = self;
+            if let Content::Literal { content } = content
+                && style.is_empty()
+                && children.is_empty()
+            {
+                StringTagWriter(content).write(w);
+                return;
+            }
+            match content {
+                Content::Literal { content } => {
+                    TagType::Compound.write(w);
+                    TagType::String.write(w);
+                    TEXT.write(w);
+                    StringTagWriter(content).write(w);
+                    style.write(w);
+                    TagType::End.write(w);
                 }
                 _ => StringTagWriter("").write(w),
             }
@@ -543,39 +540,73 @@ impl<A: Allocator> Write for Component<A> {
 
     fn sz(&self) -> usize {
         let mut w = 0usize;
-        match self {
-            Self::Literal {
-                children,
-                style,
-                content,
-            } => {
-                if style.is_empty() && children.is_empty() {
-                    w += StringTagWriter(content).sz();
-                } else {
-                    w += TagType::Compound.sz();
-                    w += TagType::String.sz();
-                    w += TEXT.sz();
-                    w += StringTagWriter(content).sz();
-                    w += style.sz();
-                    w += TagType::End.sz();
-                }
-                w
-            }
-            _ => StringTagWriter("").sz(),
+        let Self {
+            content,
+            style,
+            children,
+        } = self;
+        if let Content::Literal { content } = content
+            && style.is_empty()
+            && children.is_empty()
+        {
+            w += StringTagWriter(content).sz();
+            return w;
         }
+        match content {
+            Content::Literal { content } => {
+                w += TagType::Compound.sz();
+                w += TagType::String.sz();
+                w += TEXT.sz();
+                w += StringTagWriter(content).sz();
+                w += style.sz();
+                w += TagType::End.sz();
+            }
+            _ => {
+                w += StringTagWriter("").sz();
+            }
+        }
+        w
     }
 }
 
 impl<'a> Read<'a> for Component {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         match TagType::read(buf)? {
-            TagType::String => Ok(Self::Literal {
+            TagType::String => Ok(Self {
                 children: Vec::new(),
                 style: Style::new(),
-                content: StringTag::read(buf)?.0,
+                content: Content::Literal {
+                    content: StringTag::read(buf)?.0,
+                },
             }),
             TagType::List => Err(Error),
-            TagType::Compound => Err(Error),
+            TagType::Compound => {
+                let mut content = Content::Literal {
+                    content: SmolStr::EMPTY,
+                };
+                let style = Style::new();
+                let children = Vec::new();
+                loop {
+                    let tag_type = TagType::read(buf)?;
+                    if tag_type == TagType::End {
+                        return Ok(Self {
+                            content,
+                            style,
+                            children,
+                        });
+                    }
+                    let name = StringTag::read(buf)?;
+                    let name = name.0.as_str();
+                    match name {
+                        "text" => {
+                            content = Content::Literal {
+                                content: StringTag::read(buf)?.0,
+                            }
+                        }
+                        _ => return Err(Error),
+                    }
+                }
+            }
             _ => Err(Error),
         }
     }

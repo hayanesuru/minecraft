@@ -10,8 +10,19 @@ use core::{fmt, hash, iter, mem, ops};
 #[repr(transparent)]
 pub struct SmolStr<A: Allocator = Global>(Repr<A>);
 
-impl SmolStr {
-    pub const EMPTY: Self = Self::new_inline("");
+impl<A: Allocator> SmolStr<A> {
+    pub const EMPTY: Self = Self(Repr::Inline {
+        len: InlineSize::_V0,
+        buf: [0; INLINE_CAP],
+    });
+
+    /// # Safety
+    pub const unsafe fn new_inline_unchecked(buf: [u8; INLINE_CAP], len: usize) -> Self {
+        Self(Repr::Inline {
+            len: unsafe { InlineSize::transmute_from_u8(len as u8) },
+            buf,
+        })
+    }
 
     /// Constructs an inline variant of `SmolStr`.
     ///
@@ -29,7 +40,7 @@ impl SmolStr {
         let mut i = 0;
         while i < text.len() {
             buf[i] = text[i];
-            i += 1
+            i += 1;
         }
         Self(Repr::Inline {
             // SAFETY: We know that `len` is less than or equal to the maximum value of `InlineSize`
@@ -37,19 +48,6 @@ impl SmolStr {
             len: unsafe { InlineSize::transmute_from_u8(text.len() as u8) },
             buf,
         })
-    }
-
-    /// # Safety
-    pub const unsafe fn new_inline_unchecked(buf: [u8; INLINE_CAP], len: usize) -> Self {
-        Self(Repr::Inline {
-            len: unsafe { InlineSize::transmute_from_u8(len as u8) },
-            buf,
-        })
-    }
-
-    /// # Safety
-    pub const unsafe fn new_heap_unchecked(buf: Box<[u8]>) -> Self {
-        Self(Repr::Heap(buf))
     }
 
     /// Constructs a `SmolStr` from a statically allocated string.
@@ -63,22 +61,37 @@ impl SmolStr {
         SmolStr(Repr::Static(text))
     }
 
-    /// Constructs a `SmolStr` from a `str`, heap-allocating if necessary.
-    #[inline(always)]
-    pub fn new(text: impl AsRef<str>) -> SmolStr {
-        SmolStr(Repr::new(text.as_ref()))
+    /// # Safety
+    pub const unsafe fn new_heap_unchecked(buf: Box<[u8], A>) -> Self {
+        Self(Repr::Heap(buf))
     }
 
     /// Returns the length of `self` in bytes.
     #[inline(always)]
     pub fn len(&self) -> usize {
-        self.0.len()
+        match &self.0 {
+            Repr::Heap(data) => data.len(),
+            Repr::Static(data) => data.len(),
+            Repr::Inline { len, .. } => *len as usize,
+        }
     }
 
     /// Returns `true` if `self` has a length of zero bytes.
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        match &self.0 {
+            Repr::Heap(data) => data.is_empty(),
+            Repr::Static(data) => data.is_empty(),
+            Repr::Inline { len, .. } => *len as u8 == 0,
+        }
+    }
+}
+
+impl SmolStr {
+    /// Constructs a `SmolStr` from a `str`, heap-allocating if necessary.
+    #[inline(always)]
+    pub fn new(text: impl AsRef<str>) -> SmolStr {
+        SmolStr(Repr::new(text.as_ref()))
     }
 }
 
@@ -113,10 +126,7 @@ where
 impl Default for SmolStr {
     #[inline(always)]
     fn default() -> SmolStr {
-        SmolStr(Repr::Inline {
-            len: InlineSize::_V0,
-            buf: [0; INLINE_CAP],
-        })
+        SmolStr::EMPTY
     }
 }
 
@@ -385,24 +395,6 @@ impl Repr {
             None => Self::Heap(Box::from(text.as_bytes())),
         }
     }
-
-    #[inline(always)]
-    fn len(&self) -> usize {
-        match self {
-            Repr::Heap(data) => data.len(),
-            Repr::Static(data) => data.len(),
-            Repr::Inline { len, .. } => *len as usize,
-        }
-    }
-
-    #[inline(always)]
-    fn is_empty(&self) -> bool {
-        match self {
-            Repr::Heap(data) => data.is_empty(),
-            Repr::Static(data) => data.is_empty(),
-            &Repr::Inline { len, .. } => len as u8 == 0,
-        }
-    }
 }
 
 impl<A: Allocator> Repr<A> {
@@ -441,15 +433,15 @@ impl<A: Allocator> Repr<A> {
 /// Convert value to [`SmolStr`] using [`fmt::Display`], potentially without allocating.
 ///
 /// Almost identical to [`ToString`], but converts to `SmolStr` instead.
-pub trait ToString1 {
-    fn to_string1(&self) -> SmolStr;
+pub trait ToSmolString {
+    fn to_smol_string(&self) -> SmolStr;
 }
 
-impl<T> ToString1 for T
+impl<T> ToSmolString for T
 where
     T: fmt::Display + ?Sized,
 {
-    fn to_string1(&self) -> SmolStr {
+    fn to_smol_string(&self) -> SmolStr {
         let mut w = StringBuilder::new();
         fmt::Write::write_fmt(&mut w, format_args!("{}", self))
             .expect("a formatting trait implementation returned an error");
@@ -557,7 +549,10 @@ impl StringBuilder {
         }
     }
 
-    pub fn push2(&mut self, c: u8) {
+    /// # Safety
+    pub unsafe fn push2(&mut self, c: u8) {
+        debug_assert!(c <= 0x7F);
+
         match &mut self.0 {
             StringBuilderRepr::Inline { len, buf } => {
                 let new_len = *len + 1;
@@ -582,7 +577,7 @@ impl StringBuilder {
     }
 
     /// Appends a given string slice onto the end of `self`'s buffer.
-    pub fn extend(&mut self, s: &[u8]) {
+    pub fn extend(&mut self, s: &str) {
         match &mut self.0 {
             StringBuilderRepr::Inline { len, buf } => {
                 let old_len = *len;
@@ -590,7 +585,10 @@ impl StringBuilder {
 
                 // if the new length will fit on the stack (even if it fills it entirely)
                 if *len <= INLINE_CAP {
-                    unsafe { buf.get_unchecked_mut(old_len..*len).copy_from_slice(s) }
+                    unsafe {
+                        buf.get_unchecked_mut(old_len..*len)
+                            .copy_from_slice(s.as_bytes())
+                    }
                     return; // skip the heap push below
                 }
 
@@ -599,10 +597,10 @@ impl StringBuilder {
                 // copy existing inline bytes over to the heap
                 // SAFETY: inline data is guaranteed to be valid utf8 for `old_len` bytes
                 unsafe { heap.extend_from_slice(buf.get_unchecked(..old_len)) };
-                heap.extend(s);
+                heap.extend(s.as_bytes());
                 self.0 = StringBuilderRepr::Heap(heap);
             }
-            StringBuilderRepr::Heap(heap) => heap.extend(s),
+            StringBuilderRepr::Heap(heap) => heap.extend(s.as_bytes()),
         }
     }
 }
@@ -610,7 +608,7 @@ impl StringBuilder {
 impl fmt::Write for StringBuilder {
     #[inline]
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.extend(s.as_bytes());
+        self.extend(s);
         Ok(())
     }
 }

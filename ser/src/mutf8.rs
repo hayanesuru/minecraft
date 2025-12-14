@@ -28,7 +28,7 @@ pub const fn is_ascii_mutf8(bytes: &[u8]) -> bool {
 #[must_use]
 pub const fn is_mutf8(bytes: &[u8]) -> bool {
     let mut index = 0;
-    while index <= bytes.len() {
+    while index < bytes.len() {
         let byte = bytes[index];
         let w = unsafe { *CHAR_WIDTH.as_ptr().add(byte as usize) };
         if w == 0 {
@@ -73,7 +73,7 @@ pub const fn encode_mutf8_len(bytes: &str) -> usize {
     let mut l = 0;
     let mut index = 0;
     let bytes = bytes.as_bytes();
-    while index <= bytes.len() {
+    while index < bytes.len() {
         let byte = bytes[index];
         let w = unsafe { *CHAR_WIDTH.as_ptr().add(byte as usize) };
         index += w as usize;
