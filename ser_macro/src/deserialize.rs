@@ -1,6 +1,6 @@
 use crate::kw;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{ToTokens, TokenStreamExt, quote};
 
 pub fn deserialize_struct(
     input: syn::DeriveInput,
@@ -280,15 +280,14 @@ impl<'a> ToTokens for ImplGenerics<'a> {
             match param.value() {
                 syn::GenericParam::Lifetime(_) => unreachable!(),
                 syn::GenericParam::Type(param) => {
-                    if param.bounds.len() == 1 {
-                        if let Some(syn::TypeParamBound::Trait(t)) = param.bounds.first() {
-                            if let Some(ident) = t.path.get_ident() {
-                                if ident == "Allocator" {
-                                    continue; // todo
-                                }
-                            }
-                        }
+                    if param.bounds.len() == 1
+                        && let Some(syn::TypeParamBound::Trait(t)) = param.bounds.first()
+                        && let Some(ident) = t.path.get_ident()
+                        && ident == "Allocator"
+                    {
+                        continue; // todo
                     }
+
                     // Leave off the type parameter defaults
                     tokens.append_all(
                         param
@@ -368,15 +367,14 @@ impl<'a> ToTokens for TypeGenerics<'a> {
             match param.value() {
                 syn::GenericParam::Lifetime(_) => unreachable!(),
                 syn::GenericParam::Type(param) => {
-                    if param.bounds.len() == 1 {
-                        if let Some(syn::TypeParamBound::Trait(t)) = param.bounds.first() {
-                            if let Some(ident) = t.path.get_ident() {
-                                if ident == "Allocator" {
-                                    continue; // todo
-                                }
-                            }
-                        }
+                    if param.bounds.len() == 1
+                        && let Some(syn::TypeParamBound::Trait(t)) = param.bounds.first()
+                        && let Some(ident) = t.path.get_ident()
+                        && ident == "Allocator"
+                    {
+                        continue; // todo
                     }
+
                     // Leave off the type parameter defaults
                     param.ident.to_tokens(tokens);
                 }

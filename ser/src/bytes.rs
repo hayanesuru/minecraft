@@ -1,4 +1,4 @@
-use crate::{unlikely, Error, Read as _, V32, V64};
+use crate::{Error, Read as _, V32, V64, unlikely};
 use core::slice::from_raw_parts;
 
 pub trait Bytes<'a>: 'a {

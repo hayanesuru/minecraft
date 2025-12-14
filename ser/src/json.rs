@@ -1,4 +1,4 @@
-use crate::{u8_to_hex, UnsafeWriter, Write};
+use crate::{UnsafeWriter, Write, u8_to_hex};
 
 const B: u8 = b'b'; // \x08
 const T: u8 = b't'; // \x09

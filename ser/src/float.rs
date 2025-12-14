@@ -1238,11 +1238,7 @@ fn parse_scientific(s: &mut AsciiStr<'_>) -> i64 {
                 exp_num = 10 * exp_num + digit as i64; // no overflows here
             }
         });
-        if neg_exp {
-            -exp_num
-        } else {
-            exp_num
-        }
+        if neg_exp { -exp_num } else { exp_num }
     } else {
         *s = start; // ignore 'e' and return back
         0

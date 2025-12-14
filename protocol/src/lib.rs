@@ -5,7 +5,7 @@ use crate::str::SmolStr;
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Bytes, Error, Read, UnsafeWriter, Write, V21, V32};
+use mser::{Bytes, Error, Read, UnsafeWriter, V21, V32, Write};
 use uuid::Uuid;
 
 pub mod chat;
@@ -187,7 +187,7 @@ impl<'a, const MAX: usize> Read<'a> for Rest<'a, MAX> {
 
 impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        w.write(self.0)
+        unsafe { w.write(self.0) }
     }
 
     fn sz(&self) -> usize {

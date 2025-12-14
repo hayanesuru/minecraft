@@ -1,5 +1,5 @@
 use super::{Read, UnsafeWriter, Write};
-use crate::{likely, unlikely, Error};
+use crate::{Error, likely, unlikely};
 use core::slice::from_raw_parts;
 
 pub const V21MAX: usize = 0x1FFFFF;

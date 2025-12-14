@@ -1,5 +1,4 @@
-use crate::str::{SmolStr, StringBuilder};
-use crate::{Error, UnsafeWriter};
+use crate::{Bytes, Error, UnsafeWriter};
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -22,11 +21,12 @@ const CHAR_WIDTH: &[u8; 256] = &[
 ];
 
 #[must_use]
-pub const fn is_mutf8(bytes: &[u8]) -> bool {
-    if bytes.is_ascii() && !has_zero(bytes) {
-        return true;
-    }
+pub const fn is_ascii_mutf8(bytes: &[u8]) -> bool {
+    bytes.is_ascii() && !has_zero(bytes)
+}
 
+#[must_use]
+pub const fn is_mutf8(bytes: &[u8]) -> bool {
     let mut index = 0;
     while index <= bytes.len() {
         let byte = bytes[index];
@@ -69,12 +69,13 @@ const fn has_zero(bytes: &[u8]) -> bool {
     flag
 }
 
-pub fn len_mutf8(bytes: &str) -> usize {
+pub const fn encode_mutf8_len(bytes: &str) -> usize {
     let mut l = 0;
     let mut index = 0;
     let bytes = bytes.as_bytes();
-    while let Some(&byte) = bytes.get(index) {
-        let w = unsafe { *CHAR_WIDTH.get_unchecked(byte as usize) };
+    while index <= bytes.len() {
+        let byte = bytes[index];
+        let w = unsafe { *CHAR_WIDTH.as_ptr().add(byte as usize) };
         index += w as usize;
         if w == 0 {
             if byte == 0 {
@@ -92,7 +93,6 @@ pub fn len_mutf8(bytes: &str) -> usize {
 /// # Safety
 ///
 /// `bytes` is UTF-8
-#[inline(never)]
 pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
     let mut index = 0;
     let mut start = 0;
@@ -139,30 +139,76 @@ pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
     unsafe { w.write(bytes.get_unchecked(start..index)) }
 }
 
-pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
-    let mut buf = StringBuilder::new();
+pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
+    let mut len = 0usize;
+
+    while let Ok(byte) = bytes.u8() {
+        match byte {
+            0x01..=0x7F => len += 1,
+            0xC2..=0xDF => {
+                let sec = bytes.u8()?;
+                if !(byte == 0xC0 && sec == 0x80) {
+                    len += 2;
+                } else {
+                    len += 1;
+                }
+            }
+            0xE0..=0xEF => {
+                let sec = bytes.u8()?;
+                let third = bytes.u8()?;
+                if sec & 0xC0 != 0x80 || third & 0xC0 != 0x80 {
+                    return Err(Error);
+                }
+                match (byte, sec) {
+                    (0xE0, 0xA0..=0xBF)
+                    | (0xE1..=0xEC | 0xEE | 0xEF, 0x80..=0xBF)
+                    | (0xED, 0x80..=0x9F) => {
+                        len += 3;
+                    }
+                    (0xED, 0xA0..=0xAF) => {
+                        if bytes.u8()? != 0xED {
+                            return Err(Error);
+                        }
+                        match bytes.u8()? {
+                            0xB0..=0xBF => (),
+                            _ => return Err(Error),
+                        }
+                        if bytes.u8()? & 0xC0 != 0x80 {
+                            return Err(Error);
+                        }
+                        len += 4;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            _ => return Err(Error),
+        }
+    }
+    Ok(len)
+}
+
+/// # Safety
+pub unsafe fn decode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) -> Result<(), Error> {
     let mut index = 0;
     let mut start = 0;
 
     while let Some(&byte) = bytes.get(index) {
         match byte {
-            0x00..=0x7F => index += 1,
+            0x01..=0x7F => index += 1,
             0xC2..=0xDF => unsafe {
                 let sec = match bytes.get(index + 1) {
                     Some(&byte) => byte,
                     _ => return Err(Error),
                 };
-
+                index += 2;
                 if !(byte == 0xC0 && sec == 0x80) {
-                    index += 2;
                 } else {
-                    buf.extend(bytes.get_unchecked(start..index));
-                    buf.push2(b'\0');
-                    index += 2;
+                    w.write(bytes.get_unchecked(start..index));
+                    w.write_byte(b'\0');
                     start = index;
                 }
             },
-            0xE0..=0xEF => {
+            0xE0..=0xEF => unsafe {
                 let sec = match bytes.get(index + 1) {
                     Some(&byte) if byte & 0xC0 == 0x80 => byte,
                     _ => return Err(Error),
@@ -193,7 +239,7 @@ pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
                         let s1 = 0xD000 | (u32::from(sec & 0x3F) << 6) | u32::from(third & 0x3F);
                         let s2 = 0xD000 | (u32::from(fifth) << 6) | u32::from(sixth);
                         let point = 0x10000 + (((s1 - 0xD800) << 10) | (s2 - 0xDC00));
-                        buf.extend(&[
+                        w.write(&[
                             0xF0 | ((point & 0x1C0000) >> 18) as u8,
                             0x80 | ((point & 0x3F000) >> 12) as u8,
                             0x80 | ((point & 0xFC0) >> 6) as u8,
@@ -202,13 +248,12 @@ pub fn decode(bytes: &[u8]) -> Result<SmolStr, Error> {
                     }
                     _ => return Err(Error),
                 }
-            }
+            },
             _ => return Err(Error),
         }
     }
 
-    unsafe {
-        buf.extend(bytes.get_unchecked(start..index));
-    }
-    Ok(buf.finish())
+    unsafe { w.write(bytes.get_unchecked(start..index)) }
+
+    Ok(())
 }

@@ -7,6 +7,7 @@ mod float;
 mod hex;
 mod integer;
 mod json;
+mod mutf8;
 mod read;
 mod varint;
 mod write;
@@ -17,7 +18,10 @@ pub use self::float::parse_float;
 pub use self::hex::{hex_to_u8, parse_hex, u8_to_hex};
 pub use self::integer::parse_int;
 pub use self::json::JsonStr;
-pub use self::varint::{V21, V21MAX, V32, V64, V7MAX};
+pub use self::mutf8::{
+    decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8,
+};
+pub use self::varint::{V7MAX, V21, V21MAX, V32, V64};
 pub use self::write::{Write2, Write3};
 pub use self::writer::UnsafeWriter;
 

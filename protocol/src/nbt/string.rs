@@ -1,17 +1,17 @@
-use crate::nbt::mutf8::is_mutf8;
 use crate::{Bytes, Error, Read, UnsafeWriter, Write};
+use mser::{encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct StringTagRaw<'a>(&'a [u8]);
 
 impl<'a> StringTagRaw<'a> {
-    pub const fn new(n: &'a str) -> Self {
-        debug_assert!(is_mutf8(n.as_bytes()));
-        Self(n.as_bytes())
+    pub const fn new(n: &'a [u8]) -> Option<Self> {
+        if is_mutf8(n) { Some(Self(n)) } else { None }
     }
 
     pub const fn new_unchecked(n: &'a [u8]) -> Self {
+        debug_assert!(is_mutf8(n));
         Self(n)
     }
 
@@ -40,7 +40,7 @@ impl<'a> Read<'a> for StringTagRaw<'a> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let len = buf.u16()?;
         let data = buf.slice(len as usize)?;
-        if super::mutf8::is_mutf8(data) {
+        if is_ascii_mutf8(data) {
             Ok(Self(data))
         } else {
             Err(Error)
@@ -56,21 +56,21 @@ impl<'a> Write for StringTagWriter<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            if super::mutf8::is_mutf8(self.0.as_bytes()) {
+            if is_ascii_mutf8(self.0.as_bytes()) {
                 StringTagRaw(self.0.as_bytes()).write(w);
             } else {
-                (super::mutf8::len_mutf8(self.0) as u16).write(w);
-                super::mutf8::encode_mutf8(self.0.as_bytes(), w);
+                (encode_mutf8_len(self.0) as u16).write(w);
+                encode_mutf8(self.0.as_bytes(), w);
             }
         }
     }
 
     #[inline]
     fn sz(&self) -> usize {
-        if super::mutf8::is_mutf8(self.0.as_bytes()) {
+        if is_ascii_mutf8(self.0.as_bytes()) {
             StringTagRaw(self.0.as_bytes()).sz()
         } else {
-            2 + super::mutf8::len_mutf8(self.0)
+            encode_mutf8_len(self.0) + 2
         }
     }
 }

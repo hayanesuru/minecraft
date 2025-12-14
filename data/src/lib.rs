@@ -81,11 +81,7 @@ impl NameMap<u16> {
         let len = (packed >> 32) as usize;
         let offset = (packed as u32) as usize;
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset), len) };
-        if name == k {
-            Some(v)
-        } else {
-            None
-        }
+        if name == k { Some(v) } else { None }
     }
 }
 
@@ -98,11 +94,7 @@ impl NameMap<u8> {
         let len = (packed >> 32) as usize;
         let offset = (packed as u32) as usize;
         let k = unsafe { core::slice::from_raw_parts(self.names.add(offset), len) };
-        if name == k {
-            Some(v)
-        } else {
-            None
-        }
+        if name == k { Some(v) } else { None }
     }
 }
 
@@ -664,11 +656,7 @@ impl fluid_state {
 impl From<bool> for val_true_false {
     #[inline]
     fn from(value: bool) -> Self {
-        if value {
-            Self::r#true
-        } else {
-            Self::r#false
-        }
+        if value { Self::r#true } else { Self::r#false }
     }
 }
 impl From<val_true_false> for bool {

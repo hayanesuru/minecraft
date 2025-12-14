@@ -1,16 +1,15 @@
 mod list;
-pub mod mutf8;
 mod string;
 mod stringify;
 
 pub use self::list::List;
 pub use self::string::{StringTagRaw, StringTagWriter};
 pub use self::stringify::StringifyCompound;
-use crate::nbt::mutf8::is_mutf8;
-use crate::str::SmolStr;
+use crate::str::{INLINE_CAP, SmolStr};
 use crate::{Bytes, Error, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
+use mser::{decode_mutf8, decode_mutf8_len, is_ascii_mutf8};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -45,7 +44,7 @@ impl Read<'_> for TagType {
 impl Write for TagType {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        w.write_byte(*self as u8);
+        unsafe { w.write_byte(*self as u8) }
     }
 
     #[inline]
@@ -640,29 +639,39 @@ pub struct StringTag(pub SmolStr);
 impl Read<'_> for StringTag {
     #[inline]
     fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
-        decode_string(buf).map(Self)
+        let len = buf.u16()? as usize;
+        let a = buf.slice(len)?;
+
+        if is_ascii_mutf8(a) {
+            Ok(Self(SmolStr::new(unsafe {
+                core::str::from_utf8_unchecked(a)
+            })))
+        } else {
+            let len = decode_mutf8_len(a)?;
+            unsafe {
+                if len <= INLINE_CAP {
+                    let mut s = [0; INLINE_CAP];
+                    decode_mutf8(a, &mut UnsafeWriter::new(s.as_mut_ptr())).unwrap_unchecked();
+                    Ok(Self(SmolStr::new_inline_unchecked(s, len)))
+                } else {
+                    let mut buf = Vec::with_capacity(len);
+                    decode_mutf8(a, &mut UnsafeWriter::new(buf.as_mut_ptr())).unwrap_unchecked();
+                    buf.set_len(len);
+                    Ok(Self(SmolStr::new_heap_unchecked(buf.into_boxed_slice())))
+                }
+            }
+        }
     }
 }
 
 impl Write for StringTag {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        StringTagWriter(&self.0).write(w);
+        unsafe { StringTagWriter(&self.0).write(w) }
     }
 
     #[inline]
     fn sz(&self) -> usize {
         StringTagWriter(&self.0).sz()
-    }
-}
-
-#[inline]
-fn decode_string(b: &mut &[u8]) -> Result<SmolStr, Error> {
-    let len = b.u16()? as usize;
-    let a = b.slice(len)?;
-
-    match is_mutf8(a) {
-        true => Ok(SmolStr::new(unsafe { core::str::from_utf8_unchecked(a) })),
-        false => mutf8::decode(a),
     }
 }

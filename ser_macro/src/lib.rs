@@ -7,7 +7,7 @@ mod serialize;
 // #[cfg(feature = "nbt")]
 // use alloc::string::String;
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 extern crate alloc;
 

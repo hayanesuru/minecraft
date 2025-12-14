@@ -1,8 +1,8 @@
 use core::iter::repeat_n;
 use mser::*;
 use nested::ZString;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::env::var_os;
 use std::path::PathBuf;
 

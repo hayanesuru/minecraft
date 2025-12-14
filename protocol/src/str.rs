@@ -21,7 +21,7 @@ impl SmolStr {
     ///
     /// Panics if `text.len() > 23`.
     #[inline]
-    pub const fn new_inline(text: &str) -> SmolStr {
+    pub const fn new_inline(text: &str) -> Self {
         assert!(text.len() <= INLINE_CAP); // avoids bounds checks in loop
 
         let text = text.as_bytes();
@@ -31,12 +31,25 @@ impl SmolStr {
             buf[i] = text[i];
             i += 1
         }
-        SmolStr(Repr::Inline {
+        Self(Repr::Inline {
             // SAFETY: We know that `len` is less than or equal to the maximum value of `InlineSize`
             // as we asserted it.
             len: unsafe { InlineSize::transmute_from_u8(text.len() as u8) },
             buf,
         })
+    }
+
+    /// # Safety
+    pub const unsafe fn new_inline_unchecked(buf: [u8; INLINE_CAP], len: usize) -> Self {
+        Self(Repr::Inline {
+            len: unsafe { InlineSize::transmute_from_u8(len as u8) },
+            buf,
+        })
+    }
+
+    /// # Safety
+    pub const unsafe fn new_heap_unchecked(buf: Box<[u8]>) -> Self {
+        Self(Repr::Heap(buf))
     }
 
     /// Constructs a `SmolStr` from a statically allocated string.
@@ -288,7 +301,7 @@ impl FromStr for SmolStr {
     }
 }
 
-const INLINE_CAP: usize = InlineSize::_V23 as usize;
+pub const INLINE_CAP: usize = InlineSize::_V23 as usize;
 
 /// A [`u8`] with a bunch of niches.
 #[derive(Clone, Copy, Debug, PartialEq)]
