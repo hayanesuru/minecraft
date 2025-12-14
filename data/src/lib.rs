@@ -7,7 +7,10 @@ include!(concat!(env!("OUT_DIR"), "/data.rs"));
 #[macro_export]
 macro_rules! encode_state {
     ($b:ident($x:expr)) => {
-        block_state::new($x.encode() as raw_block_state + block::$b.state_index()).unwrap()
+        $crate::block_state::new(
+            $x.encode() as $crate::raw_block_state + $crate::block::$b.state_index(),
+        )
+        .unwrap()
     };
 }
 
@@ -15,62 +18,83 @@ macro_rules! encode_state {
 #[macro_export]
 macro_rules! decode_state {
     ($b:ident($x:expr)) => {
-        $b::decode((($x.id() - block::$b.state_index()) as _))
+        $crate::$b::decode(($x.id() - $crate::block::$b.state_index()) as _)
     };
 }
 
 #[derive(Copy, Clone)]
 struct NameMap<T: 'static> {
-    key: [u64; 4],
     disps: &'static [(u32, u32)],
     names: *const u8,
     vals: &'static [T],
 }
 
 #[inline]
-fn hash(key: [u64; 4], name: &[u8], disps: &'static [(u32, u32)], len: u32) -> u32 {
-    let hasher = highway::HighwayHasher::new(highway::Key(key));
-    let [a, b] = highway::HighwayHash::hash128(hasher, name);
+fn hash<const K: u128, const N: u32, const M: u32>(
+    name: &[u8],
+    disps: &'static [(u32, u32)],
+) -> u32 {
+    let x = name;
+    let pl;
+    let ptr;
+    let x = match x.len() {
+        len @ 0..=16 => {
+            pl = len;
+            ptr = x.as_ptr();
+            0u128
+        }
+        len @ 17..=32 => unsafe {
+            pl = len - 16;
+            ptr = x.as_ptr().add(16);
+            u128::from_le_bytes(x.get_unchecked(0..16).try_into().unwrap_unchecked())
+        },
+        len => unsafe {
+            let n = u128::from_le_bytes(x.get_unchecked(0..16).try_into().unwrap_unchecked());
+            let m = u128::from_le_bytes(x.get_unchecked(16..32).try_into().unwrap_unchecked());
+            let len = len - 32;
+            pl = if len <= 16 { len } else { 16 };
+            ptr = x.as_ptr().add(32);
+            n ^ m
+        },
+    };
+    let x = unsafe {
+        let mut p = [0u8; 16];
+        core::ptr::copy_nonoverlapping(ptr, p.as_mut_ptr(), pl);
+        x ^ u128::from_le_bytes(p)
+    };
+    let x = x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128;
+    let e = x.wrapping_mul(K);
+    let [a, b] = [(e >> 64) as u64, e as u64];
     let g = (a >> 32) as u32;
     let f1 = a as u32;
     let f2 = b as u32;
-    let (d1, d2) = disps[(g % (disps.len() as u32)) as usize];
-    d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % len
+    let (d1, d2) = unsafe { *disps.get_unchecked((g % N) as usize) };
+    d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % M
 }
 
 impl NameMap<u16> {
-    fn get(&self, name: &[u8]) -> Option<u16> {
-        let index = hash(self.key, name, self.disps, self.vals.len() as u32);
+    fn get<const K: u128, const N: u32, const M: u32>(&self, name: &[u8]) -> Option<u16> {
+        let index = hash::<K, N, M>(name, self.disps);
         let v = unsafe { *self.vals.get_unchecked(index as usize) };
-        let offset =
-            unsafe { u32::from_le_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
-        let len = unsafe {
-            u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
-        };
-        let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
-        if name == k {
-            Some(v)
-        } else {
-            None
-        }
+        let packed =
+            unsafe { u64::from_le_bytes(*self.names.add(8 * v as usize).cast::<[u8; 8]>()) };
+        let len = (packed >> 32) as usize;
+        let offset = (packed as u32) as usize;
+        let k = unsafe { core::slice::from_raw_parts(self.names.add(offset), len) };
+        if name == k { Some(v) } else { None }
     }
 }
 
 impl NameMap<u8> {
-    fn get(&self, name: &[u8]) -> Option<u8> {
-        let index = hash(self.key, name, self.disps, self.vals.len() as u32);
+    fn get<const K: u128, const N: u32, const M: u32>(&self, name: &[u8]) -> Option<u8> {
+        let index = hash::<K, N, M>(name, self.disps);
         let v = unsafe { *self.vals.get_unchecked(index as usize) };
-        let offset =
-            unsafe { u32::from_le_bytes(*self.names.add(4 * v as usize).cast::<[u8; 4]>()) };
-        let len = unsafe {
-            u16::from_le_bytes(*self.names.add(offset as usize).cast::<[u8; 2]>()) as usize
-        };
-        let k = unsafe { core::slice::from_raw_parts(self.names.add(offset as usize + 2), len) };
-        if name == k {
-            Some(v)
-        } else {
-            None
-        }
+        let packed =
+            unsafe { u64::from_le_bytes(*self.names.add(8 * v as usize).cast::<[u8; 8]>()) };
+        let len = (packed >> 32) as usize;
+        let offset = (packed as u32) as usize;
+        let k = unsafe { core::slice::from_raw_parts(self.names.add(offset), len) };
+        if name == k { Some(v) } else { None }
     }
 }
 
@@ -139,15 +163,16 @@ fn make_block_state(
 
 pub fn block_state_props(
     state: block_state,
-    buf: &mut [(block_state_property_key, block_state_property_value)],
+    buf: &mut [(block_state_property_key, block_state_property_value); 16],
 ) -> &[(block_state_property_key, block_state_property_value)] {
     let mut iter = buf.iter_mut();
     let kind = state.to_block();
     let mut raw = state.id() - kind.state_index();
     for prop in kind.props().iter().rev() {
         let v = prop.val();
-        let idx = raw % v.len() as raw_block_state;
-        raw /= v.len() as raw_block_state;
+        let l = v.len() as raw_block_state;
+        let idx = raw % l;
+        raw /= l;
         match iter.next_back() {
             Some(x) => *x = (prop.key(), unsafe { *v.get_unchecked(idx as usize) }),
             None => break,
@@ -632,11 +657,7 @@ impl fluid_state {
 impl From<bool> for val_true_false {
     #[inline]
     fn from(value: bool) -> Self {
-        if value {
-            Self::r#true
-        } else {
-            Self::r#false
-        }
+        if value { Self::r#true } else { Self::r#false }
     }
 }
 impl From<val_true_false> for bool {
@@ -677,6 +698,12 @@ impl core::fmt::Debug for block_state_property {
 
 #[test]
 fn test_block_state() {
+    assert_eq!(game_event::block_activate.name(), "block_activate");
+    assert_eq!(
+        sound_event::block_bamboo_wood_pressure_plate_click_on,
+        sound_event::parse(b"block.bamboo_wood_pressure_plate.click_on").unwrap()
+    );
+
     let x = encode_state!(white_concrete(white_concrete::new()));
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));
@@ -779,6 +806,7 @@ fn test_block_state() {
     );
     assert!(!block::dispenser.is_air());
     assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
+    assert_eq!(block::fire.state_default().opacity().unwrap(), 0);
 }
 
 impl core::fmt::Debug for fluid_state {

@@ -1,203 +1,225 @@
 acacia_logs
 8a 98 a3 af 
 anvil
-1c1 1c2 1c3 
+1de 1df 1e0 
 armadillo_food
-435 
+462 
 arrows
-35b 4d8 4d9 
+37f 50c 50d 
 axes
-36e 373 378 37d 382 387 
+392 397 39c 3a1 3a6 3ab 3b0 
 axolotl_food
-3d1 
+3fe 
 bamboo_blocks
 93 aa 
 banners
-4be 4bf 4c0 4c1 4c2 4c3 4c4 4c5 4c6 4c7 4c8 4c9 4ca 4cb 4cc 4cd 
+4f2 4f3 4f4 4f5 4f6 4f7 4f8 4f9 4fa 4fb 4fc 4fd 4fe 4ff 500 501 
+bars
+186 187 188 189 18a 18b 18c 18d 18e 
 beacon_payment_items
-35e 35f 364 368 369 
+382 383 388 38c 38d 
 beds
-411 412 413 414 415 416 417 418 419 41a 41b 41c 41d 41e 41f 420 
+43e 43f 440 441 442 443 444 445 446 447 448 449 44a 44b 44c 44d 
 bee_food
-39 bb c0 ce e5 e6 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 102 103 139 149 1ef 1f0 1f1 1f2 
+39 bb c0 ce e5 e6 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 102 103 145 155 20c 20d 20e 20f 
 birch_logs
 88 96 a1 ad 
 boats
-33b 33c 33d 33e 33f 340 341 342 343 344 345 346 347 348 349 34a 34b 34c 34d 34e 
+35f 360 361 362 363 364 365 366 367 368 369 36a 36b 36c 36d 36e 36f 370 371 372 
 book_cloning_target
-492 
+4c4 
 bookshelf_books
-3d8 492 493 4aa 4df 
+405 4c4 4c5 4dc 51b 
 breaks_decorated_pots
-36b 36c 36d 36e 36f 370 371 372 373 374 375 376 377 378 379 37a 37b 37c 37d 37e 37f 380 381 382 383 384 385 386 387 388 495 4f7 
+38f 390 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 3a9 3aa 3ab 3ac 3ad 3ae 3af 3b0 3b1 4c7 533 
 brewing_fuel
-437 
+464 
 bundles
-3df 3e0 3e1 3e2 3e3 3e4 3e5 3e6 3e7 3e8 3e9 3ea 3eb 3ec 3ed 3ee 3ef 
+40c 40d 40e 40f 410 411 412 413 414 415 416 417 418 419 41a 41b 41c 
 buttons
-2c9 2ca 2cb 2cc 2cd 2ce 2cf 2d0 2d1 2d2 2d3 2d4 2d5 2d6 
+2ed 2ee 2ef 2f0 2f1 2f2 2f3 2f4 2f5 2f6 2f7 2f8 2f9 2fa 
 camel_food
-148 
+154 
+camel_husk_food
+4e4 
 candles
-52d 52e 52f 530 531 532 533 534 535 536 537 538 539 53a 53b 53c 53d 
+576 577 578 579 57a 57b 57c 57d 57e 57f 580 581 582 583 584 585 586 
 cat_food
-3f4 3f5 
+421 422 
+chains
+18f 190 191 192 193 194 195 196 197 
 cherry_logs
 8b 99 a4 b0 
 chest_armor
-392 396 39a 39e 3a2 3a6 
+3bb 3bf 3c3 3c7 3cb 3cf 3d3 
 chest_boats
-33c 33e 340 342 344 346 348 34a 34c 34e 
+360 362 364 366 368 36a 36c 36e 370 372 
 chicken_food
-38e 427 428 4d1 4d2 4d4 
+3b7 454 455 505 506 508 
 cluster_max_harvestables
-36d 372 377 37c 381 386 
+391 396 39b 3a0 3a5 3aa 3af 
 coal_ores
 40 41 
 coals
-35c 35d 
+380 381 
 compasses
-3dd 3de 
+40a 40b 
 completes_find_tree_tutorial
-86 87 88 89 8a 8b 8c 8d 8e 91 92 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 ab ac ad ae af b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 ba bb bc bd be bf c0 223 224 
+86 87 88 89 8a 8b 8c 8d 8e 91 92 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 ab ac ad ae af b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 ba bb bc bd be bf c0 240 241 
+copper
+5b 5f 60 61 72 73 74 75 
+copper_chests
+5cc 5cd 5ce 5cf 5d0 5d1 5d2 5d3 
+copper_golem_statues
+5d4 5d5 5d6 5d7 5d8 5d9 5da 5db 
 copper_ores
 44 45 
+copper_tool_materials
+38a 
 cow_food
-38f 
+3b8 
 creeper_drop_music_discs
-4e1 4e2 4e3 4e4 4e7 4e9 4ea 4eb 4ec 4ed 4ee 4ef 
+51d 51e 51f 520 523 525 526 527 528 529 52a 52b 
 creeper_igniters
-357 490 
+37b 4c2 
 crimson_stems
 91 9d a8 b4 
 dampens_vibrations
-d5 d6 d7 d8 d9 da db dc dd de df e0 e1 e2 e3 e4 1dc 1dd 1de 1df 1e0 1e1 1e2 1e3 1e4 1e5 1e6 1e7 1e8 1e9 1ea 1eb 
+d5 d6 d7 d8 d9 da db dc dd de df e0 e1 e2 e3 e4 1f9 1fa 1fb 1fc 1fd 1fe 1ff 200 201 202 203 204 205 206 207 208 
 dark_oak_logs
 8d 9a a5 b2 
 decorated_pot_ingredients
-3d4 55c 55d 55e 55f 560 561 562 563 564 565 566 567 568 569 56a 56b 56c 56d 56e 56f 570 571 572 
+401 5a5 5a6 5a7 5a8 5a9 5aa 5ab 5ac 5ad 5ae 5af 5b0 5b1 5b2 5b3 5b4 5b5 5b6 5b7 5b8 5b9 5ba 5bb 
 decorated_pot_sherds
-55c 55d 55e 55f 560 561 562 563 564 565 566 567 568 569 56a 56b 56c 56d 56e 56f 570 571 572 
+5a5 5a6 5a7 5a8 5a9 5aa 5ab 5ac 5ad 5ae 5af 5b0 5b1 5b2 5b3 5b4 5b5 5b6 5b7 5b8 5b9 5ba 5bb 
 diamond_ores
 4e 4f 
 diamond_tool_materials
-35e 
+382 
 dirt
-1b 1c 1d 1e 1f 20 90 106 109 189 
+1b 1c 1d 1e 1f 20 90 106 109 1a6 
 doors
-2e7 2e8 2e9 2ea 2eb 2ec 2ed 2ee 2ef 2f0 2f1 2f2 2f3 2f4 2f5 2f6 2f7 2f8 2f9 2fa 2fb 
+30b 30c 30d 30e 30f 310 311 312 313 314 315 316 317 318 319 31a 31b 31c 31d 31e 31f 
 drowned_preferred_weapons
-4f7 
+533 
 duplicates_allays
-362 
+386 
 dyeable
-356 391 392 393 394 4b8 
+37a 3ba 3bb 3bc 3bd 4ec 
 eggs
-3da 3db 3dc 
+407 408 409 
 emerald_ores
 4a 4b 
 enchantable/armor
-353 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 
+377 3ba 3bb 3bc 3bd 3be 3bf 3c0 3c1 3c2 3c3 3c4 3c5 3c6 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 
 enchantable/bow
-35a 
+37e 
 enchantable/chest_armor
-392 396 39a 39e 3a2 3a6 
+3bb 3bf 3c3 3c7 3cb 3cf 3d3 
 enchantable/crossbow
-4fa 
+53b 
 enchantable/durability
-337 338 33a 353 357 35a 36b 36c 36d 36e 36f 370 371 372 373 374 375 376 377 378 379 37a 37b 37c 37d 37e 37f 380 381 382 383 384 385 386 387 388 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 3f0 424 495 4db 4f7 4fa 548 
+35b 35c 35e 377 37b 37e 38f 390 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 3a9 3aa 3ab 3ac 3ad 3ae 3af 3b0 3b1 3ba 3bb 3bc 3bd 3be 3bf 3c0 3c1 3c2 3c3 3c4 3c5 3c6 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 41d 451 4c7 50f 510 511 512 513 514 515 516 533 53b 591 
 enchantable/equippable
-159 33a 353 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 49f 4a0 4a1 4a2 4a3 4a4 4a5 
+165 35e 377 3ba 3bb 3bc 3bd 3be 3bf 3c0 3c1 3c2 3c3 3c4 3c5 3c6 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 4d1 4d2 4d3 4d4 4d5 4d6 4d7 
 enchantable/fire_aspect
-36b 370 375 37a 37f 384 495 
+38f 394 399 39e 3a3 3a8 3ad 4c7 510 511 512 513 514 515 516 
 enchantable/fishing
-3f0 
+41d 
 enchantable/foot_armor
-394 398 39c 3a0 3a4 3a8 
+3bd 3c1 3c5 3c9 3cd 3d1 3d5 
 enchantable/head_armor
-353 391 395 399 39d 3a1 3a5 
+377 3ba 3be 3c2 3c6 3ca 3ce 3d2 
 enchantable/leg_armor
-393 397 39b 39f 3a3 3a7 
+3bc 3c0 3c4 3c8 3cc 3d0 3d4 
+enchantable/lunge
+510 511 512 513 514 515 516 
 enchantable/mace
-495 
+4c7 
+enchantable/melee_weapon
+38f 394 399 39e 3a3 3a8 3ad 510 511 512 513 514 515 516 
 enchantable/mining
-36c 36d 36e 36f 371 372 373 374 376 377 378 379 37b 37c 37d 37e 380 381 382 383 385 386 387 388 424 
+390 391 392 393 395 396 397 398 39a 39b 39c 39d 39f 3a0 3a1 3a2 3a4 3a5 3a6 3a7 3a9 3aa 3ab 3ac 3ae 3af 3b0 3b1 451 
 enchantable/mining_loot
-36c 36d 36e 36f 371 372 373 374 376 377 378 379 37b 37c 37d 37e 380 381 382 383 385 386 387 388 
+390 391 392 393 395 396 397 398 39a 39b 39c 39d 39f 3a0 3a1 3a2 3a4 3a5 3a6 3a7 3a9 3aa 3ab 3ac 3ae 3af 3b0 3b1 
 enchantable/sharp_weapon
-36b 36e 370 373 375 378 37a 37d 37f 382 384 387 
-enchantable/sword
-36b 370 375 37a 37f 384 
+38f 392 394 397 399 39c 39e 3a1 3a3 3a6 3a8 3ab 3ad 3b0 510 511 512 513 514 515 516 
+enchantable/sweeping
+38f 394 399 39e 3a3 3a8 3ad 
 enchantable/trident
-4f7 
+533 
 enchantable/vanishing
-159 337 338 33a 353 357 35a 36b 36c 36d 36e 36f 370 371 372 373 374 375 376 377 378 379 37a 37b 37c 37d 37e 37f 380 381 382 383 384 385 386 387 388 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 3dd 3f0 424 495 49f 4a0 4a1 4a2 4a3 4a4 4a5 4db 4f7 4fa 548 
+165 35b 35c 35e 377 37b 37e 38f 390 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 3a9 3aa 3ab 3ac 3ad 3ae 3af 3b0 3b1 3ba 3bb 3bc 3bd 3be 3bf 3c0 3c1 3c2 3c3 3c4 3c5 3c6 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 40a 41d 451 4c7 4d1 4d2 4d3 4d4 4d5 4d6 4d7 50f 510 511 512 513 514 515 516 533 53b 591 
 enchantable/weapon
-36b 36e 370 373 375 378 37a 37d 37f 382 384 387 495 
+38f 392 394 397 399 39c 39e 3a1 3a3 3a6 3a8 3ab 3ad 3b0 4c7 510 511 512 513 514 515 516 
 fence_gates
-311 312 313 314 315 316 317 318 319 31a 31b 31c 
+335 336 337 338 339 33a 33b 33c 33d 33e 33f 340 
 fences
-14c 14d 14e 14f 150 151 152 153 154 155 156 157 18e 
+158 159 15a 15b 15c 15d 15e 15f 160 161 162 163 1ab 
 fishes
-3f4 3f5 3f6 3f7 3f8 3f9 
+421 422 423 424 425 426 
 flowers
-39 bb c0 ce e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 102 103 139 149 1ef 1f0 1f1 1f2 
+39 bb c0 ce e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 102 103 145 155 20c 20d 20e 20f 
 foot_armor
-394 398 39c 3a0 3a4 3a8 
+3bd 3c1 3c5 3c9 3cd 3d1 3d5 
 fox_food
-514 515 
+55d 55e 
 freeze_immune_wearables
-391 392 393 394 4b8 
+3ba 3bb 3bc 3bd 4ec 
 frog_food
-3d9 
+406 
 furnace_minecart_fuel
-35c 35d 
+380 381 
 gaze_disguise_equipment
-159 
+165 
 goat_food
-38f 
+3b8 
 gold_ores
 46 47 50 
 gold_tool_materials
-368 
+38c 
 hanging_signs
-3bb 3bc 3bd 3be 3bf 3c0 3c1 3c2 3c3 3c4 3c5 3c6 
+3e8 3e9 3ea 3eb 3ec 3ed 3ee 3ef 3f0 3f1 3f2 3f3 
 happy_ghast_food
-3cb 
+3f8 
 happy_ghast_tempt_items
-322 323 324 325 326 327 328 329 32a 32b 32c 32d 32e 32f 330 331 3cb 
+346 347 348 349 34a 34b 34c 34d 34e 34f 350 351 352 353 354 355 3f8 
 harnesses
-322 323 324 325 326 327 328 329 32a 32b 32c 32d 32e 32f 330 331 
+346 347 348 349 34a 34b 34c 34d 34e 34f 350 351 352 353 354 355 
 head_armor
-353 391 395 399 39d 3a1 3a5 
+377 3ba 3be 3c2 3c6 3ca 3ce 3d2 
 hoes
-36f 374 379 37e 383 388 
+393 398 39d 3a2 3a7 3ac 3b1 
 hoglin_food
 f9 
 horse_food
-1db 359 38f 3ad 3ae 40f 499 49e 
+1f8 37d 3b8 3da 3db 43c 4cb 4d0 
 horse_tempt_items
-3ad 3ae 49e 
+3da 3db 4d0 
 ignored_by_piglin_babies
-3cc 
+3f9 
 iron_ores
 42 43 
 iron_tool_materials
-364 
+388 
 jungle_logs
 89 97 a2 ae 
+lanterns
+553 554 555 556 557 558 559 55a 55b 55c 
 lapis_ores
 4c 4d 
 leaves
 b6 b7 b8 b9 ba bb bc bd be bf c0 
 lectern_books
-492 493 
+4c4 4c5 
 leg_armor
-393 397 39b 39f 3a3 3a7 
+3bc 3c0 3c4 3c8 3cc 3d0 3d4 
+lightning_rods
+2dd 2de 2df 2e0 2e1 2e2 2e3 2e4 
 llama_food
-1db 38f 
+1f8 3b8 
 llama_tempt_items
-1db 
+1f8 
 logs
 86 87 88 89 8a 8b 8c 8d 8e 91 92 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 ab ac ad ae af b0 b1 b2 b3 b4 b5 
 logs_that_burn
@@ -205,154 +227,170 @@ logs_that_burn
 mangrove_logs
 8e 9c a7 b3 
 map_invisibility_equipment
-159 
+165 
 meat
-3aa 3ab 429 42a 42b 42c 42d 4af 4b0 4bc 4bd 
+3d7 3d8 456 457 458 459 45a 4e1 4e2 4f0 4f1 
+nautilus_bucket_food
+3fb 3fc 3fd 3fe 
+nautilus_food
+3fb 3fc 3fd 3fe 421 422 423 424 425 426 
+nautilus_taming_items
+3fb 424 
 netherite_tool_materials
-369 
+38d 
 non_flammable_wood
-2e 2f 91 92 9d 9e a8 a9 b4 b5 119 11a 156 157 1a7 1a8 2d5 2d6 2e5 2e6 2f2 2f3 307 308 31b 31c 3b9 3ba 3c5 3c6 
+2e 2f 91 92 9d 9e a8 a9 b4 b5 119 11a 135 13c 162 163 1c4 1c5 2f9 2fa 309 30a 316 317 32b 32c 33f 340 3e6 3e7 3f2 3f3 
 noteblock_top_instruments
-49f 4a0 4a1 4a2 4a3 4a4 4a5 
+4d1 4d2 4d3 4d4 4d5 4d6 4d7 
 oak_logs
 86 94 9f ab 
 ocelot_food
-3f4 3f5 
+421 422 
 pale_oak_logs
 8c 9b a6 b1 
 panda_eats_from_ground
-10d 410 
+10d 43d 
 panda_food
 10d 
 parrot_food
-38e 427 428 4d1 4d2 4d4 
+3b7 454 455 505 506 508 
 parrot_poisonous_food
-421 
+44e 
 pickaxes
-36d 372 377 37c 381 386 
+391 396 39b 3a0 3a5 3aa 3af 
 pig_food
-499 49a 4d3 
+4cb 4cc 507 
 piglin_food
-3aa 3ab 
+3d7 3d8 
 piglin_loved
-46 47 50 56 5c 2d9 367 368 375 376 377 378 379 3a1 3a2 3a3 3a4 3ad 3ae 3f1 43c 49e 4b6 511 523 
+46 47 50 56 5c 2fd 38b 38c 39e 39f 3a0 3a1 3a2 3ce 3cf 3d0 3d1 3da 3db 41e 469 4d0 4e9 514 536 552 56c 
 piglin_preferred_weapons
-4fa 
+514 53b 
 piglin_repellents
-161 513 517 
+16d 554 560 
 piglin_safe_armor
-3a1 3a2 3a3 3a4 
+3ce 3cf 3d0 3d1 
 pillager_preferred_weapons
-4fa 
+53b 
 planks
 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 
 rabbit_food
-e5 499 49e 
+e5 4cb 4d0 
 rails
-31d 31e 31f 320 
+341 342 343 344 
 redstone_ores
 48 49 
 repairs_chain_armor
-364 
+388 
+repairs_copper_armor
+38a 
 repairs_diamond_armor
-35e 
+382 
 repairs_gold_armor
-368 
+38c 
 repairs_iron_armor
-364 
+388 
 repairs_leather_armor
-3cc 
+3f9 
 repairs_netherite_armor
-369 
+38d 
 repairs_turtle_helmet
-354 
+378 
 repairs_wolf_armor
-355 
+379 
 sand
 3b 3c 3e 
 saplings
 31 32 33 34 35 36 37 38 39 cd ce 
+shearable_from_copper_golem
+e8 
 sheep_food
-38f 
+3b8 
 shovels
-36c 371 376 37b 380 385 
+390 395 39a 39f 3a4 3a9 3ae 
 shulker_boxes
-228 229 22a 22b 22c 22d 22e 22f 230 231 232 233 234 235 236 237 238 
+245 246 247 248 249 24a 24b 24c 24d 24e 24f 250 251 252 253 254 255 
 signs
-3af 3b0 3b1 3b2 3b3 3b4 3b5 3b6 3b7 3b8 3b9 3ba 
+3dc 3dd 3de 3df 3e0 3e1 3e2 3e3 3e4 3e5 3e6 3e7 
 skeleton_preferred_weapons
-35a 
+37e 
 skulls
-49f 4a0 4a1 4a2 4a3 4a4 4a5 
+4d1 4d2 4d3 4d4 4d5 4d6 4d7 
 slabs
-d 12 16 6e 6f 70 71 82 83 84 85 10e 10f 110 111 112 113 114 115 116 117 118 119 11a 11b 11c 11d 11e 11f 120 121 122 123 124 125 126 127 128 129 12a 12b 183 29e 29f 2a0 2a1 2a2 2a3 2a4 2a5 2a6 2a7 2a8 2a9 2aa 2ab 2ac 2ad 2ae 521 525 529 
+d 12 16 6e 6f 70 71 82 83 84 85 10e 10f 110 111 112 113 114 115 116 117 118 119 11a 11b 11c 11d 11e 11f 120 121 122 123 124 125 126 127 128 129 12a 12b 1a0 2bb 2bc 2bd 2be 2bf 2c0 2c1 2c2 2c3 2c4 2c5 2c6 2c7 2c8 2c9 2ca 2cb 56a 56e 572 
 small_flowers
 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 
 smelts_to_glass
 3b 3e 
 sniffer_food
-4d1 
+505 
 soul_fire_base_blocks
-15c 15d 
+168 169 
+spears
+510 511 512 513 514 515 516 
 spruce_logs
 87 95 a0 ac 
 stairs
-e 13 17 6a 6b 6c 6d 7e 7f 80 81 13c 144 182 186 187 188 18f 199 19c 19d 19e 19f 1a0 1a1 1a2 1a3 1a4 1a5 1a6 1a7 1a8 1c8 218 219 21a 21f 28c 28d 28e 28f 290 291 292 293 294 295 296 297 298 299 29a 29b 29c 29d 522 526 52a 
+e 13 17 6a 6b 6c 6d 7e 7f 80 81 148 150 19f 1a3 1a4 1a5 1ac 1b6 1b9 1ba 1bb 1bc 1bd 1be 1bf 1c0 1c1 1c2 1c3 1c4 1c5 1e5 235 236 237 23c 2a9 2aa 2ab 2ac 2ad 2ae 2af 2b0 2b1 2b2 2b3 2b4 2b5 2b6 2b7 2b8 2b9 2ba 56b 56f 573 
 stone_bricks
-16a 16b 16c 16d 
+177 178 179 17a 
 stone_buttons
-2c9 2ca 
+2ed 2ee 
 stone_crafting_materials
-9 23 520 
+9 23 569 
 stone_tool_materials
-9 23 520 
+9 23 569 
 strider_food
 fa 
 strider_tempt_items
-fa 338 
+fa 35c 
 swords
-36b 370 375 37a 37f 384 
+38f 394 399 39e 3a3 3a8 3ad 
 terracotta
-1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 1d4 1d5 1d6 1d7 1d8 1ec 
+1e6 1e7 1e8 1e9 1ea 1eb 1ec 1ed 1ee 1ef 1f0 1f1 1f2 1f3 1f4 1f5 209 
 trapdoors
-2fc 2fd 2fe 2ff 300 301 302 303 304 305 306 307 308 309 30a 30b 30c 30d 30e 30f 310 
+320 321 322 323 324 325 326 327 328 329 32a 32b 32c 32d 32e 32f 330 331 332 333 334 
 trim_materials
-2b0 35e 35f 360 361 362 364 366 368 369 4ac 
+2cd 382 383 384 385 386 388 38a 38c 38d 4de 
 trimmable_armor
-353 391 392 393 394 395 396 397 398 399 39a 39b 39c 39d 39e 39f 3a0 3a1 3a2 3a3 3a4 3a5 3a6 3a7 3a8 
+377 3ba 3bb 3bc 3bd 3be 3bf 3c0 3c1 3c2 3c3 3c4 3c5 3c6 3c7 3c8 3c9 3ca 3cb 3cc 3cd 3ce 3cf 3d0 3d1 3d2 3d3 3d4 3d5 
 turtle_food
 d3 
 villager_picks_up
-38e 38f 390 499 49a 4d1 4d2 4d3 4d4 
+3b7 3b8 3b9 4cb 4cc 505 506 507 508 
 villager_plantable_seeds
-38e 499 49a 4d1 4d2 4d4 
+3b7 4cb 4cc 505 506 508 
 walls
-f 14 18 184 1ab 1ac 1ad 1ae 1af 1b0 1b1 1b2 1b3 1b4 1b5 1b6 1b7 1b8 1b9 1ba 1bb 1bc 1bd 1be 1bf 1c0 
+f 14 18 1a1 1c8 1c9 1ca 1cb 1cc 1cd 1ce 1cf 1d0 1d1 1d2 1d3 1d4 1d5 1d6 1d7 1d8 1d9 1da 1db 1dc 1dd 
 warped_stems
 92 9e a9 b5 
 wart_blocks
-223 224 
+240 241 
 wither_skeleton_disliked_weapons
-35a 4fa 
+37e 53b 
 wolf_food
-3aa 3ab 3f4 3f5 3f6 3f7 3f8 3f9 429 42a 42b 42c 42d 4af 4b0 4b1 4bc 4bd 
+3d7 3d8 421 422 423 424 425 426 456 457 458 459 45a 4e1 4e2 4e3 4f0 4f1 
 wooden_buttons
-2cb 2cc 2cd 2ce 2cf 2d0 2d1 2d2 2d3 2d4 2d5 2d6 
+2ef 2f0 2f1 2f2 2f3 2f4 2f5 2f6 2f7 2f8 2f9 2fa 
 wooden_doors
-2e8 2e9 2ea 2eb 2ec 2ed 2ee 2ef 2f0 2f1 2f2 2f3 
+30c 30d 30e 30f 310 311 312 313 314 315 316 317 
 wooden_fences
-14c 14d 14e 14f 150 151 152 153 154 155 156 157 
+158 159 15a 15b 15c 15d 15e 15f 160 161 162 163 
 wooden_pressure_plates
-2db 2dc 2dd 2de 2df 2e0 2e1 2e2 2e3 2e4 2e5 2e6 
+2ff 300 301 302 303 304 305 306 307 308 309 30a 
+wooden_shelves
+131 132 133 134 135 136 137 138 139 13a 13b 13c 
 wooden_slabs
 10e 10f 110 111 112 113 114 115 116 117 119 11a 
 wooden_stairs
-19c 19d 19e 19f 1a0 1a1 1a2 1a3 1a4 1a5 1a7 1a8 
+1b9 1ba 1bb 1bc 1bd 1be 1bf 1c0 1c1 1c2 1c4 1c5 
 wooden_tool_materials
 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f 
 wooden_trapdoors
-2fd 2fe 2ff 300 301 302 303 304 305 306 307 308 
+321 322 323 324 325 326 327 328 329 32a 32b 32c 
 wool
 d5 d6 d7 d8 d9 da db dc dd de df e0 e1 e2 e3 e4 
 wool_carpets
-1dc 1dd 1de 1df 1e0 1e1 1e2 1e3 1e4 1e5 1e6 1e7 1e8 1e9 1ea 1eb 
+1f9 1fa 1fb 1fc 1fd 1fe 1ff 200 201 202 203 204 205 206 207 208 
+zombie_horse_food
+f8 

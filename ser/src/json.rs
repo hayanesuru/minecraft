@@ -1,5 +1,4 @@
-use crate::{u8_to_hex, UnsafeWriter, Write};
-use alloc::string::String;
+use crate::{UnsafeWriter, Write, u8_to_hex};
 
 const B: u8 = b'b'; // \x08
 const T: u8 = b't'; // \x09
@@ -21,24 +20,11 @@ const ESCAPE: [u8; 256] = [
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 ];
 
-pub fn json_str_escape(buf: &mut String, b: &[u8]) {
-    unsafe {
-        let e = JsonStr(b);
-        let wlen = e.sz();
-        buf.reserve(wlen);
-        e.write(&mut UnsafeWriter(core::ptr::NonNull::new_unchecked(
-            buf.as_mut_ptr().add(buf.len()),
-        )));
-        let len = buf.len() + wlen;
-        buf.as_mut_vec().set_len(len);
-    }
-}
-
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct JsonStr<'a>(pub &'a [u8]);
 
-unsafe impl Write for JsonStr<'_> {
+impl Write for JsonStr<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         let mut start = 0;
         let mut cur = 0;
@@ -63,7 +49,7 @@ unsafe impl Write for JsonStr<'_> {
         }
     }
 
-    unsafe fn sz(&self) -> usize {
+    fn sz(&self) -> usize {
         let mut cur = 0usize;
         let mut len = 0usize;
         unsafe {

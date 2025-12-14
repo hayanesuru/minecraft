@@ -1,11 +1,10 @@
 use core::iter::repeat_n;
 use mser::*;
 use nested::ZString;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::env::var_os;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Repr {
@@ -183,17 +182,17 @@ fn registries<'a>(
         }
 
         *w += "}\n";
-        *w += "unsafe impl ::mser::Write for ";
+        *w += "impl ::mser::Write for ";
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
-        *w += "unsafe fn sz(&self) -> usize {\n";
+        *w += "fn sz(&self) -> usize {\n";
         if size <= V7MAX {
             *w += "1usize";
         } else if size <= V21MAX {
-            *w += "unsafe { ::mser::V21(*self as u32).sz() }";
+            *w += "::mser::V21(*self as u32).sz()";
         } else {
-            *w += "unsafe { ::mser::V32(*self as u32).sz() }";
+            *w += "::mser::V32(*self as u32).sz()";
         }
         *w += "\n}\n";
         *w += "#[inline]\n";
@@ -206,11 +205,11 @@ fn registries<'a>(
             *w += "unsafe { ::mser::Write::write(&::mser::V32(*self as u32), w); }";
         }
         *w += "\n}\n}\n";
-        *w += "impl ::mser::Read for ";
+        *w += "impl ::mser::Read<'_> for ";
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
-        *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
+        *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
         if size <= V7MAX {
             *w += "let x = <u8 as ::mser::Read>::read(n)?;\n";
         } else if size <= V21MAX {
@@ -224,9 +223,10 @@ fn registries<'a>(
             *w += repr.to_int();
             *w += ";\n";
         }
-        *w += "Self::new(x)";
-        *w += "}\n";
-        *w += "}\n";
+        *w += "match Self::new(x) {\n";
+        *w += "    Some(x) => Ok(x),\n";
+        *w += "    None => Err(::mser::Error),\n";
+        *w += "}\n}\n}\n";
         *w += "impl ";
         *w += &name;
         *w += " {\n";
@@ -259,13 +259,13 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "#[inline]\n#[must_use]\n";
     *w += "pub const fn new(n: ";
     *w += repr.to_int();
-    *w += ") -> Option<Self> {\n";
+    *w += ") -> ::core::option::Option<Self> {\n";
     if size == 1 {
         *w += "if ::mser::likely(n == Self::MAX) {\n";
     } else {
         *w += "if ::mser::likely(n <= Self::MAX) {\n";
     }
-    *w += "unsafe {\nSome(::core::mem::transmute::<";
+    *w += "unsafe {\ncore::option::Option::Some(::core::mem::transmute::<";
     *w += repr.to_int();
     *w += ", Self>(n))";
     *w += "\n}\n";
@@ -1245,17 +1245,17 @@ fn block_state(
     struct_head(w, bsrepr, bsname);
     impl_common(w, bsname, bsrepr, bssize, 0);
 
-    *w += "unsafe impl ::mser::Write for ";
+    *w += "impl ::mser::Write for ";
     *w += bsname;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "unsafe fn sz(&self) -> usize {\n";
+    *w += "fn sz(&self) -> usize {\n";
     if bssize <= V7MAX {
         *w += "1usize";
     } else if bssize <= V21MAX {
-        *w += "unsafe { ::mser::V21(self.0 as u32).sz() }";
+        *w += "::mser::V21(self.0 as u32).sz()";
     } else {
-        *w += "unsafe { ::mser::V32(self.0 as u32).sz() }";
+        *w += "::mser::V32(self.0 as u32).sz()";
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
@@ -1269,11 +1269,11 @@ fn block_state(
     }
     *w += "\n}\n}\n";
 
-    *w += "impl ::mser::Read for ";
+    *w += "impl ::mser::Read<'_> for ";
     *w += bsname;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn read(n: &mut &[u8]) -> Option<Self> {\n";
+    *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
     *w += "let x = <";
     if bssize <= V7MAX {
         *w += "u8 as ::mser::Read>::read(n)?";
@@ -1285,8 +1285,10 @@ fn block_state(
     *w += " as ";
     *w += bsrepr.to_int();
     *w += ";\n";
-    *w += "Self::new(x)";
-    *w += "\n}\n}\n";
+    *w += "match Self::new(x) {\n";
+    *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
+    *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
+    *w += "}\n}\n}\n";
 
     let reprblock = Repr::new(offsets.len());
     *w += "const BLOCK_STATE_TO_BLOCK: *const [u8; ";
@@ -1649,21 +1651,20 @@ fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
 fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, names: &[&str]) {
     let mut ib = itoa::Buffer::new();
 
+    let state = g.generate_hash(names);
+    *w += "const M1: u32 = ";
+    *w += ib.format(state.disps.len() as u32);
+    *w += ";\n";
+    *w += "const M2: u32 = ";
+    *w += ib.format(names.len() as u32);
+    *w += ";\n";
+    *w += "const M0: u128 = ";
+    *w += ib.format(state.key);
+    *w += ";\n";
     *w += "const M: crate::NameMap<";
     *w += repr.to_int();
-    *w += "> = crate::NameMap { key: [";
-
-    let state = g.generate_hash(names.iter());
-
-    let mut flag = true;
-    for x in state.key.0 {
-        if !flag {
-            *w += ", ";
-        }
-        flag = false;
-        *w += ib.format(x);
-    }
-    *w += "], disps: &[";
+    *w += "> = crate::NameMap { ";
+    *w += "disps: &[";
 
     for &(x, y) in state.disps {
         *w += "(";
@@ -1687,32 +1688,21 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     }
     *w += "] };\n";
 
-    while !w2.len().is_multiple_of(4) {
+    while !w2.len().is_multiple_of(8) {
         w2.push(0);
     }
     let start = w2.len();
-    w2.reserve(names.len() * 16);
-    let mut offset = names.len() * 4;
-    let mut aligned_offsets = Vec::new();
-
-    for val in names {
-        aligned_offsets.push(offset);
-        offset += 2;
-        offset += val.len();
-        offset = (offset + 1) & !1;
+    w2.reserve(names.len() * 24);
+    let mut offset = names.len() * 8;
+    for &name in names {
+        let a = offset as u32;
+        let b = name.len() as u32;
+        let c = (a as u64) | ((b as u64) << 32);
+        w2.extend(c.to_le_bytes());
+        offset += name.len();
     }
-    for &offset in &aligned_offsets {
-        w2.extend(u32::try_from(offset).unwrap().to_le_bytes());
-    }
-
-    for (i, val) in names.iter().enumerate() {
-        w2.extend(u16::try_from(val.len()).unwrap().to_le_bytes());
+    for &val in names {
         w2.extend(val.as_bytes());
-        if i < names.len() - 1 {
-            while !w2.len().is_multiple_of(2) {
-                w2.push(0);
-            }
-        }
     }
     *w += "const N: *const u8 = ";
     if start != 0 {
@@ -1753,19 +1743,20 @@ fn impl_name(w: &mut String, name: &str) {
 #[must_use]
 pub const fn name(self) -> &'static str {
 unsafe {
-let offset = u32::from_le_bytes(*Self::N.add(4 * self as usize).cast::<[u8; 4]>());
-let len = u16::from_le_bytes(*Self::N.add(offset as usize).cast::<[u8; 2]>()) as usize;
-::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset as usize + 2), len))
+let packed = u64::from_le_bytes(*Self::N.add(8 * self as usize).cast::<[u8; 8]>());
+let len = (packed >> 32) as usize;
+let offset = (packed as u32) as usize;
+::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset), len))
 }
 }
 #[inline]
 #[must_use]
-pub fn parse(name: &[u8]) -> Option<Self> {
-match Self::M.get(name) {
-Some(x) => unsafe { Some(::core::mem::transmute::<raw_";
+pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {
+match Self::M.get::<{ Self::M0 }, { Self::M1 }, { Self::M2 }>(name) {
+::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<raw_";
     *w += name;
     *w += ", Self>(x)) },
-None => None,
+::core::option::Option::None => ::core::option::Option::None,
 }
 }
 }
@@ -1806,36 +1797,90 @@ struct GenerateHash {
     map: Vec<Option<u32>>,
     disps: Vec<(u32, u32)>,
     try_map: Vec<u64>,
+    e: Vec<u128>,
+    test: Vec<u128>,
 }
 
 impl GenerateHash {
     fn new() -> Self {
         Self {
-            wy_rand: 0xE3D172B05F73CBC3u64
-                ^ SystemTime::now()
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos() as u64,
+            wy_rand: 0x3BD39E10CB0EF593u64,
             hashes: Vec::new(),
             buckets: Vec::new(),
             values_to_add: Vec::new(),
             map: Vec::new(),
             try_map: Vec::new(),
             disps: Vec::new(),
+            e: Vec::new(),
+            test: Vec::new(),
         }
     }
 
-    fn generate_hash(
-        &mut self,
-        entries: impl Iterator<Item = impl AsRef<str>> + Clone,
-    ) -> HashState<'_> {
+    fn generate_hash(&mut self, entries: &[&str]) -> HashState<'_> {
+        self.e.clear();
+        self.test.clear();
+        self.e.extend(
+            entries
+                .iter()
+                .map(|x| {
+                    let x = x.as_bytes();
+                    let pl;
+                    let ptr;
+                    let x = match x.len() {
+                        len @ 0..=16 => {
+                            pl = len;
+                            ptr = x.as_ptr();
+                            0u128
+                        }
+                        len @ 17..=32 => unsafe {
+                            pl = len - 16;
+                            ptr = x.as_ptr().add(16);
+                            u128::from_le_bytes(
+                                x.get_unchecked(0..16).try_into().unwrap_unchecked(),
+                            )
+                        },
+                        len => unsafe {
+                            let n = u128::from_le_bytes(
+                                x.get_unchecked(0..16).try_into().unwrap_unchecked(),
+                            );
+                            let m = u128::from_le_bytes(
+                                x.get_unchecked(16..32).try_into().unwrap_unchecked(),
+                            );
+                            let len = len - 32;
+                            pl = if len <= 16 { len } else { 16 };
+                            ptr = x.as_ptr().add(32);
+                            n ^ m
+                        },
+                    };
+                    unsafe {
+                        let mut p = [0u8; 16];
+                        core::ptr::copy_nonoverlapping(ptr, p.as_mut_ptr(), pl);
+                        x ^ u128::from_le_bytes(p)
+                    }
+                })
+                .map(|x| x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128),
+        );
+        self.test.extend(&self.e);
+        self.test.sort_unstable();
+        for x in self.test.windows(2) {
+            if x[0] == x[1] {
+                panic!("duplicate entry {} {}", x[0], x[1]);
+            }
+        }
         'key: loop {
-            let key = highway::Key([self.nx(), self.nx(), self.nx(), self.nx()]);
-            let hasher = highway::HighwayHasher::new(key);
+            let [kb1, kb2, kb3, kb4, kb5, kb6, kb7, kb8] = self.nx().to_le_bytes();
+            let [kb9, kb10, kb11, kb12, kb13, kb14, kb15, kb16] = self.nx().to_le_bytes();
+            let key = u128::from_le_bytes([
+                kb1, kb2, kb3, kb4, kb5, kb6, kb7, kb8, kb9, kb10, kb11, kb12, kb13, kb14, kb15,
+                kb16,
+            ]);
             self.hashes.clear();
-            self.hashes.extend(entries.clone().map(|entry| {
-                highway::HighwayHash::hash128(hasher.clone(), entry.as_ref().as_bytes())
-            }));
+            self.hashes.extend(
+                self.e
+                    .iter()
+                    .map(|&entry| entry.wrapping_mul(key))
+                    .map(|e| [(e >> 64) as u64, e as u64]),
+            );
 
             let buckets_len = self.hashes.len().div_ceil(DEFAULT_LAMBDA);
             let table_len = self.hashes.len();
@@ -1922,7 +1967,7 @@ impl GenerateHash {
 const DEFAULT_LAMBDA: usize = 5;
 
 struct HashState<'a> {
-    key: highway::Key,
+    key: u128,
     disps: &'a [(u32, u32)],
     map: &'a [Option<u32>],
 }

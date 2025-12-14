@@ -2,58 +2,51 @@
 #![allow(internal_features)]
 #![cfg_attr(nightly, feature(core_intrinsics))]
 
-extern crate alloc;
-
 mod bytes;
 mod float;
 mod hex;
 mod integer;
 mod json;
+mod mutf8;
 mod read;
 mod varint;
 mod write;
 mod writer;
 
-#[cfg(feature = "nbt")]
-pub mod nbt;
-
 pub use self::bytes::Bytes;
 pub use self::float::parse_float;
 pub use self::hex::{hex_to_u8, parse_hex, u8_to_hex};
 pub use self::integer::parse_int;
-pub use self::json::{json_str_escape, JsonStr};
-pub use self::varint::{V21, V21MAX, V32, V64, V7MAX};
+pub use self::json::JsonStr;
+pub use self::mutf8::{
+    decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8,
+};
+pub use self::varint::{V7MAX, V21, V21MAX, V32, V64};
 pub use self::write::{Write2, Write3};
 pub use self::writer::UnsafeWriter;
 
 /// # Safety
 ///
 /// `sz` must be the size of `write` to be written.
-pub unsafe trait Write {
+pub trait Write {
     /// # Safety
     ///
-    /// `sz` must be the size of `write` to be written.
+    /// [`sz`] must be the size of `write` to be written.
+    ///
+    /// [`sz`]: Write::sz
     unsafe fn write(&self, w: &mut UnsafeWriter);
 
-    /// # Safety
-    ///
-    /// `sz` must be the size of `write` to be written.
-    unsafe fn sz(&self) -> usize;
+    fn sz(&self) -> usize;
 }
 
-pub trait Read: Sized {
-    fn read(buf: &mut &[u8]) -> Option<Self>;
-}
+#[derive(Clone, Debug)]
+pub struct Error;
 
-#[must_use]
-pub fn boxed(x: &(impl Write + ?Sized)) -> alloc::boxed::Box<[u8]> {
-    unsafe {
-        let len = x.sz();
-        let mut vec = alloc::vec::Vec::<u8>::with_capacity(len);
-        write_unchecked(vec.as_mut_ptr(), x);
-        vec.set_len(len);
-        vec.into_boxed_slice()
-    }
+pub trait Read<'a>: Sized
+where
+    Self: 'a,
+{
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error>;
 }
 
 /// # Safety
@@ -65,26 +58,6 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
         let mut w = UnsafeWriter(core::ptr::NonNull::new_unchecked(ptr));
         Write::write(x, &mut w);
         debug_assert_eq!(w.0, core::ptr::NonNull::new_unchecked(ptr.add(x.sz())))
-    }
-}
-
-#[inline]
-pub fn write(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
-    unsafe {
-        let len = x.sz();
-        vec.reserve(len);
-        write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
-        vec.set_len(len + vec.len());
-    }
-}
-
-#[inline]
-pub fn write_exact(vec: &mut alloc::vec::Vec<u8>, x: &(impl Write + ?Sized)) {
-    unsafe {
-        let len = x.sz();
-        vec.reserve_exact(len);
-        write_unchecked(vec.as_mut_ptr().add(vec.len()), x);
-        vec.set_len(len + vec.len());
     }
 }
 

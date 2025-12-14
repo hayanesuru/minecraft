@@ -4,6 +4,11 @@ pub struct UnsafeWriter(pub(crate) NonNull<u8>);
 
 impl UnsafeWriter {
     /// # Safety
+    pub const unsafe fn new(ptr: *mut u8) -> Self {
+        Self(unsafe { NonNull::new_unchecked(ptr) })
+    }
+
+    /// # Safety
     #[inline(always)]
     pub unsafe fn write_byte(&mut self, byte: u8) {
         unsafe {

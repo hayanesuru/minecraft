@@ -1,45 +1,66 @@
-import it.unimi.dsi.fastutil.doubles.Double2IntOpenHashMap;
-import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
-import it.unimi.dsi.fastutil.floats.Float2IntOpenHashMap;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import com.mojang.serialization.Lifecycle;
 import net.minecraft.SharedConstants;
-import net.minecraft.Util;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.IdMap;
+import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.PacketType;
 import net.minecraft.network.protocol.configuration.ConfigurationProtocols;
 import net.minecraft.network.protocol.game.GameProtocols;
 import net.minecraft.network.protocol.handshake.HandshakeProtocols;
 import net.minecraft.network.protocol.login.LoginProtocols;
 import net.minecraft.network.protocol.status.StatusProtocols;
+import net.minecraft.server.WorldLoader;
+import net.minecraft.server.WorldStem;
+import net.minecraft.server.dedicated.DedicatedServerProperties;
+import net.minecraft.server.packs.repository.ServerPacksSource;
+import net.minecraft.server.permissions.LevelBasedPermissionSet;
+import net.minecraft.util.Util;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.DataPackConfig;
 import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.LevelSettings;
+import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SupportType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.levelgen.WorldOptions;
+import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.storage.PrimaryLevelData;
+import net.minecraft.world.level.validation.ContentValidationException;
+import net.minecraft.world.level.validation.DirectoryValidator;
 import net.minecraft.world.phys.AABB;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 
-public class Datagen {
+public final class Datagen {
     private static final String STRING = "str";
     private static final String INTEGER = "u32";
     private static final String INTEGER_ARR = "[u32]";
@@ -47,7 +68,58 @@ public class Datagen {
     private static final char NL = '\n';
     private static final char SP = ' ';
 
-    public static void start() throws IOException {
+    public static void main(String[] args) throws IOException, ContentValidationException, ExecutionException, InterruptedException {
+        SharedConstants.tryDetectVersion();
+        new DedicatedServerProperties(new Properties());
+        net.minecraft.server.Bootstrap.bootStrap();
+        net.minecraft.server.Bootstrap.validate();
+
+        var packRepository = ServerPacksSource.createPackRepository(Path.of("data"), new DirectoryValidator(path -> true));
+        var worldDataConfiguration = new WorldDataConfiguration(DataPackConfig.DEFAULT, FeatureFlags.DEFAULT_FLAGS);
+
+        var packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration, false, true);
+        var initConfig = new WorldLoader.InitConfig(
+            packConfig, Commands.CommandSelection.DEDICATED, LevelBasedPermissionSet.OWNER
+        );
+        WorldStem worldStem = Util.blockUntilDone(
+                executor -> WorldLoader.load(
+                    initConfig,
+                    context -> {
+                        var noDatapackDimensions = new MappedRegistry<>(
+                            Registries.LEVEL_STEM, Lifecycle.stable()
+                        ).freeze();
+                        var dimensions = context.datapackWorldgen()
+                            .lookupOrThrow(Registries.WORLD_PRESET)
+                            .getOrThrow(WorldPresets.FLAT)
+                            .value()
+                            .createWorldDimensions()
+                            .bake(noDatapackDimensions);
+                        return new WorldLoader.DataLoadOutput<>(
+                            new PrimaryLevelData(
+                                new LevelSettings("datagen", GameType.CREATIVE,
+                                    false,
+                                    Difficulty.NORMAL,
+                                    true,
+                                    new GameRules(FeatureFlags.DEFAULT_FLAGS),
+                                    worldDataConfiguration),
+                                new WorldOptions(0L, false, false),
+                                dimensions.specialWorldProperty(),
+                                dimensions.lifecycle()
+                            ),
+                            dimensions.dimensionsRegistryAccess()
+                        );
+                    },
+                    WorldStem::new,
+                    Util.backgroundExecutor(),
+                    executor
+                )
+            )
+            .get();
+        start(worldStem);
+        Util.shutdownExecutors();
+    }
+
+    public static void start(final WorldStem worldStem) throws IOException, ContentValidationException {
         var b = new StringBuilder(0x10000);
 
         b.setLength(0);
@@ -78,7 +150,45 @@ public class Datagen {
         item(b);
         Files.writeString(Path.of("item.txt"), b.toString());
 
+        var access = worldStem.registries().compositeAccess();
+
         b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.BLOCK));
+        Files.writeString(Path.of("block_tags.txt"), b.toString());
+
+        b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.ITEM));
+        Files.writeString(Path.of("item_tags.txt"), b.toString());
+
+        b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.ENTITY_TYPE));
+        Files.writeString(Path.of("entity_tags.txt"), b.toString());
+
+        b.setLength(0);
+        tags(b, access.lookupOrThrow(Registries.GAME_EVENT));
+        Files.writeString(Path.of("game_event_tags.txt"), b.toString());
+    }
+
+    private static <E> void tags(final StringBuilder b, final Registry<E> registryLookup) {
+        ArrayList<Integer> l = new ArrayList<>();
+        @SuppressWarnings("unchecked")
+        HolderSet.Named<E>[] a = registryLookup.listTags().toArray(HolderSet.Named[]::new);
+        Arrays.sort(a, Comparator.comparing(j -> j.key().location().getPath()));
+        for (final HolderSet.Named<E> tag : a) {
+            b.append(tag.key().location().getPath());
+            b.append(NL);
+            for (final Holder<E> holder : tag) {
+                var n = holder.value();
+                l.add(registryLookup.getIdOrThrow(n));
+            }
+            l.sort(Integer::compare);
+            for (final Integer i : l) {
+                b.append(ih(i));
+                b.append(' ');
+            }
+            l.clear();
+            b.append(NL);
+        }
     }
 
     private static void version(StringBuilder b) {
@@ -90,7 +200,7 @@ public class Datagen {
 
     private static void registries(StringBuilder b) {
         for (var registry : BuiltInRegistries.REGISTRY) {
-            writeHead(b, registry.key().location().getPath(), STRING, registry.size());
+            writeHead(b, registry.key().identifier().getPath(), STRING, registry.size());
             write_registry(b, registry);
         }
     }
@@ -147,30 +257,27 @@ public class Datagen {
             b.append(ih(BuiltInRegistries.FLUID.getId(f.getType())));
             b.append(NL);
         }
-        var fluidIdx = new Object2IntOpenHashMap<IntArrayList>(128);
-        var fluidIdx2 = new IntArrayList(128);
+        var fluidIdx = new HashMap<ArrayList<Integer>, Integer>(128);
+        var fluidIdx2 = new ArrayList<Integer>(128);
         for (final Block block : BuiltInRegistries.BLOCK) {
             var states = block.getStateDefinition().getPossibleStates();
-            var arr = new IntArrayList(states.size());
+            var arr = new ArrayList<Integer>(states.size());
             for (final var state : states) {
-                arr.push(Fluid.FLUID_STATE_REGISTRY.getId(state.getFluidState()));
+                arr.add(Fluid.FLUID_STATE_REGISTRY.getId(state.getFluidState()));
             }
             int first = arr.getFirst();
-            if (arr.intStream().allMatch(x -> x == first)) {
-                var n = IntArrayList.of(first);
-                fluidIdx.putIfAbsent(n, fluidIdx.size());
-                fluidIdx2.push(fluidIdx.getInt(n));
-            } else {
-                fluidIdx.putIfAbsent(arr, fluidIdx.size());
-                fluidIdx2.push(fluidIdx.getInt(arr));
+            if (arr.stream().allMatch(x -> x == first)) {
+                arr.clear();
+                arr.add(first);
             }
+            fluidIdx.putIfAbsent(arr, fluidIdx.size());
+            fluidIdx2.add(fluidIdx.get(arr));
         }
-        var fluids = new ObjectArrayList<IntArrayList>(fluidIdx.size());
-        fluids.size(fluidIdx.size());
-        for (final var ent : fluidIdx.object2IntEntrySet()) {
-            fluids.set(ent.getIntValue(), ent.getKey());
+        ArrayList<Integer>[] fluids = new ArrayList[fluidIdx.size()];
+        for (final var ent : fluidIdx.entrySet()) {
+            fluids[ent.getValue()] = ent.getKey();
         }
-        writeHead(b, "fluid_state_array", INTEGER_ARR, fluids.size());
+        writeHead(b, "fluid_state_array", INTEGER_ARR, fluids.length);
         for (var x : fluids) {
             boolean first = true;
             for (var y : x) {
@@ -186,68 +293,64 @@ public class Datagen {
     }
 
     private static void block_state(StringBuilder b) {
-        var keys = new Object2IntOpenHashMap<String>();
-        var vals = new Object2IntOpenHashMap<String>();
-        var kvs = new Object2IntOpenHashMap<IntArrayList>();
-        var ps = new Object2IntOpenHashMap<IntArrayList>();
-        ps.putIfAbsent(new IntArrayList(), ps.size());
+        var keys = new HashMap<String, Integer>();
+        var vals = new HashMap<String, Integer>();
+        var kvs = new HashMap<ArrayList<Integer>, Integer>();
+        var ps = new HashMap<ArrayList<Integer>, Integer>();
+        ps.putIfAbsent(new ArrayList<>(), 0);
         for (var block : BuiltInRegistries.BLOCK) {
             var p = block.getStateDefinition().getProperties();
             if (p.isEmpty()) {
                 continue;
             }
 
-            var list2 = new IntArrayList(p.size());
+            var list2 = new ArrayList<Integer>(p.size());
             for (var x : p) {
                 keys.putIfAbsent(x.getName(), keys.size());
-                var list = new IntArrayList(x.getPossibleValues().size() + 1);
-                list.add(keys.getInt(x.getName()));
+                var list = new ArrayList<Integer>(x.getPossibleValues().size() + 1);
+                list.add(keys.get(x.getName()));
                 for (var y : x.getPossibleValues()) {
                     var val = Util.getPropertyName(x, y);
                     vals.putIfAbsent(val, vals.size());
-                    list.add(vals.getInt(val));
+                    list.add(vals.get(val));
                 }
                 kvs.putIfAbsent(list, kvs.size());
-                list2.add(kvs.getInt(list));
+                list2.add(kvs.get(list));
             }
             ps.putIfAbsent(list2, ps.size());
         }
 
-        var keyz = new ObjectArrayList<String>(keys.size());
-        keyz.size(keys.size());
-        for (var key : keys.object2IntEntrySet()) {
-            keyz.set(key.getIntValue(), key.getKey());
+        var keyz = new String[keys.size()];
+        for (var key : keys.entrySet()) {
+            keyz[key.getValue()] = key.getKey();
         }
-        writeHead(b, "block_state_property_key", STRING, keyz.size());
+        writeHead(b, "block_state_property_key", STRING, keyz.length);
         for (var name : keyz) {
             b.append(name);
             b.append(NL);
         }
 
-        var valz = new ObjectArrayList<String>(vals.size());
-        valz.size(vals.size());
-        for (var val : vals.object2IntEntrySet()) {
-            valz.set(val.getIntValue(), val.getKey());
+        var valz = new String[vals.size()];
+        for (var val : vals.entrySet()) {
+            valz[val.getValue()] = val.getKey();
         }
-        writeHead(b, "block_state_property_value", STRING, valz.size());
+        writeHead(b, "block_state_property_value", STRING, valz.length);
         for (var name : valz) {
             b.append(name);
             b.append(NL);
         }
 
-        var kvz = new ObjectArrayList<IntArrayList>(kvs.size());
-        kvz.size(kvs.size());
-        for (var key : kvs.object2IntEntrySet()) {
-            kvz.set(key.getIntValue(), key.getKey());
+        ArrayList<Integer>[] kvz = new ArrayList[kvs.size()];
+        for (var key : kvs.entrySet()) {
+            kvz[key.getValue()] = key.getKey();
         }
 
-        var pz = new ObjectArrayList<IntArrayList>(ps.size());
-        pz.size(ps.size());
-        for (var key : ps.object2IntEntrySet()) {
-            pz.set(key.getIntValue(), key.getKey());
+        ArrayList<Integer>[] pz = new ArrayList[ps.size()];
+        for (var key : ps.entrySet()) {
+            pz[key.getValue()] = key.getKey();
         }
 
-        writeHead(b, "block_state_property", INTEGER_ARR, kvz.size());
+        writeHead(b, "block_state_property", INTEGER_ARR, kvz.length);
         for (var x : kvz) {
             boolean first = true;
             for (var y : x) {
@@ -259,7 +362,7 @@ public class Datagen {
             }
             b.append(NL);
         }
-        writeHead(b, "block_state_properties", INTEGER_ARR, pz.size());
+        writeHead(b, "block_state_properties", INTEGER_ARR, pz.length);
         for (var x : pz) {
             boolean first = true;
             for (var x1 : x) {
@@ -273,16 +376,16 @@ public class Datagen {
         }
 
         writeRl(b, "block_state", BuiltInRegistries.BLOCK, block -> {
-            var list = new IntArrayList(block.getStateDefinition().getProperties().size());
+            var list = new ArrayList<Integer>(block.getStateDefinition().getProperties().size());
             for (var prop : block.getStateDefinition().getProperties()) {
-                var list2 = new IntArrayList(prop.getPossibleValues().size() + 1);
-                list2.add(keys.getInt(prop.getName()));
+                var list2 = new ArrayList<Integer>(prop.getPossibleValues().size() + 1);
+                list2.add(keys.get(prop.getName()));
                 for (var x : prop.getPossibleValues()) {
-                    list2.add(vals.getInt(Util.getPropertyName(prop, x)));
+                    list2.add(vals.get(Util.getPropertyName(prop, x)));
                 }
-                list.add(kvs.getInt(list2));
+                list.add(kvs.get(list2));
             }
-            return ps.getInt(list);
+            return ps.get(list);
         });
 
 
@@ -308,15 +411,15 @@ public class Datagen {
         });
 
 
-        var f32s = new Float2IntOpenHashMap(128);
+        var f32s = new HashMap<Float, Integer>(128);
         f32s.put(0.0f, 0);
         f32s.put(1.0f, 1);
-        var f64s = new Double2IntOpenHashMap(128);
+        var f64s = new HashMap<Double, Integer>(128);
         f64s.put(0.0, 0);
         f64s.put(1.0, 1);
 
-        var bs = new Object2IntOpenHashMap<IntArrayList>();
-        var bx = new IntArrayList(BuiltInRegistries.BLOCK.size());
+        var bs = new HashMap<ArrayList<Integer>, Integer>();
+        var bx = new ArrayList<Integer>(BuiltInRegistries.BLOCK.size());
 
         for (var block : BuiltInRegistries.BLOCK) {
             f32s.putIfAbsent(block.defaultBlockState().getDestroySpeed(EmptyBlockGetter.INSTANCE, BlockPos.ZERO), f32s.size());
@@ -330,32 +433,30 @@ public class Datagen {
             float c1 = block.getFriction();
             float d1 = block.getSpeedFactor();
             float e1 = block.getJumpFactor();
-            IntArrayList x = IntArrayList.of(f32s.get(a1), f32s.get(b1), f32s.get(c1), f32s.get(d1), f32s.get(e1));
+            ArrayList<Integer> x = new ArrayList<>(List.of(f32s.get(a1), f32s.get(b1), f32s.get(c1), f32s.get(d1), f32s.get(e1)));
             bs.putIfAbsent(x, bs.size());
-            bx.push(bs.getInt(x));
+            bx.add(bs.get(x));
         }
-        var bz = new ObjectArrayList<IntArrayList>(bs.size());
-        bz.size(bs.size());
-        for (var e : bs.object2IntEntrySet()) {
+        ArrayList<Integer>[] bz = new ArrayList[bs.size()];
+        for (var e : bs.entrySet()) {
             var k = e.getKey();
-            var v = e.getIntValue();
-            bz.set(v, k);
+            var v = e.getValue();
+            bz[v] = k;
         }
-        var f32z = new FloatArrayList(f32s.size());
-        f32z.size(f32s.size());
-        for (var e : f32s.float2IntEntrySet()) {
-            var k = e.getFloatKey();
-            var v = e.getIntValue();
-            f32z.set(v, k);
+        var f32z = new float[f32s.size()];
+        for (var e : f32s.entrySet()) {
+            var k = e.getKey();
+            var v = e.getValue();
+            f32z[v] = k;
         }
 
-        writeHead(b, "float32_table", INTEGER, f32z.size());
+        writeHead(b, "float32_table", INTEGER, f32z.length);
         for (var e : f32z) {
             b.append(ih(Float.floatToIntBits(e)));
             b.append(NL);
         }
 
-        var shapes = new Object2IntOpenHashMap<List<AABB>>(128);
+        var shapes = new HashMap<List<AABB>, Integer>(128);
         for (var block : BuiltInRegistries.BLOCK) {
             if (block.hasDynamicShape()) {
                 continue;
@@ -368,12 +469,11 @@ public class Datagen {
             }
         }
 
-        var shapes2 = new ObjectArrayList<List<AABB>>(shapes.size());
-        shapes2.size(shapes.size());
-        for (var e : shapes.object2IntEntrySet()) {
+        List<AABB>[] shapes2 = new List[shapes.size()];
+        for (var e : shapes.entrySet()) {
             var k = e.getKey();
-            var v = e.getIntValue();
-            shapes2.set(v, k);
+            var v = e.getValue();
+            shapes2[v] = k;
         }
         for (var shape : shapes2) {
             for (var box : shape) {
@@ -385,14 +485,13 @@ public class Datagen {
                 f64s.putIfAbsent(box.maxZ, f64s.size());
             }
         }
-        var f64z = new DoubleArrayList(f64s.size());
-        f64z.size(f64s.size());
-        for (var e : f64s.double2IntEntrySet()) {
-            var k = e.getDoubleKey();
-            var v = e.getIntValue();
-            f64z.set(v, k);
+        var f64z = new double[f64s.size()];
+        for (var e : f64s.entrySet()) {
+            var k = e.getKey();
+            var v = e.getValue();
+            f64z[v] = k;
         }
-        writeHead(b, "float64_table", LONG, f64z.size());
+        writeHead(b, "float64_table", LONG, f64z.length);
         for (var f64 : f64z) {
             b.append(Long.toHexString(Double.doubleToLongBits(f64)));
             b.append(NL);
@@ -423,7 +522,7 @@ public class Datagen {
 
         writeHead(b, "block_settings_table#hardness " +
             "blast_resistance slipperiness velocity_multiplier " +
-            "jump_velocity_multiplier", INTEGER_ARR, bz.size());
+            "jump_velocity_multiplier", INTEGER_ARR, bz.length);
         for (var s : bz) {
             boolean first = true;
             for (var x : s) {
@@ -454,20 +553,20 @@ public class Datagen {
 
         writeRl(b, "block_state_luminance", Block.BLOCK_STATE_REGISTRY, BlockBehaviour.BlockStateBase::getLightEmission);
 
-        var bounds = new Object2IntOpenHashMap<IntArrayList>();
-        var bound2s = new Object2IntOpenHashMap<IntArrayList>();
-        var bound2x = new IntArrayList(BuiltInRegistries.BLOCK.size());
-        bounds.put(new IntArrayList(), 0);
-        bound2s.put(new IntArrayList(), 0);
+        var bounds = new HashMap<ArrayList<Integer>, Integer>();
+        var bound2s = new HashMap<ArrayList<Integer>, Integer>();
+        var bound2x = new ArrayList<Integer>(BuiltInRegistries.BLOCK.size());
+        bounds.put(new ArrayList<>(), 0);
+        bound2s.put(new ArrayList<>(), 0);
 
         for (var block : BuiltInRegistries.BLOCK) {
             var states = block.getStateDefinition().getPossibleStates();
             if (block.hasDynamicShape()) {
-                bound2s.putIfAbsent(new IntArrayList(), bound2s.size());
-                bound2x.push(bound2s.getInt(new IntArrayList()));
+                bound2s.putIfAbsent(new ArrayList<>(), bound2s.size());
+                bound2x.add(bound2s.get(new ArrayList<Integer>()));
                 continue;
             }
-            var z = new IntArrayList(states.size());
+            var z = new ArrayList<Integer>(states.size());
             for (final var state : states) {
                 int flags1 = 0;
                 if (state.isSolidRender()) {
@@ -502,42 +601,38 @@ public class Datagen {
                         flags4 |= 1 << direction.get3DDataValue();
                     }
                 }
-                int flags5 = shapes.getInt(state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs());
-                int flags6 = shapes.getInt(state.getOcclusionShape().toAabbs());
-                var x = IntArrayList.of(flags1, flags2, flags3, flags4, flags5, flags6);
+                int flags5 = shapes.get(state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs());
+                int flags6 = shapes.get(state.getOcclusionShape().toAabbs());
+                var x = new ArrayList<>(List.of(flags1, flags2, flags3, flags4, flags5, flags6));
                 bounds.putIfAbsent(x, bounds.size());
-                z.push(bounds.getInt(x));
+                z.add(bounds.get(x));
             }
-            int first = z.getInt(0);
-            if (z.intStream().allMatch(x -> x == first)) {
-                var n = IntArrayList.of(first);
-                bound2s.putIfAbsent(n, bound2s.size());
-                bound2x.push(bound2s.getInt(n));
-            } else {
-                bound2s.putIfAbsent(z, bound2s.size());
-                bound2x.push(bound2s.getInt(z));
+            int first = z.getFirst();
+            if (z.stream().allMatch(x -> x == first)) {
+                z.clear();
+                z.add(first);
             }
+            bound2s.putIfAbsent(z, bound2s.size());
+            bound2x.add(bound2s.get(z));
         }
 
-        var boundz = new ObjectArrayList<IntArrayList>(bounds.size());
-        boundz.size(bounds.size());
-        for (var e : bounds.object2IntEntrySet()) {
+        ArrayList<Integer>[] boundz = new ArrayList[bounds.size()];
+        for (var e : bounds.entrySet()) {
             var k = e.getKey();
-            var v = e.getIntValue();
-            boundz.set(v, k);
+            var v = e.getValue();
+            boundz[v] = k;
         }
-        var bound2z = new ObjectArrayList<IntArrayList>(bound2s.size());
-        bound2z.size(bound2s.size());
-        for (var e : bound2s.object2IntEntrySet()) {
+        ArrayList<Integer>[] bound2z = new ArrayList[bound2s.size()];
+        for (var e : bound2s.entrySet()) {
             var k = e.getKey();
-            var v = e.getIntValue();
-            bound2z.set(v, k);
+            var v = e.getValue();
+            bound2z[v] = k;
         }
         writeHead(b, "block_state_static_bounds_table#" +
             "(opacity(4) solid_block translucent full_cube " +
             "opaque_full_cube) side_solid_full " +
             "side_solid_center side_solid_rigid " +
-            "collision_shape culling_shape", INTEGER_ARR, boundz.size());
+            "collision_shape culling_shape", INTEGER_ARR, boundz.length);
         for (var bound : boundz) {
             boolean first = true;
             for (var x : bound) {
@@ -550,7 +645,7 @@ public class Datagen {
             b.append(NL);
         }
 
-        writeHead(b, "block_state_static_bounds_map", INTEGER_ARR, bound2z.size());
+        writeHead(b, "block_state_static_bounds_map", INTEGER_ARR, bound2z.length);
         for (var bound : bound2z) {
             boolean first = true;
             for (var x : bound) {
@@ -649,19 +744,19 @@ public class Datagen {
         return Integer.toHexString(x);
     }
 
-    private record IntegerIdMap(IntArrayList bx) implements IdMap<Integer> {
+    private record IntegerIdMap(ArrayList<Integer> bx) implements IdMap<Integer> {
         @Override
-        public @NotNull Iterator<Integer> iterator() {
-            return bx.intIterator();
+        public Iterator<Integer> iterator() {
+            return bx.iterator();
         }
 
         @Override
-        public int getId(final @NotNull Integer value) {
+        public int getId(final Integer value) {
             return value;
         }
 
         @Override
-        public @NotNull Integer byId(final int index) {
+        public Integer byId(final int index) {
             return index;
         }
 
