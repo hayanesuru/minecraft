@@ -648,19 +648,43 @@ impl Read<'_> for StringTag {
             })))
         } else {
             let len = decode_mutf8_len(a)?;
+            let mut ty = if len <= INLINE_CAP {
+                Ty::Inline([0; INLINE_CAP])
+            } else {
+                Ty::Heap(Vec::with_capacity(len))
+            };
             unsafe {
-                if len <= INLINE_CAP {
-                    let mut s = [0; INLINE_CAP];
-                    decode_mutf8(a, &mut UnsafeWriter::new(s.as_mut_ptr())).unwrap_unchecked();
-                    Ok(Self(SmolStr::new_inline_unchecked(s, len)))
-                } else {
-                    let mut buf = Vec::with_capacity(len);
-                    decode_mutf8(a, &mut UnsafeWriter::new(buf.as_mut_ptr())).unwrap_unchecked();
-                    buf.set_len(len);
-                    Ok(Self(SmolStr::new_heap_unchecked(buf.into_boxed_slice())))
-                }
+                mser::write_unchecked(
+                    match &mut ty {
+                        Ty::Inline(x) => x.as_mut_ptr(),
+                        Ty::Heap(x) => x.as_mut_ptr(),
+                    },
+                    &(MutfReader(a, len)),
+                );
+                Ok(Self(match ty {
+                    Ty::Inline(x) => SmolStr::new_inline_unchecked(x, len),
+                    Ty::Heap(mut x) => {
+                        x.set_len(len);
+                        SmolStr::new_heap_unchecked(x.into_boxed_slice())
+                    }
+                }))
             }
         }
+    }
+}
+enum Ty {
+    Inline([u8; INLINE_CAP]),
+    Heap(Vec<u8>),
+}
+struct MutfReader<'a>(&'a [u8], usize);
+
+impl Write for MutfReader<'_> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe { decode_mutf8(self.0, w).unwrap_unchecked() }
+    }
+
+    fn sz(&self) -> usize {
+        self.1
     }
 }
 

@@ -334,7 +334,7 @@ fn test_write() {
     let len = packet.sz();
     let data = unsafe {
         let mut data = alloc::vec::Vec::with_capacity(len);
-        packet.write(&mut mser::UnsafeWriter::new(data.as_mut_ptr()));
+        mser::write_unchecked(data.as_mut_ptr(), packet);
         data.set_len(len);
         data.into_boxed_slice()
     };
