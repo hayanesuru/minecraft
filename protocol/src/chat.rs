@@ -61,7 +61,7 @@ pub const SHOW_ITEM_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
 pub const SHOW_ITEM_COUNT: StringTagRaw = StringTagRaw::new_unchecked(b"count");
 pub const SHOW_ITEM_COMPONENTS: StringTagRaw = StringTagRaw::new_unchecked(b"components");
 
-pub const HEX_PREFIX: u8 = b'#';
+const HEX_PREFIX: u8 = b'#';
 
 #[derive(Clone)]
 pub struct Component<A: Allocator = Global> {
@@ -191,7 +191,7 @@ impl TextColor {
                 let (a, b) = mser::u8_to_hex(rgb.red);
                 let (c, d) = mser::u8_to_hex(rgb.green);
                 let (e, f) = mser::u8_to_hex(rgb.blue);
-                *buf = [b'#', a, b, c, d, e, f];
+                *buf = [HEX_PREFIX, a, b, c, d, e, f];
                 unsafe { core::str::from_utf8_unchecked(buf) }
             }
         }
@@ -202,7 +202,7 @@ impl TextColor {
             Some(x) => Some(Self::Named(x)),
             None => {
                 let hex = match n {
-                    [b'#', rest @ ..] => rest,
+                    [HEX_PREFIX, rest @ ..] => rest,
                     _ => return None,
                 };
                 let (a, b) = mser::parse_hex::<u32>(hex);

@@ -240,11 +240,11 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
             }
             COLOR => match tag_type {
                 TagType::String => {
-                    style.color =
-                        Some(match TextColor::parse(StringTag::read(buf)?.0.as_bytes()) {
-                            Some(x) => x,
-                            None => return Err(Error),
-                        });
+                    let color = StringTag::read(buf)?.0;
+                    style.color = match TextColor::parse(color.as_bytes()) {
+                        Some(x) => Some(x),
+                        None => return Err(Error),
+                    };
                 }
                 _ => return Err(Error),
             },
@@ -252,6 +252,7 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
         }
     }
 }
+
 impl<A: Allocator> Write for Component<A> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
