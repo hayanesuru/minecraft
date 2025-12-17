@@ -18,6 +18,9 @@ pub enum List<A: Allocator = Global> {
     Compound(Vec<Compound<A>, A>),
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct ListInfo(pub TagType, pub u32);
+
 impl From<Vec<u8>> for List {
     #[inline]
     fn from(value: Vec<u8>) -> Self {
@@ -112,82 +115,75 @@ impl From<Vec<Compound>> for List {
     }
 }
 
+impl<A: Allocator> List<A> {
+    pub fn list_info(&self) -> ListInfo {
+        match self {
+            Self::None => ListInfo(TagType::End, 0),
+            Self::Byte(items) => ListInfo(TagType::Byte, items.len() as _),
+            Self::Short(items) => ListInfo(TagType::Short, items.len() as _),
+            Self::Int(items) => ListInfo(TagType::Int, items.len() as _),
+            Self::Long(items) => ListInfo(TagType::Long, items.len() as _),
+            Self::Float(items) => ListInfo(TagType::Float, items.len() as _),
+            Self::Double(items) => ListInfo(TagType::Double, items.len() as _),
+            Self::String(items) => ListInfo(TagType::String, items.len() as _),
+            Self::ByteArray(items) => ListInfo(TagType::ByteArray, items.len() as _),
+            Self::IntArray(items) => ListInfo(TagType::IntArray, items.len() as _),
+            Self::LongArray(items) => ListInfo(TagType::LongArray, items.len() as _),
+            Self::List(items) => ListInfo(TagType::List, items.len() as _),
+            Self::Compound(items) => ListInfo(TagType::Compound, items.len() as _),
+        }
+    }
+}
+
 impl Write for List {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
+            self.list_info().write(w);
             match self {
-                Self::None => {
-                    TagType::End.write(w);
-                    w.write(&[0, 0, 0, 0]);
-                }
-
+                Self::None => {}
                 Self::Byte(x) => {
-                    TagType::Byte.write(w);
-                    (x.len() as u32).write(w);
                     w.write(&*(x.as_slice() as *const [i8] as *const [u8]));
                 }
                 Self::Short(x) => {
-                    TagType::Short.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Int(x) => {
-                    TagType::Int.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Long(x) => {
-                    TagType::Long.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Float(x) => {
-                    TagType::Float.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Double(x) => {
-                    TagType::Double.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::String(x) => {
-                    TagType::String.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().for_each(|x| StringTagWriter(x).write(w));
                 }
                 Self::ByteArray(x) => {
-                    TagType::ByteArray.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
                         y.iter().write(w);
                     });
                 }
                 Self::IntArray(x) => {
-                    TagType::IntArray.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
                         y.iter().write(w);
                     });
                 }
                 Self::LongArray(x) => {
-                    TagType::LongArray.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
                         y.iter().write(w);
                     });
                 }
                 Self::List(x) => {
-                    TagType::List.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
                 Self::Compound(x) => {
-                    TagType::Compound.write(w);
-                    (x.len() as u32).write(w);
                     x.iter().write(w);
                 }
             }
@@ -213,7 +209,8 @@ impl Write for List {
     }
 }
 
-pub fn decode_raw(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error> {
+pub fn decode_raw(n: &mut &[u8], ListInfo(id, len): ListInfo) -> Result<List, Error> {
+    let len = len as usize;
     match id {
         TagType::End => Ok(List::None),
         TagType::Byte => unsafe {
@@ -289,9 +286,8 @@ pub fn decode_raw(n: &mut &[u8], id: TagType, len: usize) -> Result<List, Error>
             }
             let mut list = Vec::with_capacity(len);
             for _ in 0..len {
-                let id = TagType::read(n)?;
-                let len = n.i32()? as usize;
-                list.push(decode_raw(n, id, len)?);
+                let info = ListInfo::read(n)?;
+                list.push(decode_raw(n, info)?);
             }
             Ok(List::List(list))
         }

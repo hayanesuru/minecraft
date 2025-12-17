@@ -2,7 +2,7 @@ mod list;
 mod string;
 mod stringify;
 
-pub use self::list::List;
+pub use self::list::{List, ListInfo};
 pub use self::string::{StringTagRaw, StringTagWriter};
 pub use self::stringify::StringifyCompound;
 use crate::str::{INLINE_CAP, SmolStr};
@@ -603,9 +603,8 @@ fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
             }
             TagType::String => Tag::from(StringTag::read(n)?.0),
             TagType::List => {
-                let id = TagType::read(n)?;
-                let len = n.i32()? as usize;
-                Tag::from(list::decode_raw(n, id, len)?)
+                let info = ListInfo::read(n)?;
+                Tag::from(list::decode_raw(n, info)?)
             }
             TagType::Compound => Tag::from(decode_raw(n)?),
             TagType::IntArray => {

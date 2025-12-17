@@ -1,6 +1,8 @@
+mod binary;
+
 use crate::dialog::Dialog;
 use crate::item::ItemStack;
-use crate::nbt::{StringTag, StringTagRaw, StringTagWriter, TagType};
+use crate::nbt::StringTagRaw;
 use crate::profile::Profile;
 use crate::str::SmolStr;
 use crate::{Holder, Identifier};
@@ -8,13 +10,12 @@ use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use minecraft_data::entity_type;
-use mser::{Error, Read, UnsafeWriter, Write};
 use uuid::Uuid;
 
-pub const TEXT: StringTagRaw = StringTagRaw::new_unchecked(b"text");
-pub const TRANSLATE: StringTagRaw = StringTagRaw::new_unchecked(b"translate");
-pub const TRANSLATE_FALLBACK: StringTagRaw = StringTagRaw::new_unchecked(b"fallback");
-pub const TRANSLATE_WITH: StringTagRaw = StringTagRaw::new_unchecked(b"with");
+const TEXT: &[u8] = b"text";
+const TRANSLATE: &[u8] = b"translate";
+const TRANSLATE_FALLBACK: &[u8] = b"fallback";
+const TRANSLATE_WITH: &[u8] = b"with";
 pub const SCORE: StringTagRaw = StringTagRaw::new_unchecked(b"score");
 pub const SCORE_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
 pub const SCORE_OBJECTIVE: StringTagRaw = StringTagRaw::new_unchecked(b"objective");
@@ -39,7 +40,7 @@ pub const PROFILE_PROPERTY_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"na
 pub const PROFILE_PROPERTY_VALUE: StringTagRaw = StringTagRaw::new_unchecked(b"value");
 pub const PROFILE_PROPERTY_SIGNATURE: StringTagRaw = StringTagRaw::new_unchecked(b"signature");
 pub const FONT: StringTagRaw = StringTagRaw::new_unchecked(b"font");
-pub const COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"color");
+const COLOR: &[u8] = b"color";
 pub const SHADOW_COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"shadow_color");
 pub const INSERTION: StringTagRaw = StringTagRaw::new_unchecked(b"insertion");
 pub const CLICK_EVENT_SNAKE: StringTagRaw = StringTagRaw::new_unchecked(b"click_event");
@@ -76,7 +77,7 @@ pub enum Content<A: Allocator = Global> {
     },
     Translatable {
         key: SmolStr<A>,
-        fallback: SmolStr<A>,
+        fallback: Option<SmolStr<A>>,
         args: Vec<Component<A>, A>,
     },
     Score {
@@ -180,6 +181,43 @@ impl<A: Allocator> Style<A> {
 pub enum TextColor {
     Named(TextColorNamed),
     Rgb(TextColorRgb),
+}
+
+impl TextColor {
+    pub const fn name(self, buf: &mut [u8; 7]) -> &str {
+        match self {
+            TextColor::Named(named) => named.name(),
+            TextColor::Rgb(rgb) => {
+                let (a, b) = mser::u8_to_hex(rgb.red);
+                let (c, d) = mser::u8_to_hex(rgb.green);
+                let (e, f) = mser::u8_to_hex(rgb.blue);
+                *buf = [b'#', a, b, c, d, e, f];
+                unsafe { core::str::from_utf8_unchecked(buf) }
+            }
+        }
+    }
+
+    pub fn parse(n: &[u8]) -> Option<Self> {
+        match TextColorNamed::parse(n) {
+            Some(x) => Some(Self::Named(x)),
+            None => {
+                let hex = match n {
+                    [b'#', rest @ ..] => rest,
+                    _ => return None,
+                };
+                let (a, b) = mser::parse_hex::<u32>(hex);
+                if b == hex.len() && a <= 0xffffff {
+                    Some(Self::Rgb(TextColorRgb {
+                        red: (a >> 16) as u8,
+                        green: ((a >> 8) & 0xff) as u8,
+                        blue: (a & 0xff) as u8,
+                    }))
+                } else {
+                    None
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -307,6 +345,28 @@ impl TextColorNamed {
             Self::Yellow => "yellow",
             Self::White => "white",
         }
+    }
+
+    pub const fn parse(n: &[u8]) -> Option<Self> {
+        Some(match n {
+            b"black" => Self::Black,
+            b"dark_blue" => Self::DarkBlue,
+            b"dark_green" => Self::DarkGreen,
+            b"dark_aqua" => Self::DarkAqua,
+            b"dark_red" => Self::DarkRed,
+            b"dark_purple" => Self::DarkPurple,
+            b"gold" => Self::Gold,
+            b"gray" => Self::Gray,
+            b"dark_gray" => Self::DarkGray,
+            b"blue" => Self::Blue,
+            b"green" => Self::Green,
+            b"aqua" => Self::Aqua,
+            b"red" => Self::Red,
+            b"light_purple" => Self::LightPurple,
+            b"yellow" => Self::Yellow,
+            b"white" => Self::White,
+            _ => return None,
+        })
     }
 }
 
@@ -507,151 +567,4 @@ pub enum ObjectContents<A: Allocator = Global> {
         player: Box<Profile<A>, A>,
         hat: Option<bool>,
     },
-}
-
-impl<A: Allocator> Write for Component<A> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            let Self {
-                content,
-                style,
-                children,
-            } = self;
-            if let Content::Literal { content } = content
-                && style.is_empty()
-                && children.is_empty()
-            {
-                StringTagWriter(content).write(w);
-                return;
-            }
-            match content {
-                Content::Literal { content } => {
-                    TagType::Compound.write(w);
-                    TagType::String.write(w);
-                    TEXT.write(w);
-                    StringTagWriter(content).write(w);
-                    style.write(w);
-                    TagType::End.write(w);
-                }
-                _ => StringTagWriter("").write(w),
-            }
-        }
-    }
-
-    fn sz(&self) -> usize {
-        let mut w = 0usize;
-        let Self {
-            content,
-            style,
-            children,
-        } = self;
-        if let Content::Literal { content } = content
-            && style.is_empty()
-            && children.is_empty()
-        {
-            w += StringTagWriter(content).sz();
-            return w;
-        }
-        match content {
-            Content::Literal { content } => {
-                w += TagType::Compound.sz();
-                w += TagType::String.sz();
-                w += TEXT.sz();
-                w += StringTagWriter(content).sz();
-                w += style.sz();
-                w += TagType::End.sz();
-            }
-            _ => {
-                w += StringTagWriter("").sz();
-            }
-        }
-        w
-    }
-}
-
-impl<'a> Read<'a> for Component {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        match TagType::read(buf)? {
-            TagType::String => Ok(Self {
-                children: Vec::new(),
-                style: Style::new(),
-                content: Content::Literal {
-                    content: StringTag::read(buf)?.0,
-                },
-            }),
-            TagType::List => Err(Error),
-            TagType::Compound => {
-                let mut content = Content::Literal {
-                    content: SmolStr::EMPTY,
-                };
-                let style = Style::new();
-                let children = Vec::new();
-                loop {
-                    let tag_type = TagType::read(buf)?;
-                    if tag_type == TagType::End {
-                        return Ok(Self {
-                            content,
-                            style,
-                            children,
-                        });
-                    }
-                    let name = StringTag::read(buf)?;
-                    let name = name.0.as_str();
-                    match name {
-                        "text" => {
-                            content = Content::Literal {
-                                content: StringTag::read(buf)?.0,
-                            }
-                        }
-                        _ => return Err(Error),
-                    }
-                }
-            }
-            _ => Err(Error),
-        }
-    }
-}
-
-impl<A: Allocator> Style<A> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            if let Some(color) = self.color {
-                TagType::String.write(w);
-                COLOR.write(w);
-                match color {
-                    TextColor::Named(named) => {
-                        StringTagRaw::new_unchecked(named.name().as_bytes()).write(w);
-                    }
-                    TextColor::Rgb(rgb) => {
-                        let (a, b) = mser::u8_to_hex(rgb.red);
-                        let (c, d) = mser::u8_to_hex(rgb.green);
-                        let (e, f) = mser::u8_to_hex(rgb.blue);
-                        let s = [b'#', a, b, c, d, e, f];
-                        StringTagRaw::new_unchecked(&s).write(w);
-                    }
-                }
-            }
-        }
-    }
-
-    fn sz(&self) -> usize {
-        let mut w = 0;
-        if let Some(color) = self.color {
-            w += TagType::String.sz();
-            w += COLOR.sz();
-            match color {
-                TextColor::Named(named) => {
-                    w += StringTagRaw::new_unchecked(named.name().as_bytes()).sz();
-                }
-                TextColor::Rgb(rgb) => {
-                    let (a, b) = mser::u8_to_hex(rgb.red);
-                    let (c, d) = mser::u8_to_hex(rgb.green);
-                    let (e, f) = mser::u8_to_hex(rgb.blue);
-                    let s = [b'#', a, b, c, d, e, f];
-                    w += StringTagRaw::new_unchecked(&s).sz();
-                }
-            }
-        }
-        w
-    }
 }
