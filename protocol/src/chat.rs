@@ -13,6 +13,7 @@ use minecraft_data::entity_type;
 use uuid::Uuid;
 
 const TYPE: &[u8] = b"type";
+const EXTRA: &[u8] = b"extra";
 const TEXT: &[u8] = b"text";
 const TRANSLATE: &[u8] = b"translate";
 const TRANSLATE_FALLBACK: &[u8] = b"fallback";
@@ -22,7 +23,6 @@ const SCORE_NAME: &[u8] = b"name";
 const SCORE_OBJECTIVE: &[u8] = b"objective";
 pub const SELECTOR: StringTagRaw = StringTagRaw::new_unchecked(b"selector");
 pub const KEYBIND: StringTagRaw = StringTagRaw::new_unchecked(b"keybind");
-pub const EXTRA: StringTagRaw = StringTagRaw::new_unchecked(b"extra");
 pub const NBT: StringTagRaw = StringTagRaw::new_unchecked(b"nbt");
 pub const NBT_INTERPRET: StringTagRaw = StringTagRaw::new_unchecked(b"interpret");
 pub const NBT_BLOCK: StringTagRaw = StringTagRaw::new_unchecked(b"block");

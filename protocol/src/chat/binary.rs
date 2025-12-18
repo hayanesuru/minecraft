@@ -1,5 +1,5 @@
 use super::{
-    COLOR, Component, Content, SCORE, SCORE_NAME, SCORE_OBJECTIVE, Style, TEXT, TRANSLATE,
+    COLOR, Component, Content, EXTRA, SCORE, SCORE_NAME, SCORE_OBJECTIVE, Style, TEXT, TRANSLATE,
     TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
 };
 use crate::nbt::{ListInfo, StringTag, StringTagRaw, StringTagWriter, TagType};
@@ -105,6 +105,21 @@ unsafe fn write_raw<A: Allocator>(
             let mut buf = [0; 7];
             StringTagRaw::new_unchecked(color.name(&mut buf).as_bytes()).write(w);
         }
+
+        let len = children.len();
+        if len != 0 {
+            TagType::List.write(w);
+            StringTagRaw::new_unchecked(EXTRA).write(w);
+            ListInfo(TagType::Compound, len as _).write(w);
+            for Component {
+                content,
+                style,
+                children,
+            } in children
+            {
+                write_raw(content, style, children, w);
+            }
+        }
         TagType::End.write(w);
     }
 }
@@ -171,6 +186,20 @@ fn write_raw_len<A: Allocator>(
         let mut buf = [0; 7];
         w += StringTagRaw::new_unchecked(color.name(&mut buf).as_bytes()).sz();
     }
+    let len = children.len();
+    if len != 0 {
+        w += TagType::List.sz();
+        w += StringTagRaw::new_unchecked(EXTRA).sz();
+        w += ListInfo(TagType::Compound, len as _).sz();
+        for Component {
+            content,
+            style,
+            children,
+        } in children
+        {
+            w += write_raw_len(content, style, children);
+        }
+    }
     w += TagType::End.sz();
 
     w
@@ -179,7 +208,7 @@ fn write_raw_len<A: Allocator>(
 fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
     let mut content: Option<Content> = None;
     let mut style = Style::new();
-    let children = Vec::new();
+    let mut children = Vec::new();
     loop {
         let t1 = TagType::read(buf)?;
         macro_rules! expect_str {
@@ -316,6 +345,17 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
             TYPE => {
                 expect_str!(t1);
             }
+            EXTRA => match t1 {
+                TagType::List => match ListInfo::read(buf)? {
+                    ListInfo(TagType::Compound, len) => {
+                        for _ in 0..len {
+                            children.push(read_raw(buf)?);
+                        }
+                    }
+                    _ => return Err(Error),
+                },
+                _ => return Err(Error),
+            },
             _ => return Err(Error),
         }
     }
