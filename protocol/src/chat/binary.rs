@@ -1,10 +1,24 @@
-use super::{COLOR, Component, Content, Style, TEXT, TRANSLATE};
-use crate::chat::{TRANSLATE_FALLBACK, TRANSLATE_WITH, TextColor};
+use super::{
+    COLOR, Component, Content, SCORE, SCORE_NAME, SCORE_OBJECTIVE, Style, TEXT, TRANSLATE,
+    TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
+};
 use crate::nbt::{ListInfo, StringTag, StringTagRaw, StringTagWriter, TagType};
 use crate::str::SmolStr;
 use alloc::alloc::Allocator;
 use alloc::vec::Vec;
 use mser::{Error, Read, UnsafeWriter, Write};
+
+const fn content_type<A: Allocator>(content: &Content<A>) -> &'static [u8] {
+    match content {
+        Content::Literal { .. } => b"text",
+        Content::Translatable { .. } => b"translatable",
+        Content::Score { .. } => b"score",
+        Content::Selector { .. } => b"selector",
+        Content::Keybind { .. } => b"keybind",
+        Content::BlockNbt { .. } | Content::EntityNbt { .. } | Content::StorageNbt { .. } => b"nbt",
+        Content::Object { .. } => b"object",
+    }
+}
 
 unsafe fn write_raw<A: Allocator>(
     content: &Content<A>,
@@ -12,6 +26,11 @@ unsafe fn write_raw<A: Allocator>(
     children: &[Component<A>],
     w: &mut UnsafeWriter,
 ) {
+    unsafe {
+        TagType::String.write(w);
+        StringTagRaw::new_unchecked(TYPE).write(w);
+        StringTagRaw::new_unchecked(content_type(content)).write(w);
+    }
     match content {
         Content::Literal { content } => unsafe {
             TagType::String.write(w);
@@ -46,7 +65,38 @@ unsafe fn write_raw<A: Allocator>(
                 }
             }
         },
-        _ => {}
+        Content::Score { name, objective } => unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(SCORE).write(w);
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(SCORE_NAME).write(w);
+            StringTagWriter(name).write(w);
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(SCORE_OBJECTIVE).write(w);
+            StringTagWriter(objective).write(w);
+            TagType::End.write(w);
+        },
+        Content::Selector { pattern, separator } => {}
+        Content::Keybind { keybind } => {}
+        Content::BlockNbt {
+            nbt_path,
+            interpret,
+            separator,
+            pos,
+        } => {}
+        Content::EntityNbt {
+            nbt_path,
+            interpret,
+            separator,
+            selector,
+        } => {}
+        Content::StorageNbt {
+            nbt_path,
+            interpret,
+            separator,
+            storage,
+        } => {}
+        Content::Object { contents } => {}
     }
     unsafe {
         if let Some(color) = style.color {
@@ -65,6 +115,9 @@ fn write_raw_len<A: Allocator>(
     children: &[Component<A>],
 ) -> usize {
     let mut w = 0usize;
+    w += TagType::String.sz();
+    w += StringTagRaw::new_unchecked(TYPE).sz();
+    w += StringTagRaw::new_unchecked(content_type(content)).sz();
     match content {
         Content::Literal { content } => {
             w += TagType::String.sz();
@@ -99,6 +152,17 @@ fn write_raw_len<A: Allocator>(
                 }
             }
         }
+        Content::Score { name, objective } => {
+            w += TagType::Compound.sz();
+            w += StringTagRaw::new_unchecked(SCORE).sz();
+            w += TagType::String.sz();
+            w += StringTagRaw::new_unchecked(SCORE_NAME).sz();
+            w += StringTagWriter(name).sz();
+            w += TagType::String.sz();
+            w += StringTagRaw::new_unchecked(SCORE_OBJECTIVE).sz();
+            w += StringTagWriter(objective).sz();
+            w += TagType::End.sz();
+        }
         _ => {}
     };
     if let Some(color) = style.color {
@@ -117,137 +181,141 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
     let mut style = Style::new();
     let children = Vec::new();
     loop {
-        let tag_type = TagType::read(buf)?;
-        if tag_type == TagType::End {
-            return Ok(Component {
-                content: match content {
-                    Some(x) => x,
-                    None => Content::Literal {
-                        content: SmolStr::EMPTY,
+        let t1 = TagType::read(buf)?;
+        macro_rules! expect_str {
+            ($ty:expr) => {
+                match $ty {
+                    TagType::String => match StringTag::read(buf) {
+                        Ok(x) => x.0,
+                        Err(e) => return Err(e),
                     },
+                    _ => return Err(Error),
+                }
+            };
+        }
+        if t1 == TagType::End {
+            let content = match content {
+                Some(x) => x,
+                None => Content::Literal {
+                    content: SmolStr::EMPTY,
                 },
+            };
+            return Ok(Component {
+                content,
                 style,
                 children,
             });
         }
-        let name = StringTag::read(buf)?;
-        let name = name.0.as_str();
-        match name.as_bytes() {
+        match StringTag::read(buf)?.0.as_bytes() {
             TEXT => {
-                match &content {
-                    None => {
-                        content = Some(Content::Literal {
-                            content: SmolStr::EMPTY,
-                        })
-                    }
-                    Some(Content::Literal { .. }) => {}
-                    _ => return Err(Error),
+                if content.is_none() {
+                    content = Some(Content::Literal {
+                        content: SmolStr::EMPTY,
+                    })
                 }
-                match content.as_mut() {
-                    Some(Content::Literal { content }) => match tag_type {
-                        TagType::String => {
-                            *content = StringTag::read(buf)?.0;
-                        }
-                        _ => return Err(Error),
-                    },
-                    _ => return Err(Error),
+                if let Some(Content::Literal { content }) = content.as_mut() {
+                    *content = expect_str!(t1);
                 }
             }
             TRANSLATE => {
-                match &content {
-                    None => {
-                        content = Some(Content::Translatable {
-                            key: SmolStr::EMPTY,
-                            fallback: None,
-                            args: Vec::new(),
-                        })
-                    }
-                    Some(Content::Translatable { .. }) => {}
-                    _ => return Err(Error),
-                };
-                match content.as_mut() {
-                    Some(Content::Translatable {
-                        key,
-                        fallback: _,
-                        args: _,
-                    }) => match tag_type {
-                        TagType::String => {
-                            *key = StringTag::read(buf)?.0;
-                        }
-                        _ => return Err(Error),
-                    },
-                    _ => return Err(Error),
+                if content.is_none() {
+                    content = Some(Content::Translatable {
+                        key: SmolStr::EMPTY,
+                        fallback: None,
+                        args: Vec::new(),
+                    });
+                }
+                if let Some(Content::Translatable {
+                    key,
+                    fallback: _,
+                    args: _,
+                }) = content.as_mut()
+                {
+                    *key = expect_str!(t1);
                 }
             }
             TRANSLATE_FALLBACK => {
-                match &content {
-                    None => {
-                        content = Some(Content::Translatable {
-                            key: SmolStr::EMPTY,
-                            fallback: None,
-                            args: Vec::new(),
-                        })
-                    }
-                    Some(Content::Translatable { .. }) => {}
-                    _ => return Err(Error),
-                };
-                match content.as_mut() {
-                    Some(Content::Translatable {
-                        key: _,
-                        fallback,
-                        args: _,
-                    }) => match tag_type {
-                        TagType::String => {
-                            *fallback = Some(StringTag::read(buf)?.0);
-                        }
-                        _ => return Err(Error),
-                    },
-                    _ => return Err(Error),
+                if content.is_none() {
+                    content = Some(Content::Translatable {
+                        key: SmolStr::EMPTY,
+                        fallback: None,
+                        args: Vec::new(),
+                    });
+                }
+                if let Some(Content::Translatable {
+                    key: _,
+                    fallback,
+                    args: _,
+                }) = content.as_mut()
+                {
+                    *fallback = Some(expect_str!(t1));
                 }
             }
             TRANSLATE_WITH => {
-                match &content {
-                    None => {
-                        content = Some(Content::Translatable {
-                            key: SmolStr::EMPTY,
-                            fallback: None,
-                            args: Vec::new(),
-                        })
-                    }
-                    Some(Content::Translatable { .. }) => {}
-                    _ => return Err(Error),
-                };
-                match content.as_mut() {
-                    Some(Content::Translatable {
-                        key: _,
-                        fallback: _,
-                        args,
-                    }) => match tag_type {
+                if content.is_none() {
+                    content = Some(Content::Translatable {
+                        key: SmolStr::EMPTY,
+                        fallback: None,
+                        args: Vec::new(),
+                    });
+                }
+                if let Some(Content::Translatable {
+                    key: _,
+                    fallback: _,
+                    args,
+                }) = content.as_mut()
+                {
+                    match t1 {
                         TagType::List => match ListInfo::read(buf)? {
                             ListInfo(TagType::Compound, len) => {
-                                let mut vec = Vec::new();
                                 for _ in 0..len {
-                                    vec.push(read_raw(buf)?);
+                                    args.push(read_raw(buf)?);
                                 }
-                                *args = vec;
                             }
                             _ => return Err(Error),
                         },
                         _ => return Err(Error),
-                    },
-                    _ => return Err(Error),
+                    }
                 }
             }
-            COLOR => match tag_type {
-                TagType::String => {
-                    let color = StringTag::read(buf)?.0;
-                    style.color = match TextColor::parse(color.as_bytes()) {
-                        Some(x) => Some(x),
-                        None => return Err(Error),
-                    };
+            SCORE => {
+                if content.is_none() {
+                    content = Some(Content::Score {
+                        name: SmolStr::EMPTY,
+                        objective: SmolStr::EMPTY,
+                    });
                 }
-                _ => return Err(Error),
-            },
+                if let Some(Content::Score { name, objective }) = content.as_mut() {
+                    match t1 {
+                        TagType::Compound => loop {
+                            let t2 = TagType::read(buf)?;
+                            if t2 == TagType::End {
+                                break;
+                            }
+                            match StringTag::read(buf)?.0.as_bytes() {
+                                SCORE_NAME => {
+                                    *name = expect_str!(t2);
+                                }
+                                SCORE_OBJECTIVE => {
+                                    *objective = expect_str!(t2);
+                                }
+                                _ => return Err(Error),
+                            }
+                        },
+                        _ => return Err(Error),
+                    }
+                }
+            }
+            COLOR => {
+                let color = expect_str!(t1);
+                style.color = match TextColor::parse(color.as_bytes()) {
+                    Some(x) => Some(x),
+                    None => return Err(Error),
+                };
+            }
+            TYPE => {
+                expect_str!(t1);
+            }
             _ => return Err(Error),
         }
     }

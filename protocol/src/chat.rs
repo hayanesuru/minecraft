@@ -12,13 +12,14 @@ use alloc::vec::Vec;
 use minecraft_data::entity_type;
 use uuid::Uuid;
 
+const TYPE: &[u8] = b"type";
 const TEXT: &[u8] = b"text";
 const TRANSLATE: &[u8] = b"translate";
 const TRANSLATE_FALLBACK: &[u8] = b"fallback";
 const TRANSLATE_WITH: &[u8] = b"with";
-pub const SCORE: StringTagRaw = StringTagRaw::new_unchecked(b"score");
-pub const SCORE_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
-pub const SCORE_OBJECTIVE: StringTagRaw = StringTagRaw::new_unchecked(b"objective");
+const SCORE: &[u8] = b"score";
+const SCORE_NAME: &[u8] = b"name";
+const SCORE_OBJECTIVE: &[u8] = b"objective";
 pub const SELECTOR: StringTagRaw = StringTagRaw::new_unchecked(b"selector");
 pub const KEYBIND: StringTagRaw = StringTagRaw::new_unchecked(b"keybind");
 pub const EXTRA: StringTagRaw = StringTagRaw::new_unchecked(b"extra");
@@ -109,7 +110,7 @@ pub enum Content<A: Allocator = Global> {
         separator: Option<Box<Component<A>, A>>,
         storage: Identifier<A>,
     },
-    Objects {
+    Object {
         contents: ObjectContents<A>,
     },
 }
