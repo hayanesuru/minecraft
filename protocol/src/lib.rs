@@ -320,7 +320,7 @@ pub enum Holder<T, A: Allocator = Global> {
 #[test]
 fn test_write() {
     use crate::clientbound::login::LoginFinished;
-    use crate::types::{Id, Packet};
+    use crate::types::{Id, Packet, packet_id};
     use minecraft_data::clientbound__login;
 
     let packet: LoginFinished<'_, Global> = LoginFinished {
@@ -330,12 +330,15 @@ fn test_write() {
             peoperties: List::Borrowed(&[]),
         },
     };
-    let packet = Packet::new(packet);
-    let len = packet.sz();
+
+    let id = packet_id(&packet);
+    let len1 = id.sz();
+    let len2 = packet.sz() + len1;
     let data = unsafe {
-        let mut data = alloc::vec::Vec::with_capacity(len);
-        mser::write_unchecked(data.as_mut_ptr(), packet);
-        data.set_len(len);
+        let mut data = alloc::vec::Vec::with_capacity(len2);
+        mser::write_unchecked(data.as_mut_ptr(), &id);
+        mser::write_unchecked(data.as_mut_ptr().add(len1), &packet);
+        data.set_len(len2);
         data.into_boxed_slice()
     };
     let mut data = &data[..];
