@@ -641,7 +641,7 @@ impl Read<'_> for StringTag {
             let len = decode_mutf8_len(a)?;
             let mut x = Vec::with_capacity(len);
             unsafe {
-                mser::write_unchecked(x.as_mut_ptr(), &(MutfReader(a, len)));
+                mser::write_unchecked(x.as_mut_ptr(), &(DecodeMutf8(a, len)));
                 x.set_len(len);
                 Ok(Self(BoxStr::new_unchecked(x.into_boxed_slice())))
             }
@@ -649,9 +649,9 @@ impl Read<'_> for StringTag {
     }
 }
 
-struct MutfReader<'a>(&'a [u8], usize);
+struct DecodeMutf8<'a>(&'a [u8], usize);
 
-impl Write for MutfReader<'_> {
+impl Write for DecodeMutf8<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe { decode_mutf8(self.0, w).unwrap_unchecked() }
     }

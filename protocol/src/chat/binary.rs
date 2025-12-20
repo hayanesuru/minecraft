@@ -1,6 +1,6 @@
 use super::{
-    COLOR, Component, Content, EXTRA, SCORE, SCORE_NAME, SCORE_OBJECTIVE, Style, TEXT, TRANSLATE,
-    TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
+    COLOR, Component, Content, EXTRA, SCORE, SCORE_NAME, SCORE_OBJECTIVE, SELECTOR, SEPARATOR,
+    Style, TEXT, TRANSLATE, TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
 };
 use crate::nbt::{ListInfo, StringTag, StringTagRaw, StringTagWriter, TagType};
 use crate::str::BoxStr;
@@ -21,7 +21,7 @@ const fn content_type<A: Allocator>(content: &Content<A>) -> &'static [u8] {
     }
 }
 
-unsafe fn write_raw<A: Allocator>(
+unsafe fn write_rec<A: Allocator>(
     content: &Content<A>,
     style: &Style<A>,
     children: &[Component<A>],
@@ -62,7 +62,7 @@ unsafe fn write_raw<A: Allocator>(
                     children,
                 } in args
                 {
-                    write_raw(content, style, children, w);
+                    write_rec(content, style, children, w);
                 }
             }
         },
@@ -77,7 +77,21 @@ unsafe fn write_raw<A: Allocator>(
             StringTagWriter(objective).write(w);
             TagType::End.write(w);
         },
-        Content::Selector { pattern, separator } => {}
+        Content::Selector { pattern, separator } => unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(SELECTOR).write(w);
+            StringTagWriter(pattern).write(w);
+            if let Some(Component {
+                content,
+                style,
+                children,
+            }) = separator.as_deref()
+            {
+                TagType::Compound.write(w);
+                StringTagRaw::new_unchecked(SEPARATOR).write(w);
+                write_rec(content, style, children, w);
+            }
+        },
         Content::Keybind { keybind } => {}
         Content::BlockNbt {
             nbt_path,
@@ -100,13 +114,6 @@ unsafe fn write_raw<A: Allocator>(
         Content::Object { contents } => {}
     }
     unsafe {
-        if let Some(color) = style.color {
-            TagType::String.write(w);
-            StringTagRaw::new_unchecked(COLOR).write(w);
-            let mut buf = [0; 7];
-            StringTagRaw::new_unchecked(color.name(&mut buf).as_bytes()).write(w);
-        }
-
         let len = children.len();
         if len != 0 {
             TagType::List.write(w);
@@ -118,9 +125,17 @@ unsafe fn write_raw<A: Allocator>(
                 children,
             } in children
             {
-                write_raw(content, style, children, w);
+                write_rec(content, style, children, w);
             }
         }
+
+        if let Some(color) = style.color {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(COLOR).write(w);
+            let mut buf = [0; 7];
+            StringTagRaw::new_unchecked(color.name(&mut buf).as_bytes()).write(w);
+        }
+
         TagType::End.write(w);
     }
 }
@@ -179,14 +194,24 @@ fn write_raw_len<A: Allocator>(
             w += StringTagWriter(objective).sz();
             w += TagType::End.sz();
         }
+        Content::Selector { pattern, separator } => {
+            w += TagType::String.sz();
+            w += StringTagRaw::new_unchecked(SELECTOR).sz();
+            w += StringTagWriter(pattern).sz();
+            if let Some(Component {
+                content,
+                style,
+                children,
+            }) = separator.as_deref()
+            {
+                w += TagType::Compound.sz();
+                w += StringTagRaw::new_unchecked(SEPARATOR).sz();
+                w += write_raw_len(content, style, children);
+            }
+        }
         _ => {}
     };
-    if let Some(color) = style.color {
-        w += TagType::String.sz();
-        w += StringTagRaw::new_unchecked(COLOR).sz();
-        let mut buf = [0; 7];
-        w += StringTagRaw::new_unchecked(color.name(&mut buf).as_bytes()).sz();
-    }
+
     let len = children.len();
     if len != 0 {
         w += TagType::List.sz();
@@ -201,12 +226,51 @@ fn write_raw_len<A: Allocator>(
             w += write_raw_len(content, style, children);
         }
     }
+
+    if let Some(color) = style.color {
+        w += TagType::String.sz();
+        w += StringTagRaw::new_unchecked(COLOR).sz();
+        let mut buf = [0; 7];
+        w += StringTagRaw::new_unchecked(color.name(&mut buf).as_bytes()).sz();
+    }
     w += TagType::End.sz();
 
     w
 }
 
-fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
+const TEXT_H: u128 = cast2(TEXT);
+const TRANSLATE_H: u128 = cast2(TRANSLATE);
+const TRANSLATE_FALLBACK_H: u128 = cast2(TRANSLATE_FALLBACK);
+const TRANSLATE_WITH_H: u128 = cast2(TRANSLATE_WITH);
+const SCORE_H: u128 = cast2(SCORE);
+const TYPE_H: u128 = cast2(TYPE);
+const EXTRA_H: u128 = cast2(EXTRA);
+const COLOR_H: u128 = cast2(COLOR);
+const SELECTOR_H: u128 = cast2(SELECTOR);
+const SEPARATOR_H: u128 = cast2(SEPARATOR);
+
+const fn cast128(n: &[u8]) -> Result<u128, Error> {
+    if n.len() <= 16 {
+        Ok(cast2(n))
+    } else {
+        Err(Error)
+    }
+}
+
+const fn cast2(n: &[u8]) -> u128 {
+    debug_assert!(n.len() <= 16);
+    let len = n.len();
+    let mut dest = [0u8; 16];
+    if len > 16 {
+        unsafe { core::hint::unreachable_unchecked() }
+    }
+    unsafe {
+        core::ptr::copy_nonoverlapping(n.as_ptr(), dest.as_mut_ptr(), len);
+    }
+    u128::from_le_bytes(dest)
+}
+
+fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
     let mut content: Option<Content> = None;
     let mut style = Style::new();
     let mut children = Vec::new();
@@ -236,8 +300,9 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
                 children,
             });
         }
-        match StringTag::read(buf)?.0.as_bytes() {
-            TEXT => match content.as_ref() {
+
+        match cast128(StringTagRaw::read(buf)?.inner())? {
+            TEXT_H => match content.as_ref() {
                 None => {
                     content = Some(Content::Literal {
                         content: expect_str!(t1),
@@ -245,7 +310,7 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
                 _ => return Err(Error),
             },
-            TRANSLATE => match content.as_mut() {
+            TRANSLATE_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Translatable {
                         key: expect_str!(t1),
@@ -262,7 +327,7 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
                 _ => return Err(Error),
             },
-            TRANSLATE_FALLBACK => match content.as_mut() {
+            TRANSLATE_FALLBACK_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Translatable {
                         key: BoxStr::default(),
@@ -279,13 +344,13 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
                 _ => return Err(Error),
             },
-            TRANSLATE_WITH => {
+            TRANSLATE_WITH_H => {
                 let mut args = Vec::new();
                 match t1 {
                     TagType::List => match ListInfo::read(buf)? {
                         ListInfo(TagType::Compound, len) => {
                             for _ in 0..len {
-                                args.push(read_raw(buf)?);
+                                args.push(read_rec_compound(buf)?);
                             }
                         }
                         _ => return Err(Error),
@@ -308,7 +373,7 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
                     _ => return Err(Error),
                 }
             }
-            SCORE => {
+            SCORE_H => {
                 let mut name: Option<BoxStr> = None;
                 let mut objective: Option<BoxStr> = None;
                 match t1 {
@@ -345,27 +410,60 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
                     _ => return Err(Error),
                 }
             }
-            COLOR => {
-                let color = expect_str!(t1);
-                style.color = match TextColor::parse(color.as_bytes()) {
-                    Some(x) => Some(x),
-                    None => return Err(Error),
-                };
+            SELECTOR_H => match content.as_mut() {
+                None => {
+                    content = Some(Content::Selector {
+                        pattern: expect_str!(t1),
+                        separator: None,
+                    })
+                }
+                Some(Content::Selector {
+                    pattern,
+                    separator: _,
+                }) => {
+                    *pattern = expect_str!(t1);
+                }
+                _ => return Err(Error),
+            },
+            SEPARATOR_H => {
+                let separator = Some(Box::new(read_rec_ty(buf, t1)?));
+                match content.as_mut() {
+                    None => {
+                        content = Some(Content::Selector {
+                            pattern: BoxStr::default(),
+                            separator,
+                        })
+                    }
+                    Some(Content::Selector {
+                        pattern: _,
+                        separator: x,
+                    }) => {
+                        *x = separator;
+                    }
+                    _ => return Err(Error),
+                }
             }
-            TYPE => {
+            TYPE_H => {
                 expect_str!(t1);
             }
-            EXTRA => match t1 {
+            EXTRA_H => match t1 {
                 TagType::List => match ListInfo::read(buf)? {
                     ListInfo(TagType::Compound, len) => {
                         for _ in 0..len {
-                            children.push(read_raw(buf)?);
+                            children.push(read_rec_compound(buf)?);
                         }
                     }
                     _ => return Err(Error),
                 },
                 _ => return Err(Error),
             },
+            COLOR_H => {
+                let color = expect_str!(t1);
+                style.color = match TextColor::parse(color.as_bytes()) {
+                    Some(x) => Some(x),
+                    None => return Err(Error),
+                };
+            }
             _ => return Err(Error),
         }
     }
@@ -387,7 +485,7 @@ impl<A: Allocator> Write for Component<A> {
                 return;
             }
             TagType::Compound.write(w);
-            write_raw(content, style, children, w);
+            write_rec(content, style, children, w);
         }
     }
 
@@ -411,36 +509,41 @@ impl<A: Allocator> Write for Component<A> {
     }
 }
 
+fn read_rec_ty(buf: &mut &[u8], ty: TagType) -> Result<Component, Error> {
+    match ty {
+        TagType::String => Ok(Component {
+            children: Vec::new(),
+            style: Style::new(),
+            content: Content::Literal {
+                content: StringTag::read(buf)?.0,
+            },
+        }),
+        TagType::List => {
+            let ListInfo(ty, len) = ListInfo::read(buf)?;
+            if ty == TagType::Compound {
+                let mut children = Vec::new();
+                for _ in 0..len {
+                    children.push(read_rec_compound(buf)?);
+                }
+                Ok(Component {
+                    children,
+                    style: Style::new(),
+                    content: Content::Literal {
+                        content: BoxStr::default(),
+                    },
+                })
+            } else {
+                Err(Error)
+            }
+        }
+        TagType::Compound => read_rec_compound(buf),
+        _ => Err(Error),
+    }
+}
+
 impl<'a> Read<'a> for Component {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        match TagType::read(buf)? {
-            TagType::String => Ok(Self {
-                children: Vec::new(),
-                style: Style::new(),
-                content: Content::Literal {
-                    content: StringTag::read(buf)?.0,
-                },
-            }),
-            TagType::List => {
-                let ListInfo(ty, len) = ListInfo::read(buf)?;
-                if ty == TagType::Compound {
-                    let mut children = Vec::new();
-                    for _ in 0..len {
-                        children.push(read_raw(buf)?);
-                    }
-                    Ok(Self {
-                        children,
-                        style: Style::new(),
-                        content: Content::Literal {
-                            content: BoxStr::default(),
-                        },
-                    })
-                } else {
-                    Err(Error)
-                }
-            }
-            TagType::Compound => read_raw(buf),
-            _ => Err(Error),
-        }
+        let ty = TagType::read(buf)?;
+        read_rec_ty(buf, ty)
     }
 }
