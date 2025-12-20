@@ -1,5 +1,5 @@
 use super::*;
-use crate::SmolStr;
+use crate::BoxStr;
 
 #[derive(Clone)]
 pub enum List<A: Allocator = Global> {
@@ -10,7 +10,7 @@ pub enum List<A: Allocator = Global> {
     Long(Vec<i64, A>),
     Float(Vec<f32, A>),
     Double(Vec<f64, A>),
-    String(Vec<SmolStr<A>, A>),
+    String(Vec<BoxStr<A>, A>),
     ByteArray(Vec<Vec<i8>, A>),
     IntArray(Vec<Vec<i32>, A>),
     LongArray(Vec<Vec<i64>, A>),
@@ -73,9 +73,9 @@ impl From<Vec<f64>> for List {
     }
 }
 
-impl From<Vec<SmolStr>> for List {
+impl From<Vec<BoxStr>> for List {
     #[inline]
-    fn from(value: Vec<SmolStr>) -> Self {
+    fn from(value: Vec<BoxStr>) -> Self {
         Self::String(value)
     }
 }

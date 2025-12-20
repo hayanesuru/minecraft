@@ -3,8 +3,9 @@ use super::{
     TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
 };
 use crate::nbt::{ListInfo, StringTag, StringTagRaw, StringTagWriter, TagType};
-use crate::str::SmolStr;
+use crate::str::BoxStr;
 use alloc::alloc::Allocator;
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, UnsafeWriter, Write};
 
@@ -226,7 +227,7 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
             let content = match content {
                 Some(x) => x,
                 None => Content::Literal {
-                    content: SmolStr::EMPTY,
+                    content: BoxStr::default(),
                 },
             };
             return Ok(Component {
@@ -236,103 +237,112 @@ fn read_raw(buf: &mut &[u8]) -> Result<Component, Error> {
             });
         }
         match StringTag::read(buf)?.0.as_bytes() {
-            TEXT => {
-                if content.is_none() {
+            TEXT => match content.as_ref() {
+                None => {
                     content = Some(Content::Literal {
-                        content: SmolStr::EMPTY,
+                        content: expect_str!(t1),
                     })
                 }
-                if let Some(Content::Literal { content }) = content.as_mut() {
-                    *content = expect_str!(t1);
-                }
-            }
-            TRANSLATE => {
-                if content.is_none() {
+                _ => return Err(Error),
+            },
+            TRANSLATE => match content.as_mut() {
+                None => {
                     content = Some(Content::Translatable {
-                        key: SmolStr::EMPTY,
+                        key: expect_str!(t1),
                         fallback: None,
                         args: Vec::new(),
-                    });
+                    })
                 }
-                if let Some(Content::Translatable {
+                Some(Content::Translatable {
                     key,
                     fallback: _,
                     args: _,
-                }) = content.as_mut()
-                {
+                }) => {
                     *key = expect_str!(t1);
                 }
-            }
-            TRANSLATE_FALLBACK => {
-                if content.is_none() {
+                _ => return Err(Error),
+            },
+            TRANSLATE_FALLBACK => match content.as_mut() {
+                None => {
                     content = Some(Content::Translatable {
-                        key: SmolStr::EMPTY,
-                        fallback: None,
+                        key: BoxStr::default(),
+                        fallback: Some(expect_str!(t1)),
                         args: Vec::new(),
-                    });
+                    })
                 }
-                if let Some(Content::Translatable {
+                Some(Content::Translatable {
                     key: _,
                     fallback,
                     args: _,
-                }) = content.as_mut()
-                {
+                }) => {
                     *fallback = Some(expect_str!(t1));
                 }
-            }
+                _ => return Err(Error),
+            },
             TRANSLATE_WITH => {
-                if content.is_none() {
-                    content = Some(Content::Translatable {
-                        key: SmolStr::EMPTY,
-                        fallback: None,
-                        args: Vec::new(),
-                    });
-                }
-                if let Some(Content::Translatable {
-                    key: _,
-                    fallback: _,
-                    args,
-                }) = content.as_mut()
-                {
-                    match t1 {
-                        TagType::List => match ListInfo::read(buf)? {
-                            ListInfo(TagType::Compound, len) => {
-                                for _ in 0..len {
-                                    args.push(read_raw(buf)?);
-                                }
+                let mut args = Vec::new();
+                match t1 {
+                    TagType::List => match ListInfo::read(buf)? {
+                        ListInfo(TagType::Compound, len) => {
+                            for _ in 0..len {
+                                args.push(read_raw(buf)?);
                             }
-                            _ => return Err(Error),
-                        },
+                        }
                         _ => return Err(Error),
+                    },
+                    _ => return Err(Error),
+                };
+                match content.as_mut() {
+                    None => {
+                        content = Some(Content::Translatable {
+                            key: BoxStr::default(),
+                            fallback: None,
+                            args,
+                        })
                     }
+                    Some(Content::Translatable {
+                        key: _,
+                        fallback: _,
+                        args: x,
+                    }) => *x = args,
+                    _ => return Err(Error),
                 }
             }
             SCORE => {
-                if content.is_none() {
-                    content = Some(Content::Score {
-                        name: SmolStr::EMPTY,
-                        objective: SmolStr::EMPTY,
-                    });
+                let mut name: Option<BoxStr> = None;
+                let mut objective: Option<BoxStr> = None;
+                match t1 {
+                    TagType::Compound => loop {
+                        let t2 = TagType::read(buf)?;
+                        if t2 == TagType::End {
+                            break;
+                        }
+                        match StringTag::read(buf)?.0.as_bytes() {
+                            SCORE_NAME => {
+                                name = Some(expect_str!(t2));
+                            }
+                            SCORE_OBJECTIVE => {
+                                objective = Some(expect_str!(t2));
+                            }
+                            _ => return Err(Error),
+                        }
+                    },
+                    _ => return Err(Error),
                 }
-                if let Some(Content::Score { name, objective }) = content.as_mut() {
-                    match t1 {
-                        TagType::Compound => loop {
-                            let t2 = TagType::read(buf)?;
-                            if t2 == TagType::End {
-                                break;
-                            }
-                            match StringTag::read(buf)?.0.as_bytes() {
-                                SCORE_NAME => {
-                                    *name = expect_str!(t2);
-                                }
-                                SCORE_OBJECTIVE => {
-                                    *objective = expect_str!(t2);
-                                }
-                                _ => return Err(Error),
-                            }
-                        },
-                        _ => return Err(Error),
+                match content.as_ref() {
+                    None => {
+                        content = Some(Content::Score {
+                            name: match name {
+                                Some(name) => name,
+                                None => return Err(Error),
+                            },
+                            objective: match objective {
+                                Some(objective) => objective,
+                                None => return Err(Error),
+                            },
+                        })
                     }
+                    _ => return Err(Error),
                 }
             }
             COLOR => {
@@ -422,7 +432,7 @@ impl<'a> Read<'a> for Component {
                         children,
                         style: Style::new(),
                         content: Content::Literal {
-                            content: SmolStr::EMPTY,
+                            content: BoxStr::default(),
                         },
                     })
                 } else {

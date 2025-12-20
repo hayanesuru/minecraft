@@ -1,7 +1,7 @@
 #![no_std]
 #![cfg_attr(not(feature = "allocator-api2"), feature(allocator_api))]
 
-use crate::str::SmolStr;
+use crate::str::BoxStr;
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -289,8 +289,8 @@ impl Write for Ident<'_> {
 
 #[derive(Clone)]
 pub struct Identifier<A: Allocator = Global> {
-    pub namespace: SmolStr<A>,
-    pub path: SmolStr<A>,
+    pub namespace: BoxStr<A>,
+    pub path: BoxStr<A>,
 }
 
 #[derive(Clone)]

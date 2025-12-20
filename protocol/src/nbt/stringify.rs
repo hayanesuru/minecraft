@@ -1,6 +1,7 @@
 use super::{Compound, List, Tag};
-use crate::str::SmolStr;
+use crate::str::BoxStr;
 use crate::{Bytes, Error};
+use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::hint::unreachable_unchecked;
@@ -250,8 +251,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                             let x = find_ascii(n, |x| {
                                 matches!(x, b':' | b' ' | b'\n' | b'\t' | b'\r')
                             })?;
-                            let m =
-                                SmolStr::new(core::str::from_utf8_unchecked(n.get_unchecked(0..x)));
+                            let m = BoxStr::new_unchecked(Box::from(n.get_unchecked(0..x)));
                             *n = n.get_unchecked(x..);
                             m
                         }
@@ -300,9 +300,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                             })?)?;
                             let v = match dnum(s) {
                                 Ok(x) => x,
-                                Err(_) => {
-                                    Tag::String(SmolStr::new(core::str::from_utf8_unchecked(s)))
-                                }
+                                Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
                             };
                             curr.push(k, v);
                             ptrs.push(Block::C(c));
@@ -392,9 +390,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                                 let s = n.slice(i)?;
                                 match dnum(s) {
                                     Ok(x) => x,
-                                    Err(_) => {
-                                        Tag::String(SmolStr::new(core::str::from_utf8_unchecked(s)))
-                                    }
+                                    Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
                                 }
                             }
                         };
@@ -618,11 +614,9 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                                                                     | b'\r'
                                                             )
                                                         })?;
-                                                        let m = SmolStr::new(
-                                                            core::str::from_utf8_unchecked(
-                                                                n.get_unchecked(0..x),
-                                                            ),
-                                                        );
+                                                        let m = BoxStr::new_unchecked(Box::from(
+                                                            n.get_unchecked(0..x),
+                                                        ));
                                                         *n = n.get_unchecked(x..);
                                                         m
                                                     }
@@ -736,7 +730,7 @@ fn dnum(n: &[u8]) -> Result<Tag, Error> {
 const ESCAPE: u8 = b'\\';
 
 /// decode single quoted string
-unsafe fn dqstr1(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<SmolStr, Error> {
+unsafe fn dqstr1(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
     buf.clear();
     unsafe {
         *n = n.get_unchecked(1..);
@@ -773,12 +767,12 @@ unsafe fn dqstr1(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<SmolStr, Error> {
         }
         buf.extend(n.get_unchecked(last..cur));
         n.slice(1 + cur)?;
-        Ok(SmolStr::new(core::str::from_utf8_unchecked(buf)))
+        Ok(BoxStr::new_unchecked(Box::from(&buf[..])))
     }
 }
 
 /// decode a double quoted string
-unsafe fn dqstr2(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<SmolStr, Error> {
+unsafe fn dqstr2(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
     buf.clear();
     unsafe {
         *n = n.get_unchecked(1..);
@@ -815,7 +809,7 @@ unsafe fn dqstr2(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<SmolStr, Error> {
         }
         buf.extend(n.get_unchecked(last..cur));
         n.slice(1 + cur)?;
-        Ok(SmolStr::new(core::str::from_utf8_unchecked(buf)))
+        Ok(BoxStr::new_unchecked(Box::from(&buf[..])))
     }
 }
 

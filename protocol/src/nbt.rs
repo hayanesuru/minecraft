@@ -5,9 +5,10 @@ mod stringify;
 pub use self::list::{List, ListInfo};
 pub use self::string::{StringTagRaw, StringTagWriter};
 pub use self::stringify::StringifyCompound;
-use crate::str::{INLINE_CAP, SmolStr};
+use crate::str::BoxStr;
 use crate::{Bytes, Error, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{decode_mutf8, decode_mutf8_len, is_ascii_mutf8};
 
@@ -61,7 +62,7 @@ pub enum Tag<A: Allocator = Global> {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(SmolStr<A>),
+    String(BoxStr<A>),
     ByteArray(Vec<i8, A>),
     IntArray(Vec<i32, A>),
     LongArray(Vec<i64, A>),
@@ -211,27 +212,20 @@ impl From<Vec<i8>> for Tag {
 impl<'a> From<&'a str> for Tag {
     #[inline]
     fn from(value: &'a str) -> Self {
-        Self::String(SmolStr::new(value))
+        unsafe { Self::String(BoxStr::new_unchecked(Box::from(value.as_bytes()))) }
     }
 }
 
 impl<'a> From<&'a mut str> for Tag {
     #[inline]
     fn from(value: &'a mut str) -> Self {
-        Self::String(SmolStr::new(value))
+        unsafe { Self::String(BoxStr::new_unchecked(Box::from(value.as_bytes()))) }
     }
 }
 
-impl From<alloc::boxed::Box<str>> for Tag {
+impl From<BoxStr> for Tag {
     #[inline]
-    fn from(value: alloc::boxed::Box<str>) -> Self {
-        Self::String(SmolStr::from(value))
-    }
-}
-
-impl From<SmolStr> for Tag {
-    #[inline]
-    fn from(value: SmolStr) -> Self {
+    fn from(value: BoxStr) -> Self {
         Self::String(value)
     }
 }
@@ -266,18 +260,18 @@ impl From<Vec<i64>> for Tag {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct Compound<A: Allocator = Global>(Vec<(SmolStr<A>, Tag), A>);
+pub struct Compound<A: Allocator = Global>(Vec<(BoxStr<A>, Tag), A>);
 
-impl AsRef<[(SmolStr, Tag)]> for Compound {
+impl AsRef<[(BoxStr, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(SmolStr, Tag)] {
+    fn as_ref(&self) -> &[(BoxStr, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(SmolStr, Tag)]> for Compound {
+impl AsMut<[(BoxStr, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(SmolStr, Tag)] {
+    fn as_mut(&mut self) -> &mut [(BoxStr, Tag)] {
         self.0.as_mut_slice()
     }
 }
@@ -340,7 +334,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound(pub SmolStr, pub Compound);
+pub struct NamedCompound(pub BoxStr, pub Compound);
 
 impl Read<'_> for NamedCompound {
     #[inline]
@@ -408,11 +402,11 @@ impl From<Compound> for UnamedCompound {
 impl From<Compound> for NamedCompound {
     #[inline]
     fn from(value: Compound) -> Self {
-        Self(SmolStr::default(), value)
+        Self(BoxStr::default(), value)
     }
 }
 
-impl<K: Into<SmolStr>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<BoxStr>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -457,12 +451,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (SmolStr, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (BoxStr, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (SmolStr, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (BoxStr, Tag)> {
         self.0.iter_mut()
     }
 
@@ -500,12 +494,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: impl Into<SmolStr>, v: impl Into<Tag>) {
+    pub fn push(&mut self, k: impl Into<BoxStr>, v: impl Into<Tag>) {
         self.push_(k.into(), v.into());
     }
 
     #[inline]
-    fn push_(&mut self, k: SmolStr, v: Tag) {
+    fn push_(&mut self, k: BoxStr, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -520,7 +514,7 @@ impl Compound {
 
     #[deprecated]
     #[inline]
-    pub fn decode_named(buf: &mut &[u8]) -> Result<(SmolStr, Self), Error> {
+    pub fn decode_named(buf: &mut &[u8]) -> Result<(BoxStr, Self), Error> {
         match NamedCompound::read(buf) {
             Ok(x) => Ok((x.0, x.1)),
             Err(e) => Err(e),
@@ -561,7 +555,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(SmolStr, Tag)> {
+    pub fn into_inner(self) -> Vec<(BoxStr, Tag)> {
         self.0
     }
 }
@@ -573,9 +567,9 @@ impl Read<'_> for Compound {
     }
 }
 
-impl From<Vec<(SmolStr, Tag)>> for Compound {
+impl From<Vec<(BoxStr, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(SmolStr, Tag)>) -> Self {
+    fn from(value: Vec<(BoxStr, Tag)>) -> Self {
         Self(value)
     }
 }
@@ -633,7 +627,7 @@ fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct StringTag(pub SmolStr);
+pub struct StringTag(pub BoxStr);
 
 impl Read<'_> for StringTag {
     #[inline]
@@ -642,39 +636,19 @@ impl Read<'_> for StringTag {
         let a = buf.slice(len)?;
 
         if is_ascii_mutf8(a) {
-            Ok(Self(SmolStr::new(unsafe {
-                core::str::from_utf8_unchecked(a)
-            })))
+            unsafe { Ok(Self(BoxStr::new_unchecked(Box::from(a)))) }
         } else {
             let len = decode_mutf8_len(a)?;
-            let mut ty = if len <= INLINE_CAP {
-                Ty::Inline([0; INLINE_CAP])
-            } else {
-                Ty::Heap(Vec::with_capacity(len))
-            };
+            let mut x = Vec::with_capacity(len);
             unsafe {
-                mser::write_unchecked(
-                    match &mut ty {
-                        Ty::Inline(x) => x.as_mut_ptr(),
-                        Ty::Heap(x) => x.as_mut_ptr(),
-                    },
-                    &(MutfReader(a, len)),
-                );
-                Ok(Self(match ty {
-                    Ty::Inline(x) => SmolStr::new_inline_unchecked(x, len),
-                    Ty::Heap(mut x) => {
-                        x.set_len(len);
-                        SmolStr::new_heap_unchecked(x.into_boxed_slice())
-                    }
-                }))
+                mser::write_unchecked(x.as_mut_ptr(), &(MutfReader(a, len)));
+                x.set_len(len);
+                Ok(Self(BoxStr::new_unchecked(x.into_boxed_slice())))
             }
         }
     }
 }
-enum Ty {
-    Inline([u8; INLINE_CAP]),
-    Heap(Vec<u8>),
-}
+
 struct MutfReader<'a>(&'a [u8], usize);
 
 impl Write for MutfReader<'_> {
