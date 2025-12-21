@@ -215,7 +215,7 @@ pub struct Ident<'a> {
     pub path: &'a str,
 }
 
-impl Ident<'_> {
+impl<'a> Ident<'a> {
     pub const MINECRAFT: &'static str = "minecraft";
 
     pub fn is_valid_path(c: char) -> bool {
@@ -225,20 +225,16 @@ impl Ident<'_> {
     pub fn is_valid_namespace(c: char) -> bool {
         matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.')
     }
-}
-
-impl<'a> Read<'a> for Ident<'a> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let identifier = Utf8::<32767>::read(buf)?.0;
+    pub fn parse(identifier: &'a str) -> Option<Self> {
         match identifier.strip_prefix("minecraft:") {
             Some(path) => {
                 if path.chars().all(Self::is_valid_path) {
-                    Ok(Self {
+                    Some(Self {
                         namespace: Self::MINECRAFT,
                         path,
                     })
                 } else {
-                    Err(Error)
+                    None
                 }
             }
             None => match identifier.split_once(':') {
@@ -246,7 +242,7 @@ impl<'a> Read<'a> for Ident<'a> {
                     if namespace.chars().all(Self::is_valid_namespace)
                         && path.chars().all(Self::is_valid_path)
                     {
-                        Ok(Self {
+                        Some(Self {
                             namespace: if !namespace.is_empty() {
                                 namespace
                             } else {
@@ -255,17 +251,17 @@ impl<'a> Read<'a> for Ident<'a> {
                             path,
                         })
                     } else {
-                        Err(Error)
+                        None
                     }
                 }
                 None => {
                     if identifier.chars().all(Self::is_valid_path) {
-                        Ok(Self {
+                        Some(Self {
                             namespace: Self::MINECRAFT,
                             path: identifier,
                         })
                     } else {
-                        Err(Error)
+                        None
                     }
                 }
             },
@@ -273,9 +269,20 @@ impl<'a> Read<'a> for Ident<'a> {
     }
 }
 
+impl<'a> Read<'a> for Ident<'a> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let identifier = Utf8::<32767>::read(buf)?.0;
+        match Self::parse(identifier) {
+            Some(x) => Ok(x),
+            None => Err(Error),
+        }
+    }
+}
+
 impl Write for Ident<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
+            V21((self.namespace.len() + 1 + self.path.len()) as _).write(w);
             w.write(self.namespace.as_bytes());
             w.write_byte(b':');
             w.write(self.path.as_bytes());
@@ -283,7 +290,8 @@ impl Write for Ident<'_> {
     }
 
     fn sz(&self) -> usize {
-        self.namespace.len() + 1 + self.path.len()
+        let a = self.namespace.len() + 1 + self.path.len();
+        V21(a as u32).sz() + a
     }
 }
 

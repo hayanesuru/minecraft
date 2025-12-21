@@ -3,7 +3,7 @@ mod string;
 mod stringify;
 
 pub use self::list::{List, ListInfo};
-pub use self::string::{StringTagRaw, StringTagWriter};
+pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
 use crate::str::BoxStr;
 use crate::{Bytes, Error, Read, UnsafeWriter, Write};
@@ -81,7 +81,7 @@ impl Write for Tag {
                 Tag::Long(x) => x.write(w),
                 Tag::Float(x) => x.write(w),
                 Tag::Double(x) => x.write(w),
-                Tag::String(x) => StringTagWriter(x).write(w),
+                Tag::String(x) => RefStringTag(x).write(w),
                 Tag::ByteArray(x) => {
                     (x.len() as u32).write(w);
                     w.write(&*(x.as_slice() as *const [i8] as *const [u8]));
@@ -108,7 +108,7 @@ impl Write for Tag {
             Tag::Long(_) => 8,
             Tag::Float(_) => 4,
             Tag::Double(_) => 8,
-            Tag::String(x) => StringTagWriter(x).sz(),
+            Tag::String(x) => RefStringTag(x).sz(),
             Tag::ByteArray(x) => 4 + x.len(),
             Tag::IntArray(x) => 4 + x.len() * 4,
             Tag::LongArray(x) => 4 + x.len() * 8,
@@ -281,7 +281,7 @@ impl Write for Compound {
         unsafe {
             for (name, tag) in &self.0 {
                 tag.id().write(w);
-                StringTagWriter(name).write(w);
+                RefStringTag(name).write(w);
                 match tag {
                     Tag::Byte(x) => x.write(w),
                     Tag::Short(x) => x.write(w),
@@ -289,7 +289,7 @@ impl Write for Compound {
                     Tag::Long(x) => x.write(w),
                     Tag::Float(x) => x.write(w),
                     Tag::Double(x) => x.write(w),
-                    Tag::String(x) => StringTagWriter(x).write(w),
+                    Tag::String(x) => RefStringTag(x).write(w),
                     Tag::ByteArray(x) => {
                         (x.len() as u32).write(w);
                         w.write(&*(x.as_slice() as *const [i8] as *const [u8]))
@@ -313,7 +313,7 @@ impl Write for Compound {
     fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += StringTagWriter(name).sz();
+            w += RefStringTag(name).sz();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -321,7 +321,7 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => StringTagWriter(x).sz(),
+                Tag::String(x) => RefStringTag(x).sz(),
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
@@ -352,14 +352,14 @@ impl Write for NamedCompound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             TagType::Compound.write(w);
-            StringTagWriter(self.0.as_str()).write(w);
+            RefStringTag(self.0.as_str()).write(w);
             self.1.write(w);
         }
     }
 
     #[inline]
     fn sz(&self) -> usize {
-        1 + Write::sz(&StringTagWriter(self.0.as_str())) + Write::sz(&self.1)
+        1 + Write::sz(&RefStringTag(self.0.as_str())) + Write::sz(&self.1)
     }
 }
 
@@ -664,11 +664,11 @@ impl Write for DecodeMutf8<'_> {
 impl Write for StringTag {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe { StringTagWriter(&self.0).write(w) }
+        unsafe { RefStringTag(&self.0).write(w) }
     }
 
     #[inline]
     fn sz(&self) -> usize {
-        StringTagWriter(&self.0).sz()
+        RefStringTag(&self.0).sz()
     }
 }

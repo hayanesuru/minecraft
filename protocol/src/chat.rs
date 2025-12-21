@@ -21,14 +21,15 @@ const TRANSLATE_WITH: &[u8] = b"with";
 const SCORE: &[u8] = b"score";
 const SCORE_NAME: &[u8] = b"name";
 const SCORE_OBJECTIVE: &[u8] = b"objective";
-pub const SELECTOR: &[u8] = b"selector";
-pub const SEPARATOR: &[u8] = b"separator";
-pub const KEYBIND: StringTagRaw = StringTagRaw::new_unchecked(b"keybind");
-pub const NBT: StringTagRaw = StringTagRaw::new_unchecked(b"nbt");
-pub const NBT_INTERPRET: StringTagRaw = StringTagRaw::new_unchecked(b"interpret");
-pub const NBT_BLOCK: StringTagRaw = StringTagRaw::new_unchecked(b"block");
-pub const NBT_ENTITY: StringTagRaw = StringTagRaw::new_unchecked(b"entity");
-pub const NBT_STORAGE: StringTagRaw = StringTagRaw::new_unchecked(b"storage");
+const SELECTOR: &[u8] = b"selector";
+const SEPARATOR: &[u8] = b"separator";
+const KEYBIND: &[u8] = b"keybind";
+const NBT: &[u8] = b"nbt";
+const NBT_INTERPRET: &[u8] = b"interpret";
+const NBT_SOURCE: &[u8] = b"source";
+const NBT_BLOCK: &[u8] = b"block";
+const NBT_ENTITY: &[u8] = b"entity";
+const NBT_STORAGE: &[u8] = b"storage";
 pub const OBJECT_ATLAS: StringTagRaw = StringTagRaw::new_unchecked(b"atlas");
 pub const OBJECT_SPRITE: StringTagRaw = StringTagRaw::new_unchecked(b"sprite");
 pub const OBJECT_HAT: StringTagRaw = StringTagRaw::new_unchecked(b"hat");
@@ -92,26 +93,14 @@ pub enum Content<A: Allocator = Global> {
     Keybind {
         keybind: BoxStr<A>,
     },
-    BlockNbt {
+    Nbt {
         nbt_path: BoxStr<A>,
-        interpret: Option<bool>,
+        interpret: bool,
         separator: Option<Box<Component<A>, A>>,
-        pos: BoxStr<A>,
-    },
-    EntityNbt {
-        nbt_path: BoxStr<A>,
-        interpret: Option<bool>,
-        separator: Option<Box<Component<A>, A>>,
-        selector: BoxStr<A>,
-    },
-    StorageNbt {
-        nbt_path: BoxStr<A>,
-        interpret: Option<bool>,
-        separator: Option<Box<Component<A>, A>>,
-        storage: Identifier<A>,
+        content: NbtContents<A>,
     },
     Object {
-        contents: ObjectContents<A>,
+        content: ObjectContents<A>,
     },
 }
 
@@ -568,4 +557,11 @@ pub enum ObjectContents<A: Allocator = Global> {
         player: Box<Profile<A>, A>,
         hat: Option<bool>,
     },
+}
+
+#[derive(Clone)]
+pub enum NbtContents<A: Allocator = Global> {
+    Block { pos: BoxStr<A> },
+    Entity { selector: BoxStr<A> },
+    Storage { storage: Identifier<A> },
 }

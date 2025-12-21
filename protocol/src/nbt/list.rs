@@ -160,7 +160,7 @@ impl Write for List {
                     x.iter().write(w);
                 }
                 Self::String(x) => {
-                    x.iter().for_each(|x| StringTagWriter(x).write(w));
+                    x.iter().for_each(|x| RefStringTag(x).write(w));
                 }
                 Self::ByteArray(x) => {
                     x.iter().for_each(|y| {
@@ -199,7 +199,7 @@ impl Write for List {
             Self::Long(x) => x.len() * 8,
             Self::Float(x) => x.len() * 4,
             Self::Double(x) => x.len() * 8,
-            Self::String(x) => x.iter().map(|x| StringTagWriter(x).sz()).sum::<usize>(),
+            Self::String(x) => x.iter().map(|x| RefStringTag(x).sz()).sum::<usize>(),
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
