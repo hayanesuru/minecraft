@@ -3,13 +3,13 @@ use super::{
     NBT_SOURCE, NBT_STORAGE, NbtContents, SCORE, SCORE_NAME, SCORE_OBJECTIVE, SELECTOR, SEPARATOR,
     Style, TEXT, TRANSLATE, TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
 };
-use crate::Ident;
 use crate::nbt::{IdentifierTag, ListInfo, RefStringTag, StringTag, StringTagRaw, TagType};
 use crate::str::BoxStr;
+use crate::{Ident, Identifier};
 use alloc::alloc::Allocator;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Error, Read, UnsafeWriter, Write};
+use mser::{Bytes, Error, Read, UnsafeWriter, Write};
 
 const STRING: TagType = TagType::String;
 const LIST: TagType = TagType::List;
@@ -393,17 +393,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
     let mut separator: Option<Box<Component>> = None;
     loop {
         let t1 = TagType::read(buf)?;
-        macro_rules! expect_str {
-            ($ty:expr) => {
-                match $ty {
-                    STRING => match StringTag::read(buf) {
-                        Ok(x) => x.0,
-                        Err(e) => return Err(e),
-                    },
-                    _ => return Err(Error),
-                }
-            };
-        }
+
         if t1 == END {
             let content = match content {
                 Some(Content::Selector {
@@ -434,18 +424,21 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
         }
 
         match cast128(StringTagRaw::read(buf)?.inner())? {
-            TEXT_H => match content.as_ref() {
+            TEXT_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Literal {
-                        content: expect_str!(t1),
+                        content: expect_str(t1, buf)?,
                     })
+                }
+                Some(Content::Literal { content }) => {
+                    *content = expect_str(t1, buf)?;
                 }
                 _ => return Err(Error),
             },
             TRANSLATE_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Translatable {
-                        key: expect_str!(t1),
+                        key: expect_str(t1, buf)?,
                         fallback: None,
                         args: Vec::new(),
                     })
@@ -455,7 +448,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     fallback: _,
                     args: _,
                 }) => {
-                    *key = expect_str!(t1);
+                    *key = expect_str(t1, buf)?;
                 }
                 _ => return Err(Error),
             },
@@ -463,7 +456,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 None => {
                     content = Some(Content::Translatable {
                         key: BoxStr::default(),
-                        fallback: Some(expect_str!(t1)),
+                        fallback: Some(expect_str(t1, buf)?),
                         args: Vec::new(),
                     })
                 }
@@ -472,7 +465,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     fallback,
                     args: _,
                 }) => {
-                    *fallback = Some(expect_str!(t1));
+                    *fallback = Some(expect_str(t1, buf)?);
                 }
                 _ => return Err(Error),
             },
@@ -516,28 +509,32 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                         }
                         match StringTag::read(buf)?.0.as_bytes() {
                             SCORE_NAME => {
-                                name = Some(expect_str!(t2));
+                                name = Some(expect_str(t2, buf)?);
                             }
                             SCORE_OBJECTIVE => {
-                                objective = Some(expect_str!(t2));
+                                objective = Some(expect_str(t2, buf)?);
                             }
                             _ => return Err(Error),
                         }
                     },
                     _ => return Err(Error),
                 }
-                match content.as_ref() {
-                    None => {
-                        content = Some(Content::Score {
-                            name: match name {
-                                Some(name) => name,
-                                None => return Err(Error),
-                            },
-                            objective: match objective {
-                                Some(objective) => objective,
-                                None => return Err(Error),
-                            },
-                        })
+                let name = match name {
+                    Some(name) => name,
+                    None => return Err(Error),
+                };
+                let objective = match objective {
+                    Some(objective) => objective,
+                    None => return Err(Error),
+                };
+                match content.as_mut() {
+                    None => content = Some(Content::Score { name, objective }),
+                    Some(Content::Score {
+                        name: x,
+                        objective: y,
+                    }) => {
+                        *x = name;
+                        *y = objective;
                     }
                     _ => return Err(Error),
                 }
@@ -545,7 +542,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
             SELECTOR_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Selector {
-                        pattern: expect_str!(t1),
+                        pattern: expect_str(t1, buf)?,
                         separator: None,
                     })
                 }
@@ -553,7 +550,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     pattern,
                     separator: _,
                 }) => {
-                    *pattern = expect_str!(t1);
+                    *pattern = expect_str(t1, buf)?;
                 }
                 _ => return Err(Error),
             },
@@ -563,19 +560,127 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
             KEYBIND_H => match content.as_ref() {
                 None => {
                     content = Some(Content::Keybind {
-                        keybind: expect_str!(t1),
+                        keybind: expect_str(t1, buf)?,
                     })
                 }
                 _ => return Err(Error),
             },
-            NBT_H => {}
-            NBT_INTERPRET_H => {}
-            NBT_SOURCE_H => {}
-            NBT_BLOCK_H => {}
-            NBT_ENTITY_H => {}
-            NBT_STORAGE_H => {}
+            NBT_H => match content.as_mut() {
+                None => {
+                    content = Some(Content::Nbt {
+                        nbt_path: expect_str(t1, buf)?,
+                        interpret: false,
+                        separator: None,
+                        content: NbtContents::Block {
+                            pos: BoxStr::default(),
+                        },
+                    })
+                }
+                Some(Content::Nbt {
+                    nbt_path,
+                    interpret: _,
+                    separator: _,
+                    content: _,
+                }) => {
+                    *nbt_path = expect_str(t1, buf)?;
+                }
+                _ => return Err(Error),
+            },
+            NBT_INTERPRET_H => {
+                let x = expect_bool(t1, buf)?;
+                match content.as_mut() {
+                    None => {
+                        content = Some(Content::Nbt {
+                            nbt_path: BoxStr::default(),
+                            interpret: x,
+                            separator: None,
+                            content: NbtContents::Block {
+                                pos: BoxStr::default(),
+                            },
+                        })
+                    }
+                    Some(Content::Nbt {
+                        nbt_path: _,
+                        interpret,
+                        separator: _,
+                        content: _,
+                    }) => {
+                        *interpret = x;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            NBT_SOURCE_H => {
+                expect_str(t1, buf)?;
+            }
+            NBT_BLOCK_H => {
+                let x = expect_str(t1, buf)?;
+                match content.as_mut() {
+                    None => {
+                        content = Some(Content::Nbt {
+                            nbt_path: BoxStr::default(),
+                            interpret: false,
+                            separator: None,
+                            content: NbtContents::Block { pos: x },
+                        })
+                    }
+                    Some(Content::Nbt {
+                        nbt_path: _,
+                        interpret: _,
+                        separator: _,
+                        content,
+                    }) => {
+                        *content = NbtContents::Block { pos: x };
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            NBT_ENTITY_H => {
+                let x = expect_str(t1, buf)?;
+                match content.as_mut() {
+                    None => {
+                        content = Some(Content::Nbt {
+                            nbt_path: BoxStr::default(),
+                            interpret: false,
+                            separator: None,
+                            content: NbtContents::Entity { selector: x },
+                        })
+                    }
+                    Some(Content::Nbt {
+                        nbt_path: _,
+                        interpret: _,
+                        separator: _,
+                        content,
+                    }) => {
+                        *content = NbtContents::Entity { selector: x };
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            NBT_STORAGE_H => {
+                let x = expect_ident(t1, buf)?;
+                match content.as_mut() {
+                    None => {
+                        content = Some(Content::Nbt {
+                            nbt_path: BoxStr::default(),
+                            interpret: false,
+                            separator: None,
+                            content: NbtContents::Storage { storage: x },
+                        })
+                    }
+                    Some(Content::Nbt {
+                        nbt_path: _,
+                        interpret: _,
+                        separator: _,
+                        content,
+                    }) => {
+                        *content = NbtContents::Storage { storage: x };
+                    }
+                    _ => return Err(Error),
+                }
+            }
             TYPE_H => {
-                expect_str!(t1);
+                expect_str(t1, buf)?;
             }
             EXTRA_H => match t1 {
                 LIST => match ListInfo::read(buf)? {
@@ -589,7 +694,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 _ => return Err(Error),
             },
             COLOR_H => {
-                let color = expect_str!(t1);
+                let color = expect_str(t1, buf)?;
                 style.color = match TextColor::parse(color.as_bytes()) {
                     Some(x) => Some(x),
                     None => return Err(Error),
@@ -597,6 +702,43 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
             }
             _ => return Err(Error),
         }
+    }
+}
+
+fn expect_ident(t: TagType, buf: &mut &[u8]) -> Result<Identifier, Error> {
+    match t {
+        TagType::String => match IdentifierTag::read(buf) {
+            Ok(x) => unsafe {
+                Ok(Identifier {
+                    namespace: BoxStr::new_unchecked(Box::from(x.0.namespace.as_bytes())),
+                    path: BoxStr::new_unchecked(Box::from(x.0.path.as_bytes())),
+                })
+            },
+            Err(e) => Err(e),
+        },
+        _ => Err(Error),
+    }
+}
+
+fn expect_str(t: TagType, buf: &mut &[u8]) -> Result<BoxStr, Error> {
+    match t {
+        TagType::String => match StringTag::read(buf) {
+            Ok(x) => Ok(x.0),
+            Err(e) => Err(e),
+        },
+        _ => Err(Error),
+    }
+}
+
+fn expect_bool(t: TagType, buf: &mut &[u8]) -> Result<bool, Error> {
+    match t {
+        TagType::Byte => Ok(buf.i8()? != 0),
+        TagType::Short => Ok(buf.i16()? != 0),
+        TagType::Int => Ok(buf.i32()? != 0),
+        TagType::Long => Ok(buf.i64()? != 0),
+        TagType::Float => Ok(buf.f32()? != 0.0),
+        TagType::Double => Ok(buf.f64()? != 0.0),
+        _ => Err(Error),
     }
 }
 
