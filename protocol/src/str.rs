@@ -39,6 +39,12 @@ impl<A: Allocator> BoxStr<A> {
     }
 }
 
+impl BoxStr {
+    pub fn empty() -> Self {
+        unsafe { Self::new_unchecked(Vec::<u8, Global>::new().into_boxed_slice()) }
+    }
+}
+
 impl<A: Allocator> Deref for BoxStr<A> {
     type Target = str;
 
@@ -50,12 +56,6 @@ impl<A: Allocator> Deref for BoxStr<A> {
 impl<A: Allocator> DerefMut for BoxStr<A> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { core::str::from_utf8_unchecked_mut(&mut self.0) }
-    }
-}
-
-impl<A: Allocator + Default> Default for BoxStr<A> {
-    fn default() -> Self {
-        unsafe { Self::new_unchecked(Vec::<u8, A>::new_in(A::default()).into_boxed_slice()) }
     }
 }
 

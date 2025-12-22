@@ -1,7 +1,8 @@
 use super::{
-    COLOR, Component, Content, EXTRA, KEYBIND, NBT, NBT_BLOCK, NBT_ENTITY, NBT_INTERPRET,
-    NBT_SOURCE, NBT_STORAGE, NbtContents, SCORE, SCORE_NAME, SCORE_OBJECTIVE, SELECTOR, SEPARATOR,
-    Style, TEXT, TRANSLATE, TRANSLATE_FALLBACK, TRANSLATE_WITH, TYPE, TextColor,
+    COLOR, Component, Content, EXTRA, KEYBIND, NBT_BLOCK, NBT_ENTITY, NBT_INTERPRET, NBT_PATH,
+    NBT_SOURCE, NBT_STORAGE, NbtContents, OBJECT_TYPE, ObjectContents, SCORE, SCORE_NAME,
+    SCORE_OBJECTIVE, SELECTOR, SEPARATOR, Style, TEXT, TRANSLATE, TRANSLATE_FALLBACK,
+    TRANSLATE_WITH, TYPE, TextColor,
 };
 use crate::nbt::{IdentifierTag, ListInfo, RefStringTag, StringTag, StringTagRaw, TagType};
 use crate::str::BoxStr;
@@ -28,12 +29,13 @@ const COLOR_H: u128 = cast2(COLOR);
 const SELECTOR_H: u128 = cast2(SELECTOR);
 const SEPARATOR_H: u128 = cast2(SEPARATOR);
 const KEYBIND_H: u128 = cast2(KEYBIND);
-const NBT_H: u128 = cast2(NBT);
+const NBT_PATH_H: u128 = cast2(NBT_PATH);
 const NBT_INTERPRET_H: u128 = cast2(NBT_INTERPRET);
 const NBT_SOURCE_H: u128 = cast2(NBT_SOURCE);
 const NBT_BLOCK_H: u128 = cast2(NBT_BLOCK);
 const NBT_ENTITY_H: u128 = cast2(NBT_ENTITY);
 const NBT_STORAGE_H: u128 = cast2(NBT_STORAGE);
+const OBJECT_TYPE_H: u128 = cast2(OBJECT_TYPE);
 
 const fn content_type<A: Allocator>(content: &Content<A>) -> &'static [u8] {
     match content {
@@ -47,11 +49,21 @@ const fn content_type<A: Allocator>(content: &Content<A>) -> &'static [u8] {
     }
 }
 
-const fn nbt_source<A: Allocator>(content: &NbtContents<A>) -> &'static [u8] {
+const fn nbt_type<A: Allocator>(content: &NbtContents<A>) -> &'static [u8] {
     match content {
         NbtContents::Block { .. } => b"block",
         NbtContents::Entity { .. } => b"entity",
         NbtContents::Storage { .. } => b"storage",
+    }
+}
+
+const fn object_type<A: Allocator>(content: &ObjectContents<A>) -> &'static [u8] {
+    match content {
+        ObjectContents::Atlas {
+            atlas: _,
+            sprite: _,
+        } => b"atlas",
+        ObjectContents::Player { player: _, hat: _ } => b"player",
     }
 }
 
@@ -142,7 +154,7 @@ unsafe fn write_rec<A: Allocator>(
             separator,
         } => unsafe {
             STRING.write(w);
-            mutf8(NBT).write(w);
+            mutf8(NBT_PATH).write(w);
             RefStringTag(nbt_path).write(w);
             if *interpret {
                 BOOL.write(w);
@@ -161,7 +173,7 @@ unsafe fn write_rec<A: Allocator>(
             }
             STRING.write(w);
             mutf8(NBT_SOURCE).write(w);
-            mutf8(nbt_source(content)).write(w);
+            mutf8(nbt_type(content)).write(w);
             match content {
                 NbtContents::Block { pos } => {
                     STRING.write(w);
@@ -184,7 +196,11 @@ unsafe fn write_rec<A: Allocator>(
                 }
             }
         },
-        Content::Object { content } => {}
+        Content::Object { content } => unsafe {
+            STRING.write(w);
+            mutf8(OBJECT_TYPE).write(w);
+            mutf8(object_type(content)).write(w);
+        },
     }
     unsafe {
         let len = children.len();
@@ -294,7 +310,7 @@ fn write_raw_len<A: Allocator>(
             content,
         } => {
             w += STRING.sz();
-            w += mutf8(NBT).sz();
+            w += mutf8(NBT_PATH).sz();
             w += RefStringTag(nbt_path).sz();
             if *interpret {
                 w += BOOL.sz();
@@ -313,7 +329,7 @@ fn write_raw_len<A: Allocator>(
             }
             w += STRING.sz();
             w += mutf8(NBT_SOURCE).sz();
-            w += mutf8(nbt_source(content)).sz();
+            w += mutf8(nbt_type(content)).sz();
             match content {
                 NbtContents::Block { pos } => {
                     w += STRING.sz();
@@ -413,7 +429,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 },
                 Some(x) => x,
                 None => Content::Literal {
-                    content: BoxStr::default(),
+                    content: BoxStr::empty(),
                 },
             };
             return Ok(Component {
@@ -455,7 +471,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
             TRANSLATE_FALLBACK_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Translatable {
-                        key: BoxStr::default(),
+                        key: BoxStr::empty(),
                         fallback: Some(expect_str(t1, buf)?),
                         args: Vec::new(),
                     })
@@ -485,7 +501,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 match content.as_mut() {
                     None => {
                         content = Some(Content::Translatable {
-                            key: BoxStr::default(),
+                            key: BoxStr::empty(),
                             fallback: None,
                             args,
                         })
@@ -565,14 +581,14 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
                 _ => return Err(Error),
             },
-            NBT_H => match content.as_mut() {
+            NBT_PATH_H => match content.as_mut() {
                 None => {
                     content = Some(Content::Nbt {
                         nbt_path: expect_str(t1, buf)?,
                         interpret: false,
                         separator: None,
                         content: NbtContents::Block {
-                            pos: BoxStr::default(),
+                            pos: BoxStr::empty(),
                         },
                     })
                 }
@@ -591,11 +607,11 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 match content.as_mut() {
                     None => {
                         content = Some(Content::Nbt {
-                            nbt_path: BoxStr::default(),
+                            nbt_path: BoxStr::empty(),
                             interpret: x,
                             separator: None,
                             content: NbtContents::Block {
-                                pos: BoxStr::default(),
+                                pos: BoxStr::empty(),
                             },
                         })
                     }
@@ -618,7 +634,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 match content.as_mut() {
                     None => {
                         content = Some(Content::Nbt {
-                            nbt_path: BoxStr::default(),
+                            nbt_path: BoxStr::empty(),
                             interpret: false,
                             separator: None,
                             content: NbtContents::Block { pos: x },
@@ -640,7 +656,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 match content.as_mut() {
                     None => {
                         content = Some(Content::Nbt {
-                            nbt_path: BoxStr::default(),
+                            nbt_path: BoxStr::empty(),
                             interpret: false,
                             separator: None,
                             content: NbtContents::Entity { selector: x },
@@ -662,7 +678,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 match content.as_mut() {
                     None => {
                         content = Some(Content::Nbt {
-                            nbt_path: BoxStr::default(),
+                            nbt_path: BoxStr::empty(),
                             interpret: false,
                             separator: None,
                             content: NbtContents::Storage { storage: x },
@@ -678,6 +694,9 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     }
                     _ => return Err(Error),
                 }
+            }
+            OBJECT_TYPE_H => {
+                expect_str(t1, buf)?;
             }
             TYPE_H => {
                 expect_str(t1, buf)?;
@@ -802,7 +821,7 @@ fn read_rec_ty(buf: &mut &[u8], ty: TagType) -> Result<Component, Error> {
                     children,
                     style: Style::new(),
                     content: Content::Literal {
-                        content: BoxStr::default(),
+                        content: BoxStr::empty(),
                     },
                 })
             } else {

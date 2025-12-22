@@ -24,14 +24,15 @@ const SCORE_OBJECTIVE: &[u8] = b"objective";
 const SELECTOR: &[u8] = b"selector";
 const SEPARATOR: &[u8] = b"separator";
 const KEYBIND: &[u8] = b"keybind";
-const NBT: &[u8] = b"nbt";
+const NBT_PATH: &[u8] = b"nbt";
 const NBT_INTERPRET: &[u8] = b"interpret";
 const NBT_SOURCE: &[u8] = b"source";
 const NBT_BLOCK: &[u8] = b"block";
 const NBT_ENTITY: &[u8] = b"entity";
 const NBT_STORAGE: &[u8] = b"storage";
-pub const OBJECT_ATLAS: StringTagRaw = StringTagRaw::new_unchecked(b"atlas");
-pub const OBJECT_SPRITE: StringTagRaw = StringTagRaw::new_unchecked(b"sprite");
+const OBJECT_TYPE: &[u8] = b"object";
+const OBJECT_ATLAS: &[u8] = b"atlas";
+const OBJECT_SPRITE: &[u8] = b"sprite";
 pub const OBJECT_HAT: StringTagRaw = StringTagRaw::new_unchecked(b"hat");
 pub const OBJECT_PLAYER: StringTagRaw = StringTagRaw::new_unchecked(b"player");
 pub const OBJECT_PLAYER_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
@@ -108,7 +109,7 @@ impl Component {
     pub fn empty() -> Self {
         Self {
             content: Content::Literal {
-                content: BoxStr::default(),
+                content: BoxStr::empty(),
             },
             children: Vec::new(),
             style: Style {
@@ -141,7 +142,7 @@ impl Default for Style {
     }
 }
 
-impl Style {
+impl<A: Allocator> Style<A> {
     pub const fn new() -> Self {
         Self {
             font: None,

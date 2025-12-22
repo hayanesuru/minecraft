@@ -402,7 +402,7 @@ impl From<Compound> for UnamedCompound {
 impl From<Compound> for NamedCompound {
     #[inline]
     fn from(value: Compound) -> Self {
-        Self(BoxStr::default(), value)
+        Self(BoxStr::empty(), value)
     }
 }
 
@@ -627,7 +627,7 @@ fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct StringTag(pub BoxStr);
+pub struct StringTag<A: Allocator = Global>(pub BoxStr<A>);
 
 impl Read<'_> for StringTag {
     #[inline]
