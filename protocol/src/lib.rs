@@ -209,7 +209,7 @@ pub struct PropertyMap<'a> {
     pub signature: Option<Utf8<'a, 1024>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Ident<'a> {
     pub namespace: &'a str,
     pub path: &'a str,
@@ -225,6 +225,7 @@ impl<'a> Ident<'a> {
     pub fn is_valid_namespace(c: char) -> bool {
         matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.')
     }
+
     pub fn parse(identifier: &'a str) -> Option<Self> {
         match identifier.strip_prefix("minecraft:") {
             Some(path) => {
@@ -297,8 +298,20 @@ impl Write for Ident<'_> {
 
 #[derive(Clone)]
 pub struct Identifier<A: Allocator = Global> {
-    pub namespace: BoxStr<A>,
+    pub namespace: Option<BoxStr<A>>,
     pub path: BoxStr<A>,
+}
+
+impl<A: Allocator> Identifier<A> {
+    pub fn as_ident(&self) -> Ident<'_> {
+        Ident {
+            namespace: match self.namespace.as_deref() {
+                Some(x) => x,
+                None => Ident::MINECRAFT,
+            },
+            path: &self.path,
+        }
+    }
 }
 
 #[derive(Clone)]

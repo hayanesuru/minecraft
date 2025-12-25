@@ -3,9 +3,9 @@ mod binary;
 use crate::dialog::Dialog;
 use crate::item::ItemStack;
 use crate::nbt::StringTagRaw;
-use crate::profile::Profile;
+use crate::profile::ResolvableProfile;
 use crate::str::BoxStr;
-use crate::{Holder, Identifier};
+use crate::{Holder, Ident, Identifier};
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -33,8 +33,9 @@ const NBT_STORAGE: &[u8] = b"storage";
 const OBJECT_TYPE: &[u8] = b"object";
 const OBJECT_ATLAS: &[u8] = b"atlas";
 const OBJECT_SPRITE: &[u8] = b"sprite";
-pub const OBJECT_HAT: StringTagRaw = StringTagRaw::new_unchecked(b"hat");
-pub const OBJECT_PLAYER: StringTagRaw = StringTagRaw::new_unchecked(b"player");
+const OBJECT_PLAYER: &[u8] = b"player";
+const OBJECT_HAT: &[u8] = b"hat";
+
 pub const OBJECT_PLAYER_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
 pub const OBJECT_PLAYER_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
 pub const OBJECT_PLAYER_PROPERTIES: StringTagRaw = StringTagRaw::new_unchecked(b"properties");
@@ -64,7 +65,48 @@ pub const SHOW_ITEM_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
 pub const SHOW_ITEM_COUNT: StringTagRaw = StringTagRaw::new_unchecked(b"count");
 pub const SHOW_ITEM_COMPONENTS: StringTagRaw = StringTagRaw::new_unchecked(b"components");
 
+const TYPE_H: u128 = cast2(TYPE);
+const EXTRA_H: u128 = cast2(EXTRA);
+const TEXT_H: u128 = cast2(TEXT);
+const TRANSLATE_H: u128 = cast2(TRANSLATE);
+const TRANSLATE_FALLBACK_H: u128 = cast2(TRANSLATE_FALLBACK);
+const TRANSLATE_WITH_H: u128 = cast2(TRANSLATE_WITH);
+const SCORE_H: u128 = cast2(SCORE);
+const SELECTOR_H: u128 = cast2(SELECTOR);
+const SEPARATOR_H: u128 = cast2(SEPARATOR);
+const KEYBIND_H: u128 = cast2(KEYBIND);
+const NBT_PATH_H: u128 = cast2(NBT_PATH);
+const NBT_INTERPRET_H: u128 = cast2(NBT_INTERPRET);
+const NBT_SOURCE_H: u128 = cast2(NBT_SOURCE);
+const NBT_BLOCK_H: u128 = cast2(NBT_BLOCK);
+const NBT_ENTITY_H: u128 = cast2(NBT_ENTITY);
+const NBT_STORAGE_H: u128 = cast2(NBT_STORAGE);
+const OBJECT_TYPE_H: u128 = cast2(OBJECT_TYPE);
+const OBJECT_ATLAS_H: u128 = cast2(OBJECT_ATLAS);
+const OBJECT_SPRITE_H: u128 = cast2(OBJECT_SPRITE);
+const OBJECT_PLAYER_H: u128 = cast2(OBJECT_PLAYER);
+const OBJECT_HAT_H: u128 = cast2(OBJECT_HAT);
+
+const COLOR_H: u128 = cast2(COLOR);
+
 const HEX_PREFIX: u8 = b'#';
+
+const fn cast128(n: &[u8]) -> Option<u128> {
+    if n.len() <= 16 { Some(cast2(n)) } else { None }
+}
+
+const fn cast2(n: &[u8]) -> u128 {
+    debug_assert!(n.len() <= 16);
+    let len = n.len();
+    let mut dest = [0u8; 16];
+    if len > 16 {
+        unsafe { core::hint::unreachable_unchecked() }
+    }
+    unsafe {
+        core::ptr::copy_nonoverlapping(n.as_ptr(), dest.as_mut_ptr(), len);
+    }
+    u128::from_le_bytes(dest)
+}
 
 #[derive(Clone)]
 pub struct Component<A: Allocator = Global> {
@@ -98,11 +140,95 @@ pub enum Content<A: Allocator = Global> {
         nbt_path: BoxStr<A>,
         interpret: bool,
         separator: Option<Box<Component<A>, A>>,
-        content: NbtContents<A>,
+        content: NbtContent<A>,
     },
     Object {
         content: ObjectContents<A>,
     },
+}
+
+pub enum ContentB<A: Allocator = Global> {
+    Literal {
+        content: BoxStr<A>,
+    },
+    Translatable {
+        key: Option<BoxStr<A>>,
+        fallback: Option<BoxStr<A>>,
+        args: Vec<Component<A>, A>,
+    },
+    Score {
+        name: BoxStr<A>,
+        objective: BoxStr<A>,
+    },
+    Selector {
+        pattern: BoxStr<A>,
+    },
+    Keybind {
+        keybind: BoxStr<A>,
+    },
+    Nbt {
+        nbt_path: Option<BoxStr<A>>,
+        interpret: bool,
+        content: Option<NbtContent<A>>,
+    },
+    Object {
+        content: ObjectContentB<A>,
+    },
+}
+
+pub enum ObjectContentB<A: Allocator = Global> {
+    Atlas {
+        atlas: Option<Identifier<A>>,
+        sprite: Option<Identifier<A>>,
+    },
+    Player {
+        player: Option<Box<ResolvableProfile<A>, A>>,
+        hat: bool,
+    },
+}
+
+impl<A: Allocator> ContentB<A> {
+    pub fn into_content(self, separator: Option<Box<Component<A>, A>>) -> Option<Content<A>> {
+        Some(match self {
+            ContentB::Literal { content } => Content::Literal { content },
+            ContentB::Translatable {
+                key,
+                fallback,
+                args,
+            } => Content::Translatable {
+                key: key?,
+                fallback,
+                args,
+            },
+            ContentB::Score { name, objective } => Content::Score { name, objective },
+            ContentB::Selector { pattern } => Content::Selector { pattern, separator },
+            ContentB::Keybind { keybind } => Content::Keybind { keybind },
+            ContentB::Nbt {
+                nbt_path,
+                interpret,
+                content,
+            } => Content::Nbt {
+                nbt_path: nbt_path?,
+                interpret,
+                separator,
+                content: content?,
+            },
+            ContentB::Object { content } => match content {
+                ObjectContentB::Atlas { atlas, sprite } => Content::Object {
+                    content: ObjectContents::Atlas {
+                        atlas: atlas?,
+                        sprite: sprite?,
+                    },
+                },
+                ObjectContentB::Player { player, hat } => Content::Object {
+                    content: ObjectContents::Player {
+                        player: player?,
+                        hat,
+                    },
+                },
+            },
+        })
+    }
 }
 
 impl Component {
@@ -548,20 +674,25 @@ pub enum HoverEvent<A: Allocator = Global> {
     },
 }
 
+pub const DEFAULT_ATLAS: Ident = Ident {
+    namespace: Ident::MINECRAFT,
+    path: "blocks",
+};
+
 #[derive(Clone)]
 pub enum ObjectContents<A: Allocator = Global> {
     Atlas {
-        atlas: Option<Identifier<A>>,
+        atlas: Identifier<A>,
         sprite: Identifier<A>,
     },
     Player {
-        player: Box<Profile<A>, A>,
-        hat: Option<bool>,
+        player: Box<ResolvableProfile<A>, A>,
+        hat: bool,
     },
 }
 
 #[derive(Clone)]
-pub enum NbtContents<A: Allocator = Global> {
+pub enum NbtContent<A: Allocator = Global> {
     Block { pos: BoxStr<A> },
     Entity { selector: BoxStr<A> },
     Storage { storage: Identifier<A> },

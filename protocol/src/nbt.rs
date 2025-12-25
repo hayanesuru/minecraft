@@ -6,7 +6,7 @@ pub use self::list::{List, ListInfo};
 pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
 use crate::str::BoxStr;
-use crate::{Bytes, Error, Read, UnsafeWriter, Write};
+use crate::{Bytes, Error, Ident, Identifier, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -28,6 +28,49 @@ pub enum TagType {
     Compound,
     IntArray,
     LongArray,
+}
+
+impl TagType {
+    pub fn expect_bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
+        match self {
+            Self::Byte => Ok(buf.i8()? != 0),
+            Self::Short => Ok(buf.i16()? != 0),
+            Self::Int => Ok(buf.i32()? != 0),
+            Self::Long => Ok(buf.i64()? != 0),
+            Self::Float => Ok(buf.f32()? != 0.0),
+            Self::Double => Ok(buf.f64()? != 0.0),
+            _ => Err(Error),
+        }
+    }
+
+    pub fn expect_str(self, buf: &mut &[u8]) -> Result<BoxStr, Error> {
+        match self {
+            Self::String => match StringTag::read(buf) {
+                Ok(x) => Ok(x.0),
+                Err(e) => Err(e),
+            },
+            _ => Err(Error),
+        }
+    }
+
+    pub fn expect_ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
+        match self {
+            Self::String => match IdentifierTag::read(buf) {
+                Ok(x) => unsafe {
+                    Ok(Identifier {
+                        namespace: if x.0.namespace == Ident::MINECRAFT {
+                            None
+                        } else {
+                            Some(BoxStr::new_unchecked(Box::from(x.0.namespace.as_bytes())))
+                        },
+                        path: BoxStr::new_unchecked(Box::from(x.0.path.as_bytes())),
+                    })
+                },
+                Err(e) => Err(e),
+            },
+            _ => Err(Error),
+        }
+    }
 }
 
 impl Read<'_> for TagType {
@@ -334,7 +377,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound(pub BoxStr, pub Compound);
+pub struct NamedCompound<A: Allocator = Global>(pub BoxStr<A>, pub Compound<A>);
 
 impl Read<'_> for NamedCompound {
     #[inline]
@@ -396,13 +439,6 @@ impl From<Compound> for UnamedCompound {
     #[inline]
     fn from(value: Compound) -> Self {
         Self(value)
-    }
-}
-
-impl From<Compound> for NamedCompound {
-    #[inline]
-    fn from(value: Compound) -> Self {
-        Self(BoxStr::empty(), value)
     }
 }
 
