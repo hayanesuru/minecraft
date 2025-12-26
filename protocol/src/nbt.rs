@@ -2,14 +2,18 @@ mod list;
 mod string;
 mod stringify;
 
-pub use self::list::List;
-pub use self::string::{StringTagRaw, StringTagWriter};
+pub use self::list::{List, ListInfo};
+pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
-use crate::str::{INLINE_CAP, SmolStr};
-use crate::{Bytes, Error, Read, UnsafeWriter, Write};
+use crate::chat::Component;
+use crate::profile::{Property, ResolvableProfile};
+use crate::str::BoxStr;
+use crate::{Bytes, Error, Ident, Identifier, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{decode_mutf8, decode_mutf8_len, is_ascii_mutf8};
+use uuid::Uuid;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -27,6 +31,252 @@ pub enum TagType {
     Compound,
     IntArray,
     LongArray,
+}
+
+#[must_use]
+pub struct Kv<'a, T>(pub &'a [u8], pub T);
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a BoxStr<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            RefStringTag(self.1).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + RefStringTag(self.1).sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, &'a str> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            RefStringTag(self.1).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + RefStringTag(self.1).sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, ListInfo> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::List.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::List.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, StringTagRaw<'a>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, bool> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Byte.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Byte.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, Ident<'a>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            IdentifierTag(self.1).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + IdentifierTag(self.1).sz()
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a Identifier<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            IdentifierTag(self.1.as_ident()).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz()
+            + StringTagRaw::new_unchecked(self.0).sz()
+            + IdentifierTag(self.1.as_ident()).sz()
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a Component<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write_ty(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a ResolvableProfile<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write_ty(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, Uuid> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::IntArray.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            4u32.write(w);
+            self.1.as_bytes().write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + 4u32.sz() + 16
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a [Property<A>]> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            for p in self.1 {
+                //
+            }
+            TagType::End.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + TagType::End.sz()
+    }
+}
+
+impl TagType {
+    pub fn bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
+        match self {
+            Self::Byte => Ok(buf.i8()? != 0),
+            Self::Short => Ok(buf.i16()? != 0),
+            Self::Int => Ok(buf.i32()? != 0),
+            Self::Long => Ok(buf.i64()? != 0),
+            Self::Float => Ok(buf.f32()? != 0.0),
+            Self::Double => Ok(buf.f64()? != 0.0),
+            _ => Err(Error),
+        }
+    }
+
+    pub fn string(self, buf: &mut &[u8]) -> Result<BoxStr, Error> {
+        match self {
+            Self::String => match StringTag::read(buf) {
+                Ok(x) => Ok(x.0),
+                Err(e) => Err(e),
+            },
+            _ => Err(Error),
+        }
+    }
+
+    pub fn ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
+        match self {
+            Self::String => match IdentifierTag::read(buf) {
+                Ok(x) => unsafe {
+                    Ok(Identifier {
+                        namespace: if x.0.namespace == Ident::MINECRAFT {
+                            None
+                        } else {
+                            Some(BoxStr::new_unchecked(Box::from(x.0.namespace.as_bytes())))
+                        },
+                        path: BoxStr::new_unchecked(Box::from(x.0.path.as_bytes())),
+                    })
+                },
+                Err(e) => Err(e),
+            },
+            _ => Err(Error),
+        }
+    }
+
+    pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
+        match self {
+            Self::IntArray => {
+                let len = u32::read(buf)? as usize;
+                let mut data = buf.slice(len * 4)?;
+                let mut vec = Vec::with_capacity(len);
+                let mut ptr = vec.as_mut_ptr();
+                for _ in 0..len {
+                    unsafe {
+                        *ptr = i32::from_be_bytes(*data.array::<4>().unwrap_unchecked());
+                        ptr = ptr.add(1);
+                    }
+                }
+                unsafe { vec.set_len(len) }
+                Ok(vec)
+            }
+            Self::List => {
+                let ListInfo(tag, len) = ListInfo::read(buf)?;
+                let len = len as usize;
+                match tag {
+                    TagType::Int => {
+                        let mut data = buf.slice(len * 4)?;
+                        let mut vec = Vec::with_capacity(len);
+                        let mut ptr = vec.as_mut_ptr();
+                        for _ in 0..len {
+                            unsafe {
+                                *ptr = i32::from_be_bytes(*data.array::<4>().unwrap_unchecked());
+                                ptr = ptr.add(1);
+                            }
+                        }
+                        unsafe { vec.set_len(len) }
+                        Ok(vec)
+                    }
+                    _ => Err(Error),
+                }
+            }
+            _ => Err(Error),
+        }
+    }
 }
 
 impl Read<'_> for TagType {
@@ -61,7 +311,7 @@ pub enum Tag<A: Allocator = Global> {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(SmolStr<A>),
+    String(BoxStr<A>),
     ByteArray(Vec<i8, A>),
     IntArray(Vec<i32, A>),
     LongArray(Vec<i64, A>),
@@ -80,7 +330,7 @@ impl Write for Tag {
                 Tag::Long(x) => x.write(w),
                 Tag::Float(x) => x.write(w),
                 Tag::Double(x) => x.write(w),
-                Tag::String(x) => StringTagWriter(x).write(w),
+                Tag::String(x) => RefStringTag(x).write(w),
                 Tag::ByteArray(x) => {
                     (x.len() as u32).write(w);
                     w.write(&*(x.as_slice() as *const [i8] as *const [u8]));
@@ -107,7 +357,7 @@ impl Write for Tag {
             Tag::Long(_) => 8,
             Tag::Float(_) => 4,
             Tag::Double(_) => 8,
-            Tag::String(x) => StringTagWriter(x).sz(),
+            Tag::String(x) => RefStringTag(x).sz(),
             Tag::ByteArray(x) => 4 + x.len(),
             Tag::IntArray(x) => 4 + x.len() * 4,
             Tag::LongArray(x) => 4 + x.len() * 8,
@@ -211,27 +461,20 @@ impl From<Vec<i8>> for Tag {
 impl<'a> From<&'a str> for Tag {
     #[inline]
     fn from(value: &'a str) -> Self {
-        Self::String(SmolStr::new(value))
+        unsafe { Self::String(BoxStr::new_unchecked(Box::from(value.as_bytes()))) }
     }
 }
 
 impl<'a> From<&'a mut str> for Tag {
     #[inline]
     fn from(value: &'a mut str) -> Self {
-        Self::String(SmolStr::new(value))
+        unsafe { Self::String(BoxStr::new_unchecked(Box::from(value.as_bytes()))) }
     }
 }
 
-impl From<alloc::boxed::Box<str>> for Tag {
+impl From<BoxStr> for Tag {
     #[inline]
-    fn from(value: alloc::boxed::Box<str>) -> Self {
-        Self::String(SmolStr::from(value))
-    }
-}
-
-impl From<SmolStr> for Tag {
-    #[inline]
-    fn from(value: SmolStr) -> Self {
+    fn from(value: BoxStr) -> Self {
         Self::String(value)
     }
 }
@@ -266,18 +509,18 @@ impl From<Vec<i64>> for Tag {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct Compound<A: Allocator = Global>(Vec<(SmolStr<A>, Tag), A>);
+pub struct Compound<A: Allocator = Global>(Vec<(BoxStr<A>, Tag), A>);
 
-impl AsRef<[(SmolStr, Tag)]> for Compound {
+impl AsRef<[(BoxStr, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(SmolStr, Tag)] {
+    fn as_ref(&self) -> &[(BoxStr, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(SmolStr, Tag)]> for Compound {
+impl AsMut<[(BoxStr, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(SmolStr, Tag)] {
+    fn as_mut(&mut self) -> &mut [(BoxStr, Tag)] {
         self.0.as_mut_slice()
     }
 }
@@ -287,7 +530,7 @@ impl Write for Compound {
         unsafe {
             for (name, tag) in &self.0 {
                 tag.id().write(w);
-                StringTagWriter(name).write(w);
+                RefStringTag(name).write(w);
                 match tag {
                     Tag::Byte(x) => x.write(w),
                     Tag::Short(x) => x.write(w),
@@ -295,7 +538,7 @@ impl Write for Compound {
                     Tag::Long(x) => x.write(w),
                     Tag::Float(x) => x.write(w),
                     Tag::Double(x) => x.write(w),
-                    Tag::String(x) => StringTagWriter(x).write(w),
+                    Tag::String(x) => RefStringTag(x).write(w),
                     Tag::ByteArray(x) => {
                         (x.len() as u32).write(w);
                         w.write(&*(x.as_slice() as *const [i8] as *const [u8]))
@@ -319,7 +562,7 @@ impl Write for Compound {
     fn sz(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += StringTagWriter(name).sz();
+            w += RefStringTag(name).sz();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -327,7 +570,7 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => StringTagWriter(x).sz(),
+                Tag::String(x) => RefStringTag(x).sz(),
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
@@ -340,7 +583,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound(pub SmolStr, pub Compound);
+pub struct NamedCompound<A: Allocator = Global>(pub BoxStr<A>, pub Compound<A>);
 
 impl Read<'_> for NamedCompound {
     #[inline]
@@ -358,14 +601,14 @@ impl Write for NamedCompound {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             TagType::Compound.write(w);
-            StringTagWriter(self.0.as_str()).write(w);
+            RefStringTag(self.0.as_str()).write(w);
             self.1.write(w);
         }
     }
 
     #[inline]
     fn sz(&self) -> usize {
-        1 + Write::sz(&StringTagWriter(self.0.as_str())) + Write::sz(&self.1)
+        1 + Write::sz(&RefStringTag(self.0.as_str())) + Write::sz(&self.1)
     }
 }
 
@@ -405,14 +648,7 @@ impl From<Compound> for UnamedCompound {
     }
 }
 
-impl From<Compound> for NamedCompound {
-    #[inline]
-    fn from(value: Compound) -> Self {
-        Self(SmolStr::default(), value)
-    }
-}
-
-impl<K: Into<SmolStr>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<BoxStr>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -457,12 +693,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (SmolStr, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (BoxStr, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (SmolStr, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (BoxStr, Tag)> {
         self.0.iter_mut()
     }
 
@@ -500,12 +736,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: impl Into<SmolStr>, v: impl Into<Tag>) {
+    pub fn push(&mut self, k: impl Into<BoxStr>, v: impl Into<Tag>) {
         self.push_(k.into(), v.into());
     }
 
     #[inline]
-    fn push_(&mut self, k: SmolStr, v: Tag) {
+    fn push_(&mut self, k: BoxStr, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -520,7 +756,7 @@ impl Compound {
 
     #[deprecated]
     #[inline]
-    pub fn decode_named(buf: &mut &[u8]) -> Result<(SmolStr, Self), Error> {
+    pub fn decode_named(buf: &mut &[u8]) -> Result<(BoxStr, Self), Error> {
         match NamedCompound::read(buf) {
             Ok(x) => Ok((x.0, x.1)),
             Err(e) => Err(e),
@@ -561,7 +797,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(SmolStr, Tag)> {
+    pub fn into_inner(self) -> Vec<(BoxStr, Tag)> {
         self.0
     }
 }
@@ -573,9 +809,9 @@ impl Read<'_> for Compound {
     }
 }
 
-impl From<Vec<(SmolStr, Tag)>> for Compound {
+impl From<Vec<(BoxStr, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(SmolStr, Tag)>) -> Self {
+    fn from(value: Vec<(BoxStr, Tag)>) -> Self {
         Self(value)
     }
 }
@@ -603,9 +839,8 @@ fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
             }
             TagType::String => Tag::from(StringTag::read(n)?.0),
             TagType::List => {
-                let id = TagType::read(n)?;
-                let len = n.i32()? as usize;
-                Tag::from(list::decode_raw(n, id, len)?)
+                let info = ListInfo::read(n)?;
+                Tag::from(list::decode_raw(n, info)?)
             }
             TagType::Compound => Tag::from(decode_raw(n)?),
             TagType::IntArray => {
@@ -634,7 +869,7 @@ fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct StringTag(pub SmolStr);
+pub struct StringTag<A: Allocator = Global>(pub BoxStr<A>);
 
 impl Read<'_> for StringTag {
     #[inline]
@@ -643,35 +878,39 @@ impl Read<'_> for StringTag {
         let a = buf.slice(len)?;
 
         if is_ascii_mutf8(a) {
-            Ok(Self(SmolStr::new(unsafe {
-                core::str::from_utf8_unchecked(a)
-            })))
+            unsafe { Ok(Self(BoxStr::new_unchecked(Box::from(a)))) }
         } else {
             let len = decode_mutf8_len(a)?;
+            let mut x = Vec::with_capacity(len);
             unsafe {
-                if len <= INLINE_CAP {
-                    let mut s = [0; INLINE_CAP];
-                    decode_mutf8(a, &mut UnsafeWriter::new(s.as_mut_ptr())).unwrap_unchecked();
-                    Ok(Self(SmolStr::new_inline_unchecked(s, len)))
-                } else {
-                    let mut buf = Vec::with_capacity(len);
-                    decode_mutf8(a, &mut UnsafeWriter::new(buf.as_mut_ptr())).unwrap_unchecked();
-                    buf.set_len(len);
-                    Ok(Self(SmolStr::new_heap_unchecked(buf.into_boxed_slice())))
-                }
+                mser::write_unchecked(x.as_mut_ptr(), &(DecodeMutf8(a, len)));
+                x.set_len(len);
+                Ok(Self(BoxStr::new_unchecked(x.into_boxed_slice())))
             }
         }
+    }
+}
+
+struct DecodeMutf8<'a>(&'a [u8], usize);
+
+impl Write for DecodeMutf8<'_> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe { decode_mutf8(self.0, w).unwrap_unchecked() }
+    }
+
+    fn sz(&self) -> usize {
+        self.1
     }
 }
 
 impl Write for StringTag {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe { StringTagWriter(&self.0).write(w) }
+        unsafe { RefStringTag(&self.0).write(w) }
     }
 
     #[inline]
     fn sz(&self) -> usize {
-        StringTagWriter(&self.0).sz()
+        RefStringTag(&self.0).sz()
     }
 }

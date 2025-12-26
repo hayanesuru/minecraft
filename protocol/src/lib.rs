@@ -1,7 +1,7 @@
 #![no_std]
-#![cfg_attr(not(feature = "allocator-api2"), feature(allocator_api))]
+#![feature(allocator_api)]
 
-use crate::str::SmolStr;
+use crate::str::BoxStr;
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -20,11 +20,7 @@ pub mod types;
 
 #[macro_use]
 extern crate mser_macro;
-
-#[cfg(not(feature = "allocator-api2"))]
 extern crate alloc;
-#[cfg(feature = "allocator-api2")]
-extern crate allocator_api2 as alloc;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ClientIntent {
@@ -209,13 +205,13 @@ pub struct PropertyMap<'a> {
     pub signature: Option<Utf8<'a, 1024>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Ident<'a> {
     pub namespace: &'a str,
     pub path: &'a str,
 }
 
-impl Ident<'_> {
+impl<'a> Ident<'a> {
     pub const MINECRAFT: &'static str = "minecraft";
 
     pub fn is_valid_path(c: char) -> bool {
@@ -225,20 +221,17 @@ impl Ident<'_> {
     pub fn is_valid_namespace(c: char) -> bool {
         matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.')
     }
-}
 
-impl<'a> Read<'a> for Ident<'a> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let identifier = Utf8::<32767>::read(buf)?.0;
+    pub fn parse(identifier: &'a str) -> Option<Self> {
         match identifier.strip_prefix("minecraft:") {
             Some(path) => {
                 if path.chars().all(Self::is_valid_path) {
-                    Ok(Self {
+                    Some(Self {
                         namespace: Self::MINECRAFT,
                         path,
                     })
                 } else {
-                    Err(Error)
+                    None
                 }
             }
             None => match identifier.split_once(':') {
@@ -246,7 +239,7 @@ impl<'a> Read<'a> for Ident<'a> {
                     if namespace.chars().all(Self::is_valid_namespace)
                         && path.chars().all(Self::is_valid_path)
                     {
-                        Ok(Self {
+                        Some(Self {
                             namespace: if !namespace.is_empty() {
                                 namespace
                             } else {
@@ -255,17 +248,17 @@ impl<'a> Read<'a> for Ident<'a> {
                             path,
                         })
                     } else {
-                        Err(Error)
+                        None
                     }
                 }
                 None => {
                     if identifier.chars().all(Self::is_valid_path) {
-                        Ok(Self {
+                        Some(Self {
                             namespace: Self::MINECRAFT,
                             path: identifier,
                         })
                     } else {
-                        Err(Error)
+                        None
                     }
                 }
             },
@@ -273,9 +266,20 @@ impl<'a> Read<'a> for Ident<'a> {
     }
 }
 
+impl<'a> Read<'a> for Ident<'a> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let identifier = Utf8::<32767>::read(buf)?.0;
+        match Self::parse(identifier) {
+            Some(x) => Ok(x),
+            None => Err(Error),
+        }
+    }
+}
+
 impl Write for Ident<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
+            V21((self.namespace.len() + 1 + self.path.len()) as _).write(w);
             w.write(self.namespace.as_bytes());
             w.write_byte(b':');
             w.write(self.path.as_bytes());
@@ -283,14 +287,27 @@ impl Write for Ident<'_> {
     }
 
     fn sz(&self) -> usize {
-        self.namespace.len() + 1 + self.path.len()
+        let a = self.namespace.len() + 1 + self.path.len();
+        V21(a as u32).sz() + a
     }
 }
 
 #[derive(Clone)]
 pub struct Identifier<A: Allocator = Global> {
-    pub namespace: SmolStr<A>,
-    pub path: SmolStr<A>,
+    pub namespace: Option<BoxStr<A>>,
+    pub path: BoxStr<A>,
+}
+
+impl<A: Allocator> Identifier<A> {
+    pub fn as_ident(&self) -> Ident<'_> {
+        Ident {
+            namespace: match self.namespace.as_deref() {
+                Some(x) => x,
+                None => Ident::MINECRAFT,
+            },
+            path: &self.path,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -320,7 +337,7 @@ pub enum Holder<T, A: Allocator = Global> {
 #[test]
 fn test_write() {
     use crate::clientbound::login::LoginFinished;
-    use crate::types::{Id, Packet};
+    use crate::types::{Id, Packet, packet_id};
     use minecraft_data::clientbound__login;
 
     let packet: LoginFinished<'_, Global> = LoginFinished {
@@ -330,12 +347,15 @@ fn test_write() {
             peoperties: List::Borrowed(&[]),
         },
     };
-    let packet = Packet::new(packet);
-    let len = packet.sz();
+
+    let id = packet_id(&packet);
+    let len1 = id.sz();
+    let len2 = packet.sz() + len1;
     let data = unsafe {
-        let mut data = alloc::vec::Vec::with_capacity(len);
-        packet.write(&mut mser::UnsafeWriter::new(data.as_mut_ptr()));
-        data.set_len(len);
+        let mut data = alloc::vec::Vec::with_capacity(len2);
+        mser::write_unchecked(data.as_mut_ptr(), &id);
+        mser::write_unchecked(data.as_mut_ptr().add(len1), &packet);
+        data.set_len(len2);
         data.into_boxed_slice()
     };
     let mut data = &data[..];

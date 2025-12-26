@@ -1,36 +1,41 @@
+mod binary;
+
 use crate::dialog::Dialog;
 use crate::item::ItemStack;
-use crate::nbt::{StringTag, StringTagRaw, StringTagWriter, TagType};
-use crate::profile::Profile;
-use crate::str::SmolStr;
-use crate::{Holder, Identifier};
+use crate::nbt::StringTagRaw;
+use crate::profile::ResolvableProfile;
+use crate::str::BoxStr;
+use crate::{Holder, Ident, Identifier};
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use minecraft_data::entity_type;
-use mser::{Error, Read, UnsafeWriter, Write};
 use uuid::Uuid;
 
-pub const TEXT: StringTagRaw = StringTagRaw::new_unchecked(b"text");
-pub const TRANSLATE: StringTagRaw = StringTagRaw::new_unchecked(b"translate");
-pub const TRANSLATE_FALLBACK: StringTagRaw = StringTagRaw::new_unchecked(b"fallback");
-pub const TRANSLATE_WITH: StringTagRaw = StringTagRaw::new_unchecked(b"with");
-pub const SCORE: StringTagRaw = StringTagRaw::new_unchecked(b"score");
-pub const SCORE_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
-pub const SCORE_OBJECTIVE: StringTagRaw = StringTagRaw::new_unchecked(b"objective");
-pub const SELECTOR: StringTagRaw = StringTagRaw::new_unchecked(b"selector");
-pub const KEYBIND: StringTagRaw = StringTagRaw::new_unchecked(b"keybind");
-pub const EXTRA: StringTagRaw = StringTagRaw::new_unchecked(b"extra");
-pub const NBT: StringTagRaw = StringTagRaw::new_unchecked(b"nbt");
-pub const NBT_INTERPRET: StringTagRaw = StringTagRaw::new_unchecked(b"interpret");
-pub const NBT_BLOCK: StringTagRaw = StringTagRaw::new_unchecked(b"block");
-pub const NBT_ENTITY: StringTagRaw = StringTagRaw::new_unchecked(b"entity");
-pub const NBT_STORAGE: StringTagRaw = StringTagRaw::new_unchecked(b"storage");
-pub const SEPARATOR: StringTagRaw = StringTagRaw::new_unchecked(b"separator");
-pub const OBJECT_ATLAS: StringTagRaw = StringTagRaw::new_unchecked(b"atlas");
-pub const OBJECT_SPRITE: StringTagRaw = StringTagRaw::new_unchecked(b"sprite");
-pub const OBJECT_HAT: StringTagRaw = StringTagRaw::new_unchecked(b"hat");
-pub const OBJECT_PLAYER: StringTagRaw = StringTagRaw::new_unchecked(b"player");
+const TYPE: &[u8] = b"type";
+const EXTRA: &[u8] = b"extra";
+const TEXT: &[u8] = b"text";
+const TRANSLATE: &[u8] = b"translate";
+const TRANSLATE_FALLBACK: &[u8] = b"fallback";
+const TRANSLATE_WITH: &[u8] = b"with";
+const SCORE: &[u8] = b"score";
+const SCORE_NAME: &[u8] = b"name";
+const SCORE_OBJECTIVE: &[u8] = b"objective";
+const SELECTOR: &[u8] = b"selector";
+const SEPARATOR: &[u8] = b"separator";
+const KEYBIND: &[u8] = b"keybind";
+const NBT_PATH: &[u8] = b"nbt";
+const NBT_INTERPRET: &[u8] = b"interpret";
+const NBT_SOURCE: &[u8] = b"source";
+const NBT_BLOCK: &[u8] = b"block";
+const NBT_ENTITY: &[u8] = b"entity";
+const NBT_STORAGE: &[u8] = b"storage";
+const OBJECT_TYPE: &[u8] = b"object";
+const OBJECT_ATLAS: &[u8] = b"atlas";
+const OBJECT_SPRITE: &[u8] = b"sprite";
+const OBJECT_PLAYER: &[u8] = b"player";
+const OBJECT_HAT: &[u8] = b"hat";
+
 pub const OBJECT_PLAYER_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
 pub const OBJECT_PLAYER_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
 pub const OBJECT_PLAYER_PROPERTIES: StringTagRaw = StringTagRaw::new_unchecked(b"properties");
@@ -39,7 +44,7 @@ pub const PROFILE_PROPERTY_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"na
 pub const PROFILE_PROPERTY_VALUE: StringTagRaw = StringTagRaw::new_unchecked(b"value");
 pub const PROFILE_PROPERTY_SIGNATURE: StringTagRaw = StringTagRaw::new_unchecked(b"signature");
 pub const FONT: StringTagRaw = StringTagRaw::new_unchecked(b"font");
-pub const COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"color");
+const COLOR: &[u8] = b"color";
 pub const SHADOW_COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"shadow_color");
 pub const INSERTION: StringTagRaw = StringTagRaw::new_unchecked(b"insertion");
 pub const CLICK_EVENT_SNAKE: StringTagRaw = StringTagRaw::new_unchecked(b"click_event");
@@ -60,7 +65,48 @@ pub const SHOW_ITEM_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
 pub const SHOW_ITEM_COUNT: StringTagRaw = StringTagRaw::new_unchecked(b"count");
 pub const SHOW_ITEM_COMPONENTS: StringTagRaw = StringTagRaw::new_unchecked(b"components");
 
-pub const HEX_PREFIX: u8 = b'#';
+const TYPE_H: u128 = cast2(TYPE);
+const EXTRA_H: u128 = cast2(EXTRA);
+const TEXT_H: u128 = cast2(TEXT);
+const TRANSLATE_H: u128 = cast2(TRANSLATE);
+const TRANSLATE_FALLBACK_H: u128 = cast2(TRANSLATE_FALLBACK);
+const TRANSLATE_WITH_H: u128 = cast2(TRANSLATE_WITH);
+const SCORE_H: u128 = cast2(SCORE);
+const SELECTOR_H: u128 = cast2(SELECTOR);
+const SEPARATOR_H: u128 = cast2(SEPARATOR);
+const KEYBIND_H: u128 = cast2(KEYBIND);
+const NBT_PATH_H: u128 = cast2(NBT_PATH);
+const NBT_INTERPRET_H: u128 = cast2(NBT_INTERPRET);
+const NBT_SOURCE_H: u128 = cast2(NBT_SOURCE);
+const NBT_BLOCK_H: u128 = cast2(NBT_BLOCK);
+const NBT_ENTITY_H: u128 = cast2(NBT_ENTITY);
+const NBT_STORAGE_H: u128 = cast2(NBT_STORAGE);
+const OBJECT_TYPE_H: u128 = cast2(OBJECT_TYPE);
+const OBJECT_ATLAS_H: u128 = cast2(OBJECT_ATLAS);
+const OBJECT_SPRITE_H: u128 = cast2(OBJECT_SPRITE);
+const OBJECT_PLAYER_H: u128 = cast2(OBJECT_PLAYER);
+const OBJECT_HAT_H: u128 = cast2(OBJECT_HAT);
+
+const COLOR_H: u128 = cast2(COLOR);
+
+const HEX_PREFIX: u8 = b'#';
+
+const fn cast128(n: &[u8]) -> Option<u128> {
+    if n.len() <= 16 { Some(cast2(n)) } else { None }
+}
+
+const fn cast2(n: &[u8]) -> u128 {
+    debug_assert!(n.len() <= 16);
+    let len = n.len();
+    let mut dest = [0u8; 16];
+    if len > 16 {
+        unsafe { core::hint::unreachable_unchecked() }
+    }
+    unsafe {
+        core::ptr::copy_nonoverlapping(n.as_ptr(), dest.as_mut_ptr(), len);
+    }
+    u128::from_le_bytes(dest)
+}
 
 #[derive(Clone)]
 pub struct Component<A: Allocator = Global> {
@@ -72,52 +118,124 @@ pub struct Component<A: Allocator = Global> {
 #[derive(Clone)]
 pub enum Content<A: Allocator = Global> {
     Literal {
-        content: SmolStr<A>,
+        content: BoxStr<A>,
     },
     Translatable {
-        key: SmolStr<A>,
-        fallback: SmolStr<A>,
+        key: BoxStr<A>,
+        fallback: Option<BoxStr<A>>,
         args: Vec<Component<A>, A>,
     },
     Score {
-        name: SmolStr<A>,
-        objective: SmolStr<A>,
+        name: BoxStr<A>,
+        objective: BoxStr<A>,
     },
     Selector {
-        pattern: SmolStr<A>,
+        pattern: BoxStr<A>,
         separator: Option<Box<Component<A>, A>>,
     },
     Keybind {
-        keybind: SmolStr<A>,
+        keybind: BoxStr<A>,
     },
-    BlockNbt {
-        nbt_path: SmolStr<A>,
-        interpret: Option<bool>,
+    Nbt {
+        nbt_path: BoxStr<A>,
+        interpret: bool,
         separator: Option<Box<Component<A>, A>>,
-        pos: SmolStr<A>,
+        content: NbtContent<A>,
     },
-    EntityNbt {
-        nbt_path: SmolStr<A>,
-        interpret: Option<bool>,
-        separator: Option<Box<Component<A>, A>>,
-        selector: SmolStr<A>,
-    },
-    StorageNbt {
-        nbt_path: SmolStr<A>,
-        interpret: Option<bool>,
-        separator: Option<Box<Component<A>, A>>,
-        storage: Identifier<A>,
-    },
-    Objects {
-        contents: ObjectContents<A>,
+    Object {
+        content: ObjectContents<A>,
     },
 }
 
+pub enum ContentB<A: Allocator = Global> {
+    Literal {
+        content: BoxStr<A>,
+    },
+    Translatable {
+        key: Option<BoxStr<A>>,
+        fallback: Option<BoxStr<A>>,
+        args: Vec<Component<A>, A>,
+    },
+    Score {
+        name: BoxStr<A>,
+        objective: BoxStr<A>,
+    },
+    Selector {
+        pattern: BoxStr<A>,
+    },
+    Keybind {
+        keybind: BoxStr<A>,
+    },
+    Nbt {
+        nbt_path: Option<BoxStr<A>>,
+        interpret: bool,
+        content: Option<NbtContent<A>>,
+    },
+    Object {
+        content: ObjectContentB<A>,
+    },
+}
+
+pub enum ObjectContentB<A: Allocator = Global> {
+    Atlas {
+        atlas: Option<Identifier<A>>,
+        sprite: Option<Identifier<A>>,
+    },
+    Player {
+        player: Option<Box<ResolvableProfile<A>, A>>,
+        hat: bool,
+    },
+}
+
+impl<A: Allocator> ContentB<A> {
+    pub fn into_content(self, separator: Option<Box<Component<A>, A>>) -> Option<Content<A>> {
+        Some(match self {
+            ContentB::Literal { content } => Content::Literal { content },
+            ContentB::Translatable {
+                key,
+                fallback,
+                args,
+            } => Content::Translatable {
+                key: key?,
+                fallback,
+                args,
+            },
+            ContentB::Score { name, objective } => Content::Score { name, objective },
+            ContentB::Selector { pattern } => Content::Selector { pattern, separator },
+            ContentB::Keybind { keybind } => Content::Keybind { keybind },
+            ContentB::Nbt {
+                nbt_path,
+                interpret,
+                content,
+            } => Content::Nbt {
+                nbt_path: nbt_path?,
+                interpret,
+                separator,
+                content: content?,
+            },
+            ContentB::Object { content } => match content {
+                ObjectContentB::Atlas { atlas, sprite } => Content::Object {
+                    content: ObjectContents::Atlas {
+                        atlas: atlas?,
+                        sprite: sprite?,
+                    },
+                },
+                ObjectContentB::Player { player, hat } => Content::Object {
+                    content: ObjectContents::Player {
+                        player: player?,
+                        hat,
+                    },
+                },
+            },
+        })
+    }
+}
+
 impl Component {
-    pub const fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             content: Content::Literal {
-                content: SmolStr::EMPTY,
+                content: BoxStr::empty(),
             },
             children: Vec::new(),
             style: Style {
@@ -135,13 +253,13 @@ impl Component {
 
 #[derive(Clone)]
 pub struct Style<A: Allocator = Global> {
-    pub font: Option<SmolStr<A>>,
+    pub font: Option<BoxStr<A>>,
     pub color: Option<TextColor>,
     pub shadow_color: Option<ShadowColor>,
     pub decorations: DecorationMap,
     pub click_event: Option<ClickEvent<A>>,
     pub hover_event: Option<HoverEvent<A>>,
-    pub insertion: Option<SmolStr<A>>,
+    pub insertion: Option<BoxStr<A>>,
 }
 
 impl Default for Style {
@@ -150,7 +268,7 @@ impl Default for Style {
     }
 }
 
-impl Style {
+impl<A: Allocator> Style<A> {
     pub const fn new() -> Self {
         Self {
             font: None,
@@ -180,6 +298,43 @@ impl<A: Allocator> Style<A> {
 pub enum TextColor {
     Named(TextColorNamed),
     Rgb(TextColorRgb),
+}
+
+impl TextColor {
+    pub const fn name(self, buf: &mut [u8; 7]) -> &str {
+        match self {
+            TextColor::Named(named) => named.name(),
+            TextColor::Rgb(rgb) => {
+                let (a, b) = mser::u8_to_hex(rgb.red);
+                let (c, d) = mser::u8_to_hex(rgb.green);
+                let (e, f) = mser::u8_to_hex(rgb.blue);
+                *buf = [HEX_PREFIX, a, b, c, d, e, f];
+                unsafe { core::str::from_utf8_unchecked(buf) }
+            }
+        }
+    }
+
+    pub fn parse(n: &[u8]) -> Option<Self> {
+        match TextColorNamed::parse(n) {
+            Some(x) => Some(Self::Named(x)),
+            None => {
+                let hex = match n {
+                    [HEX_PREFIX, rest @ ..] => rest,
+                    _ => return None,
+                };
+                let (a, b) = mser::parse_hex::<u32>(hex);
+                if b == hex.len() && a <= 0xffffff {
+                    Some(Self::Rgb(TextColorRgb {
+                        red: (a >> 16) as u8,
+                        green: ((a >> 8) & 0xff) as u8,
+                        blue: (a & 0xff) as u8,
+                    }))
+                } else {
+                    None
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -307,6 +462,28 @@ impl TextColorNamed {
             Self::Yellow => "yellow",
             Self::White => "white",
         }
+    }
+
+    pub const fn parse(n: &[u8]) -> Option<Self> {
+        Some(match n {
+            b"black" => Self::Black,
+            b"dark_blue" => Self::DarkBlue,
+            b"dark_green" => Self::DarkGreen,
+            b"dark_aqua" => Self::DarkAqua,
+            b"dark_red" => Self::DarkRed,
+            b"dark_purple" => Self::DarkPurple,
+            b"gold" => Self::Gold,
+            b"gray" => Self::Gray,
+            b"dark_gray" => Self::DarkGray,
+            b"blue" => Self::Blue,
+            b"green" => Self::Green,
+            b"aqua" => Self::Aqua,
+            b"red" => Self::Red,
+            b"light_purple" => Self::LightPurple,
+            b"yellow" => Self::Yellow,
+            b"white" => Self::White,
+            _ => return None,
+        })
     }
 }
 
@@ -472,14 +649,14 @@ impl DecorationMap {
 
 #[derive(Clone)]
 pub enum ClickEvent<A: Allocator = Global> {
-    OpenUrl(SmolStr<A>),
-    OpenFile(SmolStr<A>),
-    RunCommand(SmolStr<A>),
-    SuggestCommand(SmolStr<A>),
+    OpenUrl(BoxStr<A>),
+    OpenFile(BoxStr<A>),
+    RunCommand(BoxStr<A>),
+    SuggestCommand(BoxStr<A>),
     ChangePage(u32),
-    CopyToClipboard(SmolStr<A>),
+    CopyToClipboard(BoxStr<A>),
     ShowDialog(Holder<Box<Dialog<A>, A>, A>),
-    Custom(Identifier<A>, SmolStr<A>),
+    Custom(Identifier<A>, BoxStr<A>),
 }
 
 #[derive(Clone)]
@@ -497,161 +674,26 @@ pub enum HoverEvent<A: Allocator = Global> {
     },
 }
 
+pub const DEFAULT_ATLAS: Ident = Ident {
+    namespace: Ident::MINECRAFT,
+    path: "blocks",
+};
+
 #[derive(Clone)]
 pub enum ObjectContents<A: Allocator = Global> {
     Atlas {
-        atlas: Option<Identifier<A>>,
+        atlas: Identifier<A>,
         sprite: Identifier<A>,
     },
     Player {
-        player: Box<Profile<A>, A>,
-        hat: Option<bool>,
+        player: Box<ResolvableProfile<A>, A>,
+        hat: bool,
     },
 }
 
-impl<A: Allocator> Write for Component<A> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            let Self {
-                content,
-                style,
-                children,
-            } = self;
-            if let Content::Literal { content } = content
-                && style.is_empty()
-                && children.is_empty()
-            {
-                StringTagWriter(content).write(w);
-                return;
-            }
-            match content {
-                Content::Literal { content } => {
-                    TagType::Compound.write(w);
-                    TagType::String.write(w);
-                    TEXT.write(w);
-                    StringTagWriter(content).write(w);
-                    style.write(w);
-                    TagType::End.write(w);
-                }
-                _ => StringTagWriter("").write(w),
-            }
-        }
-    }
-
-    fn sz(&self) -> usize {
-        let mut w = 0usize;
-        let Self {
-            content,
-            style,
-            children,
-        } = self;
-        if let Content::Literal { content } = content
-            && style.is_empty()
-            && children.is_empty()
-        {
-            w += StringTagWriter(content).sz();
-            return w;
-        }
-        match content {
-            Content::Literal { content } => {
-                w += TagType::Compound.sz();
-                w += TagType::String.sz();
-                w += TEXT.sz();
-                w += StringTagWriter(content).sz();
-                w += style.sz();
-                w += TagType::End.sz();
-            }
-            _ => {
-                w += StringTagWriter("").sz();
-            }
-        }
-        w
-    }
-}
-
-impl<'a> Read<'a> for Component {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        match TagType::read(buf)? {
-            TagType::String => Ok(Self {
-                children: Vec::new(),
-                style: Style::new(),
-                content: Content::Literal {
-                    content: StringTag::read(buf)?.0,
-                },
-            }),
-            TagType::List => Err(Error),
-            TagType::Compound => {
-                let mut content = Content::Literal {
-                    content: SmolStr::EMPTY,
-                };
-                let style = Style::new();
-                let children = Vec::new();
-                loop {
-                    let tag_type = TagType::read(buf)?;
-                    if tag_type == TagType::End {
-                        return Ok(Self {
-                            content,
-                            style,
-                            children,
-                        });
-                    }
-                    let name = StringTag::read(buf)?;
-                    let name = name.0.as_str();
-                    match name {
-                        "text" => {
-                            content = Content::Literal {
-                                content: StringTag::read(buf)?.0,
-                            }
-                        }
-                        _ => return Err(Error),
-                    }
-                }
-            }
-            _ => Err(Error),
-        }
-    }
-}
-
-impl<A: Allocator> Style<A> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            if let Some(color) = self.color {
-                TagType::String.write(w);
-                COLOR.write(w);
-                match color {
-                    TextColor::Named(named) => {
-                        StringTagRaw::new_unchecked(named.name().as_bytes()).write(w);
-                    }
-                    TextColor::Rgb(rgb) => {
-                        let (a, b) = mser::u8_to_hex(rgb.red);
-                        let (c, d) = mser::u8_to_hex(rgb.green);
-                        let (e, f) = mser::u8_to_hex(rgb.blue);
-                        let s = [b'#', a, b, c, d, e, f];
-                        StringTagRaw::new_unchecked(&s).write(w);
-                    }
-                }
-            }
-        }
-    }
-
-    fn sz(&self) -> usize {
-        let mut w = 0;
-        if let Some(color) = self.color {
-            w += TagType::String.sz();
-            w += COLOR.sz();
-            match color {
-                TextColor::Named(named) => {
-                    w += StringTagRaw::new_unchecked(named.name().as_bytes()).sz();
-                }
-                TextColor::Rgb(rgb) => {
-                    let (a, b) = mser::u8_to_hex(rgb.red);
-                    let (c, d) = mser::u8_to_hex(rgb.green);
-                    let (e, f) = mser::u8_to_hex(rgb.blue);
-                    let s = [b'#', a, b, c, d, e, f];
-                    w += StringTagRaw::new_unchecked(&s).sz();
-                }
-            }
-        }
-        w
-    }
+#[derive(Clone)]
+pub enum NbtContent<A: Allocator = Global> {
+    Block { pos: BoxStr<A> },
+    Entity { selector: BoxStr<A> },
+    Storage { storage: Identifier<A> },
 }

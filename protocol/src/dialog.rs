@@ -1,7 +1,7 @@
 use crate::chat::{ClickEvent, Component};
 use crate::item::ItemStack;
 use crate::nbt::Compound;
-use crate::str::SmolStr;
+use crate::str::BoxStr;
 use crate::{HolderSet, Identifier};
 use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
@@ -79,7 +79,7 @@ pub enum Input<A: Allocator = Global> {
         label: Component<A>,
         width: u32,
         label_visible: bool,
-        initial: Option<SmolStr<A>>,
+        initial: Option<BoxStr<A>>,
         max_length: u32,
         multiline: Option<Multiline>,
     },
@@ -87,8 +87,8 @@ pub enum Input<A: Allocator = Global> {
         key: ParsedTemplate<A>,
         label: Component<A>,
         initial: bool,
-        on_true: Option<SmolStr<A>>,
-        on_false: Option<SmolStr<A>>,
+        on_true: Option<BoxStr<A>>,
+        on_false: Option<BoxStr<A>>,
     },
     SingleOption {
         key: ParsedTemplate<A>,
@@ -101,7 +101,7 @@ pub enum Input<A: Allocator = Global> {
         key: ParsedTemplate<A>,
         label: Component<A>,
         width: u32,
-        label_format: Option<SmolStr<A>>,
+        label_format: Option<BoxStr<A>>,
         start: f32,
         end: f32,
         initial: Option<f32>,
@@ -117,7 +117,7 @@ pub struct Multiline {
 
 #[derive(Clone)]
 pub struct SingleOptionEntry<A: Allocator = Global> {
-    pub id: SmolStr<A>,
+    pub id: BoxStr<A>,
     pub display: Component<A>,
     pub initial: bool,
 }
@@ -158,5 +158,5 @@ pub enum Action<A: Allocator = Global> {
 
 #[derive(Clone)]
 pub struct ParsedTemplate<A: Allocator = Global> {
-    pub raw: SmolStr<A>,
+    pub raw: BoxStr<A>,
 }

@@ -3,12 +3,6 @@
 version = 4
 
 [[package]]
-name = "allocator-api2"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
-
-[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -22,20 +16,6 @@ dependencies = [
  "mser",
  "nested",
  "ryu",
-]
-
-[[package]]
-name = "minecraft_data_protocol"
-version = "0.1.0-rc.0+1.21.11"
-dependencies = [
- "allocator-api2",
- "itoa",
- "minecraft_data",
- "mser",
- "mser_macro",
- "ryu",
- "smallvec",
- "uuid",
 ]
 
 [[package]]
@@ -101,12 +81,6 @@ name = "semver"
 version = "1.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56e6fa9c48d24d85fb3de5ad847117517440f6beceb7798af16b4a87d616b8d0"
-
-[[package]]
-name = "smallvec"
-version = "1.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
 
 [[package]]
 name = "syn"

@@ -1,8 +1,9 @@
-use crate::{Bytes, Error, Read, UnsafeWriter, Write};
+use crate::{Bytes, Error, Ident, Read, UnsafeWriter, Write};
 use mser::{encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
+#[must_use]
 pub struct StringTagRaw<'a>(&'a [u8]);
 
 impl<'a> StringTagRaw<'a> {
@@ -50,9 +51,10 @@ impl<'a> Read<'a> for StringTagRaw<'a> {
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub struct StringTagWriter<'a>(pub &'a str);
+#[must_use]
+pub struct RefStringTag<'a>(pub &'a str);
 
-impl<'a> Write for StringTagWriter<'a> {
+impl<'a> Write for RefStringTag<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
@@ -71,6 +73,44 @@ impl<'a> Write for StringTagWriter<'a> {
             StringTagRaw(self.0.as_bytes()).sz()
         } else {
             encode_mutf8_len(self.0) + 2
+        }
+    }
+}
+
+impl<'a> Read<'a> for RefStringTag<'a> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        unsafe {
+            Ok(Self(core::str::from_utf8_unchecked(
+                StringTagRaw::read(buf)?.0,
+            )))
+        }
+    }
+}
+#[derive(Clone)]
+pub struct IdentifierTag<'a>(pub Ident<'a>);
+
+impl Write for IdentifierTag<'_> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            let l = self.0.namespace.len() + 1 + self.0.path.len();
+            (l as u16).write(w);
+            w.write(self.0.namespace.as_bytes());
+            w.write_byte(b':');
+            w.write(self.0.path.as_bytes());
+        }
+    }
+
+    fn sz(&self) -> usize {
+        2 + self.0.namespace.len() + 1 + self.0.path.len()
+    }
+}
+
+impl<'a> Read<'a> for IdentifierTag<'a> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let s = unsafe { core::str::from_utf8_unchecked(StringTagRaw::read(buf)?.inner()) };
+        match Ident::parse(s) {
+            Some(ident) => Ok(Self(ident)),
+            None => Err(Error),
         }
     }
 }

@@ -1,6 +1,7 @@
 use super::{Compound, List, Tag};
-use crate::str::{SmolStr, StringBuilder};
+use crate::str::BoxStr;
 use crate::{Bytes, Error};
+use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::hint::unreachable_unchecked;
@@ -24,7 +25,7 @@ impl From<Compound> for StringifyCompound {
 impl StringifyCompound {
     #[inline]
     pub fn decode(n: &str) -> Result<Self, Error> {
-        unsafe { decode(&mut n.as_bytes()).map(|(x, _)| Self(x)) }
+        unsafe { decode(&mut n.as_bytes()).map(Self) }
     }
 
     #[inline]
@@ -63,13 +64,13 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             let mut vec = Vec::<u8>::new();
 
             *n = n.get_unchecked(3..);
-            dw(n);
+            skip_ws(n);
             if n.peek1()? == b']' {
                 *n = n.get_unchecked(1..);
                 return Ok(Tag::from(vec));
             }
             loop {
-                dw(n);
+                skip_ws(n);
                 let (x, len) = match parse_int::<i8>(n) {
                     (_, 0) => match n.peek1()? {
                         b't' | b'T' if n.len() >= 4 => (1, 4),
@@ -83,7 +84,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
                 };
                 vec.push(x as u8);
                 *n = n.get_unchecked(len..);
-                dw(n);
+                skip_ws(n);
                 match n.u8()? {
                     b']' => break,
                     b',' => continue,
@@ -97,17 +98,17 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             let mut vec = Vec::<i32>::new();
 
             *n = n.get_unchecked(3..);
-            dw(n);
+            skip_ws(n);
             if n.peek1()? == b']' {
                 *n = n.get_unchecked(1..);
                 return Ok(Tag::IntArray(vec));
             }
             loop {
-                dw(n);
+                skip_ws(n);
                 let (x, l) = parse_int::<i32>(n);
                 vec.push(x);
                 *n = n.get_unchecked(l..);
-                dw(n);
+                skip_ws(n);
                 match n.u8()? {
                     b']' => break,
                     b',' => continue,
@@ -121,13 +122,13 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             let mut vec = Vec::<i64>::new();
 
             *n = n.get_unchecked(2..);
-            dw(n);
+            skip_ws(n);
             if n.peek1()? == b']' {
                 *n = n.get_unchecked(1..);
                 return Ok(Tag::LongArray(vec));
             }
             loop {
-                dw(n);
+                skip_ws(n);
                 let (a, b) = parse_int::<i64>(n);
                 let (x, len) = match n.at(b)? {
                     b'L' | b'l' => (a, b + 1),
@@ -135,7 +136,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
                 };
                 vec.push(x);
                 *n = n.get_unchecked(len..);
-                dw(n);
+                skip_ws(n);
                 match n.u8()? {
                     b']' => break,
                     b',' => continue,
@@ -149,9 +150,9 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
     }
 }
 
-unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
+unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
+    let mut s = Vec::<u8>::new();
     unsafe {
-        let len_start = n.len();
         let mut root = Compound::new();
         let mut ptrs = SmallVec::<[Block; CAP]>::new();
         ptrs.push(Block::C(NonNull::new_unchecked(&mut root as *mut _)));
@@ -163,7 +164,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                 Some(x) => x,
                 None => return Err(Error),
             };
-            dw(n);
+            skip_ws(n);
 
             if on_start {
                 on_start = false;
@@ -171,7 +172,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                     if n.u8()? != b'{' {
                         return Err(Error);
                     }
-                    dw(n);
+                    skip_ws(n);
                     if n.peek1()? == b'}' {
                         *n = n.get_unchecked(1..);
                         on_end = true;
@@ -180,7 +181,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                     if n.u8()? != b'[' {
                         return Err(Error);
                     }
-                    dw(n);
+                    skip_ws(n);
                     if n.peek1()? == b']' {
                         *n = n.get_unchecked(1..);
                         on_end = true;
@@ -193,14 +194,14 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                     b',' => (),
                     _ => return Err(Error),
                 }
-                dw(n);
+                skip_ws(n);
             } else {
                 match n.u8()? {
                     b']' => on_end = true,
                     b',' => (),
                     _ => return Err(Error),
                 }
-                dw(n);
+                skip_ws(n);
             }
             if !on_end {
                 if matches!(ptr, Block::C(..)) {
@@ -234,7 +235,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                     },
                 }
                 if ptrs.is_empty() {
-                    return Ok((root, len_start - n.len()));
+                    return Ok(root);
                 } else {
                     continue;
                 }
@@ -244,21 +245,20 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                 Block::C(mut c) => {
                     let curr = c.as_mut();
                     let k = match n.peek1()? {
-                        b'\"' => dqstr2(n)?,
-                        b'\'' => dqstr1(n)?,
+                        b'\"' => dqstr2(n, &mut s)?,
+                        b'\'' => dqstr1(n, &mut s)?,
                         _ => {
                             let x = find_ascii(n, |x| {
                                 matches!(x, b':' | b' ' | b'\n' | b'\t' | b'\r')
                             })?;
-                            let m =
-                                SmolStr::new(core::str::from_utf8_unchecked(n.get_unchecked(0..x)));
+                            let m = BoxStr::new_unchecked(Box::from(n.get_unchecked(0..x)));
                             *n = n.get_unchecked(x..);
                             m
                         }
                     };
-                    dw(n);
+                    skip_ws(n);
                     n.slice(1)?;
-                    dw(n);
+                    skip_ws(n);
                     match n.peek1()? {
                         b'{' => {
                             let index = curr.len();
@@ -285,12 +285,12 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                             }
                         }
                         b'"' => {
-                            let s = dqstr2(n)?;
+                            let s = dqstr2(n, &mut s)?;
                             curr.push(k, s);
                             ptrs.push(Block::C(c));
                         }
                         b'\'' => {
-                            let s = dqstr1(n)?;
+                            let s = dqstr1(n, &mut s)?;
                             curr.push(k, s);
                             ptrs.push(Block::C(c));
                         }
@@ -300,9 +300,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                             })?)?;
                             let v = match dnum(s) {
                                 Ok(x) => x,
-                                Err(_) => {
-                                    Tag::String(SmolStr::new(core::str::from_utf8_unchecked(s)))
-                                }
+                                Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
                             };
                             curr.push(k, v);
                             ptrs.push(Block::C(c));
@@ -377,11 +375,11 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         let first = n.peek1()?;
                         let tag = match first {
                             b'"' => {
-                                let s = dqstr2(n)?;
+                                let s = dqstr2(n, &mut s)?;
                                 Tag::String(s)
                             }
                             b'\'' => {
-                                let s = dqstr1(n)?;
+                                let s = dqstr1(n, &mut s)?;
                                 Tag::String(s)
                             }
                             _ => {
@@ -392,19 +390,17 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                                 let s = n.slice(i)?;
                                 match dnum(s) {
                                     Ok(x) => x,
-                                    Err(_) => {
-                                        Tag::String(SmolStr::new(core::str::from_utf8_unchecked(s)))
-                                    }
+                                    Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
                                 }
                             }
                         };
                         if let Tag::Byte(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b'+' | b'-' | b'0'..=b'9' => {
                                                 let (a, b) = parse_int::<i8>(n);
@@ -441,10 +437,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         } else if let Tag::Short(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b'+' | b'-' | b'0'..=b'9' => {}
                                             b']' => {
@@ -472,10 +468,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         } else if let Tag::Int(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b'+' | b'-' | b'0'..=b'9' => {}
                                             b']' => {
@@ -500,10 +496,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         } else if let Tag::Long(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b'+' | b'-' | b'0'..=b'9' => {}
                                             b']' => {
@@ -531,10 +527,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         } else if let Tag::Float(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b'+' | b'-' | b'0'..=b'9' | b'.' => {}
                                             b']' => {
@@ -562,10 +558,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         } else if let Tag::Double(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b'+' | b'-' | b'0'..=b'9' | b'.' => {}
                                             b']' => {
@@ -593,10 +589,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                         } else if let Tag::String(x) = tag {
                             let mut list = vec![x];
                             loop {
-                                dw(n);
+                                skip_ws(n);
                                 match n.u8()? {
                                     b',' => {
-                                        dw(n);
+                                        skip_ws(n);
                                         match n.peek1()? {
                                             b']' => {
                                                 *n = n.get_unchecked(1..);
@@ -605,8 +601,8 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                                             }
                                             _ => {
                                                 let x = match n.peek1()? {
-                                                    b'\"' => dqstr2(n)?,
-                                                    b'\'' => dqstr1(n)?,
+                                                    b'\"' => dqstr2(n, &mut s)?,
+                                                    b'\'' => dqstr1(n, &mut s)?,
                                                     _ => {
                                                         let x = find_ascii(n, |x| {
                                                             matches!(
@@ -618,11 +614,9 @@ unsafe fn decode(n: &mut &[u8]) -> Result<(Compound, usize), Error> {
                                                                     | b'\r'
                                                             )
                                                         })?;
-                                                        let m = SmolStr::new(
-                                                            core::str::from_utf8_unchecked(
-                                                                n.get_unchecked(0..x),
-                                                            ),
-                                                        );
+                                                        let m = BoxStr::new_unchecked(Box::from(
+                                                            n.get_unchecked(0..x),
+                                                        ));
                                                         *n = n.get_unchecked(x..);
                                                         m
                                                     }
@@ -736,10 +730,10 @@ fn dnum(n: &[u8]) -> Result<Tag, Error> {
 const ESCAPE: u8 = b'\\';
 
 /// decode single quoted string
-unsafe fn dqstr1(n: &mut &[u8]) -> Result<SmolStr, Error> {
+unsafe fn dqstr1(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
+    buf.clear();
     unsafe {
         *n = n.get_unchecked(1..);
-        let mut buf = StringBuilder::new();
         let mut last = 0;
         let mut cur = 0;
         loop {
@@ -747,13 +741,13 @@ unsafe fn dqstr1(n: &mut &[u8]) -> Result<SmolStr, Error> {
             if x == ESCAPE {
                 let y = n.at(cur + 1)?;
                 if y == ESCAPE {
-                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
-                    buf.push2(ESCAPE);
+                    buf.extend(n.get_unchecked(last..cur));
+                    buf.push(ESCAPE);
                     cur += 2;
                     last = cur;
                 } else if y == b'\'' {
-                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
-                    buf.push2(b'\'');
+                    buf.extend(n.get_unchecked(last..cur));
+                    buf.push(b'\'');
                     cur += 2;
                     last = cur;
                 } else {
@@ -771,17 +765,17 @@ unsafe fn dqstr1(n: &mut &[u8]) -> Result<SmolStr, Error> {
                 cur += 4;
             }
         }
-        buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
+        buf.extend(n.get_unchecked(last..cur));
         n.slice(1 + cur)?;
-        Ok(buf.finish())
+        Ok(BoxStr::new_unchecked(Box::from(&buf[..])))
     }
 }
 
 /// decode a double quoted string
-unsafe fn dqstr2(n: &mut &[u8]) -> Result<SmolStr, Error> {
+unsafe fn dqstr2(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
+    buf.clear();
     unsafe {
         *n = n.get_unchecked(1..);
-        let mut buf = StringBuilder::new();
         let mut last = 0;
         let mut cur = 0;
         loop {
@@ -789,13 +783,13 @@ unsafe fn dqstr2(n: &mut &[u8]) -> Result<SmolStr, Error> {
             if x == ESCAPE {
                 let y = n.at(cur + 1)?;
                 if y == ESCAPE {
-                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
-                    buf.push2(ESCAPE);
+                    buf.extend(n.get_unchecked(last..cur));
+                    buf.push(ESCAPE);
                     cur += 2;
                     last = cur;
                 } else if y == b'\"' {
-                    buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
-                    buf.push2(b'\"');
+                    buf.extend(n.get_unchecked(last..cur));
+                    buf.push(b'\"');
                     cur += 2;
                     last = cur;
                 } else {
@@ -813,15 +807,15 @@ unsafe fn dqstr2(n: &mut &[u8]) -> Result<SmolStr, Error> {
                 cur += 4;
             }
         }
-        buf.extend(core::str::from_utf8_unchecked(n.get_unchecked(last..cur)));
+        buf.extend(n.get_unchecked(last..cur));
         n.slice(1 + cur)?;
-        Ok(buf.finish())
+        Ok(BoxStr::new_unchecked(Box::from(&buf[..])))
     }
 }
 
 /// skip whitespace characters
 #[inline]
-fn dw(n: &mut &[u8]) {
+fn skip_ws(n: &mut &[u8]) {
     while let [b' ' | b'\n' | b'\t' | b'\r', rest @ ..] = n {
         *n = rest;
     }
