@@ -1,5 +1,5 @@
 #![no_std]
-#![cfg_attr(not(feature = "allocator-api2"), feature(allocator_api))]
+#![feature(allocator_api)]
 
 use crate::str::BoxStr;
 use alloc::alloc::{Allocator, Global};
@@ -20,11 +20,7 @@ pub mod types;
 
 #[macro_use]
 extern crate mser_macro;
-
-#[cfg(not(feature = "allocator-api2"))]
 extern crate alloc;
-#[cfg(feature = "allocator-api2")]
-extern crate allocator_api2 as alloc;
 
 #[derive(Clone, Copy, Debug)]
 pub enum ClientIntent {

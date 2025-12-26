@@ -6,7 +6,8 @@ use alloc::vec::Vec;
 use uuid::Uuid;
 
 const NAME: &[u8] = b"name";
-const ID: &[u8] = b"ID";
+const ID: &[u8] = b"id";
+const PROPERTIES: &[u8] = b"properties";
 
 #[derive(Clone)]
 pub struct ResolvableProfile<A: Allocator = Global> {

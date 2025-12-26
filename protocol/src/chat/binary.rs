@@ -286,7 +286,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
         };
         match name {
             TEXT_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => content = Some(ContentB::Literal { content: x }),
                     Some(ContentB::Literal { content }) => *content = x,
@@ -294,7 +294,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             TRANSLATE_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Translatable {
@@ -312,7 +312,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             TRANSLATE_FALLBACK_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Translatable {
@@ -369,10 +369,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                         }
                         match StringTag::read(buf)?.0.as_bytes() {
                             SCORE_NAME => {
-                                name = Some(t2.expect_str(buf)?);
+                                name = Some(t2.string(buf)?);
                             }
                             SCORE_OBJECTIVE => {
-                                objective = Some(t2.expect_str(buf)?);
+                                objective = Some(t2.string(buf)?);
                             }
                             _ => return Err(Error),
                         }
@@ -400,7 +400,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             SELECTOR_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => content = Some(ContentB::Selector { pattern: x }),
                     Some(ContentB::Selector { pattern }) => *pattern = x,
@@ -411,7 +411,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 separator = Some(Box::new(Component::read_ty(buf, t1)?));
             }
             KEYBIND_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => content = Some(ContentB::Keybind { keybind: x }),
                     Some(ContentB::Keybind { keybind }) => *keybind = x,
@@ -419,7 +419,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_PATH_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Nbt {
@@ -437,7 +437,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_INTERPRET_H => {
-                let x = TagType::expect_bool(t1, buf)?;
+                let x = t1.bool(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Nbt {
@@ -461,7 +461,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 _ => return Err(Error),
             },
             NBT_BLOCK_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Nbt {
@@ -479,7 +479,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_ENTITY_H => {
-                let x = t1.expect_str(buf)?;
+                let x = t1.string(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Nbt {
@@ -497,7 +497,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_STORAGE_H => {
-                let x = t1.expect_ident(buf)?;
+                let x = t1.ident(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Nbt {
@@ -521,7 +521,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 _ => return Err(Error),
             },
             OBJECT_ATLAS_H => {
-                let x = t1.expect_ident(buf)?;
+                let x = t1.ident(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Object {
@@ -538,7 +538,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             OBJECT_SPRITE_H => {
-                let x = t1.expect_ident(buf)?;
+                let x = t1.ident(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Object {
@@ -575,7 +575,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             OBJECT_HAT_H => {
-                let x = t1.expect_bool(buf)?;
+                let x = t1.bool(buf)?;
                 match content.as_mut() {
                     None => {
                         content = Some(ContentB::Object {
@@ -609,7 +609,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 _ => return Err(Error),
             },
             COLOR_H => {
-                let color = t1.expect_str(buf)?;
+                let color = t1.string(buf)?;
                 style.color = match TextColor::parse(color.as_bytes()) {
                     Some(x) => Some(x),
                     None => return Err(Error),

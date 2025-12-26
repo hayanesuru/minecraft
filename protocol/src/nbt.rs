@@ -164,7 +164,7 @@ impl<'a, A: Allocator> Write for Kv<'a, &'a ResolvableProfile<A>> {
 }
 
 impl TagType {
-    pub fn expect_bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
+    pub fn bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
         match self {
             Self::Byte => Ok(buf.i8()? != 0),
             Self::Short => Ok(buf.i16()? != 0),
@@ -176,7 +176,7 @@ impl TagType {
         }
     }
 
-    pub fn expect_str(self, buf: &mut &[u8]) -> Result<BoxStr, Error> {
+    pub fn string(self, buf: &mut &[u8]) -> Result<BoxStr, Error> {
         match self {
             Self::String => match StringTag::read(buf) {
                 Ok(x) => Ok(x.0),
@@ -186,7 +186,7 @@ impl TagType {
         }
     }
 
-    pub fn expect_ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
+    pub fn ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
         match self {
             Self::String => match IdentifierTag::read(buf) {
                 Ok(x) => unsafe {
@@ -201,6 +201,46 @@ impl TagType {
                 },
                 Err(e) => Err(e),
             },
+            _ => Err(Error),
+        }
+    }
+
+    pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
+        match self {
+            Self::IntArray => {
+                let len = u32::read(buf)? as usize;
+                let mut data = buf.slice(len * 4)?;
+                let mut vec = Vec::with_capacity(len);
+                let mut ptr = vec.as_mut_ptr();
+                for _ in 0..len {
+                    unsafe {
+                        *ptr = i32::from_be_bytes(*data.array::<4>().unwrap_unchecked());
+                        ptr = ptr.add(1);
+                    }
+                }
+                unsafe { vec.set_len(len) }
+                Ok(vec)
+            }
+            Self::List => {
+                let ListInfo(tag, len) = ListInfo::read(buf)?;
+                let len = len as usize;
+                match tag {
+                    TagType::Int => {
+                        let mut data = buf.slice(len * 4)?;
+                        let mut vec = Vec::with_capacity(len);
+                        let mut ptr = vec.as_mut_ptr();
+                        for _ in 0..len {
+                            unsafe {
+                                *ptr = i32::from_be_bytes(*data.array::<4>().unwrap_unchecked());
+                                ptr = ptr.add(1);
+                            }
+                        }
+                        unsafe { vec.set_len(len) }
+                        Ok(vec)
+                    }
+                    _ => Err(Error),
+                }
+            }
             _ => Err(Error),
         }
     }
