@@ -37,7 +37,12 @@ impl<A: Allocator> ResolvableProfile<A> {
             if let Some(ref name) = self.name {
                 Kv(NAME, name).write(w);
             }
-
+            if let Some(id) = self.id {
+                Kv(ID, id).write(w);
+            }
+            if !self.properties.is_empty() {
+                Kv(PROPERTIES, &*self.properties).write(w);
+            }
             TagType::End.write(w);
         }
     }
@@ -46,6 +51,12 @@ impl<A: Allocator> ResolvableProfile<A> {
         let mut w = 0;
         if let Some(ref name) = self.name {
             w += Kv(NAME, name).sz();
+        }
+        if let Some(id) = self.id {
+            w += Kv(ID, id).sz();
+        }
+        if !self.properties.is_empty() {
+            w += Kv(PROPERTIES, &*self.properties).sz();
         }
 
         w += TagType::End.sz();

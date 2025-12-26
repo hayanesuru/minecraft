@@ -6,13 +6,14 @@ pub use self::list::{List, ListInfo};
 pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
 use crate::chat::Component;
-use crate::profile::ResolvableProfile;
+use crate::profile::{Property, ResolvableProfile};
 use crate::str::BoxStr;
 use crate::{Bytes, Error, Ident, Identifier, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{decode_mutf8, decode_mutf8_len, is_ascii_mutf8};
+use uuid::Uuid;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -160,6 +161,38 @@ impl<'a, A: Allocator> Write for Kv<'a, &'a ResolvableProfile<A>> {
 
     fn sz(&self) -> usize {
         TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, Uuid> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::IntArray.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            4u32.write(w);
+            self.1.as_bytes().write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + 4u32.sz() + 16
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a [Property<A>]> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            for p in self.1 {
+                //
+            }
+            TagType::End.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + TagType::End.sz()
     }
 }
 
