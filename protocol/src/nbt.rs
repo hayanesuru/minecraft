@@ -5,6 +5,8 @@ mod stringify;
 pub use self::list::{List, ListInfo};
 pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
+use crate::chat::Component;
+use crate::profile::ResolvableProfile;
 use crate::str::BoxStr;
 use crate::{Bytes, Error, Ident, Identifier, Read, UnsafeWriter, Write};
 use alloc::alloc::{Allocator, Global};
@@ -28,6 +30,137 @@ pub enum TagType {
     Compound,
     IntArray,
     LongArray,
+}
+
+#[must_use]
+pub struct Kv<'a, T>(pub &'a [u8], pub T);
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a BoxStr<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            RefStringTag(self.1).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + RefStringTag(self.1).sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, &'a str> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            RefStringTag(self.1).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + RefStringTag(self.1).sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, ListInfo> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::List.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::List.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, StringTagRaw<'a>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, bool> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Byte.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Byte.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    }
+}
+
+impl<'a> Write for Kv<'a, Ident<'a>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            IdentifierTag(self.1).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + IdentifierTag(self.1).sz()
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a Identifier<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::String.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            IdentifierTag(self.1.as_ident()).write(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::String.sz()
+            + StringTagRaw::new_unchecked(self.0).sz()
+            + IdentifierTag(self.1.as_ident()).sz()
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a Component<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write_ty(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
+    }
+}
+
+impl<'a, A: Allocator> Write for Kv<'a, &'a ResolvableProfile<A>> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            StringTagRaw::new_unchecked(self.0).write(w);
+            self.1.write_ty(w);
+        }
+    }
+
+    fn sz(&self) -> usize {
+        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
+    }
 }
 
 impl TagType {

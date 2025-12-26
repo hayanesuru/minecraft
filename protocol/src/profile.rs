@@ -5,6 +5,9 @@ use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
 use uuid::Uuid;
 
+const NAME: &[u8] = b"name";
+const ID: &[u8] = b"ID";
+
 #[derive(Clone)]
 pub struct ResolvableProfile<A: Allocator = Global> {
     pub name: Option<BoxStr<A>>,

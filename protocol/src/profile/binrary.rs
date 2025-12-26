@@ -1,4 +1,5 @@
 use super::*;
+use crate::nbt::{Kv, TagType};
 use mser::{Error, Read, UnsafeWriter, Write};
 
 impl<A: Allocator> Write for GameProfile<A> {
@@ -31,10 +32,24 @@ impl<'a> Read<'a> for ResolvableProfile {
 
 impl<A: Allocator> ResolvableProfile<A> {
     /// # Safety
-    pub unsafe fn write_ty(&self, w: &mut UnsafeWriter) {}
+    pub unsafe fn write_ty(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            if let Some(ref name) = self.name {
+                Kv(NAME, name).write(w);
+            }
 
-    pub fn write_ty_sz(&self) -> usize {
-        0
+            TagType::End.write(w);
+        }
+    }
+
+    pub fn ty_sz(&self) -> usize {
+        let mut w = 0;
+        if let Some(ref name) = self.name {
+            w += Kv(NAME, name).sz();
+        }
+
+        w += TagType::End.sz();
+        w
     }
 }
 
@@ -48,7 +63,7 @@ impl<A: Allocator> GameProfile<A> {
     /// # Safety
     pub unsafe fn write_ty(&self, w: &mut UnsafeWriter) {}
 
-    pub fn write_ty_sz(&self) -> usize {
+    pub fn ty_sz(&self) -> usize {
         0
     }
 }
