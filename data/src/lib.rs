@@ -22,80 +22,62 @@ macro_rules! decode_state {
     };
 }
 
-#[derive(Copy, Clone)]
-struct NameMap<T: 'static> {
-    disps: &'static [(u32, u32)],
-    names: *const u8,
-    vals: &'static [T],
+fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+    const M: u64 = 0xc6a4a7935bd1e995;
+    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut i = 0;
+    while i + 8 <= n.len() {
+        h ^= u64::from_le_bytes(unsafe { *(n.as_ptr().add(i) as *const [u8; 8]) }).wrapping_mul(M);
+        i += 8;
+    }
+    while i < n.len() {
+        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
+        i += 1;
+    }
+    let h = h.wrapping_mul(M) as u128;
+    let h = (h ^ (h >> 44)).wrapping_mul(0xdbe6d5d5fe4cce213198a2e03707344u128);
+    [(h >> 64) as u64, h as u64]
 }
 
-#[inline]
-fn hash<const K: u128, const N: u32, const M: u32>(
+fn name_u8<const K: u64, const N: usize, const M: usize>(
+    disps: [(u32, u32); N],
+    names: *const u8,
+    vals: [u8; M],
     name: &[u8],
-    disps: &'static [(u32, u32)],
-) -> u32 {
-    let x = name;
-    let pl;
-    let ptr;
-    let x = match x.len() {
-        len @ 0..=16 => {
-            pl = len;
-            ptr = x.as_ptr();
-            0u128
-        }
-        len @ 17..=32 => unsafe {
-            pl = len - 16;
-            ptr = x.as_ptr().add(16);
-            u128::from_le_bytes(x.get_unchecked(0..16).try_into().unwrap_unchecked())
-        },
-        len => unsafe {
-            let n = u128::from_le_bytes(x.get_unchecked(0..16).try_into().unwrap_unchecked());
-            let m = u128::from_le_bytes(x.get_unchecked(16..32).try_into().unwrap_unchecked());
-            let len = len - 32;
-            pl = if len <= 16 { len } else { 16 };
-            ptr = x.as_ptr().add(32);
-            n ^ m
-        },
-    };
-    let x = unsafe {
-        let mut p = [0u8; 16];
-        core::ptr::copy_nonoverlapping(ptr, p.as_mut_ptr(), pl);
-        x ^ u128::from_le_bytes(p)
-    };
-    let x = x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128;
-    let e = x.wrapping_mul(K);
-    let [a, b] = [(e >> 64) as u64, e as u64];
+) -> Option<u8> {
+    let [a, b] = hash128(name, K);
     let g = (a >> 32) as u32;
     let f1 = a as u32;
     let f2 = b as u32;
-    let (d1, d2) = unsafe { *disps.get_unchecked((g % N) as usize) };
-    d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % M
+    let (d1, d2) = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % (M as u32);
+    let v = unsafe { *vals.get_unchecked(index as usize) };
+    let packed = unsafe { u64::from_le_bytes(*names.add(8 * v as usize).cast::<[u8; 8]>()) };
+    let len = (packed >> 32) as usize;
+    let offset = (packed as u32) as usize;
+    let k = unsafe { core::slice::from_raw_parts(names.add(offset), len) };
+    if name == k { Some(v) } else { None }
 }
 
-impl NameMap<u16> {
-    fn get<const K: u128, const N: u32, const M: u32>(&self, name: &[u8]) -> Option<u16> {
-        let index = hash::<K, N, M>(name, self.disps);
-        let v = unsafe { *self.vals.get_unchecked(index as usize) };
-        let packed =
-            unsafe { u64::from_le_bytes(*self.names.add(8 * v as usize).cast::<[u8; 8]>()) };
-        let len = (packed >> 32) as usize;
-        let offset = (packed as u32) as usize;
-        let k = unsafe { core::slice::from_raw_parts(self.names.add(offset), len) };
-        if name == k { Some(v) } else { None }
-    }
-}
-
-impl NameMap<u8> {
-    fn get<const K: u128, const N: u32, const M: u32>(&self, name: &[u8]) -> Option<u8> {
-        let index = hash::<K, N, M>(name, self.disps);
-        let v = unsafe { *self.vals.get_unchecked(index as usize) };
-        let packed =
-            unsafe { u64::from_le_bytes(*self.names.add(8 * v as usize).cast::<[u8; 8]>()) };
-        let len = (packed >> 32) as usize;
-        let offset = (packed as u32) as usize;
-        let k = unsafe { core::slice::from_raw_parts(self.names.add(offset), len) };
-        if name == k { Some(v) } else { None }
-    }
+fn name_u16<const K: u64, const N: usize, const M: usize>(
+    disps: [(u32, u32); N],
+    names: *const u8,
+    vals: [u16; M],
+    name: &[u8],
+) -> Option<u16> {
+    let [a, b] = hash128(name, K);
+    let g = (a >> 32) as u32;
+    let f1 = a as u32;
+    let f2 = b as u32;
+    let (d1, d2) = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
+    let index = (index % (M as u32)) as usize;
+    let v = unsafe { *vals.get_unchecked(index) };
+    let packed = unsafe { u64::from_le_bytes(*names.add(8 * v as usize).cast::<[u8; 8]>()) };
+    let len = (packed >> 32) as usize;
+    let offset = (packed as u32) as usize;
+    let k = unsafe { core::slice::from_raw_parts(names.add(offset), len) };
+    if name == k { Some(v) } else { None }
 }
 
 fn make_block_state(
@@ -714,10 +696,11 @@ fn test_block_state() {
 
     let b = x.to_block();
     assert_eq!(b.name(), "white_concrete");
-    assert_eq!(Some(b), block::parse(b"white_concrete"));
+    assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
-    assert_eq!(block::air.name(), "air");
-    assert_eq!(Some(block::air), block::parse(b"air"));
+    let b = block::air;
+    assert_eq!(b.name(), "air");
+    assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
     let x = block::air.state_default();
     assert_eq!(x.side_solid_full(), Some(0));
@@ -728,7 +711,7 @@ fn test_block_state() {
     let x = encode_state!(oak_sapling(oak_sapling::new()));
     let b = x.to_block();
     assert_eq!(b.name(), "oak_sapling");
-    assert_eq!(Some(b), block::parse(b"oak_sapling"));
+    assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
     assert_eq!(x.side_solid_full(), Some(0));
     assert_eq!(x.side_solid_rigid(), Some(0));
