@@ -1,5 +1,4 @@
 use crate::{ByteArray, GameProfile, Ident, Rest, Utf8};
-use alloc::alloc::{Allocator, Global};
 use mser::V32;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -16,8 +15,8 @@ pub struct Hello<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct LoginFinished<'a, A: Allocator = Global> {
-    pub game_profile: GameProfile<'a, A>,
+pub struct LoginFinished<'a> {
+    pub game_profile: GameProfile<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -1,4 +1,3 @@
-use alloc::alloc::Allocator;
 use minecraft_data::{clientbound__configuration, clientbound__login, clientbound__status};
 
 pub mod common;
@@ -11,24 +10,6 @@ pub mod status;
 macro_rules! packets {
     ($m:ty,$($rest:tt)*) => {
         packets!(@munch $m; $($rest)*);
-    };
-    (@munch $m:ty;
-        $type:ty where Allocator => $variant:path,
-        $($tail:tt)*
-    ) => {
-        #[automatically_derived]
-        impl<A: Allocator> crate::types::Id<$m> for $type {
-            const ID: $m = $variant;
-        }
-        packets!(@munch $m; $($tail)*);
-    };
-    (@munch $m:ty;
-        $type:ty where Allocator => $variant:path
-    ) => {
-        #[automatically_derived]
-        impl<A: Allocator> crate::types::Id<$m> for $type {
-            const ID: $m = $variant;
-        }
     };
     (@munch $m:ty;
         $type:ty => $variant:path,
@@ -63,7 +44,7 @@ packets! {
     clientbound__login,
     login::LoginDisconnect<'_> => clientbound__login::login_disconnect,
     login::Hello<'_> => clientbound__login::hello,
-    login::LoginFinished<'_, A> where Allocator => clientbound__login::login_finished,
+    login::LoginFinished<'_>  => clientbound__login::login_finished,
     login::LoginCompression => clientbound__login::login_compression,
     login::CustomQuery<'_> => clientbound__login::custom_query,
     cookie::CookieRequest<'_> => clientbound__login::cookie_request,

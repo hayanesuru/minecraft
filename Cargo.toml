@@ -1,5 +1,5 @@
 [workspace]
-members = ["data", "ser", "ser_macro"]
+members = ["data", "ser", "ser_macro", "protocol"]
 resolver = "2"
 
 [workspace.package]

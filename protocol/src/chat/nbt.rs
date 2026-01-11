@@ -1,5 +1,5 @@
 use super::*;
-use crate::nbt::{Kv, ListInfo, RefStringTag, StringTag, TagType};
+use crate::nbt::{Kv, ListInfo, MapCodec, MapReader, RefStringTag, StringTag, TagType, read_map};
 use mser::{Error, Read, UnsafeWriter, Write};
 
 const STRING: TagType = TagType::String;
@@ -7,7 +7,7 @@ const LIST: TagType = TagType::List;
 const COMPOUND: TagType = TagType::Compound;
 const END: TagType = TagType::End;
 
-const fn content_type<A: Allocator>(content: &Content<A>) -> &'static [u8] {
+const fn content_type(content: &Content) -> &'static [u8] {
     match content {
         Content::Literal { .. } => b"text",
         Content::Translatable { .. } => b"translatable",
@@ -19,7 +19,7 @@ const fn content_type<A: Allocator>(content: &Content<A>) -> &'static [u8] {
     }
 }
 
-const fn nbt_type<A: Allocator>(content: &NbtContent<A>) -> &'static [u8] {
+const fn nbt_type(content: &NbtContent) -> &'static [u8] {
     match content {
         NbtContent::Block { .. } => b"block",
         NbtContent::Entity { .. } => b"entity",
@@ -27,7 +27,7 @@ const fn nbt_type<A: Allocator>(content: &NbtContent<A>) -> &'static [u8] {
     }
 }
 
-const fn object_type<A: Allocator>(content: &ObjectContents<A>) -> &'static [u8] {
+const fn object_type(content: &ObjectContents) -> &'static [u8] {
     match content {
         ObjectContents::Atlas {
             atlas: _,
@@ -41,10 +41,10 @@ fn mutf8(n: &[u8]) -> StringTagRaw<'_> {
     StringTagRaw::new_unchecked(n)
 }
 
-unsafe fn write_rec<A: Allocator>(
-    content: &Content<A>,
-    style: &Style<A>,
-    children: &[Component<A>],
+unsafe fn write_rec(
+    content: &Content,
+    style: &Style,
+    children: &[Component],
     w: &mut UnsafeWriter,
 ) {
     unsafe {
@@ -67,7 +67,7 @@ unsafe fn write_rec<A: Allocator>(
             if len != 0 {
                 Kv(TRANSLATE_WITH, ListInfo(COMPOUND, len as _)).write(w);
                 for arg in args {
-                    arg.write_ty(w);
+                    arg.write_kv(w);
                 }
             }
         },
@@ -137,7 +137,7 @@ unsafe fn write_rec<A: Allocator>(
         if len != 0 {
             Kv(EXTRA, ListInfo(COMPOUND, len as _)).write(w);
             for child in children {
-                child.write_ty(w);
+                child.write_kv(w);
             }
         }
 
@@ -150,49 +150,45 @@ unsafe fn write_rec<A: Allocator>(
     }
 }
 
-fn write_rec_len<A: Allocator>(
-    content: &Content<A>,
-    style: &Style<A>,
-    children: &[Component<A>],
-) -> usize {
+fn write_rec_len(content: &Content, style: &Style, children: &[Component]) -> usize {
     let mut w = 0usize;
-    w += Kv(TYPE, mutf8(content_type(content))).sz();
+    w += Kv(TYPE, mutf8(content_type(content))).len_s();
     match content {
         Content::Literal { content } => {
-            w += Kv(TEXT, content).sz();
+            w += Kv(TEXT, content).len_s();
         }
         Content::Translatable {
             key,
             fallback,
             args,
         } => {
-            w += Kv(TRANSLATE, key).sz();
+            w += Kv(TRANSLATE, key).len_s();
             if let Some(fallback) = fallback {
-                w += Kv(TRANSLATE_FALLBACK, fallback).sz();
+                w += Kv(TRANSLATE_FALLBACK, fallback).len_s();
             }
             let len = args.len();
             if len != 0 {
-                w += Kv(TRANSLATE_WITH, ListInfo(COMPOUND, len as _)).sz();
+                w += Kv(TRANSLATE_WITH, ListInfo(COMPOUND, len as _)).len_s();
                 for arg in args {
-                    w += arg.ty_sz();
+                    w += arg.len_kv();
                 }
             }
         }
         Content::Score { name, objective } => {
-            w += COMPOUND.sz();
-            w += mutf8(SCORE).sz();
-            w += Kv(SCORE_NAME, name).sz();
-            w += Kv(SCORE_OBJECTIVE, objective).sz();
-            w += END.sz();
+            w += COMPOUND.len_s();
+            w += mutf8(SCORE).len_s();
+            w += Kv(SCORE_NAME, name).len_s();
+            w += Kv(SCORE_OBJECTIVE, objective).len_s();
+            w += END.len_s();
         }
         Content::Selector { pattern, separator } => {
-            w += Kv(SELECTOR, pattern).sz();
+            w += Kv(SELECTOR, pattern).len_s();
             if let Some(separator) = separator.as_deref() {
-                w += Kv(SEPARATOR, separator).sz();
+                w += Kv(SEPARATOR, separator).len_s();
             }
         }
         Content::Keybind { keybind } => {
-            w += Kv(KEYBIND, keybind).sz();
+            w += Kv(KEYBIND, keybind).len_s();
         }
         Content::Nbt {
             nbt_path,
@@ -200,40 +196,40 @@ fn write_rec_len<A: Allocator>(
             separator,
             content,
         } => {
-            w += Kv(NBT_PATH, nbt_path).sz();
+            w += Kv(NBT_PATH, nbt_path).len_s();
             if *interpret {
-                w += Kv(NBT_INTERPRET, *interpret).sz();
+                w += Kv(NBT_INTERPRET, *interpret).len_s();
             }
             if let Some(separator) = separator.as_deref() {
-                w += Kv(SEPARATOR, separator).sz();
+                w += Kv(SEPARATOR, separator).len_s();
             }
-            w += Kv(NBT_SOURCE, mutf8(nbt_type(content))).sz();
+            w += Kv(NBT_SOURCE, mutf8(nbt_type(content))).len_s();
             match content {
                 NbtContent::Block { pos } => {
-                    w += Kv(NBT_BLOCK, pos).sz();
+                    w += Kv(NBT_BLOCK, pos).len_s();
                 }
                 NbtContent::Entity { selector } => {
-                    w += Kv(NBT_ENTITY, selector).sz();
+                    w += Kv(NBT_ENTITY, selector).len_s();
                 }
                 NbtContent::Storage { storage } => {
-                    w += Kv(NBT_STORAGE, storage).sz();
+                    w += Kv(NBT_STORAGE, storage).len_s();
                 }
             }
         }
         Content::Object { content } => {
-            w += Kv(OBJECT_TYPE, mutf8(object_type(content))).sz();
+            w += Kv(OBJECT_TYPE, mutf8(object_type(content))).len_s();
             match content {
                 ObjectContents::Atlas { atlas, sprite } => {
                     let atlas = atlas.as_ident();
                     if atlas != DEFAULT_ATLAS {
-                        w += Kv(OBJECT_ATLAS, atlas).sz();
+                        w += Kv(OBJECT_ATLAS, atlas).len_s();
                     }
-                    w += Kv(OBJECT_SPRITE, sprite.as_ident()).sz();
+                    w += Kv(OBJECT_SPRITE, sprite.as_ident()).len_s();
                 }
                 ObjectContents::Player { player, hat } => {
-                    w += Kv(OBJECT_PLAYER, &**player).sz();
+                    w += Kv(OBJECT_PLAYER, &**player).len_s();
                     if !hat {
-                        w += Kv(OBJECT_HAT, *hat).sz();
+                        w += Kv(OBJECT_HAT, *hat).len_s();
                     }
                 }
             }
@@ -242,62 +238,118 @@ fn write_rec_len<A: Allocator>(
 
     let len = children.len();
     if len != 0 {
-        w += Kv(EXTRA, ListInfo(COMPOUND, len as _)).sz();
+        w += Kv(EXTRA, ListInfo(COMPOUND, len as _)).len_s();
         for child in children {
-            w += child.ty_sz();
+            w += child.len_kv();
         }
     }
 
     if let Some(color) = style.color {
         let mut buf = [0; 7];
-        w += Kv(COLOR, mutf8(color.name(&mut buf).as_bytes())).sz();
+        w += Kv(COLOR, mutf8(color.name(&mut buf).as_bytes())).len_s();
     }
-    w += END.sz();
+    w += END.len_s();
 
     w
 }
 
-fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
-    let mut content: Option<ContentB> = None;
-    let mut style = Style::new();
-    let mut children = Vec::new();
-    let mut separator: Option<Box<Component>> = None;
-    loop {
-        let t1 = TagType::read(buf)?;
-        if t1 == END {
-            let content = match content {
-                Some(x) => match x.into_content(separator) {
-                    Some(x) => x,
-                    None => return Err(Error),
-                },
-                None => Content::Literal {
-                    content: BoxStr::empty(),
-                },
-            };
-            return Ok(Component {
+impl Write for Component {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            let Self {
                 content,
                 style,
                 children,
-            });
+            } = self;
+            if let Content::Literal { content } = content
+                && style.is_empty()
+                && children.is_empty()
+            {
+                RefStringTag(content).write(w);
+                return;
+            }
+            COMPOUND.write(w);
+            write_rec(content, style, children, w);
         }
-        let name = match cast128(StringTagRaw::read(buf)?.inner()) {
-            Some(x) => x,
-            None => return Err(Error),
-        };
-        match name {
+    }
+
+    fn len_s(&self) -> usize {
+        let mut w = 0usize;
+        let Self {
+            content,
+            style,
+            children,
+        } = self;
+        if let Content::Literal { content } = content
+            && style.is_empty()
+            && children.is_empty()
+        {
+            w += RefStringTag(content).len_s();
+            return w;
+        }
+        w += COMPOUND.len_s();
+        w += write_rec_len(content, style, children);
+        w
+    }
+}
+
+impl Component {
+    pub fn read_ty(buf: &mut &[u8], ty: TagType) -> Result<Component, Error> {
+        match ty {
+            STRING => Ok(Component {
+                children: Vec::new(),
+                style: Style::new(),
+                content: Content::Literal {
+                    content: StringTag::read(buf)?.0,
+                },
+            }),
+            LIST => {
+                let ListInfo(ty, len) = ListInfo::read(buf)?;
+                if ty == COMPOUND {
+                    let mut children = Vec::new();
+                    for _ in 0..len {
+                        children.push(Self::read_kv(buf)?);
+                    }
+                    Ok(Component {
+                        children,
+                        style: Style::new(),
+                        content: Content::Literal {
+                            content: BoxStr::empty(),
+                        },
+                    })
+                } else {
+                    Err(Error)
+                }
+            }
+            COMPOUND => Self::read_kv(buf),
+            _ => Err(Error),
+        }
+    }
+}
+
+struct Reader {
+    content: Option<ContentB>,
+    style: Style,
+    children: Vec<Component>,
+    separator: Option<Box<Component>>,
+}
+
+impl MapReader<Component> for Reader {
+    fn visit(&mut self, ty: TagType, k: &str, buf: &mut &[u8]) -> Result<(), Error> {
+        match cast128(k.as_bytes())? {
             TEXT_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
-                    None => content = Some(ContentB::Literal { content: x }),
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
+                    None => self.content = Some(ContentB::Literal { content: x }),
                     Some(ContentB::Literal { content }) => *content = x,
                     _ => return Err(Error),
                 }
             }
             TRANSLATE_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Translatable {
+                        self.content = Some(ContentB::Translatable {
                             key: Some(x),
                             fallback: None,
                             args: Vec::new(),
@@ -312,10 +364,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             TRANSLATE_FALLBACK_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Translatable {
+                        self.content = Some(ContentB::Translatable {
                             key: None,
                             fallback: Some(x),
                             args: Vec::new(),
@@ -331,20 +383,20 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
             }
             TRANSLATE_WITH_H => {
                 let mut args = Vec::new();
-                match t1 {
+                match ty {
                     LIST => match ListInfo::read(buf)? {
                         ListInfo(COMPOUND, len) => {
                             for _ in 0..len {
-                                args.push(read_rec_compound(buf)?);
+                                args.push(Component::read_kv(buf)?);
                             }
                         }
                         _ => return Err(Error),
                     },
                     _ => return Err(Error),
                 };
-                match content.as_mut() {
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Translatable {
+                        self.content = Some(ContentB::Translatable {
                             key: None,
                             fallback: None,
                             args,
@@ -361,7 +413,7 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
             SCORE_H => {
                 let mut name: Option<BoxStr> = None;
                 let mut objective: Option<BoxStr> = None;
-                match t1 {
+                match ty {
                     COMPOUND => loop {
                         let t2 = TagType::read(buf)?;
                         if t2 == END {
@@ -387,8 +439,8 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     Some(objective) => objective,
                     None => return Err(Error),
                 };
-                match content.as_mut() {
-                    None => content = Some(ContentB::Score { name, objective }),
+                match self.content.as_mut() {
+                    None => self.content = Some(ContentB::Score { name, objective }),
                     Some(ContentB::Score {
                         name: x,
                         objective: y,
@@ -400,29 +452,29 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             SELECTOR_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
-                    None => content = Some(ContentB::Selector { pattern: x }),
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
+                    None => self.content = Some(ContentB::Selector { pattern: x }),
                     Some(ContentB::Selector { pattern }) => *pattern = x,
                     _ => return Err(Error),
                 }
             }
             SEPARATOR_H => {
-                separator = Some(Box::new(Component::read_ty(buf, t1)?));
+                self.separator = Some(Box::new(Component::read_ty(buf, ty)?));
             }
             KEYBIND_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
-                    None => content = Some(ContentB::Keybind { keybind: x }),
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
+                    None => self.content = Some(ContentB::Keybind { keybind: x }),
                     Some(ContentB::Keybind { keybind }) => *keybind = x,
                     _ => return Err(Error),
                 }
             }
             NBT_PATH_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Nbt {
+                        self.content = Some(ContentB::Nbt {
                             nbt_path: Some(x),
                             interpret: false,
                             content: None,
@@ -437,10 +489,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_INTERPRET_H => {
-                let x = t1.bool(buf)?;
-                match content.as_mut() {
+                let x = ty.bool(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Nbt {
+                        self.content = Some(ContentB::Nbt {
                             nbt_path: None,
                             interpret: x,
                             content: None,
@@ -454,17 +506,17 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     _ => return Err(Error),
                 }
             }
-            NBT_SOURCE_H => match t1 {
+            NBT_SOURCE_H => match ty {
                 TagType::String => {
                     let _ = StringTagRaw::read(buf)?;
                 }
                 _ => return Err(Error),
             },
             NBT_BLOCK_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Nbt {
+                        self.content = Some(ContentB::Nbt {
                             nbt_path: None,
                             interpret: false,
                             content: Some(NbtContent::Block { pos: x }),
@@ -479,10 +531,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_ENTITY_H => {
-                let x = t1.string(buf)?;
-                match content.as_mut() {
+                let x = ty.string(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Nbt {
+                        self.content = Some(ContentB::Nbt {
                             nbt_path: None,
                             interpret: false,
                             content: Some(NbtContent::Entity { selector: x }),
@@ -497,10 +549,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             NBT_STORAGE_H => {
-                let x = t1.ident(buf)?;
-                match content.as_mut() {
+                let x = ty.ident(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Nbt {
+                        self.content = Some(ContentB::Nbt {
                             nbt_path: None,
                             interpret: false,
                             content: Some(NbtContent::Storage { storage: x }),
@@ -514,17 +566,17 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     _ => return Err(Error),
                 }
             }
-            OBJECT_TYPE_H => match t1 {
+            OBJECT_TYPE_H => match ty {
                 TagType::String => {
                     let _ = StringTagRaw::read(buf)?;
                 }
                 _ => return Err(Error),
             },
             OBJECT_ATLAS_H => {
-                let x = t1.ident(buf)?;
-                match content.as_mut() {
+                let x = ty.ident(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Object {
+                        self.content = Some(ContentB::Object {
                             content: ObjectContentB::Atlas {
                                 atlas: Some(x),
                                 sprite: None,
@@ -538,10 +590,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             OBJECT_SPRITE_H => {
-                let x = t1.ident(buf)?;
-                match content.as_mut() {
+                let x = ty.ident(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Object {
+                        self.content = Some(ContentB::Object {
                             content: ObjectContentB::Atlas {
                                 atlas: None,
                                 sprite: Some(x),
@@ -555,13 +607,13 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             OBJECT_PLAYER_H => {
-                let x = match t1 {
-                    TagType::Compound => Box::new(ResolvableProfile::read_ty(buf)?),
+                let x = match ty {
+                    TagType::Compound => Box::new(ResolvableProfile::read_kv(buf)?),
                     _ => return Err(Error),
                 };
-                match content.as_mut() {
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Object {
+                        self.content = Some(ContentB::Object {
                             content: ObjectContentB::Player {
                                 player: Some(x),
                                 hat: false,
@@ -575,10 +627,10 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 }
             }
             OBJECT_HAT_H => {
-                let x = t1.bool(buf)?;
-                match content.as_mut() {
+                let x = ty.bool(buf)?;
+                match self.content.as_mut() {
                     None => {
-                        content = Some(ContentB::Object {
+                        self.content = Some(ContentB::Object {
                             content: ObjectContentB::Player {
                                 player: None,
                                 hat: x,
@@ -591,17 +643,17 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                     _ => return Err(Error),
                 }
             }
-            TYPE_H => match t1 {
+            TYPE_H => match ty {
                 TagType::String => {
                     let _ = StringTagRaw::read(buf)?;
                 }
                 _ => return Err(Error),
             },
-            EXTRA_H => match t1 {
+            EXTRA_H => match ty {
                 LIST => match ListInfo::read(buf)? {
                     ListInfo(COMPOUND, len) => {
                         for _ in 0..len {
-                            children.push(read_rec_compound(buf)?);
+                            self.children.push(Component::read_kv(buf)?);
                         }
                     }
                     _ => return Err(Error),
@@ -609,100 +661,54 @@ fn read_rec_compound(buf: &mut &[u8]) -> Result<Component, Error> {
                 _ => return Err(Error),
             },
             COLOR_H => {
-                let color = t1.string(buf)?;
-                style.color = match TextColor::parse(color.as_bytes()) {
+                let color = ty.string(buf)?;
+                self.style.color = match TextColor::parse(color.as_bytes()) {
                     Some(x) => Some(x),
                     None => return Err(Error),
                 };
             }
             _ => return Err(Error),
         }
-    }
-}
-
-impl<A: Allocator> Write for Component<A> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            let Self {
-                content,
-                style,
-                children,
-            } = self;
-            if let Content::Literal { content } = content
-                && style.is_empty()
-                && children.is_empty()
-            {
-                RefStringTag(content).write(w);
-                return;
-            }
-            COMPOUND.write(w);
-            write_rec(content, style, children, w);
-        }
+        Ok(())
     }
 
-    fn sz(&self) -> usize {
-        let mut w = 0usize;
-        let Self {
-            content,
-            style,
-            children,
-        } = self;
-        if let Content::Literal { content } = content
-            && style.is_empty()
-            && children.is_empty()
-        {
-            w += RefStringTag(content).sz();
-            return w;
-        }
-        w += COMPOUND.sz();
-        w += write_rec_len(content, style, children);
-        w
-    }
-}
-
-impl Component {
-    pub fn read_ty(buf: &mut &[u8], ty: TagType) -> Result<Component, Error> {
-        match ty {
-            STRING => Ok(Component {
-                children: Vec::new(),
-                style: Style::new(),
-                content: Content::Literal {
-                    content: StringTag::read(buf)?.0,
+    fn end(self) -> Result<Component, Error> {
+        Ok(Component {
+            content: match self.content {
+                Some(x) => match x.into_content(self.separator) {
+                    Some(x) => x,
+                    None => return Err(Error),
                 },
-            }),
-            LIST => {
-                let ListInfo(ty, len) = ListInfo::read(buf)?;
-                if ty == COMPOUND {
-                    let mut children = Vec::new();
-                    for _ in 0..len {
-                        children.push(read_rec_compound(buf)?);
-                    }
-                    Ok(Component {
-                        children,
-                        style: Style::new(),
-                        content: Content::Literal {
-                            content: BoxStr::empty(),
-                        },
-                    })
-                } else {
-                    Err(Error)
-                }
-            }
-            COMPOUND => read_rec_compound(buf),
-            _ => Err(Error),
-        }
+                None => Content::Literal {
+                    content: BoxStr::empty(),
+                },
+            },
+            style: self.style,
+            children: self.children,
+        })
     }
 }
 
-impl<A: Allocator> Component<A> {
-    /// # Safety
-    pub unsafe fn write_ty(&self, w: &mut UnsafeWriter) {
+impl MapCodec for Component {
+    fn read_kv(buf: &mut &[u8]) -> Result<Self, Error> {
+        read_map(
+            Reader {
+                content: None,
+                style: Style::new(),
+                children: Vec::new(),
+                separator: None,
+            },
+            buf,
+        )
+    }
+
+    unsafe fn write_kv(&self, w: &mut UnsafeWriter) {
         unsafe {
             write_rec(&self.content, &self.style, &self.children, w);
         }
     }
 
-    pub fn ty_sz(&self) -> usize {
+    fn len_kv(&self) -> usize {
         write_rec_len(&self.content, &self.style, &self.children)
     }
 }

@@ -2,20 +2,20 @@ use super::*;
 use crate::BoxStr;
 
 #[derive(Clone)]
-pub enum List<A: Allocator = Global> {
+pub enum List {
     None,
-    Byte(Vec<i8, A>),
-    Short(Vec<i16, A>),
-    Int(Vec<i32, A>),
-    Long(Vec<i64, A>),
-    Float(Vec<f32, A>),
-    Double(Vec<f64, A>),
-    String(Vec<BoxStr<A>, A>),
-    ByteArray(Vec<Vec<i8>, A>),
-    IntArray(Vec<Vec<i32>, A>),
-    LongArray(Vec<Vec<i64>, A>),
-    List(Vec<List<A>, A>),
-    Compound(Vec<Compound<A>, A>),
+    Byte(Vec<i8>),
+    Short(Vec<i16>),
+    Int(Vec<i32>),
+    Long(Vec<i64>),
+    Float(Vec<f32>),
+    Double(Vec<f64>),
+    String(Vec<BoxStr>),
+    ByteArray(Vec<Vec<i8>>),
+    IntArray(Vec<Vec<i32>>),
+    LongArray(Vec<Vec<i64>>),
+    List(Vec<List>),
+    Compound(Vec<Compound>),
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -115,7 +115,7 @@ impl From<Vec<Compound>> for List {
     }
 }
 
-impl<A: Allocator> List<A> {
+impl List {
     pub fn list_info(&self) -> ListInfo {
         match self {
             Self::None => ListInfo(TagType::End, 0),
@@ -190,7 +190,7 @@ impl Write for List {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         5 + match self {
             Self::None => 0,
             Self::Byte(x) => x.len(),
@@ -199,12 +199,12 @@ impl Write for List {
             Self::Long(x) => x.len() * 8,
             Self::Float(x) => x.len() * 4,
             Self::Double(x) => x.len() * 8,
-            Self::String(x) => x.iter().map(|x| RefStringTag(x).sz()).sum::<usize>(),
+            Self::String(x) => x.iter().map(|x| RefStringTag(x).len_s()).sum::<usize>(),
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
-            Self::List(x) => x.iter().sz(),
-            Self::Compound(x) => x.iter().sz(),
+            Self::List(x) => x.iter().len_s(),
+            Self::Compound(x) => x.iter().len_s(),
         }
     }
 }

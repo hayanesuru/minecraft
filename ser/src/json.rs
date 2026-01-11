@@ -49,7 +49,7 @@ impl Write for JsonStr<'_> {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let mut cur = 0usize;
         let mut len = 0usize;
         unsafe {

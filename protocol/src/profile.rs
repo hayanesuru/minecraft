@@ -1,7 +1,6 @@
-mod binrary;
+mod nbt;
 
 use crate::str::BoxStr;
-use alloc::alloc::{Allocator, Global};
 use alloc::vec::Vec;
 use uuid::Uuid;
 
@@ -10,32 +9,32 @@ const ID: &[u8] = b"id";
 const PROPERTIES: &[u8] = b"properties";
 
 #[derive(Clone)]
-pub struct ResolvableProfile<A: Allocator = Global> {
-    pub name: Option<BoxStr<A>>,
+pub struct ResolvableProfile {
+    pub name: Option<BoxStr>,
     pub id: Option<Uuid>,
-    pub properties: Vec<Property<A>, A>,
-    pub patch: ProfilePatch<A>,
+    pub properties: Vec<Property>,
+    pub patch: ProfilePatch,
 }
 
 #[derive(Clone)]
-pub struct GameProfile<A: Allocator = Global> {
-    pub name: BoxStr<A>,
+pub struct GameProfile {
+    pub name: BoxStr,
     pub id: Uuid,
-    pub properties: Vec<Property<A>, A>,
-    pub patch: ProfilePatch<A>,
+    pub properties: Vec<Property>,
+    pub patch: ProfilePatch,
 }
 
 #[derive(Clone)]
-pub struct Property<A: Allocator = Global> {
-    pub name: BoxStr<A>,
-    pub value: BoxStr<A>,
-    pub signature: Option<BoxStr<A>>,
+pub struct Property {
+    pub name: BoxStr,
+    pub value: BoxStr,
+    pub signature: Option<BoxStr>,
 }
 
 #[derive(Clone)]
-pub struct ProfilePatch<A: Allocator = Global> {
-    pub texture: Option<BoxStr<A>>,
-    pub cape: Option<BoxStr<A>>,
-    pub elytra: Option<BoxStr<A>>,
-    pub model: Option<BoxStr<A>>,
+pub struct ProfilePatch {
+    pub texture: Option<BoxStr>,
+    pub cape: Option<BoxStr>,
+    pub elytra: Option<BoxStr>,
+    pub model: Option<BoxStr>,
 }

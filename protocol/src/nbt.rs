@@ -5,15 +5,81 @@ mod stringify;
 pub use self::list::{List, ListInfo};
 pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
-use crate::chat::Component;
-use crate::profile::{Property, ResolvableProfile};
+use crate::profile::Property;
 use crate::str::BoxStr;
 use crate::{Bytes, Error, Ident, Identifier, Read, UnsafeWriter, Write};
-use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{decode_mutf8, decode_mutf8_len, is_ascii_mutf8};
+use mser::{decode_mutf8, decode_mutf8_len, is_ascii_mutf8, unlikely};
 use uuid::Uuid;
+
+pub struct Map<T>(pub T);
+
+impl<'a, T: MapCodec> Read<'a> for Map<T> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        match TagType::read(buf) {
+            Ok(TagType::Compound) => match T::read_kv(buf) {
+                Ok(x) => Ok(Map(x)),
+                Err(e) => Err(e),
+            },
+            _ => Err(Error),
+        }
+    }
+}
+
+impl<T: MapCodec> Write for Map<T> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            self.0.write_kv(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        TagType::Compound.len_s() + self.0.len_kv()
+    }
+}
+
+pub trait MapCodec: Sized {
+    fn read_kv(buf: &mut &[u8]) -> Result<Self, Error>;
+    /// # Safety
+    ///
+    /// Must write [`len_kv`] bytes exactly.
+    ///
+    /// [`len_kv`]: MapCodec::len_kv
+    unsafe fn write_kv(&self, w: &mut UnsafeWriter);
+    fn len_kv(&self) -> usize;
+}
+
+pub trait MapReader<T: Sized = Self> {
+    fn visit(&mut self, ty: TagType, k: &str, buf: &mut &[u8]) -> Result<(), Error>;
+    fn end(self) -> Result<T, Error>;
+}
+
+pub fn read_map<T, R: MapReader<T>>(mut r: R, buf: &mut &[u8]) -> Result<T, Error> {
+    let mut temp = Vec::new();
+    loop {
+        let ty = TagType::read(buf)?;
+        if unlikely(matches!(ty, TagType::End)) {
+            return r.end();
+        }
+        let len = buf.u16()? as usize;
+        let a = buf.slice(len)?;
+        let k = if is_ascii_mutf8(a) {
+            unsafe { core::str::from_utf8_unchecked(a) }
+        } else {
+            let len = decode_mutf8_len(a)?;
+            temp.clear();
+            temp.reserve_exact(len);
+            unsafe {
+                mser::write_unchecked(temp.as_mut_ptr(), &(DecodeMutf8(a, len)));
+                temp.set_len(len);
+                core::str::from_utf8_unchecked(&temp)
+            }
+        };
+        r.visit(ty, k, buf)?;
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -36,17 +102,36 @@ pub enum TagType {
 #[must_use]
 pub struct Kv<'a, T>(pub &'a [u8], pub T);
 
-impl<'a, A: Allocator> Write for Kv<'a, &'a BoxStr<A>> {
+pub struct End;
+
+impl Write for End {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe { TagType::End.write(w) }
+    }
+
+    fn len_s(&self) -> usize {
+        TagType::End.len_s()
+    }
+}
+
+impl<'a> Read<'a> for End {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        match TagType::read(buf) {
+            Ok(TagType::End) => Ok(Self),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl<'a> Write for Kv<'a, &'a BoxStr> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            TagType::String.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            RefStringTag(self.1).write(w);
+            Kv(self.0, self.1.as_str()).write(w);
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + RefStringTag(self.1).sz()
+    fn len_s(&self) -> usize {
+        Kv(self.0, self.1.as_str()).len_s()
     }
 }
 
@@ -59,8 +144,10 @@ impl<'a> Write for Kv<'a, &'a str> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + RefStringTag(self.1).sz()
+    fn len_s(&self) -> usize {
+        TagType::String.len_s()
+            + StringTagRaw::new_unchecked(self.0).len_s()
+            + RefStringTag(self.1).len_s()
     }
 }
 
@@ -73,8 +160,8 @@ impl<'a> Write for Kv<'a, ListInfo> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::List.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    fn len_s(&self) -> usize {
+        TagType::List.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
     }
 }
 
@@ -87,8 +174,8 @@ impl<'a> Write for Kv<'a, StringTagRaw<'a>> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    fn len_s(&self) -> usize {
+        TagType::String.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
     }
 }
 
@@ -101,8 +188,8 @@ impl<'a> Write for Kv<'a, bool> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::Byte.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.sz()
+    fn len_s(&self) -> usize {
+        TagType::Byte.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
     }
 }
 
@@ -115,12 +202,14 @@ impl<'a> Write for Kv<'a, Ident<'a>> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::String.sz() + StringTagRaw::new_unchecked(self.0).sz() + IdentifierTag(self.1).sz()
+    fn len_s(&self) -> usize {
+        TagType::String.len_s()
+            + StringTagRaw::new_unchecked(self.0).len_s()
+            + IdentifierTag(self.1).len_s()
     }
 }
 
-impl<'a, A: Allocator> Write for Kv<'a, &'a Identifier<A>> {
+impl<'a> Write for Kv<'a, &'a Identifier> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             TagType::String.write(w);
@@ -129,38 +218,24 @@ impl<'a, A: Allocator> Write for Kv<'a, &'a Identifier<A>> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::String.sz()
-            + StringTagRaw::new_unchecked(self.0).sz()
-            + IdentifierTag(self.1.as_ident()).sz()
+    fn len_s(&self) -> usize {
+        TagType::String.len_s()
+            + StringTagRaw::new_unchecked(self.0).len_s()
+            + IdentifierTag(self.1.as_ident()).len_s()
     }
 }
 
-impl<'a, A: Allocator> Write for Kv<'a, &'a Component<A>> {
+impl<'a, T: MapCodec> Write for Kv<'a, &'a T> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             TagType::Compound.write(w);
             StringTagRaw::new_unchecked(self.0).write(w);
-            self.1.write_ty(w);
+            self.1.write_kv(w);
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
-    }
-}
-
-impl<'a, A: Allocator> Write for Kv<'a, &'a ResolvableProfile<A>> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Compound.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            self.1.write_ty(w);
-        }
-    }
-
-    fn sz(&self) -> usize {
-        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + self.1.ty_sz()
+    fn len_s(&self) -> usize {
+        TagType::Compound.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_kv()
     }
 }
 
@@ -174,25 +249,39 @@ impl<'a> Write for Kv<'a, Uuid> {
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + 4u32.sz() + 16
+    fn len_s(&self) -> usize {
+        TagType::Compound.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + 4u32.len_s() + 16
     }
 }
 
-impl<'a, A: Allocator> Write for Kv<'a, &'a [Property<A>]> {
+impl<'a> Write for Kv<'a, &'a [Property]> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             TagType::Compound.write(w);
             StringTagRaw::new_unchecked(self.0).write(w);
             for p in self.1 {
-                //
+                Kv(b"name", &p.name).write(w);
+                Kv(b"value", &p.value).write(w);
+                if let Some(ref signature) = p.signature {
+                    Kv(b"signature", signature).write(w);
+                }
             }
             TagType::End.write(w);
         }
     }
 
-    fn sz(&self) -> usize {
-        TagType::Compound.sz() + StringTagRaw::new_unchecked(self.0).sz() + TagType::End.sz()
+    fn len_s(&self) -> usize {
+        let mut w = 0;
+        for p in self.1 {
+            w += Kv(b"name", &p.name).len_s();
+            w += Kv(b"value", &p.value).len_s();
+            if let Some(ref signature) = p.signature {
+                w += Kv(b"signature", signature).len_s();
+            }
+        }
+        w + TagType::Compound.len_s()
+            + StringTagRaw::new_unchecked(self.0).len_s()
+            + TagType::End.len_s()
     }
 }
 
@@ -298,25 +387,25 @@ impl Write for TagType {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
 
 #[derive(Clone)]
-pub enum Tag<A: Allocator = Global> {
+pub enum Tag {
     Byte(i8),
     Short(i16),
     Int(i32),
     Long(i64),
     Float(f32),
     Double(f64),
-    String(BoxStr<A>),
-    ByteArray(Vec<i8, A>),
-    IntArray(Vec<i32, A>),
-    LongArray(Vec<i64, A>),
-    List(List<A>),
-    Compound(Compound<A>),
+    String(BoxStr),
+    ByteArray(Vec<i8>),
+    IntArray(Vec<i32>),
+    LongArray(Vec<i64>),
+    List(List),
+    Compound(Compound),
 }
 
 impl Write for Tag {
@@ -349,7 +438,7 @@ impl Write for Tag {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1 + match self {
             Tag::Byte(_) => 1,
             Tag::Short(_) => 2,
@@ -357,12 +446,12 @@ impl Write for Tag {
             Tag::Long(_) => 8,
             Tag::Float(_) => 4,
             Tag::Double(_) => 8,
-            Tag::String(x) => RefStringTag(x).sz(),
+            Tag::String(x) => RefStringTag(x).len_s(),
             Tag::ByteArray(x) => 4 + x.len(),
             Tag::IntArray(x) => 4 + x.len() * 4,
             Tag::LongArray(x) => 4 + x.len() * 8,
-            Tag::List(x) => x.sz(),
-            Tag::Compound(x) => x.sz(),
+            Tag::List(x) => x.len_s(),
+            Tag::Compound(x) => x.len_s(),
         }
     }
 }
@@ -509,7 +598,7 @@ impl From<Vec<i64>> for Tag {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct Compound<A: Allocator = Global>(Vec<(BoxStr<A>, Tag), A>);
+pub struct Compound(Vec<(BoxStr, Tag)>);
 
 impl AsRef<[(BoxStr, Tag)]> for Compound {
     #[inline]
@@ -559,10 +648,10 @@ impl Write for Compound {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += RefStringTag(name).sz();
+            w += RefStringTag(name).len_s();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,
@@ -570,12 +659,12 @@ impl Write for Compound {
                 Tag::Long(_) => 8,
                 Tag::Float(_) => 4,
                 Tag::Double(_) => 8,
-                Tag::String(x) => RefStringTag(x).sz(),
+                Tag::String(x) => RefStringTag(x).len_s(),
                 Tag::ByteArray(x) => 4 + x.len(),
                 Tag::IntArray(x) => 4 + x.len() * 4,
                 Tag::LongArray(x) => 4 + x.len() * 8,
-                Tag::List(x) => x.sz(),
-                Tag::Compound(x) => Write::sz(x),
+                Tag::List(x) => x.len_s(),
+                Tag::Compound(x) => Write::len_s(x),
             };
         }
         w
@@ -583,7 +672,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct NamedCompound<A: Allocator = Global>(pub BoxStr<A>, pub Compound<A>);
+pub struct NamedCompound(pub BoxStr, pub Compound);
 
 impl Read<'_> for NamedCompound {
     #[inline]
@@ -607,8 +696,8 @@ impl Write for NamedCompound {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
-        1 + Write::sz(&RefStringTag(self.0.as_str())) + Write::sz(&self.1)
+    fn len_s(&self) -> usize {
+        1 + Write::len_s(&RefStringTag(self.0.as_str())) + Write::len_s(&self.1)
     }
 }
 
@@ -636,8 +725,8 @@ impl Write for UnamedCompound {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
-        1 + Write::sz(&self.0)
+    fn len_s(&self) -> usize {
+        1 + Write::len_s(&self.0)
     }
 }
 
@@ -869,7 +958,7 @@ fn decode_raw(n: &mut &[u8]) -> Result<Compound, Error> {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct StringTag<A: Allocator = Global>(pub BoxStr<A>);
+pub struct StringTag(pub BoxStr);
 
 impl Read<'_> for StringTag {
     #[inline]
@@ -898,7 +987,7 @@ impl Write for DecodeMutf8<'_> {
         unsafe { decode_mutf8(self.0, w).unwrap_unchecked() }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         self.1
     }
 }
@@ -910,7 +999,7 @@ impl Write for StringTag {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
-        RefStringTag(&self.0).sz()
+    fn len_s(&self) -> usize {
+        RefStringTag(&self.0).len_s()
     }
 }

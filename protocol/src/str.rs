@@ -1,14 +1,13 @@
-use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 
 #[repr(transparent)]
 #[derive(Clone)]
-pub struct BoxStr<A: Allocator = Global>(Box<[u8], A>);
+pub struct BoxStr(Box<[u8]>);
 
-impl<A: Allocator> BoxStr<A> {
-    pub fn new(bytes: Box<[u8], A>) -> Option<Self> {
+impl BoxStr {
+    pub fn new(bytes: Box<[u8]>) -> Option<Self> {
         match core::str::from_utf8(&bytes) {
             Ok(_) => Some(Self(bytes)),
             Err(_) => None,
@@ -18,7 +17,7 @@ impl<A: Allocator> BoxStr<A> {
     /// # Safety
     ///
     /// `bytes` must be valid UTF-8.
-    pub unsafe fn new_unchecked(bytes: Box<[u8], A>) -> Self {
+    pub unsafe fn new_unchecked(bytes: Box<[u8]>) -> Self {
         Self(bytes)
     }
 
@@ -41,11 +40,11 @@ impl<A: Allocator> BoxStr<A> {
 
 impl BoxStr {
     pub fn empty() -> Self {
-        unsafe { Self::new_unchecked(Vec::<u8, Global>::new().into_boxed_slice()) }
+        unsafe { Self::new_unchecked(Vec::<u8>::new().into_boxed_slice()) }
     }
 }
 
-impl<A: Allocator> Deref for BoxStr<A> {
+impl Deref for BoxStr {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -53,19 +52,19 @@ impl<A: Allocator> Deref for BoxStr<A> {
     }
 }
 
-impl<A: Allocator> DerefMut for BoxStr<A> {
+impl DerefMut for BoxStr {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { core::str::from_utf8_unchecked_mut(&mut self.0) }
     }
 }
 
-impl<A: Allocator> AsRef<str> for BoxStr<A> {
+impl AsRef<str> for BoxStr {
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
-impl<A: Allocator> AsMut<str> for BoxStr<A> {
+impl AsMut<str> for BoxStr {
     fn as_mut(&mut self) -> &mut str {
         self.as_str_mut()
     }

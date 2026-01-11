@@ -31,7 +31,7 @@ impl<'a> Write for StringTagRaw<'a> {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         2 + self.0.len()
     }
 }
@@ -68,9 +68,9 @@ impl<'a> Write for RefStringTag<'a> {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         if is_ascii_mutf8(self.0.as_bytes()) {
-            StringTagRaw(self.0.as_bytes()).sz()
+            StringTagRaw(self.0.as_bytes()).len_s()
         } else {
             encode_mutf8_len(self.0) + 2
         }
@@ -100,7 +100,7 @@ impl Write for IdentifierTag<'_> {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         2 + self.0.namespace.len() + 1 + self.0.path.len()
     }
 }

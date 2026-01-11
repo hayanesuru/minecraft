@@ -1,8 +1,6 @@
 #![no_std]
-#![feature(allocator_api)]
 
 use crate::str::BoxStr;
-use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Bytes, Error, Read, UnsafeWriter, V21, V32, Write};
@@ -40,7 +38,7 @@ impl Write for ClientIntent {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
@@ -67,8 +65,8 @@ impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
         }
     }
 
-    fn sz(&self) -> usize {
-        V21(self.0.len() as u32).sz() + self.0.len()
+    fn len_s(&self) -> usize {
+        V21(self.0.len() as u32).len_s() + self.0.len()
     }
 }
 
@@ -102,8 +100,8 @@ impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
         }
     }
 
-    fn sz(&self) -> usize {
-        V21(self.0.len() as u32).sz() + self.0.len()
+    fn len_s(&self) -> usize {
+        V21(self.0.len() as u32).len_s() + self.0.len()
     }
 }
 
@@ -119,15 +117,12 @@ impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
 }
 
 #[derive(Clone, Debug)]
-pub enum List<'a, T: 'a, A: Allocator = Global, const MAX: usize = { usize::MAX }>
-where
-    A: 'a,
-{
+pub enum List<'a, T: 'a, const MAX: usize = { usize::MAX }> {
     Borrowed(&'a [T]),
-    Ref(Box<[T], A>),
+    Ref(Box<[T]>),
 }
 
-impl<'a, T: Write + 'a, A: Allocator, const MAX: usize> Write for List<'a, T, A, MAX> {
+impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             let x = match self {
@@ -141,26 +136,26 @@ impl<'a, T: Write + 'a, A: Allocator, const MAX: usize> Write for List<'a, T, A,
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let x = match self {
             Self::Borrowed(x) => x,
             Self::Ref(x) => &x[..],
         };
-        let mut len = V21(x.len() as u32).sz();
+        let mut len = V21(x.len() as u32).len_s();
         for y in x {
-            len += y.sz();
+            len += y.len_s();
         }
         len
     }
 }
 
-impl<'a, T: Read<'a> + 'a, const MAX: usize> Read<'a> for List<'a, T, Global, MAX> {
+impl<'a, T: Read<'a> + 'a, const MAX: usize> Read<'a> for List<'a, T, MAX> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX {
             return Err(Error);
         }
-        let mut vec = Vec::with_capacity_in(usize::min(len, 65536), Global);
+        let mut vec = Vec::with_capacity(usize::min(len, 65536));
         for _ in 0..len {
             vec.push(T::read(buf)?);
         }
@@ -186,20 +181,20 @@ impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
         unsafe { w.write(self.0) }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         self.0.len()
     }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct GameProfile<'a, A: Allocator = Global> {
+pub struct GameProfile<'a> {
     pub id: Uuid,
     pub name: Utf8<'a, 16>,
-    pub peoperties: List<'a, PropertyMap<'a>, A, 16>,
+    pub peoperties: List<'a, PropertyRef<'a>, 16>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct PropertyMap<'a> {
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct PropertyRef<'a> {
     pub name: Utf8<'a, 64>,
     pub value: Utf8<'a, 32767>,
     pub signature: Option<Utf8<'a, 1024>>,
@@ -286,19 +281,19 @@ impl Write for Ident<'_> {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let a = self.namespace.len() + 1 + self.path.len();
-        V21(a as u32).sz() + a
+        V21(a as u32).len_s() + a
     }
 }
 
 #[derive(Clone)]
-pub struct Identifier<A: Allocator = Global> {
-    pub namespace: Option<BoxStr<A>>,
-    pub path: BoxStr<A>,
+pub struct Identifier {
+    pub namespace: Option<BoxStr>,
+    pub path: BoxStr,
 }
 
-impl<A: Allocator> Identifier<A> {
+impl Identifier {
     pub fn as_ident(&self) -> Ident<'_> {
         Ident {
             namespace: match self.namespace.as_deref() {
@@ -311,27 +306,27 @@ impl<A: Allocator> Identifier<A> {
 }
 
 #[derive(Clone)]
-pub struct ResourceKey<A: Allocator = Global> {
-    pub registry_name: Identifier<A>,
-    pub identifier: Identifier<A>,
+pub struct ResourceKey {
+    pub registry_name: Identifier,
+    pub identifier: Identifier,
 }
 
 #[derive(Clone)]
-pub struct TagKey<A: Allocator = Global> {
-    pub registry: ResourceKey<A>,
-    pub location: Identifier<A>,
+pub struct TagKey {
+    pub registry: ResourceKey,
+    pub location: Identifier,
 }
 
 #[derive(Clone)]
-pub enum HolderSet<T, A: Allocator = Global> {
-    Direct(Vec<Holder<T, A>, A>),
-    Named(TagKey<A>),
+pub enum HolderSet<T> {
+    Direct(Vec<Holder<T>>),
+    Named(TagKey),
 }
 
 #[derive(Clone)]
-pub enum Holder<T, A: Allocator = Global> {
+pub enum Holder<T> {
     Direct(T),
-    Reference(ResourceKey<A>),
+    Reference(ResourceKey),
 }
 
 #[test]
@@ -349,8 +344,8 @@ fn test_write() {
     };
 
     let id = packet_id(&packet);
-    let len1 = id.sz();
-    let len2 = packet.sz() + len1;
+    let len1 = id.len_s();
+    let len2 = packet.len_s() + len1;
     let data = unsafe {
         let mut data = alloc::vec::Vec::with_capacity(len2);
         mser::write_unchecked(data.as_mut_ptr(), &id);

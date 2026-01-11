@@ -1,4 +1,4 @@
-mod binary;
+mod nbt;
 
 use crate::dialog::Dialog;
 use crate::item::ItemStack;
@@ -6,10 +6,10 @@ use crate::nbt::StringTagRaw;
 use crate::profile::ResolvableProfile;
 use crate::str::BoxStr;
 use crate::{Holder, Ident, Identifier};
-use alloc::alloc::{Allocator, Global};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use minecraft_data::entity_type;
+use mser::Error;
 use uuid::Uuid;
 
 const TYPE: &[u8] = b"type";
@@ -91,8 +91,12 @@ const COLOR_H: u128 = cast2(COLOR);
 
 const HEX_PREFIX: u8 = b'#';
 
-const fn cast128(n: &[u8]) -> Option<u128> {
-    if n.len() <= 16 { Some(cast2(n)) } else { None }
+const fn cast128(n: &[u8]) -> Result<u128, Error> {
+    if n.len() <= 16 {
+        Ok(cast2(n))
+    } else {
+        Err(Error)
+    }
 }
 
 const fn cast2(n: &[u8]) -> u128 {
@@ -109,86 +113,86 @@ const fn cast2(n: &[u8]) -> u128 {
 }
 
 #[derive(Clone)]
-pub struct Component<A: Allocator = Global> {
-    pub content: Content<A>,
-    pub style: Style<A>,
-    pub children: Vec<Component<A>, A>,
+pub struct Component {
+    pub content: Content,
+    pub style: Style,
+    pub children: Vec<Component>,
 }
 
 #[derive(Clone)]
-pub enum Content<A: Allocator = Global> {
+pub enum Content {
     Literal {
-        content: BoxStr<A>,
+        content: BoxStr,
     },
     Translatable {
-        key: BoxStr<A>,
-        fallback: Option<BoxStr<A>>,
-        args: Vec<Component<A>, A>,
+        key: BoxStr,
+        fallback: Option<BoxStr>,
+        args: Vec<Component>,
     },
     Score {
-        name: BoxStr<A>,
-        objective: BoxStr<A>,
+        name: BoxStr,
+        objective: BoxStr,
     },
     Selector {
-        pattern: BoxStr<A>,
-        separator: Option<Box<Component<A>, A>>,
+        pattern: BoxStr,
+        separator: Option<Box<Component>>,
     },
     Keybind {
-        keybind: BoxStr<A>,
+        keybind: BoxStr,
     },
     Nbt {
-        nbt_path: BoxStr<A>,
+        nbt_path: BoxStr,
         interpret: bool,
-        separator: Option<Box<Component<A>, A>>,
-        content: NbtContent<A>,
+        separator: Option<Box<Component>>,
+        content: NbtContent,
     },
     Object {
-        content: ObjectContents<A>,
+        content: ObjectContents,
     },
 }
 
-pub enum ContentB<A: Allocator = Global> {
+pub enum ContentB {
     Literal {
-        content: BoxStr<A>,
+        content: BoxStr,
     },
     Translatable {
-        key: Option<BoxStr<A>>,
-        fallback: Option<BoxStr<A>>,
-        args: Vec<Component<A>, A>,
+        key: Option<BoxStr>,
+        fallback: Option<BoxStr>,
+        args: Vec<Component>,
     },
     Score {
-        name: BoxStr<A>,
-        objective: BoxStr<A>,
+        name: BoxStr,
+        objective: BoxStr,
     },
     Selector {
-        pattern: BoxStr<A>,
+        pattern: BoxStr,
     },
     Keybind {
-        keybind: BoxStr<A>,
+        keybind: BoxStr,
     },
     Nbt {
-        nbt_path: Option<BoxStr<A>>,
+        nbt_path: Option<BoxStr>,
         interpret: bool,
-        content: Option<NbtContent<A>>,
+        content: Option<NbtContent>,
     },
     Object {
-        content: ObjectContentB<A>,
+        content: ObjectContentB,
     },
 }
 
-pub enum ObjectContentB<A: Allocator = Global> {
+pub enum ObjectContentB {
     Atlas {
-        atlas: Option<Identifier<A>>,
-        sprite: Option<Identifier<A>>,
+        atlas: Option<Identifier>,
+        sprite: Option<Identifier>,
     },
     Player {
-        player: Option<Box<ResolvableProfile<A>, A>>,
+        player: Option<Box<ResolvableProfile>>,
         hat: bool,
     },
 }
 
-impl<A: Allocator> ContentB<A> {
-    pub fn into_content(self, separator: Option<Box<Component<A>, A>>) -> Option<Content<A>> {
+impl ContentB {
+    pub fn into_content(self, separator: Option<Box<Component>>) -> Option<Content> {
         Some(match self {
             ContentB::Literal { content } => Content::Literal { content },
             ContentB::Translatable {
@@ -252,14 +256,14 @@ impl Component {
 }
 
 #[derive(Clone)]
-pub struct Style<A: Allocator = Global> {
-    pub font: Option<BoxStr<A>>,
+pub struct Style {
+    pub font: Option<BoxStr>,
     pub color: Option<TextColor>,
     pub shadow_color: Option<ShadowColor>,
     pub decorations: DecorationMap,
-    pub click_event: Option<ClickEvent<A>>,
-    pub hover_event: Option<HoverEvent<A>>,
-    pub insertion: Option<BoxStr<A>>,
+    pub click_event: Option<ClickEvent>,
+    pub hover_event: Option<HoverEvent>,
+    pub insertion: Option<BoxStr>,
 }
 
 impl Default for Style {
@@ -268,7 +272,7 @@ impl Default for Style {
     }
 }
 
-impl<A: Allocator> Style<A> {
+impl Style {
     pub const fn new() -> Self {
         Self {
             font: None,
@@ -282,7 +286,7 @@ impl<A: Allocator> Style<A> {
     }
 }
 
-impl<A: Allocator> Style<A> {
+impl Style {
     pub const fn is_empty(&self) -> bool {
         self.font.is_none()
             && self.color.is_none()
@@ -648,29 +652,29 @@ impl DecorationMap {
 }
 
 #[derive(Clone)]
-pub enum ClickEvent<A: Allocator = Global> {
-    OpenUrl(BoxStr<A>),
-    OpenFile(BoxStr<A>),
-    RunCommand(BoxStr<A>),
-    SuggestCommand(BoxStr<A>),
+pub enum ClickEvent {
+    OpenUrl(BoxStr),
+    OpenFile(BoxStr),
+    RunCommand(BoxStr),
+    SuggestCommand(BoxStr),
     ChangePage(u32),
-    CopyToClipboard(BoxStr<A>),
-    ShowDialog(Holder<Box<Dialog<A>, A>, A>),
-    Custom(Identifier<A>, BoxStr<A>),
+    CopyToClipboard(BoxStr),
+    ShowDialog(Holder<Box<Dialog>>),
+    Custom(Identifier, BoxStr),
 }
 
 #[derive(Clone)]
-pub enum HoverEvent<A: Allocator = Global> {
+pub enum HoverEvent {
     ShowEntity {
         id: entity_type,
         uuid: Uuid,
-        name: Option<Box<Component<A>, A>>,
+        name: Option<Box<Component>>,
     },
     ShowItem {
-        item: ItemStack<A>,
+        item: ItemStack,
     },
     ShowText {
-        value: Box<Component<A>, A>,
+        value: Box<Component>,
     },
 }
 
@@ -680,20 +684,20 @@ pub const DEFAULT_ATLAS: Ident = Ident {
 };
 
 #[derive(Clone)]
-pub enum ObjectContents<A: Allocator = Global> {
+pub enum ObjectContents {
     Atlas {
-        atlas: Identifier<A>,
-        sprite: Identifier<A>,
+        atlas: Identifier,
+        sprite: Identifier,
     },
     Player {
-        player: Box<ResolvableProfile<A>, A>,
+        player: Box<ResolvableProfile>,
         hat: bool,
     },
 }
 
 #[derive(Clone)]
-pub enum NbtContent<A: Allocator = Global> {
-    Block { pos: BoxStr<A> },
-    Entity { selector: BoxStr<A> },
-    Storage { storage: Identifier<A> },
+pub enum NbtContent {
+    Block { pos: BoxStr },
+    Entity { selector: BoxStr },
+    Storage { storage: Identifier },
 }

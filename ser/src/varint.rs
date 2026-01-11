@@ -94,7 +94,7 @@ impl Write for V21 {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             1
@@ -156,7 +156,7 @@ impl Write for V32 {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFF80 == 0 {
             1
@@ -353,7 +353,7 @@ impl Write for V64 {
         }
     }
 
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         let n = self.0;
         if n & 0xFFFFFFFFFFFFFF80 == 0 {
             1
@@ -559,7 +559,7 @@ fn test_varint() {
             let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
             let y = V64(x);
             y.write(&mut w);
-            let sz = y.sz();
+            let sz = y.len_s();
             assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
             let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
             assert_eq!(V64::read(&mut sl).unwrap(), y);
@@ -568,7 +568,7 @@ fn test_varint() {
             let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
             let y = V32(x as u32);
             y.write(&mut w);
-            let sz = y.sz();
+            let sz = y.len_s();
             assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
             let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
             assert_eq!(V32::read(&mut sl).unwrap(), y);
@@ -577,7 +577,7 @@ fn test_varint() {
             let mut w = crate::UnsafeWriter(core::ptr::NonNull::new_unchecked(buf.as_mut_ptr()));
             let y = V21(x as u32 & 0x1FFFFF);
             y.write(&mut w);
-            let sz = y.sz();
+            let sz = y.len_s();
             assert_eq!(buf.as_ptr().add(sz), w.ptr().as_ptr());
             let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
             assert_eq!(V21::read(&mut sl).unwrap(), y);

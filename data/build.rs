@@ -186,13 +186,13 @@ fn registries<'a>(
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
-        *w += "fn sz(&self) -> usize {\n";
+        *w += "fn len_s(&self) -> usize {\n";
         if size <= V7MAX {
             *w += "1usize";
         } else if size <= V21MAX {
-            *w += "::mser::V21(*self as u32).sz()";
+            *w += "::mser::V21(*self as u32).len_s()";
         } else {
-            *w += "::mser::V32(*self as u32).sz()";
+            *w += "::mser::V32(*self as u32).len_s()";
         }
         *w += "\n}\n";
         *w += "#[inline]\n";
@@ -210,22 +210,16 @@ fn registries<'a>(
         *w += " {\n";
         *w += "#[inline]\n";
         *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
-        if size <= V7MAX {
-            *w += "let x = <u8 as ::mser::Read>::read(n)?;\n";
-        } else if size <= V21MAX {
+        if size <= V21MAX {
             *w += "let x = <::mser::V21 as ::mser::Read>::read(n)?.0;\n";
-            *w += "let x = x as ";
-            *w += repr.to_int();
-            *w += ";\n";
         } else {
             *w += "let x = <::mser::V32 as ::mser::Read>::read(n)?.0;\n";
-            *w += "let x = x as ";
-            *w += repr.to_int();
-            *w += ";\n";
         }
-        *w += "match Self::new(x) {\n";
-        *w += "    Some(x) => Ok(x),\n";
-        *w += "    None => Err(::mser::Error),\n";
+        *w += "match Self::new(x as ";
+        *w += repr.to_int();
+        *w += ") {\n";
+        *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
+        *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
         *w += "}\n}\n}\n";
         *w += "impl ";
         *w += &name;
@@ -1249,13 +1243,13 @@ fn block_state(
     *w += bsname;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn sz(&self) -> usize {\n";
+    *w += "fn len_s(&self) -> usize {\n";
     if bssize <= V7MAX {
         *w += "1usize";
     } else if bssize <= V21MAX {
-        *w += "::mser::V21(self.0 as u32).sz()";
+        *w += "::mser::V21(self.0 as u32).len_s()";
     } else {
-        *w += "::mser::V32(self.0 as u32).sz()";
+        *w += "::mser::V32(self.0 as u32).len_s()";
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
@@ -1275,9 +1269,7 @@ fn block_state(
     *w += "#[inline]\n";
     *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
     *w += "let x = <";
-    if bssize <= V7MAX {
-        *w += "u8 as ::mser::Read>::read(n)?";
-    } else if bssize <= V21MAX {
+    if bssize <= V21MAX {
         *w += "::mser::V21 as ::mser::Read>::read(n)?.0";
     } else {
         *w += "::mser::V32 as ::mser::Read>::read(n)?.0";

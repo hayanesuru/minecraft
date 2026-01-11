@@ -25,27 +25,21 @@ pub use self::varint::{V7MAX, V21, V21MAX, V32, V64};
 pub use self::write::{Write2, Write3};
 pub use self::writer::UnsafeWriter;
 
-/// # Safety
-///
-/// `sz` must be the size of `write` to be written.
 pub trait Write {
     /// # Safety
     ///
-    /// [`sz`] must be the size of `write` to be written.
+    /// Must write [`len_s`] bytes exactly.
     ///
-    /// [`sz`]: Write::sz
+    /// [`len_s`]: Write::len_s
     unsafe fn write(&self, w: &mut UnsafeWriter);
 
-    fn sz(&self) -> usize;
+    fn len_s(&self) -> usize;
 }
 
 #[derive(Clone, Debug)]
 pub struct Error;
 
-pub trait Read<'a>: Sized
-where
-    Self: 'a,
-{
+pub trait Read<'a>: Sized {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error>;
 }
 
@@ -57,7 +51,7 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
     unsafe {
         let mut w = UnsafeWriter(core::ptr::NonNull::new_unchecked(ptr));
         Write::write(x, &mut w);
-        debug_assert_eq!(w.0, core::ptr::NonNull::new_unchecked(ptr.add(x.sz())))
+        debug_assert_eq!(w.0, core::ptr::NonNull::new_unchecked(ptr.add(x.len_s())))
     }
 }
 

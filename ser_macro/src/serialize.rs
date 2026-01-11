@@ -21,14 +21,14 @@ pub fn serialize_struct(
                 quote!(::#cratename::Write::write(&self.#l, __w);)
             }
         });
-    let sz = fields
+    let len_s = fields
         .iter()
         .enumerate()
         .map(|(idx, field)| match &field.ident {
-            Some(ident) => quote!(::#cratename::Write::sz(&self.#ident)),
+            Some(ident) => quote!(::#cratename::Write::len_s(&self.#ident)),
             None => {
                 let l = proc_macro2::Literal::usize_unsuffixed(idx);
-                quote!(::#cratename::Write::sz(&self.#l))
+                quote!(::#cratename::Write::len_s(&self.#l))
             }
         });
 
@@ -43,9 +43,9 @@ pub fn serialize_struct(
             }
 
             #[inline]
-            fn sz(&self) -> usize {
+            fn len_s(&self) -> usize {
                 let mut __l = 0usize;
-                #(__l += #sz;)*
+                #(__l += #len_s;)*
                 __l
             }
         }
@@ -132,8 +132,8 @@ pub fn serialize_enum(
             }
 
             #[inline]
-            fn sz(&self) -> usize {
-                ::#cratename::Write::sz(&(#repr))
+            fn len_s(&self) -> usize {
+                ::#cratename::Write::len_s(&(#repr))
             }
         }
     })
