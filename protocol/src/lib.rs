@@ -332,10 +332,10 @@ pub enum Holder<T> {
 #[test]
 fn test_write() {
     use crate::clientbound::login::LoginFinished;
-    use crate::types::{Id, Packet, packet_id};
+    use crate::types::{Id, packet_id};
     use minecraft_data::clientbound__login;
 
-    let packet: LoginFinished<'_, Global> = LoginFinished {
+    let packet: LoginFinished = LoginFinished {
         game_profile: GameProfile {
             id: Uuid::nil(),
             name: Utf8("abc"),
@@ -355,10 +355,7 @@ fn test_write() {
     };
     let mut data = &data[..];
     let id = data.v32().unwrap();
-    assert_eq!(
-        clientbound__login::new(id as _).unwrap(),
-        LoginFinished::<'_, Global>::ID
-    );
+    assert_eq!(clientbound__login::new(id as _).unwrap(), LoginFinished::ID);
     assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
     assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");
     assert_eq!(data.v32().unwrap(), 0);

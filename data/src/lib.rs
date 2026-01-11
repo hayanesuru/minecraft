@@ -1,6 +1,8 @@
 #![no_std]
 #![allow(non_camel_case_types, clippy::manual_map, non_upper_case_globals)]
 
+use core::hint::assert_unchecked;
+
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
 /// `block_name(prop_expr)`
@@ -87,60 +89,68 @@ fn make_block_state(
     let def: raw_block_state = block.state_default().id() - block.state_index();
     let mut offset: raw_block_state = 0;
     let mut mul: raw_block_state = 1;
-    let ptr = buf.as_mut_ptr();
-    let mut len = buf.len();
+    let b_ptr = buf.as_mut_ptr();
+    let mut b_len = buf.len();
     let props = block.props();
-    let props_ptr = props.as_ptr();
-    let mut props_end = unsafe { props_ptr.add(props.len()) };
-    while props_end != props_ptr {
-        props_end = unsafe { props_end.sub(1) };
-        let prop = unsafe { *props_end };
+    let mut index = props.len();
+    while index > 0 {
+        index -= 1;
+        let prop = props[index];
         let key = prop.key();
         let vals = prop.val();
         let vals_len = vals.len() as raw_block_state;
 
-        let mut buf_ptr = ptr;
-        let buf_end = unsafe { ptr.add(len) };
+        let mut buf_ptr = b_ptr;
+        let buf_end = unsafe { b_ptr.add(b_len) };
         loop {
+            unsafe {
+                assert_unchecked(mul > 0);
+                assert_unchecked(vals_len > 0);
+            }
             if buf_ptr == buf_end {
                 let val = (def / mul) % vals_len;
                 offset += val * mul;
                 mul *= vals_len;
                 break;
             }
-            if unsafe { ((*buf_ptr).0) != key } {
-                buf_ptr = unsafe { buf_ptr.add(1) };
-                continue;
-            }
-            let last = unsafe { ptr.add(len - 1) };
-            if buf_ptr != last {
-                unsafe { core::ptr::swap(buf_ptr, last) };
-            }
-            let value = unsafe { (*last).1 };
-            len -= 1;
-            let mut val_ptr = vals.as_ptr();
-            let val_end = unsafe { val_ptr.add(vals.len()) };
-            loop {
-                if val_ptr == val_end {
-                    let val = (def / mul) % vals_len;
-                    offset += val * mul;
-                    mul *= vals_len;
-                    break;
-                }
-                if unsafe { (*val_ptr).id() != value.id() } {
-                    val_ptr = unsafe { val_ptr.add(1) };
+            unsafe {
+                if ((*buf_ptr).0) != key {
+                    buf_ptr = buf_ptr.add(1);
                     continue;
                 }
-                let val = unsafe { val_ptr.offset_from_unsigned(vals.as_ptr()) } as raw_block_state;
-                offset += val * mul;
-                mul *= vals_len;
-                break;
+                let last = { b_ptr.add(b_len - 1) };
+                if buf_ptr != last {
+                    core::ptr::swap(buf_ptr, last);
+                }
+                let value = { (*last).1 };
+                b_len -= 1;
+                let mut val_ptr = vals.as_ptr();
+                let val_end = val_ptr.add(vals.len());
+                loop {
+                    if (*val_ptr).id() != value.id() {
+                        val_ptr = val_ptr.add(1);
+                        if val_ptr != val_end {
+                            continue;
+                        } else {
+                            offset += ((def / mul) % vals_len) * mul;
+                            mul *= vals_len;
+                            break;
+                        }
+                    } else {
+                        let val = val_ptr.offset_from_unsigned(vals.as_ptr()) as raw_block_state;
+                        offset += val * mul;
+                        mul *= vals_len;
+                        break;
+                    }
+                }
             }
             break;
         }
     }
 
-    block_state(block.state_index() + offset)
+    let ret = block.state_index() + offset;
+    debug_assert!(ret <= block_state::MAX);
+    block_state(ret)
 }
 
 pub fn block_state_props(
