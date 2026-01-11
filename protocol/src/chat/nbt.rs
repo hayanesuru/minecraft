@@ -1,11 +1,12 @@
 use super::*;
-use crate::nbt::{Kv, ListInfo, MapCodec, MapReader, RefStringTag, StringTag, TagType, read_map};
+use crate::nbt::{
+    End, Kv, ListInfo, MapCodec, MapReader, RefStringTag, StringTag, TagType, read_map,
+};
 use mser::{Error, Read, UnsafeWriter, Write};
 
 const STRING: TagType = TagType::String;
 const LIST: TagType = TagType::List;
 const COMPOUND: TagType = TagType::Compound;
-const END: TagType = TagType::End;
 
 const fn content_type(content: &Content) -> &'static [u8] {
     match content {
@@ -76,7 +77,7 @@ unsafe fn write_rec(
             mutf8(SCORE).write(w);
             Kv(SCORE_NAME, name).write(w);
             Kv(SCORE_OBJECTIVE, objective).write(w);
-            END.write(w);
+            End.write(w);
         },
         Content::Selector { pattern, separator } => unsafe {
             Kv(SELECTOR, pattern).write(w);
@@ -146,7 +147,7 @@ unsafe fn write_rec(
             Kv(COLOR, mutf8(color.name(&mut buf).as_bytes())).write(w);
         }
 
-        END.write(w);
+        End.write(w);
     }
 }
 
@@ -179,7 +180,7 @@ fn write_rec_len(content: &Content, style: &Style, children: &[Component]) -> us
             w += mutf8(SCORE).len_s();
             w += Kv(SCORE_NAME, name).len_s();
             w += Kv(SCORE_OBJECTIVE, objective).len_s();
-            w += END.len_s();
+            w += End.len_s();
         }
         Content::Selector { pattern, separator } => {
             w += Kv(SELECTOR, pattern).len_s();
@@ -248,7 +249,7 @@ fn write_rec_len(content: &Content, style: &Style, children: &[Component]) -> us
         let mut buf = [0; 7];
         w += Kv(COLOR, mutf8(color.name(&mut buf).as_bytes())).len_s();
     }
-    w += END.len_s();
+    w += End.len_s();
 
     w
 }
@@ -411,31 +412,18 @@ impl MapReader<Component> for Reader {
                 }
             }
             SCORE_H => {
-                let mut name: Option<BoxStr> = None;
-                let mut objective: Option<BoxStr> = None;
-                match ty {
-                    COMPOUND => loop {
-                        let t2 = TagType::read(buf)?;
-                        if t2 == END {
-                            break;
-                        }
-                        match StringTag::read(buf)?.0.as_bytes() {
-                            SCORE_NAME => {
-                                name = Some(t2.string(buf)?);
-                            }
-                            SCORE_OBJECTIVE => {
-                                objective = Some(t2.string(buf)?);
-                            }
-                            _ => return Err(Error),
-                        }
+                let score = read_map(
+                    Score {
+                        name: None,
+                        objective: None,
                     },
-                    _ => return Err(Error),
-                }
-                let name = match name {
+                    buf,
+                )?;
+                let name = match score.name {
                     Some(name) => name,
                     None => return Err(Error),
                 };
-                let objective = match objective {
+                let objective = match score.objective {
                     Some(objective) => objective,
                     None => return Err(Error),
                 };
@@ -717,5 +705,25 @@ impl<'a> Read<'a> for Component {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let ty = TagType::read(buf)?;
         Self::read_ty(buf, ty)
+    }
+}
+
+struct Score {
+    name: Option<BoxStr>,
+    objective: Option<BoxStr>,
+}
+
+impl MapReader for Score {
+    fn visit(&mut self, ty: TagType, k: &str, buf: &mut &[u8]) -> Result<(), Error> {
+        match k.as_bytes() {
+            SCORE_NAME => self.name = Some(ty.string(buf)?),
+            SCORE_OBJECTIVE => self.objective = Some(ty.string(buf)?),
+            _ => return Err(Error),
+        }
+        Ok(())
+    }
+
+    fn end(self) -> Result<Self, Error> {
+        Ok(self)
     }
 }
