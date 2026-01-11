@@ -1,5 +1,5 @@
 use super::*;
-use crate::nbt::{Kv, MapCodec, TagType};
+use crate::nbt::{End, Kv, MapCodec};
 use mser::{Error, UnsafeWriter, Write};
 
 impl MapCodec for GameProfile {
@@ -12,9 +12,9 @@ impl MapCodec for GameProfile {
             Kv(NAME, &self.name).write(w);
             Kv(ID, self.id).write(w);
             if !self.properties.is_empty() {
-                Kv(PROPERTIES, &*self.properties).write(w);
+                Kv(PROPERTIES, &self.properties).write(w);
             }
-            TagType::End.write(w);
+            End.write(w);
         }
     }
 
@@ -23,9 +23,9 @@ impl MapCodec for GameProfile {
         w += Kv(NAME, &self.name).len_s();
         w += Kv(ID, self.id).len_s();
         if !self.properties.is_empty() {
-            w += Kv(PROPERTIES, &*self.properties).len_s();
+            w += Kv(PROPERTIES, &self.properties).len_s();
         }
-        w + TagType::End.len_s()
+        w + End.len_s()
     }
 }
 
@@ -43,9 +43,9 @@ impl MapCodec for ResolvableProfile {
                 Kv(ID, id).write(w);
             }
             if !self.properties.is_empty() {
-                Kv(PROPERTIES, &*self.properties).write(w);
+                Kv(PROPERTIES, &self.properties).write(w);
             }
-            TagType::End.write(w);
+            End.write(w);
         }
     }
 
@@ -58,8 +58,44 @@ impl MapCodec for ResolvableProfile {
             w += Kv(ID, id).len_s();
         }
         if !self.properties.is_empty() {
-            w += Kv(PROPERTIES, &*self.properties).len_s();
+            w += Kv(PROPERTIES, &self.properties).len_s();
         }
-        w + TagType::End.len_s()
+        w + End.len_s()
+    }
+}
+
+impl PropertyMap {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+impl MapCodec for PropertyMap {
+    fn read_kv(buf: &mut &[u8]) -> Result<Self, mser::Error> {
+        todo!()
+    }
+
+    unsafe fn write_kv(&self, w: &mut mser::UnsafeWriter) {
+        unsafe {
+            for p in &self.0 {
+                Kv(b"name", &p.name).write(w);
+                Kv(b"value", &p.value).write(w);
+                if let Some(ref signature) = p.signature {
+                    Kv(b"signature", signature).write(w);
+                }
+            }
+            End.write(w);
+        }
+    }
+
+    fn len_kv(&self) -> usize {
+        let mut w = 0;
+        for p in &self.0 {
+            w += Kv(b"name", &p.name).len_s();
+            w += Kv(b"value", &p.value).len_s();
+            if let Some(ref signature) = p.signature {
+                w += Kv(b"signature", signature).len_s();
+            }
+        }
+        w + End.len_s()
     }
 }

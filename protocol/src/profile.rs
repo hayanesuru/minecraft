@@ -12,7 +12,7 @@ const PROPERTIES: &[u8] = b"properties";
 pub struct ResolvableProfile {
     pub name: Option<BoxStr>,
     pub id: Option<Uuid>,
-    pub properties: Vec<Property>,
+    pub properties: PropertyMap,
     pub patch: ProfilePatch,
 }
 
@@ -20,9 +20,12 @@ pub struct ResolvableProfile {
 pub struct GameProfile {
     pub name: BoxStr,
     pub id: Uuid,
-    pub properties: Vec<Property>,
+    pub properties: PropertyMap,
     pub patch: ProfilePatch,
 }
+
+#[derive(Clone)]
+pub struct PropertyMap(pub Vec<Property>);
 
 #[derive(Clone)]
 pub struct Property {

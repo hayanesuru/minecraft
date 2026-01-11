@@ -3,34 +3,35 @@ use crate::item::ItemStack;
 use crate::nbt::Compound;
 use crate::str::BoxStr;
 use crate::{HolderSet, Identifier};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 #[derive(Clone)]
-#[allow(clippy::large_enum_variant)]
-pub enum Dialog {
+pub struct Dialog {
+    pub common: CommonDialog,
+    pub data: DialogData,
+}
+
+#[derive(Clone)]
+pub enum DialogData {
     Notice {
-        common: CommonDialog,
         action: ActionButton,
     },
     Confirmation {
-        common: CommonDialog,
         yes_button: ActionButton,
         no_button: ActionButton,
     },
     MultiAction {
-        common: CommonDialog,
         actions: Vec<ActionButton>,
         exit_action: Option<ActionButton>,
         columns: u32,
     },
     ServerLinks {
-        common: CommonDialog,
         exit_action: Option<ActionButton>,
         columns: u32,
         button_width: u32,
     },
     DialogList {
-        common: CommonDialog,
         dialogs: HolderSet<Dialog>,
         exit_action: Option<ActionButton>,
         columns: u32,
@@ -75,7 +76,7 @@ pub struct Description {
 pub enum Input {
     Text {
         key: ParsedTemplate,
-        label: Component,
+        label: Box<Component>,
         width: u32,
         label_visible: bool,
         initial: Option<BoxStr>,
@@ -136,8 +137,8 @@ pub struct ActionButton {
 
 #[derive(Clone)]
 pub struct Botton {
-    pub label: Component,
-    pub tooltip: Option<Component>,
+    pub label: Box<Component>,
+    pub tooltip: Option<Box<Component>>,
     pub width: u32,
 }
 

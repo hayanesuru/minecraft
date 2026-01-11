@@ -5,7 +5,6 @@ mod stringify;
 pub use self::list::{List, ListInfo};
 pub use self::string::{IdentifierTag, RefStringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
-use crate::profile::Property;
 use crate::str::BoxStr;
 use crate::{Bytes, Error, Ident, Identifier, Read, UnsafeWriter, Write};
 use alloc::boxed::Box;
@@ -254,37 +253,6 @@ impl<'a> Write for Kv<'a, Uuid> {
     }
 }
 
-impl<'a> Write for Kv<'a, &'a [Property]> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Compound.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            for p in self.1 {
-                Kv(b"name", &p.name).write(w);
-                Kv(b"value", &p.value).write(w);
-                if let Some(ref signature) = p.signature {
-                    Kv(b"signature", signature).write(w);
-                }
-            }
-            TagType::End.write(w);
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        let mut w = 0;
-        for p in self.1 {
-            w += Kv(b"name", &p.name).len_s();
-            w += Kv(b"value", &p.value).len_s();
-            if let Some(ref signature) = p.signature {
-                w += Kv(b"signature", signature).len_s();
-            }
-        }
-        w + TagType::Compound.len_s()
-            + StringTagRaw::new_unchecked(self.0).len_s()
-            + TagType::End.len_s()
-    }
-}
-
 impl TagType {
     pub fn bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
         match self {
@@ -333,12 +301,9 @@ impl TagType {
                 let len = u32::read(buf)? as usize;
                 let mut data = buf.slice(len * 4)?;
                 let mut vec = Vec::with_capacity(len);
-                let mut ptr = vec.as_mut_ptr();
                 for _ in 0..len {
-                    unsafe {
-                        *ptr = i32::from_be_bytes(*data.array::<4>().unwrap_unchecked());
-                        ptr = ptr.add(1);
-                    }
+                    let x = unsafe { *data.array::<4>().unwrap_unchecked() };
+                    vec.push(i32::from_be_bytes(x));
                 }
                 unsafe { vec.set_len(len) }
                 Ok(vec)
@@ -350,12 +315,9 @@ impl TagType {
                     TagType::Int => {
                         let mut data = buf.slice(len * 4)?;
                         let mut vec = Vec::with_capacity(len);
-                        let mut ptr = vec.as_mut_ptr();
                         for _ in 0..len {
-                            unsafe {
-                                *ptr = i32::from_be_bytes(*data.array::<4>().unwrap_unchecked());
-                                ptr = ptr.add(1);
-                            }
+                            let x = unsafe { *data.array::<4>().unwrap_unchecked() };
+                            vec.push(i32::from_be_bytes(x));
                         }
                         unsafe { vec.set_len(len) }
                         Ok(vec)
