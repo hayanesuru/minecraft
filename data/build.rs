@@ -1652,20 +1652,9 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
     let mut ib = itoa::Buffer::new();
 
     let state = g.generate_hash(names);
-    *w += "const M1: u32 = ";
+    *w += "const DISPS: [(u32, u32); ";
     *w += ib.format(state.disps.len() as u32);
-    *w += ";\n";
-    *w += "const M2: u32 = ";
-    *w += ib.format(names.len() as u32);
-    *w += ";\n";
-    *w += "const M0: u128 = ";
-    *w += ib.format(state.key);
-    *w += ";\n";
-    *w += "const M: crate::NameMap<";
-    *w += repr.to_int();
-    *w += "> = crate::NameMap { ";
-    *w += "disps: &[";
-
+    *w += "] = [";
     for &(x, y) in state.disps {
         *w += "(";
         *w += ib.format(x);
@@ -1677,7 +1666,12 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
         w.pop();
         w.pop();
     }
-    *w += "], names: Self::N, vals: &[";
+    *w += "];\n";
+    *w += "const VALS: [";
+    *w += repr.to_int();
+    *w += "; ";
+    *w += ib.format(state.map.len() as u32);
+    *w += "] = [";
     for &ele in state.map {
         *w += ib.format(ele.unwrap());
         *w += ", ";
@@ -1686,8 +1680,7 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
         w.pop();
         w.pop();
     }
-    *w += "] };\n";
-
+    *w += "];\n";
     while !w2.len().is_multiple_of(8) {
         w2.push(0);
     }
@@ -1713,6 +1706,47 @@ fn namemap(w: &mut String, g: &mut GenerateHash, w2: &mut Vec<u8>, repr: Repr, n
         *w += "NAMES.as_ptr()";
     }
     *w += ";\n";
+    *w += "#[inline]
+#[must_use]
+pub const fn name(self) -> &'static str {
+unsafe {
+let packed = u64::from_le_bytes(*Self::N.add(8 * self as usize).cast::<[u8; 8]>());
+let len = (packed >> 32) as usize;
+let offset = (packed as u32) as usize;
+::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset), len))
+}
+}
+#[inline]
+#[must_use]
+pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {\n";
+    match repr {
+        Repr::U8 => {
+            *w += "match crate::name_u8::<";
+            *w += ib.format(state.key);
+            *w += ", ";
+            *w += ib.format(state.disps.len());
+            *w += ", ";
+            *w += ib.format(names.len());
+        }
+        Repr::U16 => {
+            *w += "match crate::name_u16::<";
+            *w += ib.format(state.key);
+            *w += ", ";
+            *w += ib.format(state.disps.len());
+            *w += ", ";
+            *w += ib.format(names.len());
+        }
+        _ => unimplemented!(),
+    }
+
+    *w += ">(Self::DISPS, Self::N, Self::VALS, name) {\n";
+    *w += "::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<";
+    *w += repr.to_int();
+    *w += ", Self>(x)) },
+::core::option::Option::None => ::core::option::Option::None,
+}
+}
+";
 }
 
 fn enum_head(w: &mut String, repr: Repr, name: &str) {
@@ -1736,32 +1770,6 @@ fn struct_head(w: &mut String, repr: Repr, name: &str) {
 }
 
 fn impl_name(w: &mut String, name: &str) {
-    *w += "impl ";
-    *w += name;
-    *w += " {
-#[inline]
-#[must_use]
-pub const fn name(self) -> &'static str {
-unsafe {
-let packed = u64::from_le_bytes(*Self::N.add(8 * self as usize).cast::<[u8; 8]>());
-let len = (packed >> 32) as usize;
-let offset = (packed as u32) as usize;
-::core::str::from_utf8_unchecked(::core::slice::from_raw_parts(Self::N.add(offset), len))
-}
-}
-#[inline]
-#[must_use]
-pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {
-match Self::M.get::<{ Self::M0 }, { Self::M1 }, { Self::M2 }>(name) {
-::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<raw_";
-    *w += name;
-    *w += ", Self>(x)) },
-::core::option::Option::None => ::core::option::Option::None,
-}
-}
-}
-";
-
     *w += "impl ::core::fmt::Display for ";
     *w += name;
     *w += " {
@@ -1797,8 +1805,6 @@ struct GenerateHash {
     map: Vec<Option<u32>>,
     disps: Vec<(u32, u32)>,
     try_map: Vec<u64>,
-    e: Vec<u128>,
-    test: Vec<u128>,
 }
 
 impl GenerateHash {
@@ -1811,85 +1817,18 @@ impl GenerateHash {
             map: Vec::new(),
             try_map: Vec::new(),
             disps: Vec::new(),
-            e: Vec::new(),
-            test: Vec::new(),
         }
     }
 
     fn generate_hash(&mut self, entries: &[&str]) -> HashState<'_> {
-        self.e.clear();
-        self.test.clear();
-        self.e.extend(
-            entries
-                .iter()
-                .map(|x| {
-                    let x = x.as_bytes();
-                    let pl;
-                    let ptr;
-                    let x = match x.len() {
-                        len @ 0..=16 => {
-                            pl = len;
-                            ptr = x.as_ptr();
-                            0u128
-                        }
-                        len @ 17..=32 => unsafe {
-                            pl = len - 16;
-                            ptr = x.as_ptr().add(16);
-                            u128::from_le_bytes(
-                                x.get_unchecked(0..16).try_into().unwrap_unchecked(),
-                            )
-                        },
-                        len => unsafe {
-                            let n = u128::from_le_bytes(
-                                x.get_unchecked(0..16).try_into().unwrap_unchecked(),
-                            );
-                            let m = u128::from_le_bytes(
-                                x.get_unchecked(16..32).try_into().unwrap_unchecked(),
-                            );
-                            let len = len - 32;
-                            pl = if len <= 16 { len } else { 16 };
-                            ptr = x.as_ptr().add(32);
-                            n ^ m
-                        },
-                    };
-                    unsafe {
-                        let mut p = [0u8; 16];
-                        core::ptr::copy_nonoverlapping(ptr, p.as_mut_ptr(), pl);
-                        x ^ u128::from_le_bytes(p)
-                    }
-                })
-                .map(|x| x ^ 0xdbe6d5d5fe4cce213198a2e03707344u128),
-        );
-        self.test.extend(&self.e);
-        self.test.sort_unstable();
-        for x in self.test.windows(2) {
-            if x[0] == x[1] {
-                panic!("duplicate entry {} {}", x[0], x[1]);
-            }
-        }
         'key: loop {
-            let [kb1, kb2, kb3, kb4, kb5, kb6, kb7, kb8] = self.nx().to_le_bytes();
-            let [kb9, kb10, kb11, kb12, kb13, kb14, kb15, kb16] = self.nx().to_le_bytes();
-            let key = u128::from_le_bytes([
-                kb1, kb2, kb3, kb4, kb5, kb6, kb7, kb8, kb9, kb10, kb11, kb12, kb13, kb14, kb15,
-                kb16,
-            ]);
+            let key = self.next();
             self.hashes.clear();
-            self.hashes.extend(
-                self.e
-                    .iter()
-                    .map(|&entry| entry.wrapping_mul(key))
-                    .map(|e| [(e >> 64) as u64, e as u64]),
-            );
-
-            let buckets_len = self.hashes.len().div_ceil(DEFAULT_LAMBDA);
+            self.hashes
+                .extend(entries.iter().map(|&x| hash128(x.as_bytes(), key)));
             let table_len = self.hashes.len();
+            let buckets_len = table_len.div_ceil(DEFAULT_LAMBDA);
 
-            self.buckets.truncate(buckets_len);
-            for (i, bucket) in self.buckets.iter_mut().enumerate() {
-                bucket.idx = i;
-                bucket.keys.clear();
-            }
             if self.buckets.len() < buckets_len {
                 self.buckets
                     .extend((self.buckets.len()..buckets_len).map(|i| Bucket {
@@ -1898,13 +1837,17 @@ impl GenerateHash {
                     }));
             }
 
-            for (i, [hash, _]) in self.hashes.iter().enumerate() {
-                self.buckets[((hash >> 32) as u32 % buckets_len as u32) as usize]
+            for (i, bucket) in self.buckets[0..buckets_len].iter_mut().enumerate() {
+                bucket.idx = i;
+                bucket.keys.clear();
+            }
+            for (i, [a, _]) in self.hashes.iter().enumerate() {
+                self.buckets[(((a >> 32) as u32) % buckets_len as u32) as usize]
                     .keys
                     .push(i as u32);
             }
 
-            self.buckets
+            self.buckets[0..buckets_len]
                 .sort_unstable_by(|a, b| a.keys.len().cmp(&b.keys.len()).reverse());
 
             self.map.clear();
@@ -1918,9 +1861,10 @@ impl GenerateHash {
 
             let mut generation = 0u64;
 
-            'buckets: for bucket in &*self.buckets {
-                for d1 in 0..(table_len as u32) {
-                    'disps: for d2 in 0..(table_len as u32) {
+            'buckets: for bucket in &self.buckets[0..buckets_len] {
+                let max_d = table_len as u32;
+                for d1 in 0..max_d {
+                    'disps: for d2 in 0..max_d {
                         self.values_to_add.clear();
                         generation += 1;
 
@@ -1928,7 +1872,6 @@ impl GenerateHash {
                             let [a, b] = (&mut self.hashes)[key as usize];
                             let f1 = a as u32;
                             let f2 = b as u32;
-
                             let x = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
                             let idx = (x % (table_len as u32)) as usize;
                             if self.map[idx].is_some() || self.try_map[idx] == generation {
@@ -1956,7 +1899,7 @@ impl GenerateHash {
     }
 
     #[inline]
-    fn nx(&mut self) -> u64 {
+    fn next(&mut self) -> u64 {
         self.wy_rand = self.wy_rand.wrapping_add(0xa0761d6478bd642f);
         let x = (self.wy_rand ^ 0xe7037ed1a0b428db) as u128;
         let t = (self.wy_rand as u128).wrapping_mul(x);
@@ -1967,7 +1910,7 @@ impl GenerateHash {
 const DEFAULT_LAMBDA: usize = 5;
 
 struct HashState<'a> {
-    key: u128,
+    key: u64,
     disps: &'a [(u32, u32)],
     map: &'a [Option<u32>],
 }
@@ -2019,4 +1962,21 @@ fn read_rl<'a, T: Iterator<Item = &'a str>>(size: usize, iter: T) -> RunLength<T
         prev: 0,
         take: size,
     }
+}
+
+fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+    const M: u64 = 0xc6a4a7935bd1e995;
+    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut i = 0;
+    while i + 8 <= n.len() {
+        h ^= u64::from_le_bytes(unsafe { *(n.as_ptr().add(i) as *const [u8; 8]) }).wrapping_mul(M);
+        i += 8;
+    }
+    while i < n.len() {
+        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
+        i += 1;
+    }
+    let h = h.wrapping_mul(M) as u128;
+    let h = (h ^ (h >> 44)).wrapping_mul(0xdbe6d5d5fe4cce213198a2e03707344u128);
+    [(h >> 64) as u64, h as u64]
 }
