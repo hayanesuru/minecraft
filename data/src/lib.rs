@@ -24,7 +24,7 @@ macro_rules! decode_state {
     };
 }
 
-fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
     const M: u64 = 0xc6a4a7935bd1e995;
     let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
     let mut i = 0;
@@ -42,7 +42,7 @@ fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
 }
 
 fn name_u8<const K: u64, const N: usize, const M: usize>(
-    disps: [(u32, u32); N],
+    disps: [u64; N],
     names: *const u8,
     vals: [u8; M],
     name: &[u8],
@@ -51,7 +51,9 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
     let g = (a >> 32) as u32;
     let f1 = a as u32;
     let f2 = b as u32;
-    let (d1, d2) = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let d = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let d1 = (d >> 32) as u32;
+    let d2 = d as u32;
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % (M as u32);
     let v = unsafe { *vals.get_unchecked(index as usize) };
     let packed = unsafe { u64::from_le_bytes(*names.add(8 * v as usize).cast::<[u8; 8]>()) };
@@ -62,7 +64,7 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
 }
 
 fn name_u16<const K: u64, const N: usize, const M: usize>(
-    disps: [(u32, u32); N],
+    disps: [u64; N],
     names: *const u8,
     vals: [u16; M],
     name: &[u8],
@@ -71,7 +73,9 @@ fn name_u16<const K: u64, const N: usize, const M: usize>(
     let g = (a >> 32) as u32;
     let f1 = a as u32;
     let f2 = b as u32;
-    let (d1, d2) = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let d = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let d1 = (d >> 32) as u32;
+    let d2 = d as u32;
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
     let index = (index % (M as u32)) as usize;
     let v = unsafe { *vals.get_unchecked(index) };
@@ -198,9 +202,9 @@ impl block_state {
     #[inline]
     pub const fn to_block(self) -> block {
         unsafe {
-            core::mem::transmute(raw_block::from_le_bytes(
-                *BLOCK_STATE_TO_BLOCK.add(self.0 as usize),
-            ))
+            core::mem::transmute::<raw_block, block>(
+                *BLOCK_STATE_TO_BLOCK.as_ptr().add(self.0 as usize),
+            )
         }
     }
 
@@ -299,31 +303,31 @@ impl block_state {
     }
 
     #[inline]
-    #[must_use]
-    #[doc(alias = "getLightBlock")]
-    pub const fn opacity(self) -> Option<u8> {
+    const fn static_bounds(self) -> Option<u64> {
+        let b = self.to_block();
+        let index = b.id() as usize;
         unsafe {
-            // 1
-            let b = self.to_block();
-            let index = b.id() as usize;
-            // 2
             let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
             if ::mser::unlikely(index == 0) {
                 return None;
             }
-            // 3
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                // 4
+            let index = if bounds.len() == 1 {
                 *bounds.as_ptr()
             } else {
-                // 4
-                let offset = b.state_index();
-                // 5
-                *bounds.as_ptr().add((self.id() - offset) as _)
+                *bounds.as_ptr().add((self.id() - b.state_index()) as _)
             };
-            // 5 / 6
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) >> 4)
+            Some(*BLOCK_STATE_BOUNDS.as_ptr().add(index as usize))
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    #[doc(alias = "getLightBlock")]
+    pub const fn opacity(self) -> Option<u8> {
+        match self.static_bounds() {
+            Some(x) => Some(x as u8 >> 4),
+            None => None,
         }
     }
 
@@ -331,21 +335,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isSolidRender")]
     pub const fn solid(self) -> Option<bool> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 1 != 0)
+        match self.static_bounds() {
+            Some(x) => Some(x & 1 != 0),
+            None => None,
         }
     }
 
@@ -353,21 +345,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isCollisionShapeFullBlock")]
     pub const fn full_cube(self) -> Option<bool> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 2 != 0)
+        match self.static_bounds() {
+            Some(x) => Some(x & 2 != 0),
+            None => None,
         }
     }
 
@@ -375,21 +355,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "propagatesSkylightDown")]
     pub const fn transparent(self) -> Option<bool> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 4 != 0)
+        match self.static_bounds() {
+            Some(x) => Some(x & 4 != 0),
+            None => None,
         }
     }
 
@@ -397,21 +365,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isRedstoneConductor")]
     pub const fn opaque_full_cube(self) -> Option<bool> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8) & 8 != 0)
+        match self.static_bounds() {
+            Some(x) => Some(x & 8 != 0),
+            None => None,
         }
     }
 
@@ -419,21 +375,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isFaceSturdyFull")]
     pub const fn side_solid_full(self) -> Option<u8> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8 + 1))
+        match self.static_bounds() {
+            Some(x) => Some((x >> 8) as u8),
+            None => None,
         }
     }
 
@@ -441,21 +385,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isFaceSturdyCenter")]
     pub const fn side_solid_center(self) -> Option<u8> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8 + 2))
+        match self.static_bounds() {
+            Some(x) => Some((x >> 16) as u8),
+            None => None,
         }
     }
 
@@ -463,21 +395,9 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isFaceSturdyRigid")]
     pub const fn side_solid_rigid(self) -> Option<u8> {
-        unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let offset = self.id() - b.state_index();
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add(offset as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.add(index as usize * 8 + 3))
+        match self.static_bounds() {
+            Some(x) => Some((x >> 24) as u8),
+            None => None,
         }
     }
 
@@ -492,17 +412,15 @@ impl block_state {
             if ::mser::unlikely(index == 0) {
                 return None;
             }
-            let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
+            let index = if bounds.len() == 1 {
                 *bounds.as_ptr()
             } else {
+                let offset = self.id() - b.state_index();
                 *bounds.as_ptr().add(offset as _)
             };
-            let index = *BLOCK_STATE_BOUNDS
-                .add(index as usize * 8 + 4)
-                .cast::<[u8; 2]>();
-            let index = u16::from_le_bytes(index) as usize;
+            let index = *BLOCK_STATE_BOUNDS.as_ptr().add(index as usize) >> 32;
+            let index = index as u16 as usize;
             Some(*SHAPES.as_ptr().add(index))
         }
     }
@@ -518,17 +436,15 @@ impl block_state {
             if ::mser::unlikely(index == 0) {
                 return None;
             }
-            let offset = self.id() - b.state_index();
             let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if ::mser::unlikely(bounds.len() == 1) {
+            let index = if bounds.len() == 1 {
                 *bounds.as_ptr()
             } else {
+                let offset = self.id() - b.state_index();
                 *bounds.as_ptr().add(offset as _)
             };
-            let index = *BLOCK_STATE_BOUNDS
-                .add(index as usize * 8 + 6)
-                .cast::<[u8; 2]>();
-            let index = u16::from_le_bytes(index) as usize;
+            let index = *BLOCK_STATE_BOUNDS.as_ptr().add(index as usize) >> 48;
+            let index = index as u16 as usize;
             Some(*SHAPES.as_ptr().add(index))
         }
     }
@@ -565,6 +481,7 @@ impl block {
             *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr()
         }
     }
+
     #[inline]
     #[must_use]
     #[doc(alias = "getExplosionResistance")]
@@ -574,6 +491,7 @@ impl block {
             *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(1)
         }
     }
+
     #[inline]
     #[must_use]
     #[doc(alias = "getFriction")]
@@ -583,6 +501,7 @@ impl block {
             *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(2)
         }
     }
+
     #[inline]
     #[must_use]
     #[doc(alias = "getSpeedFactor")]
@@ -592,6 +511,7 @@ impl block {
             *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(3)
         }
     }
+
     #[inline]
     #[must_use]
     #[doc(alias = "getJumpFactor")]
@@ -601,19 +521,20 @@ impl block {
             *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(4)
         }
     }
+
     #[inline]
     #[must_use]
     pub const fn state_index(self) -> u16 {
         unsafe { *Self::OFFSET.as_ptr().add(self as usize) }
     }
+
     #[inline]
     pub const fn props(self) -> &'static [block_state_property] {
         let i = unsafe { *Self::PROPS_INDEX.as_ptr().add(self as usize) };
         unsafe {
-            *Self::PROPS
-                .as_ptr()
-                .add(i as usize)
-                .cast::<&'static [block_state_property]>()
+            core::mem::transmute::<&[u8], &[block_state_property]>(
+                *Self::PROPS.as_ptr().add(i as usize),
+            )
         }
     }
 }
@@ -624,7 +545,7 @@ impl fluid_state {
         unsafe {
             block_state(raw_block_state::from_le_bytes(
                 *FLUID_STATE_TO_BLOCK
-                    .add(self.0 as usize * ::core::mem::size_of::<raw_block_state>()),
+                    .add(self.0 as usize * core::mem::size_of::<raw_block_state>()),
             ))
         }
     }
@@ -646,18 +567,19 @@ impl fluid_state {
         unsafe { core::mem::transmute(*(*FLUID_STATE_TO_FLUID.add(self.0 as usize)).as_ptr()) }
     }
 }
-impl From<bool> for val_true_false {
+impl From<bool> for val_bool {
     #[inline]
     fn from(value: bool) -> Self {
         if value { Self::r#true } else { Self::r#false }
     }
 }
-impl From<val_true_false> for bool {
+
+impl From<val_bool> for bool {
     #[inline]
-    fn from(value: val_true_false) -> Self {
+    fn from(value: val_bool) -> Self {
         match value {
-            val_true_false::r#true => true,
-            val_true_false::r#false => false,
+            val_bool::r#true => true,
+            val_bool::r#false => false,
         }
     }
 }
@@ -678,7 +600,7 @@ impl entity_type {
     #[inline]
     #[must_use]
     pub const fn fixed(self) -> bool {
-        unsafe { *ENTITY_FIXED.as_ptr().add(self as usize) }
+        unsafe { *ENTITY_FIXED.as_ptr().add(self as usize) == 1 }
     }
 }
 
@@ -762,7 +684,7 @@ fn test_block_state() {
         ),
         encode_state!(redstone_wire(
             decode_state!(redstone_wire(block::redstone_wire.state_default()))
-                .with_east(val_up_side_none::side)
+                .with_east(prop_east_u_s_n::side)
         ))
     );
     assert_eq!(
@@ -781,7 +703,7 @@ fn test_block_state() {
         ),
         encode_state!(redstone_wire(
             decode_state!(redstone_wire(block::redstone_wire.state_default()))
-                .with_east(prop_east_up_side_none::side)
+                .with_east(prop_east_u_s_n::side)
                 .with_power(prop_power::d_11)
         ))
     );
