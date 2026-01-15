@@ -1,7 +1,5 @@
 use super::*;
-use crate::nbt::{
-    End, Kv, ListInfo, MapCodec, MapReader, RefStringTag, StringTag, TagType, read_map,
-};
+use crate::nbt::{End, Kv, ListInfo, MapCodec, MapReader, RefStringTag, StringTag, TagType};
 use mser::{Error, Read, UnsafeWriter, Write};
 
 const STRING: TagType = TagType::String;
@@ -336,8 +334,8 @@ struct Reader {
 }
 
 impl MapReader<Component> for Reader {
-    fn visit(&mut self, ty: TagType, k: &str, buf: &mut &[u8]) -> Result<(), Error> {
-        match cast128(k.as_bytes())? {
+    fn visit(&mut self, ty: TagType, k: &[u8], buf: &mut &[u8]) -> Result<(), Error> {
+        match cast128(k)? {
             TEXT_H => {
                 let x = ty.string(buf)?;
                 match self.content.as_mut() {
@@ -412,13 +410,11 @@ impl MapReader<Component> for Reader {
                 }
             }
             SCORE_H => {
-                let score = read_map(
-                    Score {
-                        name: None,
-                        objective: None,
-                    },
-                    buf,
-                )?;
+                let score = Score {
+                    name: None,
+                    objective: None,
+                }
+                .read_map(buf)?;
                 let name = match score.name {
                     Some(name) => name,
                     None => return Err(Error),
@@ -679,15 +675,13 @@ impl MapReader<Component> for Reader {
 
 impl MapCodec for Component {
     fn read_kv(buf: &mut &[u8]) -> Result<Self, Error> {
-        read_map(
-            Reader {
-                content: None,
-                style: Style::new(),
-                children: Vec::new(),
-                separator: None,
-            },
-            buf,
-        )
+        Reader {
+            content: None,
+            style: Style::new(),
+            children: Vec::new(),
+            separator: None,
+        }
+        .read_map(buf)
     }
 
     unsafe fn write_kv(&self, w: &mut UnsafeWriter) {
@@ -714,8 +708,8 @@ struct Score {
 }
 
 impl MapReader for Score {
-    fn visit(&mut self, ty: TagType, k: &str, buf: &mut &[u8]) -> Result<(), Error> {
-        match k.as_bytes() {
+    fn visit(&mut self, ty: TagType, k: &[u8], buf: &mut &[u8]) -> Result<(), Error> {
+        match k {
             SCORE_NAME => self.name = Some(ty.string(buf)?),
             SCORE_OBJECTIVE => self.objective = Some(ty.string(buf)?),
             _ => return Err(Error),

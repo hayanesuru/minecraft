@@ -4,7 +4,6 @@ use crate::str::BoxStr;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Bytes, Error, Read, UnsafeWriter, V21, V32, Write};
-use uuid::Uuid;
 
 pub mod chat;
 pub mod clientbound;
@@ -186,20 +185,6 @@ impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct GameProfile<'a> {
-    pub id: Uuid,
-    pub name: Utf8<'a, 16>,
-    pub peoperties: List<'a, PropertyRef<'a>, 16>,
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct PropertyRef<'a> {
-    pub name: Utf8<'a, 64>,
-    pub value: Utf8<'a, 32767>,
-    pub signature: Option<Utf8<'a, 1024>>,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Ident<'a> {
     pub namespace: &'a str,
@@ -336,7 +321,7 @@ fn test_write() {
     use minecraft_data::clientbound__login;
 
     let packet: LoginFinished = LoginFinished {
-        game_profile: GameProfile {
+        game_profile: GameProfileRef {
             id: Uuid::nil(),
             name: Utf8("abc"),
             peoperties: List::Borrowed(&[]),

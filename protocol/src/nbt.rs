@@ -50,33 +50,32 @@ pub trait MapCodec: Sized {
     fn len_kv(&self) -> usize;
 }
 
-pub trait MapReader<T: Sized = Self> {
-    fn visit(&mut self, ty: TagType, k: &str, buf: &mut &[u8]) -> Result<(), Error>;
+pub trait MapReader<T: Sized = Self>: Sized {
+    fn visit(&mut self, ty: TagType, k: &[u8], buf: &mut &[u8]) -> Result<(), Error>;
     fn end(self) -> Result<T, Error>;
-}
-
-pub fn read_map<T, R: MapReader<T>>(mut r: R, buf: &mut &[u8]) -> Result<T, Error> {
-    let mut temp = Vec::new();
-    loop {
-        let ty = TagType::read(buf)?;
-        if unlikely(matches!(ty, TagType::End)) {
-            return r.end();
-        }
-        let len = buf.u16()? as usize;
-        let a = buf.slice(len)?;
-        let k = if is_ascii_mutf8(a) {
-            unsafe { core::str::from_utf8_unchecked(a) }
-        } else {
-            let len = decode_mutf8_len(a)?;
-            temp.clear();
-            temp.reserve_exact(len);
-            unsafe {
-                mser::write_unchecked(temp.as_mut_ptr(), &(DecodeMutf8(a, len)));
-                temp.set_len(len);
-                core::str::from_utf8_unchecked(&temp)
+    fn read_map(mut self, buf: &mut &[u8]) -> Result<T, Error> {
+        let mut temp = Vec::new();
+        loop {
+            let ty = TagType::read(buf)?;
+            if unlikely(matches!(ty, TagType::End)) {
+                return self.end();
             }
-        };
-        r.visit(ty, k, buf)?;
+            let len = buf.u16()? as usize;
+            let a = buf.slice(len)?;
+            let k = if is_ascii_mutf8(a) {
+                a
+            } else {
+                let len = decode_mutf8_len(a)?;
+                temp.clear();
+                temp.reserve_exact(len);
+                unsafe {
+                    mser::write_unchecked(temp.as_mut_ptr(), &(DecodeMutf8(a, len)));
+                    temp.set_len(len);
+                    &temp
+                }
+            };
+            self.visit(ty, k, buf)?;
+        }
     }
 }
 
