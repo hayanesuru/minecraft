@@ -1,4 +1,5 @@
 use core::iter::repeat_n;
+use core::num::NonZeroUsize;
 use mser::*;
 use nested::ZString;
 use std::collections::HashMap;
@@ -7,6 +8,7 @@ use std::env::var_os;
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[must_use]
 enum Repr {
     U32,
     U16,
@@ -32,21 +34,6 @@ impl Repr {
             Self::U8 => "u8",
         }
     }
-    #[inline]
-    const fn to_arr(self) -> &'static str {
-        match self {
-            Self::U32 => "[u8; 4]",
-            Self::U16 => "[u8; 2]",
-            Self::U8 => "[u8; 1]",
-        }
-    }
-    fn write(self, b: &mut Vec<u8>, n: u32) {
-        match self {
-            Self::U32 => b.extend(n.to_le_bytes()),
-            Self::U16 => b.extend((n as u16).to_le_bytes()),
-            Self::U8 => b.push(n as u8),
-        }
-    }
 }
 
 fn read(buf: &mut String, path: PathBuf) -> std::io::Result<usize> {
@@ -65,7 +52,7 @@ fn main() -> std::io::Result<()> {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
     let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let mut w = String::with_capacity(0x80000);
-    let mut wn = Vec::with_capacity(0x80000);
+    let mut name_buf = Vec::with_capacity(0x80000);
     let mut data = String::with_capacity(0x40000);
     let mut gen_hash = GenerateHash::new();
 
@@ -103,14 +90,20 @@ fn main() -> std::io::Result<()> {
     let gat = read(&mut data, path.join("game_event_tags.txt"))?;
     let gat = ett.end..ett.end + gat;
 
-    let block_names = registries(&mut w, &mut wn, &data[reg], &mut gen_hash);
-    registries(&mut w, &mut wn, &data[pac], &mut gen_hash);
+    let block_names = registries(&mut w, &mut name_buf, &data[reg], &mut gen_hash);
+    registries(&mut w, &mut name_buf, &data[pac], &mut gen_hash);
 
     item(&mut w, &data[ite]);
-    entity(&mut w, &mut wn, &data[ent]);
+    entity(&mut w, &mut name_buf, &data[ent]);
 
-    let bsrepr = block_state(&mut w, &mut wn, &data[blo], &mut gen_hash, &block_names);
-    fluid_state(&mut w, &mut wn, &data[flu], bsrepr);
+    let bs_repr = block_state(
+        &mut w,
+        &mut name_buf,
+        &data[blo],
+        &mut gen_hash,
+        &block_names,
+    );
+    fluid_state(&mut w, &data[flu], bs_repr);
 
     block_tags(&mut w, &data[blt]);
     item_tags(&mut w, &data[itt]);
@@ -118,12 +111,12 @@ fn main() -> std::io::Result<()> {
     game_event_tags(&mut w, &data[gat]);
 
     w += "const NAMES: &[u8; ";
-    w += itoa::Buffer::new().format(wn.len());
+    w += itoa::Buffer::new().format(name_buf.len());
     w += "] = include_bytes!(\"";
     w += "data";
     w += ".bin\");\n";
     std::fs::write(out.join("data.rs"), w)?;
-    std::fs::write(out.join("data.bin"), wn)?;
+    std::fs::write(out.join("data.bin"), name_buf)?;
     Ok(())
 }
 
@@ -142,7 +135,7 @@ fn version(w: &mut String, data: &str) {
 
 fn registries<'a>(
     w: &mut String,
-    wn: &mut Vec<u8>,
+    name_buf: &mut Vec<u8>,
     data: &'a str,
     gen_hash: &mut GenerateHash,
 ) -> Vec<&'a str> {
@@ -221,7 +214,7 @@ fn registries<'a>(
         *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
         *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
         *w += "}\n}\n}\n";
-        impl_name(w, gen_hash, wn, repr, &zhash, &name);
+        impl_name(w, gen_hash, name_buf, repr, &zhash, &name);
         impl_common(w, &name, repr, size, 0);
     }
     block_names
@@ -287,7 +280,7 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "}\n";
 }
 
-fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
+fn fluid_state(w: &mut String, data: &str, bs_repr: Repr) {
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
     let (name, size, repr) = head(iter.next(), "fluid_state");
@@ -296,8 +289,7 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     *w += "impl ";
     *w += name;
     *w += " {\n";
-    for index in 0..size {
-        let name = iter.next().unwrap();
+    for (index, name) in (&mut iter).take(size).enumerate() {
         *w += "pub const ";
         *w += name;
         *w += ": Self = Self(";
@@ -306,72 +298,64 @@ fn fluid_state(w: &mut String, wn: &mut Vec<u8>, data: &str, bsrepr: Repr) {
     }
     *w += "}\n";
     let (_, size, _) = head(iter.next(), "fluid_to_block");
-    *w += "const FLUID_STATE_TO_BLOCK: *const ";
-    *w += bsrepr.to_arr();
-    *w += " = unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    for _ in 0..size {
-        let next = iter.next().unwrap().as_bytes();
-        let (n, _) = parse_hex::<u32>(next);
-        bsrepr.write(wn, n);
-    }
-
+    list_ty(w, "FLUID_STATE_TO_BLOCK", bs_repr, size);
+    list(
+        w,
+        (&mut iter)
+            .take(size)
+            .map(|x| parse_hex::<u32>(x.as_bytes()).0),
+    );
+    *w += ";\n";
     let (_, size, _) = head(iter.next(), "fluid_state_level");
-    *w += "const FLUID_STATE_LEVEL: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    for _ in 0..size {
-        let next = iter.next().unwrap().as_bytes();
-        let (n, _) = parse_hex::<u8>(next);
-        wn.push(n);
-    }
+    list_ty(w, "FLUID_STATE_LEVEL", Repr::U8, size);
+    list(
+        w,
+        (&mut iter)
+            .take(size)
+            .map(|x| parse_hex::<u8>(x.as_bytes()).0),
+    );
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "fluid_state_falling");
-    *w += "const FLUID_STATE_FALLING: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    for _ in 0..size {
-        let next = iter.next().unwrap().as_bytes();
-        let (n, _) = parse_hex::<u8>(next);
-        wn.push(n);
-    }
+    list_ty(w, "FLUID_STATE_FALLING", Repr::U8, size);
+    list(
+        w,
+        (&mut iter)
+            .take(size)
+            .map(|x| parse_hex::<u8>(x.as_bytes()).0),
+    );
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "fluid_state_to_fluid");
-    *w += "const FLUID_STATE_TO_FLUID: *const [u8; 1] = unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    for _ in 0..size {
-        let next = iter.next().unwrap().as_bytes();
-        let (n, _) = parse_hex::<u8>(next);
-        wn.push(n);
-    }
+    list_ty(w, "FLUID_STATE_TO_FLUID", Repr::U8, size);
+    list(
+        w,
+        (&mut iter)
+            .take(size)
+            .map(|x| parse_hex::<u8>(x.as_bytes()).0),
+    );
+    *w += ";\n";
 
-    let (_, size, repr) = head(iter.next(), "fluid_state_array");
+    let (_, fs_size, fs_repr) = head(iter.next(), "fluid_state_array");
     *w += "const FLUID_STATE_ARRAY: [&[";
-    *w += repr.to_int();
+    *w += fs_repr.to_int();
     *w += "]; ";
-    *w += ib.format(size);
+    *w += ib.format(fs_size);
     *w += "] = [\n";
-    for x in (&mut iter).take(size).map(|arr| {
+    for x in (&mut iter).take(fs_size).map(|arr| {
         arr.split_ascii_whitespace()
             .map(|x| parse_hex::<u32>(x.as_bytes()).0)
     }) {
-        *w += "&[";
+        *w += "&";
         list(w, x);
-        *w += "],\n";
+        *w += ",\n";
     }
     *w += "];\n";
 
     let (_, size, _) = head(iter.next(), "block_to_fluid_state");
-    *w += "const FLUID_STATE_INDEX: *const ";
-    *w += repr.to_arr();
-    *w += " = unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    for n in read_rl(size, &mut iter) {
-        repr.write(wn, n);
-    }
+    list_ty(w, "FLUID_STATE_INDEX", fs_repr, size);
+    list(w, read_rl(size, &mut iter));
+    *w += ";\n";
 }
 
 fn block_tags(w: &mut String, data: &str) {
@@ -512,7 +496,7 @@ fn game_event_tags(w: &mut String, data: &str) {
 
 fn block_state(
     w: &mut String,
-    wn: &mut Vec<u8>,
+    name_buf: &mut Vec<u8>,
     data: &str,
     gen_hash: &mut GenerateHash,
     block_names: &[&str],
@@ -520,7 +504,7 @@ fn block_state(
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
-    let (namek, sizek, reprk) = head(iter.next(), "block_state_property_key");
+    let (namek, sizek, repr_k) = head(iter.next(), "block_state_property_key");
 
     let mut pk1 = Vec::with_capacity(sizek);
     let mut pk2 = vec![""; sizek];
@@ -550,9 +534,9 @@ fn block_state(
         pv3[before] = sorted;
     }
 
-    let (namekv, sizekv, reprkv) = head(iter.next(), "block_state_property");
+    let (name_kv, size_kv, repr_kv) = head(iter.next(), "block_state_property");
 
-    let kv = (0..sizekv)
+    let kv = (0..size_kv)
         .map(|_| {
             let mut x = hex_line(iter.next().unwrap());
             let k = x.next().unwrap();
@@ -565,7 +549,7 @@ fn block_state(
     drop(pk3);
     drop(pv3);
 
-    enum_head(w, reprk, namek);
+    enum_head(w, repr_k, namek);
     for &ele in &pk2 {
         if ele == "type" {
             *w += "r#";
@@ -589,10 +573,10 @@ fn block_state(
     }
     *w += "}\n";
 
-    impl_common(w, namek, reprk, sizek, 0);
+    impl_common(w, namek, repr_k, sizek, 0);
     impl_common(w, namev, reprv, sizev, 0);
 
-    let mut kvn = nested::Nested::<String>::with_capacity(kv.len(), kv.len() * 4);
+    let mut kvn = ZString::with_capacity(kv.len(), kv.len() * 4);
     let mut x = HashMap::<Box<[&str]>, usize>::new();
     for arr in &kv {
         let key = arr[1..].iter().map(|&x| pv2[x as usize]).collect();
@@ -607,7 +591,7 @@ fn block_state(
     }
     let mut vals = x.iter().map(|(k, v)| (v, k)).collect::<Vec<_>>();
     vals.sort_unstable_by(|(x, _), (y, _)| (*x).cmp(*y));
-    let mut val_names = nested::Nested::<String>::with_capacity(vals.len(), vals.len() * 4);
+    let mut val_names = ZString::with_capacity(vals.len(), vals.len() * 4);
     let mut name_ = "val_".to_owned();
     for (_, x) in vals {
         name_.truncate(4);
@@ -648,7 +632,7 @@ fn block_state(
         }
         *w += "}\n";
         impl_common(w, name, repr, x.len(), 0);
-        impl_name(w, gen_hash, wn, repr, x, name);
+        impl_name(w, gen_hash, name_buf, repr, x, name);
 
         val_names.push(name);
     }
@@ -712,33 +696,29 @@ fn block_state(
         *w += &kvn[index];
         *w += ";\n";
     }
-    enum_head(w, reprkv, namekv);
+    enum_head(w, repr_kv, name_kv);
     for name in kvn.iter() {
         *w += &name[5..];
         *w += ",\n";
     }
     *w += "}\n";
-    impl_common(w, namekv, reprkv, sizekv, 0);
+    impl_common(w, name_kv, repr_kv, size_kv, 0);
 
-    impl_name(w, gen_hash, wn, reprk, &pk2, namek);
-    impl_name(w, gen_hash, wn, reprv, &pv2, namev);
+    impl_name(w, gen_hash, name_buf, repr_k, &pk2, namek);
+    impl_name(w, gen_hash, name_buf, reprv, &pv2, namev);
 
     *w += "impl ";
-    *w += namekv;
+    *w += name_kv;
     *w += " {\n";
 
-    *w += "const K: [";
-    *w += reprk.to_int();
-    *w += "; ";
-    *w += ib.format(sizekv);
-    *w += "] = [";
+    list_ty(w, "K", repr_k, size_kv);
     list(w, kv.iter().map(|x| x[0]));
-    *w += "];\n";
+    *w += ";\n";
 
     *w += "const V: [&'static [";
     *w += reprv.to_int();
     *w += "]; ";
-    *w += ib.format(sizekv);
+    *w += ib.format(size_kv);
     *w += "] = [";
     for data in &kv {
         *w += "&[";
@@ -756,7 +736,7 @@ fn block_state(
     *w += namek;
     *w += " {\n";
     *w += "unsafe { ::core::mem::transmute::<";
-    *w += reprk.to_int();
+    *w += repr_k.to_int();
     *w += ", ";
     *w += namek;
     *w += ">(*Self::K.as_ptr().add(self as usize)) }\n";
@@ -771,14 +751,14 @@ fn block_state(
     *w += "}\n";
 
     let (_, size, _) = head(iter.next(), "block_state_properties");
-    let mut properties_size = Vec::with_capacity(size);
-    let mut block_state_properties = Vec::with_capacity(size);
+    let mut bs_prop_size = Vec::with_capacity(size);
+    let mut bs_properties = Vec::with_capacity(size);
 
     for _ in 0..size {
         let props = iter.next().unwrap();
         if props.is_empty() {
-            properties_size.push(1);
-            block_state_properties.push(Box::<[u32]>::from([]));
+            bs_prop_size.push(NonZeroUsize::new(1).unwrap());
+            bs_properties.push(Box::<[u32]>::from([]));
             continue;
         }
         let props = hex_line(props).collect::<Box<_>>();
@@ -788,16 +768,13 @@ fn block_state(
             let prop = &*kv[prop as usize];
             len *= prop.len() - 1;
         }
-        properties_size.push(len);
-        block_state_properties.push(props);
+        bs_prop_size.push(NonZeroUsize::new(len).unwrap());
+        bs_properties.push(props);
     }
 
-    let mut psn = ZString::with_capacity(
-        block_state_properties.len(),
-        block_state_properties.len() * 10,
-    );
-    let mut dedup = HashMap::<Vec<u64>, u32>::with_capacity(block_state_properties.len());
-    for props in &block_state_properties {
+    let mut psn = ZString::with_capacity(bs_properties.len(), bs_properties.len() * 10);
+    let mut dedup = HashMap::<Vec<u64>, u32>::with_capacity(bs_properties.len());
+    for props in &bs_properties {
         let mut ctx = Vec::with_capacity(props.len());
         for &x in &**props {
             let prop = &*kv[x as usize];
@@ -813,7 +790,7 @@ fn block_state(
         }
     }
     let mut ctx = Vec::<u64>::with_capacity(16);
-    for props in block_state_properties.iter().map(|x| &**x) {
+    for props in bs_properties.iter().map(|x| &**x) {
         if props.is_empty() {
             psn.push("props_nil");
             continue;
@@ -865,7 +842,7 @@ fn block_state(
 
     let mut vec1 = Vec::<u32>::with_capacity(256);
     let mut vec2 = Vec::<u32>::with_capacity(256);
-    for (x, props) in block_state_properties.iter().enumerate() {
+    for (x, props) in bs_properties.iter().enumerate() {
         let name = &psn[x];
 
         let mut size = 1;
@@ -975,12 +952,7 @@ fn block_state(
             *w += "Self(n)\n";
             *w += "}\n";
         } else {
-            *w += "const M: [";
-            *w += repr.to_int();
-            *w += "; ";
-            *w += ib.format(len);
-            *w += "] = [";
-
+            list_ty(w, "M", repr, len);
             vec1.clear();
             vec2.clear();
             let mut index = 0;
@@ -1004,7 +976,7 @@ fn block_state(
                 index += x;
             }
             list(w, vec1.iter().copied());
-            *w += "];\n";
+            *w += ";\n";
             *w += "#[inline]\n";
             *w += "pub const fn decode(n: ";
             *w += repr.to_int();
@@ -1129,51 +1101,50 @@ fn block_state(
         *w += "}\n";
     }
 
-    let (bsname, bssize, _) = head(iter.next(), "block_state");
-    assert_eq!(bssize, block_names.len());
+    let (bs_name, block_size, _) = head(iter.next(), "block_state");
+    assert_eq!(block_size, block_names.len());
 
-    let mut offsets = Vec::with_capacity(block_names.len());
-    let mut y = 0;
-    let mut block_state = Vec::<u32>::with_capacity(block_names.len());
-    let mut x = block_names.iter();
-    for props in read_rl(bssize, &mut iter) {
-        offsets.push(y as u32);
-        block_state.push(props);
-        y += properties_size[props as usize];
+    let mut offsets = Vec::<u32>::with_capacity(block_names.len());
+    let mut bs_idx = 0;
+
+    let mut bl_props = Vec::<u32>::with_capacity(block_names.len());
+    let mut name_iter = block_names.iter();
+    for props in read_rl(block_size, &mut iter) {
+        offsets.push(bs_idx as u32);
+        bl_props.push(props);
+        let size = bs_prop_size[props as usize].get();
+        bs_idx += size;
 
         *w += "pub use ";
         *w += &psn[props as usize];
         *w += " as ";
-        *w += x.next().unwrap();
+        *w += name_iter.next().unwrap();
         *w += ";\n";
     }
 
-    let bssize = y + 1;
-    let bsrepr = Repr::new(bssize);
+    let bs_size = bs_idx;
+    let bs_repr = Repr::new(bs_size);
 
     *w += "impl block {\n";
-    *w += "const OFFSET: [";
-    *w += bsrepr.to_int();
-    *w += "; ";
-    *w += ib.format(block_names.len());
-    *w += "] = [";
+    list_ty(w, "OFFSET", bs_repr, block_names.len());
     list(w, offsets.iter().copied());
-    *w += "];\n";
+    *w += ";\n";
 
-    *w += "const PROPS_INDEX: [";
-    *w += Repr::new(block_state_properties.len() + 1).to_int();
-    *w += "; ";
-    *w += ib.format(block_names.len());
-    *w += "] = [";
-    list(w, block_state.iter().copied());
-    *w += "];\n";
+    list_ty(
+        w,
+        "PROPS_INDEX",
+        Repr::new(bs_properties.len()),
+        block_names.len(),
+    );
+    list(w, bl_props.iter().copied());
+    *w += ";\n";
 
     *w += "const PROPS: [&'static [";
-    *w += reprkv.to_int();
+    *w += repr_kv.to_int();
     *w += "]; ";
-    *w += ib.format(block_state_properties.len());
+    *w += ib.format(bs_properties.len());
     *w += "] = [\n";
-    for prop in &block_state_properties {
+    for prop in &bs_properties {
         *w += "&[";
         for &x in &**prop {
             *w += ib.format(x);
@@ -1190,17 +1161,17 @@ fn block_state(
     *w += "];\n";
     *w += "}\n";
 
-    struct_head(w, bsrepr, bsname);
-    impl_common(w, bsname, bsrepr, bssize, 0);
+    struct_head(w, bs_repr, bs_name);
+    impl_common(w, bs_name, bs_repr, bs_size, 0);
 
     *w += "impl ::mser::Write for ";
-    *w += bsname;
+    *w += bs_name;
     *w += " {\n";
     *w += "#[inline]\n";
     *w += "fn len_s(&self) -> usize {\n";
-    if bssize <= V7MAX {
+    if bs_size <= V7MAX {
         *w += "1usize";
-    } else if bssize <= V21MAX {
+    } else if bs_size <= V21MAX {
         *w += "::mser::V21(self.0 as u32).len_s()";
     } else {
         *w += "::mser::V32(self.0 as u32).len_s()";
@@ -1208,9 +1179,9 @@ fn block_state(
     *w += "\n}\n";
     *w += "#[inline]\n";
     *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
-    if bssize <= V7MAX {
+    if bs_size <= V7MAX {
         *w += "unsafe { w.write_byte(self.0 as u8); }";
-    } else if bssize <= V21MAX {
+    } else if bs_size <= V21MAX {
         *w += "unsafe { ::mser::Write::write(&::mser::V21(self.0 as u32), w); }";
     } else {
         *w += "unsafe { ::mser::Write::write(&::mser::V32(self.0 as u32), w); }";
@@ -1218,47 +1189,43 @@ fn block_state(
     *w += "\n}\n}\n";
 
     *w += "impl ::mser::Read<'_> for ";
-    *w += bsname;
+    *w += bs_name;
     *w += " {\n";
     *w += "#[inline]\n";
     *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
     *w += "let x = <";
-    if bssize <= V21MAX {
+    if bs_size <= V21MAX {
         *w += "::mser::V21 as ::mser::Read>::read(n)?.0";
     } else {
         *w += "::mser::V32 as ::mser::Read>::read(n)?.0";
     }
     *w += " as ";
-    *w += bsrepr.to_int();
+    *w += bs_repr.to_int();
     *w += ";\n";
     *w += "match Self::new(x) {\n";
     *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
     *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
     *w += "}\n}\n}\n";
 
-    let reprblock = Repr::new(offsets.len());
-    *w += "const BLOCK_STATE_TO_BLOCK:  [";
-    *w += reprblock.to_int();
-    *w += "; ";
-    *w += ib.format(bssize - 1);
-    *w += "] = [";
+    list_ty(
+        w,
+        "BLOCK_STATE_TO_BLOCK",
+        Repr::new(block_names.len()),
+        bs_size,
+    );
     list(
         w,
-        block_state.iter().enumerate().flat_map(|(index, &offset)| {
-            core::iter::repeat_n(index, properties_size[offset as usize])
+        bl_props.iter().enumerate().flat_map(|(index, &offset)| {
+            core::iter::repeat_n(index, bs_prop_size[offset as usize].get())
         }),
     );
-    *w += "];\n";
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "block_to_default_block_state");
     assert_eq!(size, block_names.len());
 
     *w += "impl block {\n";
-    *w += "const DEFAULT: [";
-    *w += bsrepr.to_int();
-    *w += "; ";
-    *w += ib.format(block_names.len());
-    *w += "] = [";
+    list_ty(w, "DEFAULT", bs_repr, block_names.len());
     let mut prev = 0u32;
     let mut out = Vec::with_capacity(size);
     for x in read_rl(size, &mut iter) {
@@ -1266,7 +1233,7 @@ fn block_state(
         prev += 1 + x;
     }
     list(w, out.into_iter());
-    *w += "];\n";
+    *w += ";\n";
     *w += "#[inline]\n";
     *w += "pub const fn state_default(self) -> block_state {\n";
     *w += "unsafe { block_state(*Self::DEFAULT.as_ptr().add(self as usize)) }\n";
@@ -1274,7 +1241,7 @@ fn block_state(
     *w += "}\n";
     let (_, size, _) = head(iter.next(), "block_item_to_block");
 
-    *w += "const ITEM: [raw_block; item::MAX as usize + 1] = [";
+    *w += "const ITEM: [raw_block; item::MAX as usize + 1] = ";
     prev = 0;
     let mut out = Vec::with_capacity(size);
     for x in read_rl(size, &mut iter) {
@@ -1282,7 +1249,7 @@ fn block_state(
         prev = 1 + x.wrapping_add(prev);
     }
     list(w, out.into_iter());
-    *w += "];\n";
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "float32_table");
 
@@ -1303,7 +1270,7 @@ fn block_state(
 
     *w += "const SHAPES: [&[[f64; 6]]; ";
     *w += ib.format(size);
-    *w += "] = [\n";
+    *w += "] = [";
     let mut shape = Vec::new();
     let mut rb = ryu::Buffer::new();
     for _ in 0..size {
@@ -1347,7 +1314,7 @@ fn block_state(
         "block_settings_table#hardness blast_resistance slipperiness velocity_multiplier jump_velocity_multiplier",
     );
 
-    let mut bsettings = Vec::with_capacity(size);
+    let mut bs_ettings = Vec::with_capacity(size);
     for _ in 0..size {
         let mut s = iter.next().unwrap().as_bytes();
         let mut settings = [0_u32; 5];
@@ -1359,14 +1326,14 @@ fn block_state(
             }
             *s1 = f32t[x as usize];
         }
-        bsettings.push(settings);
+        bs_ettings.push(settings);
     }
     *w += "const BLOCK_SETTINGS: [";
     *w += "[f32; 5]";
     *w += "; ";
     *w += ib.format(size);
     *w += "] = [";
-    for &x in bsettings.iter() {
+    for &x in bs_ettings.iter() {
         *w += "[";
         for x in x {
             *w += rb.format(f32::from_bits(x));
@@ -1385,41 +1352,41 @@ fn block_state(
     *w += repr.to_int();
     *w += "; ";
     *w += ib.format(block_names.len());
-    *w += "] = [";
+    *w += "] = ";
     list(w, read_rl(size, &mut iter));
-    *w += "];\n";
+    *w += ";\n";
 
     let (_, size, _) = head(
         iter.next(),
         "block_state_flags#(has_sided_transparency lava_ignitable material_replaceable opaque tool_required exceeds_cube redstone_power_source has_comparator_output)",
     );
 
-    *w += "const BLOCK_STATE_FLAGS: *const u8 = ";
-    *w += "unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    wn.extend(read_rl(size, &mut iter).map(|x| x as u8));
+    assert_eq!(size, bs_size);
+    *w += "const BLOCK_STATE_FLAGS: [";
+    *w += "u8";
+    *w += "; ";
+    *w += ib.format(size);
+    *w += "] = ";
+    list(w, read_rl(size, &mut iter).map(|x| x as u8));
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "block_state_luminance");
 
-    *w += "const BLOCK_STATE_LUMINANCE: *const u8 = ";
-    *w += "unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    wn.extend(read_rl(size, &mut iter).map(|x| x as u8));
-
-    let (_, size, repr) = head(
+    *w += "const BLOCK_STATE_LUMINANCE: [";
+    *w += "u8; ";
+    *w += ib.format(size);
+    *w += "] = ";
+    list(w, read_rl(size, &mut iter).map(|x| x as u8));
+    *w += ";\n";
+    let (_, size, _) = head(
         iter.next(),
         "block_state_static_bounds_table#(opacity(4) solid_block translucent full_cube opaque_full_cube) side_solid_full side_solid_center side_solid_rigid collision_shape culling_shape",
     );
 
-    while !wn.len().is_multiple_of(8) {
-        wn.push(0);
-    }
     assert_eq!(shape_repr, Repr::U16);
     *w += "const BLOCK_STATE_BOUNDS: [u64; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = ";
     let mut out = Vec::with_capacity(size);
     for _ in 0..size {
         let mut s = iter.next().unwrap().as_bytes();
@@ -1441,39 +1408,57 @@ fn block_state(
         let [n5, n6] = m5.to_le_bytes();
         let [n7, n8] = m6.to_le_bytes();
         let v = u64::from_le_bytes([n1, n2, n3, n4, n5, n6, n7, n8]);
-        assert!(v != 0);
+        assert_ne!(v, 0);
         out.push(v);
     }
     list(w, out.into_iter());
-    *w += "];\n";
-    let (_, size, _) = head(iter.next(), "block_state_static_bounds_map");
+    *w += ";\n";
+    let (_, bsb_size, _) = head(iter.next(), "block_state_static_bounds_map");
 
-    *w += "const BLOCK_BOUNDS: [&[";
-    *w += repr.to_int();
-    *w += "]; ";
-    *w += ib.format(size);
-    *w += "] = [\n";
-    for x in (&mut iter).take(size).map(|arr| {
-        arr.split_ascii_whitespace()
-            .map(|x| parse_hex::<u32>(x.as_bytes()).0)
-    }) {
-        *w += "&[";
-        list(w, x);
-        *w += "],\n";
+    let prop_bounds = (&mut iter)
+        .take(bsb_size)
+        .map(|arr| {
+            arr.split_ascii_whitespace()
+                .map(|x| parse_hex::<u32>(x.as_bytes()).0)
+                .collect::<Box<_>>()
+        })
+        .collect::<Box<_>>();
+
+    let (_, size, _) = head(iter.next(), "block_state_static_bounds");
+    assert_eq!(size, block_size);
+    *w += "const BLOCK_STATE_BOUNDS_INDEX: [";
+    *w += "u16";
+    *w += "; ";
+    *w += ib.format(bs_size);
+    *w += "] = ";
+
+    let mut out = Vec::with_capacity(bs_size);
+    for (i, b_idx) in read_rl(size, &mut iter).enumerate() {
+        let bounds = &*prop_bounds[b_idx as usize];
+        let props = &*bs_properties[bl_props[i] as usize];
+        let mut len = 1;
+        for &prop in props {
+            let prop = &*kv[prop as usize];
+            len *= prop.len() - 1;
+        }
+        match bounds[..] {
+            [] => {
+                out.extend(repeat_n(0, len));
+            }
+            [b] => {
+                out.extend(repeat_n(b, len));
+            }
+            ref bounds => {
+                assert_eq!(len, bounds.len());
+                out.extend(bounds.iter().copied());
+            }
+        }
     }
-    *w += "];\n";
 
-    let (_, size, repr) = head(iter.next(), "block_state_static_bounds");
-    *w += "const BLOCK_STATE_BOUNDS_INDEX: *const ";
-    *w += repr.to_arr();
-    *w += " = unsafe { NAMES.as_ptr().add(";
-    *w += ib.format(wn.len());
-    *w += ").cast() };\n";
-    for n in read_rl(size, &mut iter) {
-        repr.write(wn, n);
-    }
+    list(w, out.into_iter());
+    *w += ";\n";
 
-    bsrepr
+    bs_repr
 }
 
 fn item(w: &mut String, data: &str) {
@@ -1483,7 +1468,7 @@ fn item(w: &mut String, data: &str) {
 
     *w += "const ITEM_MAX_COUNT: [u8; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = ";
     let mut x = size;
     let mut out = Vec::new();
     loop {
@@ -1507,7 +1492,7 @@ fn item(w: &mut String, data: &str) {
         x = x.checked_sub(count).unwrap();
     }
     list(w, out.iter().copied());
-    *w += "];\n";
+    *w += ";\n";
 }
 
 fn entity(w: &mut String, _: &mut [u8], data: &str) {
@@ -1517,23 +1502,23 @@ fn entity(w: &mut String, _: &mut [u8], data: &str) {
     let (_, size, _) = head(iter.next(), "entity_type_height");
     *w += "const ENTITY_HEIGHT: [f32; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = ";
     list(w, read_rl(size, &mut iter).map(f32::from_bits));
-    *w += "];\n";
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_width");
     *w += "const ENTITY_WIDTH: [f32; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = ";
     list(w, read_rl(size, &mut iter).map(f32::from_bits));
-    *w += "];\n";
+    *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_fixed");
     *w += "const ENTITY_FIXED: [u8; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = ";
     list(w, read_rl(size, &mut iter));
-    *w += "];\n";
+    *w += ";\n";
 }
 
 fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
@@ -1554,7 +1539,7 @@ fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
 fn impl_name(
     w: &mut String,
     g: &mut GenerateHash,
-    w2: &mut Vec<u8>,
+    name_buf: &mut Vec<u8>,
     repr: Repr,
     names: &[&str],
     name: &str,
@@ -1566,7 +1551,7 @@ fn impl_name(
     let state = g.generate_hash(names);
     *w += "const DISPS: [u64; ";
     *w += ib.format(state.disps.len() as u32);
-    *w += "] = [";
+    *w += "] = ";
     list(
         w,
         state
@@ -1574,29 +1559,29 @@ fn impl_name(
             .iter()
             .map(|&(h, l)| ((h as u64) << 32) | l as u64),
     );
-    *w += "];\n";
+    *w += ";\n";
     *w += "const VALS: [";
     *w += repr.to_int();
     *w += "; ";
     *w += ib.format(state.map.len() as u32);
-    *w += "] = [";
+    *w += "] = ";
     list(w, state.map.iter().map(|&ele| ele.unwrap()));
-    *w += "];\n";
-    while !w2.len().is_multiple_of(8) {
-        w2.push(0);
+    *w += ";\n";
+    while !name_buf.len().is_multiple_of(8) {
+        name_buf.push(0);
     }
-    let start = w2.len();
-    w2.reserve(names.len() * 24);
+    let start = name_buf.len();
+    name_buf.reserve(names.len() * 24);
     let mut offset = names.len() * 8;
     for &name in names {
         let a = offset as u32;
         let b = name.len() as u32;
         let c = (a as u64) | ((b as u64) << 32);
-        w2.extend(c.to_le_bytes());
+        name_buf.extend(c.to_le_bytes());
         offset += name.len();
     }
     for &val in names {
-        w2.extend(val.as_bytes());
+        name_buf.extend(val.as_bytes());
     }
     *w += "const N: *const u8 = ";
     if start != 0 {
@@ -1865,30 +1850,33 @@ fn read_rl<'a, T: Iterator<Item = &'a str>>(size: usize, iter: T) -> RunLength<T
     }
 }
 
-fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
-    const M: u64 = 0xc6a4a7935bd1e995;
-    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
-    let mut i = 0;
-    while i + 8 <= n.len() {
-        h ^= u64::from_le_bytes(unsafe { *(n.as_ptr().add(i) as *const [u8; 8]) }).wrapping_mul(M);
-        i += 8;
-    }
-    while i < n.len() {
-        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
-        i += 1;
-    }
-    let h = h.wrapping_mul(M) as u128;
-    let h = (h ^ (h >> 44)).wrapping_mul(0xdbe6d5d5fe4cce213198a2e03707344u128);
-    [(h >> 64) as u64, h as u64]
+fn list_ty(w: &mut String, name: &str, repr: Repr, size: usize) {
+    *w += "const ";
+    *w += name;
+    w.push(':');
+    w.push(' ');
+    w.push('[');
+    *w += repr.to_int();
+    *w += "; ";
+    *w += itoa::Buffer::new().format(size);
+    w.push(']');
+    w.push(' ');
+    w.push('=');
+    w.push(' ');
 }
 
 fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     let first = iter.next();
     let first = match first {
         Some(x) => x,
-        None => return,
+        None => {
+            w.push('[');
+            w.push(']');
+            return;
+        }
     };
     let mut c = 0;
+    w.push('[');
     w.push('\n');
     let mut b = itoa::Buffer::new();
     let mut r = ryu::Buffer::new();
@@ -1906,6 +1894,7 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     }
     w.push(',');
     w.push('\n');
+    w.push(']');
 }
 
 fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
@@ -1919,6 +1908,7 @@ fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     let mut r = ryu::Buffer::new();
     first.format(w, &mut b, &mut r);
     for x in iter {
+        w.push(' ');
         w.push('|');
         c += 1;
         if c == 10 {

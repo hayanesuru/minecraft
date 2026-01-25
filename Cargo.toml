@@ -1,5 +1,5 @@
 [workspace]
-members = ["data", "ser", "ser_macro", "protocol"]
+members = ["data", "ser", "ser_macro"]
 resolver = "2"
 
 [workspace.package]
@@ -11,7 +11,6 @@ edition = "2024"
 
 [workspace.dependencies]
 mser = { path = "ser", version = "2.1.0", default-features = false }
-mser_macro = { path = "ser_macro", version = "2.1.0", default-features = false }
 minecraft_data = { path = "data", version = "2.1.0", default-features = false }
 
 [profile.dev.package."minecraft_data"]

@@ -88,3 +88,22 @@ pub const fn unlikely(b: bool) -> bool {
 pub const fn likely(b: bool) -> bool {
     ::core::intrinsics::likely(b)
 }
+
+pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+    const M: u64 = 0xc6a4a7935bd1e995;
+    const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
+    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut i = 0;
+    while i + 8 <= n.len() {
+        h ^= u64::from_le_bytes(unsafe { *(n.as_ptr().add(i) as *const [u8; 8]) }).wrapping_mul(M);
+        i += 8;
+    }
+    while i < n.len() {
+        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
+        i += 1;
+    }
+    let h = (h as u128).wrapping_mul(N);
+    let h = h ^ (h >> 64);
+    let h = h.wrapping_mul(N);
+    [(h >> 64) as u64, h as u64]
+}

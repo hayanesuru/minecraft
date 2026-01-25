@@ -2,6 +2,7 @@
 #![allow(non_camel_case_types, clippy::manual_map, non_upper_case_globals)]
 
 use core::hint::assert_unchecked;
+use mser::hash128;
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
@@ -24,23 +25,7 @@ macro_rules! decode_state {
     };
 }
 
-const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
-    const M: u64 = 0xc6a4a7935bd1e995;
-    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
-    let mut i = 0;
-    while i + 8 <= n.len() {
-        h ^= u64::from_le_bytes(unsafe { *(n.as_ptr().add(i) as *const [u8; 8]) }).wrapping_mul(M);
-        i += 8;
-    }
-    while i < n.len() {
-        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
-        i += 1;
-    }
-    let h = h.wrapping_mul(M) as u128;
-    let h = (h ^ (h >> 44)).wrapping_mul(0xdbe6d5d5fe4cce213198a2e03707344u128);
-    [(h >> 64) as u64, h as u64]
-}
-
+#[inline]
 fn name_u8<const K: u64, const N: usize, const M: usize>(
     disps: [u64; N],
     names: *const u8,
@@ -63,6 +48,7 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
     if name == k { Some(v) } else { None }
 }
 
+#[inline]
 fn name_u16<const K: u64, const N: usize, const M: usize>(
     disps: [u64; N],
     names: *const u8,
@@ -214,11 +200,9 @@ impl block_state {
             // 1
             let b = self.to_block();
             // 2
-            let i = *FLUID_STATE_INDEX.add(b as usize);
+            let i = *FLUID_STATE_INDEX.as_ptr().add(b as usize);
             // 3
-            let a = *FLUID_STATE_ARRAY
-                .as_ptr()
-                .add(u8::from_le_bytes(i) as usize);
+            let a = *FLUID_STATE_ARRAY.as_ptr().add(i as usize);
             if a.len() == 1 {
                 // 4
                 fluid_state(*a.as_ptr())
@@ -234,91 +218,103 @@ impl block_state {
     #[inline]
     #[must_use]
     #[doc(alias = "getLightEmission")]
+    #[cfg(not(debug_assertions))]
     pub const fn luminance(self) -> u8 {
-        unsafe { *BLOCK_STATE_LUMINANCE.add(self.0 as usize) }
+        unsafe { *BLOCK_STATE_LUMINANCE.as_ptr().add(self.0 as usize) }
+    }
+
+    #[inline]
+    #[must_use]
+    #[doc(alias = "getLightEmission")]
+    #[cfg(debug_assertions)]
+    pub const fn luminance(self) -> u8 {
+        BLOCK_STATE_LUMINANCE[self.0 as usize]
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "useShapeForLightOcclusion")]
     pub const fn has_sided_transparency(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 128 != 0
+        self.static_flags() & 128 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "ignitedByLava")]
     pub const fn lava_ignitable(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 64 != 0
+        self.static_flags() & 64 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "canBeReplaced")]
     pub const fn material_replaceable(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 32 != 0
+        self.static_flags() & 32 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "canOcclude")]
     pub const fn opaque(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 16 != 0
+        self.static_flags() & 16 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "requiresCorrectToolForDrops")]
     pub const fn tool_required(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 8 != 0
+        self.static_flags() & 8 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "hasLargeCollisionShape")]
     pub const fn exceeds_cube(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 4 != 0
+        self.static_flags() & 4 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "isSignalSource")]
     pub const fn redstone_power_source(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 2 != 0
+        self.static_flags() & 2 != 0
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "hasAnalogOutputSignal")]
     pub const fn has_comparator_output(self) -> bool {
-        let x = unsafe { *BLOCK_STATE_FLAGS.add(self.0 as usize) };
-        x & 1 != 0
+        self.static_flags() & 1 != 0
     }
 
     #[inline]
+    #[cfg(not(debug_assertions))]
+    const fn static_flags(self) -> u8 {
+        unsafe { *BLOCK_STATE_FLAGS.as_ptr().add(self.id() as usize) }
+    }
+
+    #[inline]
+    #[cfg(debug_assertions)]
+    const fn static_flags(self) -> u8 {
+        BLOCK_STATE_FLAGS[self.id() as usize]
+    }
+
+    #[inline]
+    #[cfg(not(debug_assertions))]
     const fn static_bounds(self) -> Option<u64> {
-        let b = self.to_block();
-        let index = b.id() as usize;
         unsafe {
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() == 1 {
-                *bounds.as_ptr()
-            } else {
-                *bounds.as_ptr().add((self.id() - b.state_index()) as _)
-            };
-            Some(*BLOCK_STATE_BOUNDS.as_ptr().add(index as usize))
+            Some(
+                *BLOCK_STATE_BOUNDS
+                    .as_ptr()
+                    .add(*BLOCK_STATE_BOUNDS_INDEX.as_ptr().add(self.id() as usize) as usize),
+            )
         }
+    }
+
+    #[inline]
+    #[cfg(debug_assertions)]
+    const fn static_bounds(self) -> Option<u64> {
+        Some(BLOCK_STATE_BOUNDS[BLOCK_STATE_BOUNDS_INDEX[self.id() as usize] as usize])
     }
 
     #[inline]
@@ -406,21 +402,11 @@ impl block_state {
     #[doc(alias = "getCollisionShape")]
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() == 1 {
-                *bounds.as_ptr()
-            } else {
-                let offset = self.id() - b.state_index();
-                *bounds.as_ptr().add(offset as _)
+            let index = match self.static_bounds() {
+                Some(x) => (x >> 32) as u16,
+                None => return None,
             };
-            let index = *BLOCK_STATE_BOUNDS.as_ptr().add(index as usize) >> 32;
-            let index = index as u16 as usize;
+            let index = index as usize;
             Some(*SHAPES.as_ptr().add(index))
         }
     }
@@ -430,21 +416,11 @@ impl block_state {
     #[doc(alias = "getOcclusionShape")]
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         unsafe {
-            let b = self.to_block();
-            let index = b.id() as usize;
-            let index = u16::from_le_bytes(*BLOCK_STATE_BOUNDS_INDEX.add(index));
-            if ::mser::unlikely(index == 0) {
-                return None;
-            }
-            let bounds = *BLOCK_BOUNDS.as_ptr().add(index as usize);
-            let index = if bounds.len() == 1 {
-                *bounds.as_ptr()
-            } else {
-                let offset = self.id() - b.state_index();
-                *bounds.as_ptr().add(offset as _)
+            let index = match self.static_bounds() {
+                Some(x) => (x >> 48) as u16,
+                None => return None,
             };
-            let index = *BLOCK_STATE_BOUNDS.as_ptr().add(index as usize) >> 48;
-            let index = index as u16 as usize;
+            let index = index as usize;
             Some(*SHAPES.as_ptr().add(index))
         }
     }
@@ -542,31 +518,31 @@ impl block {
 impl fluid_state {
     #[inline]
     pub const fn to_block(self) -> block_state {
-        unsafe {
-            block_state(raw_block_state::from_le_bytes(
-                *FLUID_STATE_TO_BLOCK
-                    .add(self.0 as usize * core::mem::size_of::<raw_block_state>()),
-            ))
-        }
+        unsafe { block_state(*FLUID_STATE_TO_BLOCK.as_ptr().add(self.0 as usize)) }
     }
 
     #[inline]
     #[must_use]
     pub const fn level(self) -> u8 {
-        unsafe { *(*FLUID_STATE_LEVEL.add(self.0 as usize)).as_ptr() }
+        unsafe { *FLUID_STATE_LEVEL.as_ptr().add(self.0 as usize) }
     }
 
     #[inline]
     #[must_use]
     pub const fn falling(self) -> bool {
-        unsafe { *(*FLUID_STATE_FALLING.add(self.0 as usize)).as_ptr() == 1 }
+        unsafe { *FLUID_STATE_FALLING.as_ptr().add(self.0 as usize) == 1 }
     }
 
     #[inline]
     pub const fn to_fluid(self) -> fluid {
-        unsafe { core::mem::transmute(*(*FLUID_STATE_TO_FLUID.add(self.0 as usize)).as_ptr()) }
+        unsafe {
+            core::mem::transmute::<raw_fluid, fluid>(
+                *FLUID_STATE_TO_FLUID.as_ptr().add(self.0 as usize),
+            )
+        }
     }
 }
+
 impl From<bool> for val_bool {
     #[inline]
     fn from(value: bool) -> Self {
@@ -612,64 +588,71 @@ impl core::fmt::Debug for block_state_property {
 
 #[test]
 fn test_block_state() {
+    assert!(
+        block_state::new(block_state::MAX)
+            .unwrap()
+            .collision_shape()
+            .is_some()
+    );
+
     assert_eq!(game_event::block_activate.name(), "block_activate");
     assert_eq!(
         sound_event::block_bamboo_wood_pressure_plate_click_on,
         sound_event::parse(b"block.bamboo_wood_pressure_plate.click_on").unwrap()
     );
 
-    let x = encode_state!(white_concrete(white_concrete::new()));
-    assert_eq!(x.side_solid_full(), Some(0b111111));
-    assert_eq!(x.side_solid_rigid(), Some(0b111111));
-    assert_eq!(x.side_solid_center(), Some(0b111111));
-    assert_eq!(x.full_cube(), Some(true));
-    assert_eq!(x.solid(), Some(true));
-    assert!(x.tool_required());
+    let white_concrete_bs = encode_state!(white_concrete(white_concrete::new()));
+    assert_eq!(white_concrete_bs.side_solid_full(), Some(0b111111));
+    assert_eq!(white_concrete_bs.side_solid_rigid(), Some(0b111111));
+    assert_eq!(white_concrete_bs.side_solid_center(), Some(0b111111));
+    assert_eq!(white_concrete_bs.full_cube(), Some(true));
+    assert_eq!(white_concrete_bs.solid(), Some(true));
+    assert!(white_concrete_bs.tool_required());
 
-    let b = x.to_block();
+    let b = white_concrete_bs.to_block();
     assert_eq!(b.name(), "white_concrete");
     assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
-    let b = block::air;
-    assert_eq!(b.name(), "air");
-    assert_eq!(Some(b), block::parse(b.name().as_bytes()));
+    let air_bl = block::air;
+    assert_eq!(air_bl.name(), "air");
+    assert_eq!(Some(air_bl), block::parse(air_bl.name().as_bytes()));
 
-    let x = block::air.state_default();
-    assert_eq!(x.side_solid_full(), Some(0));
-    assert_eq!(x.side_solid_rigid(), Some(0));
-    assert_eq!(x.side_solid_center(), Some(0));
-    assert_eq!(x.full_cube(), Some(false));
+    let air_bs = air_bl.state_default();
+    assert_eq!(air_bs.side_solid_full(), Some(0));
+    assert_eq!(air_bs.side_solid_rigid(), Some(0));
+    assert_eq!(air_bs.side_solid_center(), Some(0));
+    assert_eq!(air_bs.full_cube(), Some(false));
 
-    let x = encode_state!(oak_sapling(oak_sapling::new()));
-    let b = x.to_block();
+    let oak_sapling_bs = encode_state!(oak_sapling(oak_sapling::new()));
+    let b = oak_sapling_bs.to_block();
     assert_eq!(b.name(), "oak_sapling");
     assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
-    assert_eq!(x.side_solid_full(), Some(0));
-    assert_eq!(x.side_solid_rigid(), Some(0));
-    assert_eq!(x.side_solid_center(), Some(0));
-    assert_eq!(x.full_cube(), Some(false));
+    assert_eq!(oak_sapling_bs.side_solid_full(), Some(0));
+    assert_eq!(oak_sapling_bs.side_solid_rigid(), Some(0));
+    assert_eq!(oak_sapling_bs.side_solid_center(), Some(0));
+    assert_eq!(oak_sapling_bs.full_cube(), Some(false));
 
-    let x = block::mud.state_default();
-    let b = x.to_block();
+    let mud_bs = block::mud.state_default();
+    let b = mud_bs.to_block();
     assert_eq!(b.name(), "mud");
     assert_eq!(Some(b), block::parse(b"mud"));
 
-    assert_eq!(x.side_solid_full(), Some(0b111111));
-    assert_eq!(x.side_solid_rigid(), Some(0b111111));
-    assert_eq!(x.side_solid_center(), Some(0b111111));
-    assert!(!x.redstone_power_source());
-    assert_eq!(x.opaque_full_cube(), Some(true));
-    assert_eq!(x.full_cube(), Some(false));
+    assert_eq!(mud_bs.side_solid_full(), Some(0b111111));
+    assert_eq!(mud_bs.side_solid_rigid(), Some(0b111111));
+    assert_eq!(mud_bs.side_solid_center(), Some(0b111111));
+    assert!(!mud_bs.redstone_power_source());
+    assert_eq!(mud_bs.opaque_full_cube(), Some(true));
+    assert_eq!(mud_bs.full_cube(), Some(false));
 
-    let x = block::cactus.state_default();
-    assert_eq!(x.side_solid_full(), Some(0b000000));
-    assert_eq!(x.side_solid_rigid(), Some(0b000000));
-    assert_eq!(x.side_solid_center(), Some(0b000001));
-    assert_eq!(x.full_cube(), Some(false));
-    assert!(!x.exceeds_cube());
-    assert!(!x.tool_required());
-    assert_eq!(x.full_cube(), Some(false));
+    let cactus_bs = block::cactus.state_default();
+    assert_eq!(cactus_bs.side_solid_full(), Some(0b000000));
+    assert_eq!(cactus_bs.side_solid_rigid(), Some(0b000000));
+    assert_eq!(cactus_bs.side_solid_center(), Some(0b000001));
+    assert_eq!(cactus_bs.full_cube(), Some(false));
+    assert!(!cactus_bs.exceeds_cube());
+    assert!(!cactus_bs.tool_required());
+    assert_eq!(cactus_bs.full_cube(), Some(false));
     assert_eq!(
         block_state::parse(block::redstone_wire, &mut [][..]),
         block::redstone_wire.state_default()
