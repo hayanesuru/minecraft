@@ -313,17 +313,19 @@ impl block_state {
 
     #[inline]
     #[cfg(debug_assertions)]
-    const fn static_bounds(self) -> Option<u64> {
-        Some(BLOCK_STATE_BOUNDS[BLOCK_STATE_BOUNDS_INDEX[self.id() as usize] as usize])
+    const fn static_bounds(self) -> u64 {
+        BLOCK_STATE_BOUNDS[BLOCK_STATE_BOUNDS_INDEX[self.id() as usize] as usize]
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "getLightBlock")]
     pub const fn opacity(self) -> Option<u8> {
-        match self.static_bounds() {
-            Some(x) => Some(x as u8 >> 4),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some(x as u8 >> 4)
         }
     }
 
@@ -331,9 +333,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isSolidRender")]
     pub const fn solid(self) -> Option<bool> {
-        match self.static_bounds() {
-            Some(x) => Some(x & 1 != 0),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some(x & 1 != 0)
         }
     }
 
@@ -341,9 +345,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isCollisionShapeFullBlock")]
     pub const fn full_cube(self) -> Option<bool> {
-        match self.static_bounds() {
-            Some(x) => Some(x & 2 != 0),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some(x & 2 != 0)
         }
     }
 
@@ -351,9 +357,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "propagatesSkylightDown")]
     pub const fn transparent(self) -> Option<bool> {
-        match self.static_bounds() {
-            Some(x) => Some(x & 4 != 0),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some(x & 4 != 0)
         }
     }
 
@@ -361,9 +369,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isRedstoneConductor")]
     pub const fn opaque_full_cube(self) -> Option<bool> {
-        match self.static_bounds() {
-            Some(x) => Some(x & 8 != 0),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some(x & 8 != 0)
         }
     }
 
@@ -371,9 +381,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isFaceSturdyFull")]
     pub const fn side_solid_full(self) -> Option<u8> {
-        match self.static_bounds() {
-            Some(x) => Some((x >> 8) as u8),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some((x >> 8) as u8)
         }
     }
 
@@ -381,9 +393,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isFaceSturdyCenter")]
     pub const fn side_solid_center(self) -> Option<u8> {
-        match self.static_bounds() {
-            Some(x) => Some((x >> 16) as u8),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some((x >> 16) as u8)
         }
     }
 
@@ -391,9 +405,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "isFaceSturdyRigid")]
     pub const fn side_solid_rigid(self) -> Option<u8> {
-        match self.static_bounds() {
-            Some(x) => Some((x >> 24) as u8),
-            None => None,
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            Some((x >> 24) as u8)
         }
     }
 
@@ -401,13 +417,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "getCollisionShape")]
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
-        unsafe {
-            let index = match self.static_bounds() {
-                Some(x) => (x >> 32) as u16,
-                None => return None,
-            };
-            let index = index as usize;
-            Some(*SHAPES.as_ptr().add(index))
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            unsafe { Some(*SHAPES.as_ptr().add((x >> 32) as u16 as usize)) }
         }
     }
 
@@ -415,13 +429,11 @@ impl block_state {
     #[must_use]
     #[doc(alias = "getOcclusionShape")]
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
-        unsafe {
-            let index = match self.static_bounds() {
-                Some(x) => (x >> 48) as u16,
-                None => return None,
-            };
-            let index = index as usize;
-            Some(*SHAPES.as_ptr().add(index))
+        let x = self.static_bounds();
+        if ::mser::unlikely(x == 0) {
+            None
+        } else {
+            unsafe { Some(*SHAPES.as_ptr().add((x >> 48) as u16 as usize)) }
         }
     }
 
@@ -437,6 +449,14 @@ impl block_state {
 impl item {
     #[inline]
     #[must_use]
+    #[cfg(debug_assertions)]
+    pub const fn max_count(self) -> u8 {
+        ITEM_MAX_COUNT[self as usize]
+    }
+
+    #[inline]
+    #[must_use]
+    #[cfg(not(debug_assertions))]
     pub const fn max_count(self) -> u8 {
         unsafe { *ITEM_MAX_COUNT.as_ptr().add(self as usize) }
     }
@@ -449,53 +469,54 @@ impl item {
 
 impl block {
     #[inline]
+    #[cfg(debug_assertions)]
+    const fn settings(self) -> &'static [f32; 5] {
+        &BLOCK_SETTINGS[BLOCK_SETTINGS_INDEX[self as usize] as usize]
+    }
+
+    #[inline]
+    #[cfg(not(debug_assertions))]
+    const fn settings(self) -> &'static [f32; 5] {
+        unsafe {
+            &*BLOCK_SETTINGS
+                .as_ptr()
+                .add(*BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize)
+        }
+    }
+
+    #[inline]
     #[must_use]
     #[doc(alias = "defaultDestroyTime", alias = "getDestroySpeed")]
     pub const fn hardness(self) -> f32 {
-        unsafe {
-            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr()
-        }
+        unsafe { *self.settings().as_ptr() }
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "getExplosionResistance")]
     pub const fn blast_resistance(self) -> f32 {
-        unsafe {
-            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(1)
-        }
+        unsafe { *self.settings().as_ptr().add(1) }
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "getFriction")]
     pub const fn slipperiness(self) -> f32 {
-        unsafe {
-            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(2)
-        }
+        unsafe { *self.settings().as_ptr().add(2) }
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "getSpeedFactor")]
     pub const fn velocity_multiplier(self) -> f32 {
-        unsafe {
-            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(3)
-        }
+        unsafe { *self.settings().as_ptr().add(3) }
     }
 
     #[inline]
     #[must_use]
     #[doc(alias = "getJumpFactor")]
     pub const fn jump_velocity_multiplier(self) -> f32 {
-        unsafe {
-            let x = *BLOCK_SETTINGS_INDEX.as_ptr().add(self as usize) as usize;
-            *(*BLOCK_SETTINGS.as_ptr().add(x)).as_ptr().add(4)
-        }
+        unsafe { *self.settings().as_ptr().add(4) }
     }
 
     #[inline]
