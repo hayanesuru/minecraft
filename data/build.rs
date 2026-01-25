@@ -517,12 +517,12 @@ fn block_state(
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
-    let (namek, sizek, repr_k) = head(iter.next(), "block_state_property_key");
+    let (name_k, size_k, repr_k) = head(iter.next(), "block_state_property_key");
 
-    let mut pk1 = Vec::with_capacity(sizek);
-    let mut pk2 = vec![""; sizek];
-    let mut pk3 = vec![0_usize; sizek];
-    for index in 0..sizek {
+    let mut pk1 = Vec::with_capacity(size_k);
+    let mut pk2 = vec![""; size_k];
+    let mut pk3 = vec![0_usize; size_k];
+    for index in 0..size_k {
         let data = iter.next().unwrap();
         pk1.push((data, index));
     }
@@ -532,12 +532,12 @@ fn block_state(
         pk3[before] = sorted;
     }
 
-    let (namev, sizev, reprv) = head(iter.next(), "block_state_property_value");
+    let (name_v, size_v, repr_v) = head(iter.next(), "block_state_property_value");
 
-    let mut pv1 = Vec::with_capacity(sizev);
-    let mut pv2 = vec![""; sizev];
-    let mut pv3 = vec![0_usize; sizev];
-    for index in 0..sizev {
+    let mut pv1 = Vec::with_capacity(size_v);
+    let mut pv2 = vec![""; size_v];
+    let mut pv3 = vec![0_usize; size_v];
+    for index in 0..size_v {
         let data = iter.next().unwrap();
         pv1.push((data, index));
     }
@@ -562,22 +562,22 @@ fn block_state(
     drop(pk3);
     drop(pv3);
 
-    enum_head(w, repr_k, namek);
+    enum_head(w, repr_k, name_k);
     for &s in &pk2 {
         kw_prefix(w, s);
         *w += ",\n";
     }
     *w += "}\n";
 
-    enum_head(w, reprv, namev);
+    enum_head(w, repr_v, name_v);
     for &val in &pv2 {
         kw_prefix(w, val);
         *w += ",\n";
     }
     *w += "}\n";
 
-    impl_common(w, namek, repr_k, sizek, 0);
-    impl_common(w, namev, reprv, sizev, 0);
+    impl_common(w, name_k, repr_k, size_k, 0);
+    impl_common(w, name_v, repr_v, size_v, 0);
 
     let mut kvn = ZString::with_capacity(kv.len(), kv.len() * 4);
     let mut x = HashMap::<Box<[&str]>, usize>::new();
@@ -702,8 +702,8 @@ fn block_state(
     *w += "}\n";
     impl_common(w, name_kv, repr_kv, size_kv, 0);
 
-    impl_name(w, gen_hash, name_buf, repr_k, &pk2, namek);
-    impl_name(w, gen_hash, name_buf, reprv, &pv2, namev);
+    impl_name(w, gen_hash, name_buf, repr_k, &pk2, name_k);
+    impl_name(w, gen_hash, name_buf, repr_v, &pv2, name_v);
 
     *w += "impl ";
     *w += name_kv;
@@ -714,7 +714,7 @@ fn block_state(
     *w += ";\n";
 
     *w += "const V: [&'static [";
-    *w += reprv.to_int();
+    *w += repr_v.to_int();
     *w += "]; ";
     *w += ib.format(size_kv);
     *w += "] = [";
@@ -731,19 +731,23 @@ fn block_state(
     *w += "];\n";
 
     *w += "#[inline]\npub const fn key(self) -> ";
-    *w += namek;
+    *w += name_k;
     *w += " {\n";
     *w += "unsafe { ::core::mem::transmute::<";
     *w += repr_k.to_int();
     *w += ", ";
-    *w += namek;
+    *w += name_k;
     *w += ">(*Self::K.as_ptr().add(self as usize)) }\n";
     *w += "}\n";
 
     *w += "#[inline]\npub const fn val(self) -> &'static [";
-    *w += namev;
+    *w += name_v;
     *w += "] {\n";
-    *w += "unsafe { ::core::mem::transmute(*Self::V.as_ptr().add(self as usize)) }\n";
+    *w += "unsafe { ::core::mem::transmute::<&'static [";
+    *w += repr_v.to_int();
+    *w += "], &'static [";
+    *w += name_v;
+    *w += "]>(*Self::V.as_ptr().add(self as usize)) }\n";
     *w += "}\n";
 
     *w += "}\n";
