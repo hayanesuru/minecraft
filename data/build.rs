@@ -10,6 +10,7 @@ use std::path::PathBuf;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[must_use]
 enum Repr {
+    U64,
     U32,
     U16,
     U8,
@@ -17,7 +18,9 @@ enum Repr {
 
 impl Repr {
     const fn new(size: usize) -> Self {
-        if size > u16::MAX as usize {
+        if size > u32::MAX as usize {
+            unreachable!()
+        } else if size > u16::MAX as usize {
             Self::U32
         } else if size > u8::MAX as usize {
             Self::U16
@@ -29,6 +32,7 @@ impl Repr {
     #[must_use]
     const fn to_int(self) -> &'static str {
         match self {
+            Self::U64 => "u64",
             Self::U32 => "u32",
             Self::U16 => "u16",
             Self::U8 => "u8",
@@ -161,16 +165,7 @@ fn registries<'a>(
         enum_head(w, repr, &name);
 
         for &location in &zhash {
-            if let "match" | "true" | "false" | "type" = location {
-                *w += "r#"
-            }
-            let mut last_end = 0;
-            for (start, part) in location.match_indices(['.', '/']) {
-                *w += unsafe { location.get_unchecked(last_end..start) };
-                w.push('_');
-                last_end = start + part.len();
-            }
-            *w += unsafe { location.get_unchecked(last_end..location.len()) };
+            kw_prefix(w, location);
             *w += ",\n";
         }
 
@@ -218,6 +213,24 @@ fn registries<'a>(
         impl_common(w, &name, repr, size, 0);
     }
     block_names
+}
+
+fn kw_prefix(w: &mut String, s: &str) {
+    if s.chars().next().unwrap().is_ascii_digit() {
+        *w += "d_";
+        *w += s;
+    } else if let "match" | "true" | "false" | "type" = s {
+        *w += "r#";
+        *w += s;
+    } else {
+        let mut last_end = 0;
+        for (start, part) in s.match_indices(['.', '/']) {
+            *w += unsafe { s.get_unchecked(last_end..start) };
+            w.push('_');
+            last_end = start + part.len();
+        }
+        *w += unsafe { s.get_unchecked(last_end..s.len()) };
+    }
 }
 
 fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
@@ -550,25 +563,15 @@ fn block_state(
     drop(pv3);
 
     enum_head(w, repr_k, namek);
-    for &ele in &pk2 {
-        if ele == "type" {
-            *w += "r#";
-        }
-        *w += ele;
+    for &s in &pk2 {
+        kw_prefix(w, s);
         *w += ",\n";
     }
     *w += "}\n";
 
     enum_head(w, reprv, namev);
     for &val in &pv2 {
-        let b = *val.as_bytes().first().unwrap();
-        if b.is_ascii_digit() {
-            *w += "d_";
-        } else if val == "false" || val == "true" {
-            *w += "r#";
-        }
-
-        *w += val;
+        kw_prefix(w, val);
         *w += ",\n";
     }
     *w += "}\n";
@@ -622,12 +625,7 @@ fn block_state(
         let repr = Repr::new(x.len() - 1);
         enum_head(w, repr, name);
         for &n in &**x {
-            if n == "true" || n == "false" {
-                *w += "r#";
-            } else if n.chars().next().unwrap().is_ascii_digit() {
-                *w += "d_";
-            }
-            *w += n;
+            kw_prefix(w, n);
             *w += ",\n";
         }
         *w += "}\n";
@@ -926,10 +924,7 @@ fn block_state(
                 }
                 flag = false;
                 *w += "self.";
-                if k == "type" {
-                    *w += "r#";
-                }
-                *w += k;
+                kw_prefix(w, k);
                 *w += "()";
                 *w += " as ";
                 *w += repr.to_int();
@@ -1003,10 +998,7 @@ fn block_state(
             };
             *w += "#[inline]\n";
             *w += "pub const fn ";
-            if k == "type" {
-                *w += "r#";
-            }
-            *w += k;
+            kw_prefix(w, k);
             *w += "(self) -> ";
             *w += &kvn[prop1 as usize];
             *w += " {\n";
@@ -1021,7 +1013,7 @@ fn block_state(
             if index != 0 {
                 *w += "(";
             }
-            let mut m = 0_u32;
+            let mut m = 0u32;
             for n in index..index + x {
                 m |= 1 << n;
             }
@@ -1052,10 +1044,7 @@ fn block_state(
             *w += "pub const fn with_";
             *w += k;
             *w += "(self, ";
-            if k == "type" {
-                *w += "r#";
-            }
-            *w += k;
+            kw_prefix(w, k);
             *w += ": ";
             *w += &kvn[prop1 as usize];
             *w += ") -> Self {\n";
@@ -1069,17 +1058,13 @@ fn block_state(
                 *w += "self.0 & ";
                 *w += ib.format(m);
                 *w += ")";
-
                 *w += " | (";
             }
 
             if index != 0 {
                 *w += "(";
             }
-            if k == "type" {
-                *w += "r#";
-            }
-            *w += k;
+            kw_prefix(w, k);
             *w += " as ";
             *w += repr.to_int();
             if index != 0 {
@@ -1345,12 +1330,7 @@ fn block_state(
 
     let repr = Repr::new(size);
     let (_, size, _) = head(iter.next(), "block_settings");
-
-    *w += "const BLOCK_SETTINGS_INDEX: [";
-    *w += repr.to_int();
-    *w += "; ";
-    *w += ib.format(block_names.len());
-    *w += "] = ";
+    list_ty(w, "BLOCK_SETTINGS_INDEX", repr, block_names.len());
     list(w, read_rl(size, &mut iter));
     *w += ";\n";
 
@@ -1358,22 +1338,13 @@ fn block_state(
         iter.next(),
         "block_state_flags#(has_sided_transparency lava_ignitable material_replaceable opaque tool_required exceeds_cube redstone_power_source has_comparator_output)",
     );
-
     assert_eq!(size, bs_size);
-    *w += "const BLOCK_STATE_FLAGS: [";
-    *w += "u8";
-    *w += "; ";
-    *w += ib.format(size);
-    *w += "] = ";
+    list_ty(w, "BLOCK_STATE_FLAGS", Repr::U8, size);
     list(w, read_rl(size, &mut iter).map(|x| x as u8));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "block_state_luminance");
-
-    *w += "const BLOCK_STATE_LUMINANCE: [";
-    *w += "u8; ";
-    *w += ib.format(size);
-    *w += "] = ";
+    list_ty(w, "BLOCK_STATE_LUMINANCE", Repr::U8, size);
     list(w, read_rl(size, &mut iter).map(|x| x as u8));
     *w += ";\n";
     let (_, size, _) = head(
@@ -1382,9 +1353,7 @@ fn block_state(
     );
 
     assert_eq!(shape_repr, Repr::U16);
-    *w += "const BLOCK_STATE_BOUNDS: [u64; ";
-    *w += ib.format(size);
-    *w += "] = ";
+    list_ty(w, "BLOCK_STATE_BOUNDS", Repr::U64, size);
     let mut out = Vec::with_capacity(size);
     for _ in 0..size {
         let mut s = iter.next().unwrap().as_bytes();
@@ -1424,11 +1393,7 @@ fn block_state(
 
     let (_, size, _) = head(iter.next(), "block_state_static_bounds");
     assert_eq!(size, block_size);
-    *w += "const BLOCK_STATE_BOUNDS_INDEX: [";
-    *w += "u16";
-    *w += "; ";
-    *w += ib.format(bs_size);
-    *w += "] = ";
+    list_ty(w, "BLOCK_STATE_BOUNDS_INDEX", Repr::U16, bs_size);
 
     let mut out = Vec::with_capacity(bs_size);
     for (i, b_idx) in read_rl(size, &mut iter).enumerate() {
@@ -1460,13 +1425,9 @@ fn block_state(
 }
 
 fn item(w: &mut String, data: &str) {
-    let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
     let (_, size, _) = head(iter.next(), "item_max_count");
-
-    *w += "const ITEM_MAX_COUNT: [u8; ";
-    *w += ib.format(size);
-    *w += "] = ";
+    list_ty(w, "ITEM_MAX_COUNT", Repr::U8, size);
     let mut x = size;
     let mut out = Vec::new();
     loop {
@@ -1547,9 +1508,7 @@ fn impl_name(
     *w += name;
     *w += " {\n";
     let state = g.generate_hash(names);
-    *w += "const DISPS: [u64; ";
-    *w += ib.format(state.disps.len() as u32);
-    *w += "] = ";
+    list_ty(w, "DISPS", Repr::U64, state.disps.len());
     list(
         w,
         state
@@ -1558,11 +1517,7 @@ fn impl_name(
             .map(|&(h, l)| ((h as u64) << 32) | l as u64),
     );
     *w += ";\n";
-    *w += "const VALS: [";
-    *w += repr.to_int();
-    *w += "; ";
-    *w += ib.format(state.map.len() as u32);
-    *w += "] = ";
+    list_ty(w, "VALS", repr, state.map.len());
     list(w, state.map.iter().map(|&ele| ele.unwrap()));
     *w += ";\n";
     while !name_buf.len().is_multiple_of(8) {
@@ -1849,6 +1804,7 @@ fn read_rl<'a, T: Iterator<Item = &'a str>>(size: usize, iter: T) -> RunLength<T
 }
 
 fn list_ty(w: &mut String, name: &str, repr: Repr, size: usize) {
+    *w += "#[allow(clippy::large_const_arrays)]\n";
     *w += "const ";
     *w += name;
     w.push(':');
