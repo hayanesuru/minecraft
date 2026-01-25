@@ -1875,7 +1875,7 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
             return;
         }
     };
-    let mut c = 0;
+    let mut c = 0usize;
     w.push('[');
     w.push('\n');
     let mut b = itoa::Buffer::new();
@@ -1884,7 +1884,7 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     for x in iter {
         w.push(',');
         c += 1;
-        if c == 10 {
+        if c == 8 {
             w.push('\n');
             c = 0;
         } else {
@@ -1903,7 +1903,7 @@ fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
         Some(x) => x,
         None => return,
     };
-    let mut c = 0;
+    let mut c = 0usize;
     let mut b = itoa::Buffer::new();
     let mut r = ryu::Buffer::new();
     first.format(w, &mut b, &mut r);
@@ -1911,7 +1911,7 @@ fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
         w.push(' ');
         w.push('|');
         c += 1;
-        if c == 10 {
+        if c == 8 {
             w.push('\n');
             c = 0;
         } else {
