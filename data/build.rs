@@ -211,8 +211,8 @@ fn registries<'a>(
         *w += "match Self::new(x as ";
         *w += repr.to_int();
         *w += ") {\n";
-        *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
-        *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
+        *w += "::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
+        *w += "::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
         *w += "}\n}\n}\n";
         impl_name(w, gen_hash, name_buf, repr, &zhash, &name);
         impl_common(w, &name, repr, size, 0);
@@ -1203,8 +1203,8 @@ fn block_state(
     *w += bs_repr.to_int();
     *w += ";\n";
     *w += "match Self::new(x) {\n";
-    *w += "    ::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
-    *w += "    ::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
+    *w += "::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
+    *w += "::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
     *w += "}\n}\n}\n";
 
     list_ty(
