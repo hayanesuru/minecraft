@@ -1226,12 +1226,11 @@ fn block_state(
 
     *w += "impl block {\n";
     list_ty(w, "DEFAULT", bs_repr, block_names.len());
-    let mut prev = 0u32;
     let mut out = Vec::with_capacity(size);
-    for x in read_rl(size, &mut iter) {
-        out.push(x + prev);
-        prev += 1 + x;
-    }
+    let _: u32 = read_rl(size, &mut iter).fold(0, |prev, x| {
+        out.push(x.wrapping_add(prev));
+        1 + x.wrapping_add(prev)
+    });
     list(w, out.into_iter());
     *w += ";\n";
     *w += "#[inline]\n";
@@ -1242,12 +1241,11 @@ fn block_state(
     let (_, size, _) = head(iter.next(), "block_item_to_block");
 
     *w += "const ITEM: [raw_block; item::MAX as usize + 1] = ";
-    prev = 0;
     let mut out = Vec::with_capacity(size);
-    for x in read_rl(size, &mut iter) {
+    let _: u32 = read_rl(size, &mut iter).fold(0, |prev, x| {
         out.push(x.wrapping_add(prev));
-        prev = 1 + x.wrapping_add(prev);
-    }
+        1 + x.wrapping_add(prev)
+    });
     list(w, out.into_iter());
     *w += ";\n";
 
@@ -1897,15 +1895,27 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     w.push(']');
 }
 
-fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
+fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format> + Clone) {
+    let iter1 = iter.clone();
     let first = iter.next();
     let first = match first {
         Some(x) => x,
-        None => return,
+        None => {
+            unimplemented!();
+        }
     };
-    let mut c = 0usize;
     let mut b = itoa::Buffer::new();
     let mut r = ryu::Buffer::new();
+    if iter1.is_sorted_by(|a, b| a.is_next(b))
+        && let Some(last) = iter.clone().last()
+    {
+        first.format(w, &mut b, &mut r);
+        *w += "..=";
+        last.format(w, &mut b, &mut r);
+        return;
+    }
+
+    let mut c = 0usize;
     first.format(w, &mut b, &mut r);
     for x in iter {
         w.push(' ');
@@ -1923,6 +1933,9 @@ fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
 
 trait Format {
     fn format(&self, w: &mut String, b: &mut itoa::Buffer, r: &mut ryu::Buffer);
+    fn is_next(&self, _: &Self) -> bool {
+        false
+    }
 }
 
 impl Format for str {
@@ -1935,11 +1948,19 @@ impl Format for usize {
     fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
         w.push_str(b.format(*self));
     }
+
+    fn is_next(&self, other: &Self) -> bool {
+        self.wrapping_add(1) == *other
+    }
 }
 
 impl Format for u8 {
     fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
         w.push_str(b.format(*self));
+    }
+
+    fn is_next(&self, other: &Self) -> bool {
+        self.wrapping_add(1) == *other
     }
 }
 
@@ -1947,11 +1968,19 @@ impl Format for u32 {
     fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
         w.push_str(b.format(*self));
     }
+
+    fn is_next(&self, other: &Self) -> bool {
+        self.wrapping_add(1) == *other
+    }
 }
 
 impl Format for u64 {
     fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
         w.push_str(b.format(*self));
+    }
+
+    fn is_next(&self, other: &Self) -> bool {
+        self.wrapping_add(1) == *other
     }
 }
 

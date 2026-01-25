@@ -586,6 +586,14 @@ impl core::fmt::Debug for block_state_property {
     }
 }
 
+impl core::fmt::Debug for fluid_state {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_tuple(self.to_fluid().name())
+            .field(&self.id())
+            .finish()
+    }
+}
+
 #[test]
 fn test_block_state() {
     assert!(
@@ -705,12 +713,4 @@ fn test_block_state() {
     assert!(!block::dispenser.is_air());
     assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
     assert_eq!(block::fire.state_default().opacity().unwrap(), 0);
-}
-
-impl core::fmt::Debug for fluid_state {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_tuple(self.to_fluid().name())
-            .field(&self.id())
-            .finish()
-    }
 }
