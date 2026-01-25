@@ -1,4 +1,4 @@
-use crate::kw;
+use crate::{V7MAX, V21MAX, kw};
 use quote::quote;
 
 pub fn serialize_struct(
@@ -74,21 +74,21 @@ pub fn serialize_enum(
         if attr.path().is_ident("repr") {
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("u8") {
-                    if varint && len > mser::V7MAX {
+                    if varint && len > V7MAX {
                         repr = Some(quote!(::#cratename::V21(*self as u32)));
                     } else {
                         repr = Some(quote!(*self as u8));
                     }
                 } else if meta.path.is_ident("u16") {
-                    if varint && len > mser::V7MAX {
+                    if varint && len > V7MAX {
                         repr = Some(quote!(::#cratename::V21(*self as u32)));
                     } else {
                         repr = Some(quote!(*self as u16));
                     }
                 } else if meta.path.is_ident("u32") {
-                    if varint && len > mser::V21MAX {
+                    if varint && len > V21MAX {
                         repr = Some(quote!(::#cratename::V32(*self as u32)));
-                    } else if varint && len > mser::V7MAX {
+                    } else if varint && len > V7MAX {
                         repr = Some(quote!(::#cratename::V21(*self as u32)));
                     } else {
                         repr = Some(quote!(*self as u32));
@@ -96,9 +96,9 @@ pub fn serialize_enum(
                 } else if meta.path.is_ident("u64") {
                     if varint && len > u32::MAX as usize {
                         repr = Some(quote!(::#cratename::V64(*self as u64)));
-                    } else if varint && len > mser::V21MAX {
+                    } else if varint && len > V21MAX {
                         repr = Some(quote!(::#cratename::V32(*self as u64 as u32)));
-                    } else if varint && len > mser::V7MAX {
+                    } else if varint && len > V7MAX {
                         repr = Some(quote!(::#cratename::V21(*self as u64 as u32)));
                     } else {
                         repr = Some(quote!(*self as u64));
