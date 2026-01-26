@@ -3,62 +3,62 @@ use crate::item::ItemStack;
 use crate::nbt::Compound;
 use crate::str::BoxStr;
 use crate::{HolderSet, Identifier};
-use alloc::alloc::{Allocator, Global};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 #[derive(Clone)]
-#[allow(clippy::large_enum_variant)]
-pub enum Dialog<A: Allocator = Global> {
+pub struct Dialog {
+    pub common: CommonDialog,
+    pub data: DialogData,
+}
+
+#[derive(Clone)]
+pub enum DialogData {
     Notice {
-        common: CommonDialog<A>,
-        action: ActionButton<A>,
+        action: ActionButton,
     },
     Confirmation {
-        common: CommonDialog<A>,
-        yes_button: ActionButton<A>,
-        no_button: ActionButton<A>,
+        yes_button: ActionButton,
+        no_button: ActionButton,
     },
     MultiAction {
-        common: CommonDialog<A>,
-        actions: Vec<ActionButton<A>, A>,
-        exit_action: Option<ActionButton<A>>,
+        actions: Vec<ActionButton>,
+        exit_action: Option<ActionButton>,
         columns: u32,
     },
     ServerLinks {
-        common: CommonDialog<A>,
-        exit_action: Option<ActionButton<A>>,
+        exit_action: Option<ActionButton>,
         columns: u32,
         button_width: u32,
     },
     DialogList {
-        common: CommonDialog<A>,
-        dialogs: HolderSet<Dialog, A>,
-        exit_action: Option<ActionButton<A>>,
+        dialogs: HolderSet<Dialog>,
+        exit_action: Option<ActionButton>,
         columns: u32,
         button_width: u32,
     },
 }
 
 #[derive(Clone)]
-pub struct CommonDialog<A: Allocator = Global> {
-    pub title: Component<A>,
-    pub external_title: Option<Component<A>>,
-    pub body: Vec<DialogBody<A>, A>,
-    pub inputs: Vec<Input<A>, A>,
+pub struct CommonDialog {
+    pub title: Component,
+    pub external_title: Option<Component>,
+    pub body: Vec<DialogBody>,
+    pub inputs: Vec<Input>,
     pub can_close_with_escape: bool,
     pub pause: bool,
     pub after_action: AfterAction,
 }
 
 #[derive(Clone)]
-pub enum DialogBody<A: Allocator = Global> {
+pub enum DialogBody {
     PlainMessage {
-        contents: Component<A>,
+        contents: Component,
         width: u32,
     },
     Item {
-        item: ItemStack<A>,
-        description: Description<A>,
+        item: ItemStack,
+        description: Description,
         show_decoration: bool,
         show_tooltip: bool,
         width: u32,
@@ -67,41 +67,41 @@ pub enum DialogBody<A: Allocator = Global> {
 }
 
 #[derive(Clone)]
-pub struct Description<A: Allocator = Global> {
-    pub contents: Option<Component<A>>,
+pub struct Description {
+    pub contents: Option<Component>,
     pub width: Option<u32>,
 }
 
 #[derive(Clone)]
-pub enum Input<A: Allocator = Global> {
+pub enum Input {
     Text {
-        key: ParsedTemplate<A>,
-        label: Component<A>,
+        key: ParsedTemplate,
+        label: Box<Component>,
         width: u32,
         label_visible: bool,
-        initial: Option<BoxStr<A>>,
+        initial: Option<BoxStr>,
         max_length: u32,
         multiline: Option<Multiline>,
     },
     Boolean {
-        key: ParsedTemplate<A>,
-        label: Component<A>,
+        key: ParsedTemplate,
+        label: Component,
         initial: bool,
-        on_true: Option<BoxStr<A>>,
-        on_false: Option<BoxStr<A>>,
+        on_true: Option<BoxStr>,
+        on_false: Option<BoxStr>,
     },
     SingleOption {
-        key: ParsedTemplate<A>,
-        label: Component<A>,
+        key: ParsedTemplate,
+        label: Component,
         width: u32,
         label_visible: bool,
-        options: Vec<SingleOptionEntry, A>,
+        options: Vec<SingleOptionEntry>,
     },
     NumberRange {
-        key: ParsedTemplate<A>,
-        label: Component<A>,
+        key: ParsedTemplate,
+        label: Component,
         width: u32,
-        label_format: Option<BoxStr<A>>,
+        label_format: Option<BoxStr>,
         start: f32,
         end: f32,
         initial: Option<f32>,
@@ -116,9 +116,9 @@ pub struct Multiline {
 }
 
 #[derive(Clone)]
-pub struct SingleOptionEntry<A: Allocator = Global> {
-    pub id: BoxStr<A>,
-    pub display: Component<A>,
+pub struct SingleOptionEntry {
+    pub id: BoxStr,
+    pub display: Component,
     pub initial: bool,
 }
 
@@ -130,33 +130,33 @@ pub enum AfterAction {
 }
 
 #[derive(Clone)]
-pub struct ActionButton<A: Allocator = Global> {
-    pub botton: Botton<A>,
-    pub action: Option<Action<A>>,
+pub struct ActionButton {
+    pub botton: Botton,
+    pub action: Option<Action>,
 }
 
 #[derive(Clone)]
-pub struct Botton<A: Allocator = Global> {
-    pub label: Component<A>,
-    pub tooltip: Option<Component<A>>,
+pub struct Botton {
+    pub label: Box<Component>,
+    pub tooltip: Option<Box<Component>>,
     pub width: u32,
 }
 
 #[derive(Clone)]
-pub enum Action<A: Allocator = Global> {
+pub enum Action {
     CommandTemplate {
-        template: ParsedTemplate<A>,
+        template: ParsedTemplate,
     },
     CustomAll {
-        id: Identifier<A>,
-        additions: Option<Compound<A>>,
+        id: Identifier,
+        additions: Option<Compound>,
     },
     Static {
-        value: ClickEvent<A>,
+        value: ClickEvent,
     },
 }
 
 #[derive(Clone)]
-pub struct ParsedTemplate<A: Allocator = Global> {
-    pub raw: BoxStr<A>,
+pub struct ParsedTemplate {
+    pub raw: BoxStr,
 }

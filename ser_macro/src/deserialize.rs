@@ -1,4 +1,4 @@
-use crate::kw;
+use crate::{V7MAX, V21MAX, kw};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt, quote};
 
@@ -75,7 +75,7 @@ pub fn deserialize_enum(
         if attr.path().is_ident("repr") {
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("u8") {
-                    if varint && len > mser::V7MAX {
+                    if varint && len > V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
                             let x = <::#cratename::V21 as ::#cratename::Read>::read(r)?;
@@ -97,7 +97,7 @@ pub fn deserialize_enum(
                         });
                     }
                 } else if meta.path.is_ident("u16") {
-                    if varint && len > mser::V7MAX {
+                    if varint && len > V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
                             let x = <::#cratename::V21 as ::#cratename::Read>::read(r)?;
@@ -129,7 +129,7 @@ pub fn deserialize_enum(
                         });
                     }
                 } else if meta.path.is_ident("u32") {
-                    if varint && len > mser::V21MAX {
+                    if varint && len > V21MAX {
                         let len = len as u32;
                         read = Some(quote! {
                             let x = <::#cratename::V32 as ::#cratename::Read>::read(r)?;
@@ -139,7 +139,7 @@ pub fn deserialize_enum(
                                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(0) ) }
                             }
                         });
-                    } else if varint && len > mser::V7MAX {
+                    } else if varint && len > V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
                             let x = <::#cratename::V21 as ::#cratename::Read>::read(r)?;
@@ -171,7 +171,7 @@ pub fn deserialize_enum(
                                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
-                    } else if varint && len > mser::V21MAX {
+                    } else if varint && len > V21MAX {
                         let len = len as u32;
                         read = Some(quote! {
                             let x = <::#cratename::V32 as ::#cratename::Read>::read(r)?;
@@ -181,7 +181,7 @@ pub fn deserialize_enum(
                                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
                             }
                         });
-                    } else if varint && len > mser::V7MAX {
+                    } else if varint && len > V7MAX {
                         let len = len as u32;
                         read = Some(quote! {
                             let x = <::#cratename::V21 as ::#cratename::Read>::read(r)?;

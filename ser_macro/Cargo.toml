@@ -1,6 +1,6 @@
 [package]
 name = "mser_macro"
-version = "2.1.0"
+version = "2.2.0"
 description = "mser_macro"
 authors.workspace = true
 readme.workspace = true
@@ -16,7 +16,6 @@ proc-macro = true
 syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
-mser = { workspace = true }
 itoa = "1"
 
 [package.metadata.docs.rs]

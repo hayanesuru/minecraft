@@ -16,7 +16,7 @@ macro_rules! primitive {
             }
 
             #[inline(always)]
-            fn sz(&self) -> usize {
+            fn len_s(&self) -> usize {
                 ::core::mem::size_of::<Self>()
             }
         }
@@ -34,7 +34,7 @@ macro_rules! non_zero {
             }
 
             #[inline(always)]
-            fn sz(&self) -> usize {
+            fn len_s(&self) -> usize {
                 ::core::mem::size_of::<Self>()
             }
         }
@@ -56,8 +56,8 @@ impl<A: Write + ?Sized, B: Write + ?Sized> Write for Write2<'_, A, B> {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
-        self.a.sz() + self.b.sz()
+    fn len_s(&self) -> usize {
+        self.a.len_s() + self.b.len_s()
     }
 }
 
@@ -78,8 +78,8 @@ impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'
     }
 
     #[inline]
-    fn sz(&self) -> usize {
-        self.a.sz() + self.b.sz() + self.c.sz()
+    fn len_s(&self) -> usize {
+        self.a.len_s() + self.b.len_s() + self.c.len_s()
     }
 }
 
@@ -90,8 +90,8 @@ impl<T: Write> Write for core::slice::Iter<'_, T> {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
-        self.clone().map(|x| x.sz()).sum()
+    fn len_s(&self) -> usize {
+        self.clone().map(|x| x.len_s()).sum()
     }
 }
 
@@ -102,8 +102,8 @@ impl<T: Write> Write for core::slice::IterMut<'_, T> {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
-        self.as_slice().iter().map(|x| x.sz()).sum()
+    fn len_s(&self) -> usize {
+        self.as_slice().iter().map(|x| x.len_s()).sum()
     }
 }
 
@@ -116,7 +116,7 @@ impl Write for bool {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
@@ -130,7 +130,7 @@ impl Write for NonZeroI8 {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
@@ -144,7 +144,7 @@ impl Write for NonZeroU8 {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
@@ -158,7 +158,7 @@ impl Write for u8 {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
@@ -172,7 +172,7 @@ impl Write for i8 {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         1
     }
 }
@@ -203,7 +203,7 @@ impl Write for str {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         str::len(self)
     }
 }
@@ -217,7 +217,7 @@ impl Write for [u8] {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         <[u8]>::len(self)
     }
 }
@@ -231,7 +231,7 @@ impl Write for &str {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         str::len(self)
     }
 }
@@ -243,7 +243,7 @@ impl Write for uuid::Uuid {
     }
 
     #[inline(always)]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         16
     }
 }
@@ -257,7 +257,7 @@ impl Write for &[u8] {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         <[u8]>::len(self)
     }
 }
@@ -271,8 +271,8 @@ impl<T: Write + ?Sized> Write for NonNull<T> {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
-        unsafe { self.as_ref().sz() }
+    fn len_s(&self) -> usize {
+        unsafe { self.as_ref().len_s() }
     }
 }
 
@@ -293,9 +293,9 @@ impl<T: Write> Write for Option<T> {
     }
 
     #[inline]
-    fn sz(&self) -> usize {
+    fn len_s(&self) -> usize {
         match self.as_ref() {
-            Some(x) => 1 + x.sz(),
+            Some(x) => 1 + x.len_s(),
             None => 1,
         }
     }

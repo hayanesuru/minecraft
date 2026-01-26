@@ -35,6 +35,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SupportType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
@@ -562,48 +563,12 @@ public final class Datagen {
         for (var block : BuiltInRegistries.BLOCK) {
             var states = block.getStateDefinition().getPossibleStates();
             if (block.hasDynamicShape()) {
-                bound2s.putIfAbsent(new ArrayList<>(), bound2s.size());
-                bound2x.add(bound2s.get(new ArrayList<Integer>()));
+                bound2x.add(0);
                 continue;
             }
             var z = new ArrayList<Integer>(states.size());
             for (final var state : states) {
-                int flags1 = 0;
-                if (state.isSolidRender()) {
-                    flags1 |= 1;
-                }
-                if (state.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
-                    flags1 |= 2;
-                }
-                if (state.propagatesSkylightDown()) {
-                    flags1 |= 4;
-                }
-                if (state.isRedstoneConductor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
-                    flags1 |= 8;
-                }
-                flags1 |= state.getLightBlock() << 4;
-
-                int flags2 = 0;
-                int flags3 = 0;
-                int flags4 = 0;
-                for (var direction : Direction.values()) {
-                    if (state.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, direction, SupportType.FULL)) {
-                        flags2 |= 1 << direction.get3DDataValue();
-                    }
-                }
-                for (var direction : Direction.values()) {
-                    if (state.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, direction, SupportType.CENTER)) {
-                        flags3 |= 1 << direction.get3DDataValue();
-                    }
-                }
-                for (var direction : Direction.values()) {
-                    if (state.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, direction, SupportType.RIGID)) {
-                        flags4 |= 1 << direction.get3DDataValue();
-                    }
-                }
-                int flags5 = shapes.get(state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs());
-                int flags6 = shapes.get(state.getOcclusionShape().toAabbs());
-                var x = new ArrayList<>(List.of(flags1, flags2, flags3, flags4, flags5, flags6));
+                var x = bsFlags(state, shapes);
                 bounds.putIfAbsent(x, bounds.size());
                 z.add(bounds.get(x));
             }
@@ -658,6 +623,72 @@ public final class Datagen {
             b.append(NL);
         }
         writeRl(b, "block_state_static_bounds", new IntegerIdMap(bound2x), val -> val);
+
+        BlockState mud = Blocks.MUD.defaultBlockState();
+        int flags2 = 0;
+        int flags3 = 0;
+        int flags4 = 0;
+        for (var d : VALUES) {
+            if (mud.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, d, SupportType.FULL)) {
+                flags2 |= 1 << d.get3DDataValue();
+            }
+        }
+        for (var d : VALUES) {
+            if (mud.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, d, SupportType.CENTER)) {
+                flags3 |= 1 << d.get3DDataValue();
+            }
+        }
+        for (var d : VALUES) {
+            if (mud.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, d, SupportType.RIGID)) {
+                flags4 |= 1 << d.get3DDataValue();
+            }
+        }
+        boolean c;
+        c = flags2 == 63 && flags3 == 63 && flags4 == 63;
+        if (!c) {
+            throw new IllegalStateException(flags2 + " " + flags3 + " " + flags4);
+        }
+    }
+
+    private static final Direction[] VALUES = Direction.values();
+
+    private static ArrayList<Integer> bsFlags(BlockState state, HashMap<List<AABB>, Integer> shapes) {
+        int flags1 = 0;
+        if (state.isSolidRender()) {
+            flags1 |= 1;
+        }
+        if (state.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
+            flags1 |= 2;
+        }
+        if (state.propagatesSkylightDown()) {
+            flags1 |= 4;
+        }
+        if (state.isRedstoneConductor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
+            flags1 |= 8;
+        }
+        flags1 |= state.getLightBlock() << 4;
+
+        int flags2 = 0;
+        int flags3 = 0;
+        int flags4 = 0;
+        for (var d : VALUES) {
+            if (state.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, d, SupportType.FULL)) {
+                flags2 |= 1 << d.get3DDataValue();
+            }
+        }
+        for (var d : VALUES) {
+            if (state.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, d, SupportType.CENTER)) {
+                flags3 |= 1 << d.get3DDataValue();
+            }
+        }
+        for (var d : VALUES) {
+            if (state.isFaceSturdy(EmptyBlockGetter.INSTANCE, BlockPos.ZERO, d, SupportType.RIGID)) {
+                flags4 |= 1 << d.get3DDataValue();
+            }
+        }
+        int flags5 = shapes.get(state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).toAabbs());
+        int flags6 = shapes.get(state.getOcclusionShape().toAabbs());
+        return new ArrayList<>(List.of(flags1, flags2, flags3, flags4, flags5, flags6));
     }
 
     private static void packet(StringBuilder b) {

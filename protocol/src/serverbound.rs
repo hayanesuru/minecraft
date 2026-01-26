@@ -21,14 +21,6 @@ macro_rules! packets {
         packets!(@munch $m; $($tail)*);
     };
     (@munch $m:ty;
-        $type:ty where Allocator => $variant:path
-    ) => {
-        #[automatically_derived]
-        impl<A: Allocator> crate::types::Id<$m> for $type {
-            const ID: $m = $variant;
-        }
-    };
-    (@munch $m:ty;
         $type:ty => $variant:path,
         $($tail:tt)*
     ) => {

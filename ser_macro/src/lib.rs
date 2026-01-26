@@ -11,6 +11,9 @@ use syn::{DeriveInput, parse_macro_input};
 
 extern crate alloc;
 
+const V21MAX: usize = 0x1FFFFF;
+const V7MAX: usize = 0x7F;
+
 mod kw {
     syn::custom_keyword!(varint);
 }
