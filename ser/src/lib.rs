@@ -2,7 +2,6 @@
 #![allow(internal_features)]
 #![cfg_attr(nightly, feature(core_intrinsics))]
 
-mod bytes;
 mod float;
 mod hex;
 mod integer;
@@ -13,7 +12,6 @@ mod varint;
 mod write;
 mod writer;
 
-pub use self::bytes::Bytes;
 pub use self::float::parse_float;
 pub use self::hex::{hex_to_u8, parse_hex, u8_to_hex};
 pub use self::integer::parse_int;
