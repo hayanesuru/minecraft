@@ -1,4 +1,4 @@
-use crate::{Error, Read, unlikely};
+use crate::{Error, Read, cold_path};
 
 impl<'a> Read<'a> for u8 {
     #[inline]
@@ -7,6 +7,7 @@ impl<'a> Read<'a> for u8 {
             *buf = b;
             Ok(*a)
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -19,6 +20,7 @@ impl<'a> Read<'a> for i8 {
             *buf = b;
             Ok(*a as i8)
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -31,6 +33,7 @@ impl<'a> Read<'a> for u16 {
             *buf = c;
             Ok(u16::from_be_bytes([*a, *b]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -43,6 +46,7 @@ impl<'a> Read<'a> for i16 {
             *buf = c;
             Ok(i16::from_be_bytes([*a, *b]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -55,6 +59,7 @@ impl<'a> Read<'a> for u32 {
             *buf = e;
             Ok(u32::from_be_bytes([*a, *b, *c, *d]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -67,6 +72,7 @@ impl<'a> Read<'a> for i32 {
             *buf = e;
             Ok(i32::from_be_bytes([*a, *b, *c, *d]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -75,10 +81,11 @@ impl<'a> Read<'a> for i32 {
 impl<'a> Read<'a> for u64 {
     #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        if let [a, b, c, d, e, f, g, h, i @ ..] = buf {
+        if let [a, b, c, d, e, f, g, h, ref i @ ..] = buf[..] {
             *buf = i;
-            Ok(u64::from_be_bytes([*a, *b, *c, *d, *e, *f, *g, *h]))
+            Ok(u64::from_be_bytes([a, b, c, d, e, f, g, h]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -87,10 +94,11 @@ impl<'a> Read<'a> for u64 {
 impl<'a> Read<'a> for i64 {
     #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        if let [a, b, c, d, e, f, g, h, i @ ..] = buf {
+        if let [a, b, c, d, e, f, g, h, ref i @ ..] = buf[..] {
             *buf = i;
-            Ok(i64::from_be_bytes([*a, *b, *c, *d, *e, *f, *g, *h]))
+            Ok(i64::from_be_bytes([a, b, c, d, e, f, g, h]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -103,6 +111,7 @@ impl<'a> Read<'a> for f32 {
             *buf = e;
             Ok(f32::from_be_bytes([*a, *b, *c, *d]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -111,10 +120,11 @@ impl<'a> Read<'a> for f32 {
 impl<'a> Read<'a> for f64 {
     #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        if let [a, b, c, d, e, f, g, h, i @ ..] = buf {
+        if let [a, b, c, d, e, f, g, h, ref i @ ..] = buf[..] {
             *buf = i;
-            Ok(f64::from_be_bytes([*a, *b, *c, *d, *e, *f, *g, *h]))
+            Ok(f64::from_be_bytes([a, b, c, d, e, f, g, h]))
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -127,6 +137,7 @@ impl<'a> Read<'a> for bool {
             *buf = b;
             Ok(*a == 1)
         } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -134,19 +145,27 @@ impl<'a> Read<'a> for bool {
 
 impl<'a> Read<'a> for uuid::Uuid {
     #[inline]
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        Ok(Self::from_bytes(*<&[u8; 16]>::read(buf)?))
+    }
+}
+
+impl<'a, const N: usize> Read<'a> for &'a [u8; N] {
+    #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        if unlikely(16 > buf.len()) {
+        if N > buf.len() {
+            cold_path();
             return Err(Error);
         }
         let len = buf.len();
         let ptr = buf.as_ptr();
         unsafe {
             let (a, b) = (
-                core::slice::from_raw_parts(ptr, 16),
-                core::slice::from_raw_parts(ptr.add(16), len - 16),
+                core::slice::from_raw_parts(ptr, N),
+                core::slice::from_raw_parts(ptr.add(N), len - N),
             );
             *buf = b;
-            Ok(Self::from_bytes(*a.as_ptr().cast()))
+            Ok(&*(a.as_ptr() as *const [u8; N]))
         }
     }
 }

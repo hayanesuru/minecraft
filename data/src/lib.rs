@@ -2,7 +2,7 @@
 #![allow(non_camel_case_types, clippy::manual_map, non_upper_case_globals)]
 
 use core::hint::assert_unchecked;
-use mser::hash128;
+use mser::{cold_path, hash128};
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
@@ -322,7 +322,8 @@ impl block_state {
     #[doc(alias = "getLightBlock")]
     pub const fn opacity(self) -> Option<u8> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some(x as u8 >> 4)
@@ -334,7 +335,8 @@ impl block_state {
     #[doc(alias = "isSolidRender")]
     pub const fn solid(self) -> Option<bool> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some(x & 1 != 0)
@@ -346,7 +348,8 @@ impl block_state {
     #[doc(alias = "isCollisionShapeFullBlock")]
     pub const fn full_cube(self) -> Option<bool> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some(x & 2 != 0)
@@ -358,7 +361,8 @@ impl block_state {
     #[doc(alias = "propagatesSkylightDown")]
     pub const fn transparent(self) -> Option<bool> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some(x & 4 != 0)
@@ -370,7 +374,8 @@ impl block_state {
     #[doc(alias = "isRedstoneConductor")]
     pub const fn opaque_full_cube(self) -> Option<bool> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some(x & 8 != 0)
@@ -382,7 +387,8 @@ impl block_state {
     #[doc(alias = "isFaceSturdyFull")]
     pub const fn side_solid_full(self) -> Option<u8> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some((x >> 8) as u8)
@@ -394,7 +400,8 @@ impl block_state {
     #[doc(alias = "isFaceSturdyCenter")]
     pub const fn side_solid_center(self) -> Option<u8> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some((x >> 16) as u8)
@@ -406,7 +413,8 @@ impl block_state {
     #[doc(alias = "isFaceSturdyRigid")]
     pub const fn side_solid_rigid(self) -> Option<u8> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             Some((x >> 24) as u8)
@@ -418,7 +426,8 @@ impl block_state {
     #[doc(alias = "getCollisionShape")]
     pub const fn collision_shape(self) -> Option<&'static [[f64; 6]]> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             unsafe { Some(*SHAPES.as_ptr().add((x >> 32) as u16 as usize)) }
@@ -430,7 +439,8 @@ impl block_state {
     #[doc(alias = "getOcclusionShape")]
     pub const fn culling_shape(self) -> Option<&'static [[f64; 6]]> {
         let x = self.static_bounds();
-        if ::mser::unlikely(x == 0) {
+        if x == 0 {
+            cold_path();
             None
         } else {
             unsafe { Some(*SHAPES.as_ptr().add((x >> 48) as u16 as usize)) }

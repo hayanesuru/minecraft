@@ -1,6 +1,5 @@
 #![no_std]
 #![allow(internal_features)]
-#![cfg_attr(nightly, feature(core_intrinsics))]
 
 mod float;
 mod hex;
@@ -53,39 +52,8 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
     }
 }
 
-#[inline(always)]
-#[cfg(not(nightly))]
-pub const fn unlikely(b: bool) -> bool {
-    #[allow(clippy::needless_bool)]
-    if (1i32).checked_div(if b { 0 } else { 1 }).is_none() {
-        true
-    } else {
-        false
-    }
-}
-
-#[inline(always)]
-#[cfg(not(nightly))]
-pub const fn likely(b: bool) -> bool {
-    #[allow(clippy::needless_bool)]
-    if (1i32).checked_div(if b { 1 } else { 0 }).is_some() {
-        true
-    } else {
-        false
-    }
-}
-
-#[inline(always)]
-#[cfg(nightly)]
-pub const fn unlikely(b: bool) -> bool {
-    ::core::intrinsics::unlikely(b)
-}
-
-#[inline(always)]
-#[cfg(nightly)]
-pub const fn likely(b: bool) -> bool {
-    ::core::intrinsics::likely(b)
-}
+#[cold]
+pub const fn cold_path() {}
 
 pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
     const M: u64 = 0xc6a4a7935bd1e995;

@@ -1,5 +1,5 @@
 use super::{Read, UnsafeWriter, Write};
-use crate::{Error, likely, unlikely};
+use crate::{Error, cold_path};
 use core::slice::from_raw_parts;
 
 pub const V21MAX: usize = 0x1FFFFF;
@@ -20,59 +20,29 @@ impl V21 {
 
 impl<'a> Read<'a> for V21 {
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        unsafe {
-            let mut ptr = buf.as_ptr();
-            let len = buf.len();
-
-            if unlikely(len == 0) {
-                return Err(Error);
-            }
-            let a = *ptr;
-            ptr = ptr.add(1);
-            if likely((a & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 1);
-                return Ok(Self(a as u32));
-            }
-
-            if unlikely(len == 1) {
-                return Err(Error);
-            }
-            let b = *ptr;
-            ptr = ptr.add(1);
-            if likely((b & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 2);
-                return Ok(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
-            }
-
-            if unlikely(len == 2) {
-                return Err(Error);
-            }
-            let c = *ptr;
-            ptr = ptr.add(1);
-            let p = (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14);
-            if likely((c & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 3);
-                return Ok(Self(p));
-            }
-
-            if unlikely(len == 3) {
-                return Err(Error);
-            }
-            let d = *ptr;
-            ptr = ptr.add(1);
-            if unlikely(d == 0x00) {
-                *buf = from_raw_parts(ptr, len - 4);
-                return Ok(Self(p));
-            }
-            if unlikely(len == 4) {
-                return Err(Error);
-            }
-            let e = *ptr;
-            ptr = ptr.add(1);
-            if likely(d == 0x80 && e == 0x00) {
-                *buf = from_raw_parts(ptr, len - 5);
-                return Ok(Self(p));
-            }
+        let a = u8::read(buf)?;
+        if (a & 0x80) == 0 {
+            return Ok(Self(a as u32));
+        }
+        let b = u8::read(buf)?;
+        if (b & 0x80) == 0 {
+            return Ok(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
+        }
+        let c = u8::read(buf)?;
+        let p = (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14);
+        if (c & 0x80) == 0 {
+            return Ok(Self(p));
+        }
+        let d = u8::read(buf)?;
+        if d == 0x00 {
+            cold_path();
+            return Ok(Self(p));
+        }
+        let e = u8::read(buf)?;
+        if d == 0x80 && e == 0x00 {
+            Ok(Self(p))
+        } else {
+            cold_path();
             Err(Error)
         }
     }
@@ -174,74 +144,43 @@ impl Write for V32 {
 
 impl<'a> Read<'a> for V32 {
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        unsafe {
-            let mut ptr = buf.as_ptr();
-            let len = buf.len();
-
-            if unlikely(len == 0) {
-                return Err(Error);
-            }
-            let a = *ptr;
-            ptr = ptr.add(1);
-            if likely((a & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 1);
-                return Ok(Self(a as u32));
-            }
-
-            if unlikely(len == 1) {
-                return Err(Error);
-            }
-            let b = *ptr;
-            ptr = ptr.add(1);
-            if likely((b & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 2);
-                return Ok(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
-            }
-
-            if unlikely(len == 2) {
-                return Err(Error);
-            }
-            let c = *ptr;
-            ptr = ptr.add(1);
-            if unlikely((c & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 3);
-                return Ok(Self(
-                    (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
-                ));
-            }
-
-            if unlikely(len == 3) {
-                return Err(Error);
-            }
-            let d = *ptr;
-            ptr = ptr.add(1);
-            if unlikely((d & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 4);
-                return Ok(Self(
-                    (a & 0x7F) as u32
-                        | (((b & 0x7F) as u32) << 7)
-                        | (((c & 0x7F) as u32) << 14)
-                        | ((d as u32) << 21),
-                ));
-            }
-
-            if unlikely(len == 4) {
-                return Err(Error);
-            }
-            let e = *ptr;
-            ptr = ptr.add(1);
-            if (e & 0xF0) == 0 {
-                *buf = core::slice::from_raw_parts(ptr, len - 5);
-                return Ok(Self(
-                    (a & 0x7F) as u32
-                        | (((b & 0x7F) as u32) << 7)
-                        | (((c & 0x7F) as u32) << 14)
-                        | (((d & 0x7F) as u32) << 21)
-                        | ((e as u32) << 28),
-                ));
-            }
-            Err(Error)
+        let a = u8::read(buf)?;
+        if (a & 0x80) == 0 {
+            return Ok(Self(a as u32));
         }
+        let b = u8::read(buf)?;
+        if (b & 0x80) == 0 {
+            return Ok(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
+        }
+        let c = u8::read(buf)?;
+        if (c & 0x80) == 0 {
+            return Ok(Self(
+                (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
+            ));
+        }
+
+        let d = u8::read(buf)?;
+        if (d & 0x80) == 0 {
+            return Ok(Self(
+                (a & 0x7F) as u32
+                    | (((b & 0x7F) as u32) << 7)
+                    | (((c & 0x7F) as u32) << 14)
+                    | ((d as u32) << 21),
+            ));
+        }
+
+        let e = u8::read(buf)?;
+        if (e & 0xF0) == 0 {
+            return Ok(Self(
+                (a & 0x7F) as u32
+                    | (((b & 0x7F) as u32) << 7)
+                    | (((c & 0x7F) as u32) << 14)
+                    | (((d & 0x7F) as u32) << 21)
+                    | ((e as u32) << 28),
+            ));
+        }
+        cold_path();
+        Err(Error)
     }
 }
 
@@ -382,33 +321,20 @@ impl Write for V64 {
 impl<'a> Read<'a> for V64 {
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
         unsafe {
-            let mut ptr = buf.as_ptr();
-            let len = buf.len();
-
-            if unlikely(len == 0) {
-                return Err(Error);
-            }
-            let a = *ptr;
-            ptr = ptr.add(1);
-            if likely((a & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 1);
+            let a = u8::read(buf)?;
+            if (a & 0x80) == 0 {
                 return Ok(Self(a as u64));
             }
 
-            if unlikely(len == 1) {
-                return Err(Error);
-            }
-            let b = *ptr;
-            ptr = ptr.add(1);
-            if likely((b & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 2);
+            let b = u8::read(buf)?;
+            if (b & 0x80) == 0 {
                 return Ok(Self((a & 0x7F) as u64 | ((b as u64) << 7)));
             }
 
-            if likely(len >= 10) {
-                let y = u64::from_le_bytes(*ptr.cast::<[u8; 8]>());
-                if unlikely(y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080) {
-                    *buf = from_raw_parts(ptr.add(8), len - 10);
+            if buf.len() >= 8 {
+                let y = u64::from_le_bytes(*buf.as_ptr().cast::<[u8; 8]>());
+                if y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080 {
+                    *buf = from_raw_parts(buf.as_ptr().add(8), buf.len() - 8);
                     return Ok(Self(
                         ((a & 0x7F) as u64)
                             | (((b & 0x7F) as u64) << 7)
@@ -424,25 +350,15 @@ impl<'a> Read<'a> for V64 {
                 }
             }
 
-            if unlikely(len == 2) {
-                return Err(Error);
-            }
-            let c = *ptr;
-            ptr = ptr.add(1);
-            if unlikely((c & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 3);
+            let c = u8::read(buf)?;
+            if (c & 0x80) == 0 {
                 return Ok(Self(
                     (a & 0x7F) as u64 | (((b & 0x7F) as u64) << 7) | ((c as u64) << 14),
                 ));
             }
 
-            if unlikely(len == 3) {
-                return Err(Error);
-            }
-            let d = *ptr;
-            ptr = ptr.add(1);
-            if unlikely((d & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 4);
+            let d = u8::read(buf)?;
+            if (d & 0x80) == 0 {
                 return Ok(Self(
                     (a & 0x7F) as u64
                         | (((b & 0x7F) as u64) << 7)
@@ -450,89 +366,46 @@ impl<'a> Read<'a> for V64 {
                         | ((d as u64) << 21),
                 ));
             }
-            if unlikely(len == 4) {
-                return Err(Error);
+            let four = (a & 0x7F) as u64
+                | (((b & 0x7F) as u64) << 7)
+                | (((c & 0x7F) as u64) << 14)
+                | (((d & 0x7F) as u64) << 21);
+
+            let e = u8::read(buf)?;
+            if (e & 0x80) == 0 {
+                return Ok(Self(four | ((e as u64) << 28)));
             }
-            let e = *ptr;
-            ptr = ptr.add(1);
-            if likely((e & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 5);
+
+            let f = u8::read(buf)?;
+            if (f & 0x80) == 0 {
                 return Ok(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | (((d & 0x7F) as u64) << 21)
-                        | ((e as u64) << 28),
+                    four | (((e & 0x7F) as u64) << 28) | ((f as u64) << 35),
                 ));
             }
 
-            if unlikely(len == 5) {
-                return Err(Error);
-            }
-            let f = *ptr;
-            ptr = ptr.add(1);
-            if likely((f & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 6);
+            let g = u8::read(buf)?;
+            if (g & 0x80) == 0 {
                 return Ok(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | (((d & 0x7F) as u64) << 21)
-                        | (((e & 0x7F) as u64) << 28)
-                        | ((f as u64) << 35),
-                ));
-            }
-
-            if unlikely(len == 6) {
-                return Err(Error);
-            }
-            let g = *ptr;
-            ptr = ptr.add(1);
-            if likely((g & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 7);
-                return Ok(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | (((d & 0x7F) as u64) << 21)
-                        | (((e & 0x7F) as u64) << 28)
+                    four | (((e & 0x7F) as u64) << 28)
                         | (((f & 0x7F) as u64) << 35)
                         | ((g as u64) << 42),
                 ));
             }
 
-            if unlikely(len == 7) {
-                return Err(Error);
-            }
-            let h = *ptr;
-            ptr = ptr.add(1);
-            if likely((h & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 8);
+            let h = u8::read(buf)?;
+            if (h & 0x80) == 0 {
                 return Ok(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | (((d & 0x7F) as u64) << 21)
-                        | (((e & 0x7F) as u64) << 28)
+                    four | (((e & 0x7F) as u64) << 28)
                         | (((f & 0x7F) as u64) << 35)
                         | (((g & 0x7F) as u64) << 42)
                         | ((h as u64) << 49),
                 ));
             }
 
-            if unlikely(len == 8) {
-                return Err(Error);
-            }
-            let i = *ptr;
-            ptr = ptr.add(1);
-            if likely((i & 0x80) == 0) {
-                *buf = from_raw_parts(ptr, len - 9);
+            let i = u8::read(buf)?;
+            if (i & 0x80) == 0 {
                 return Ok(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | (((d & 0x7F) as u64) << 21)
-                        | (((e & 0x7F) as u64) << 28)
+                    four | (((e & 0x7F) as u64) << 28)
                         | (((f & 0x7F) as u64) << 35)
                         | (((g & 0x7F) as u64) << 42)
                         | (((h & 0x7F) as u64) << 49)
@@ -541,6 +414,7 @@ impl<'a> Read<'a> for V64 {
             }
         }
 
+        cold_path();
         Err(Error)
     }
 }
