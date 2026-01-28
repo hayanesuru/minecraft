@@ -256,16 +256,16 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += repr.to_int();
     *w += ") -> ::core::option::Option<Self> {\n";
     if size == 1 {
-        *w += "if ::mser::likely(n == Self::MAX) {\n";
+        *w += "if n == Self::MAX {\n";
     } else {
-        *w += "if ::mser::likely(n <= Self::MAX) {\n";
+        *w += "if n <= Self::MAX {\n";
     }
     *w += "unsafe {\ncore::option::Option::Some(::core::mem::transmute::<";
     *w += repr.to_int();
     *w += ", Self>(n))";
     *w += "\n}\n";
     *w += "} else {\n";
-    *w += "None\n";
+    *w += "::mser::cold_path();\nNone\n";
     *w += "}\n";
     *w += "}\n";
 

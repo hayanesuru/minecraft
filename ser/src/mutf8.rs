@@ -1,4 +1,4 @@
-use crate::{Bytes, Error, UnsafeWriter};
+use crate::{Error, UnsafeWriter};
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -142,45 +142,56 @@ pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
 pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
     let mut len = 0usize;
 
-    while let Ok(byte) = bytes.u8() {
+    while let [byte, ref rest @ ..] = bytes[..] {
+        bytes = rest;
         match byte {
             0x01..=0x7F => len += 1,
             0xC2..=0xDF => {
-                let sec = bytes.u8()?;
-                if !(byte == 0xC0 && sec == 0x80) {
-                    len += 2;
+                if let [sec, ref rest @ ..] = bytes[..] {
+                    bytes = rest;
+                    if !(byte == 0xC0 && sec == 0x80) {
+                        len += 2;
+                    } else {
+                        len += 1;
+                    }
                 } else {
-                    len += 1;
-                }
-            }
-            0xE0..=0xEF => {
-                let sec = bytes.u8()?;
-                let third = bytes.u8()?;
-                if sec & 0xC0 != 0x80 || third & 0xC0 != 0x80 {
                     return Err(Error);
                 }
-                match (byte, sec) {
-                    (0xE0, 0xA0..=0xBF)
-                    | (0xE1..=0xEC | 0xEE | 0xEF, 0x80..=0xBF)
-                    | (0xED, 0x80..=0x9F) => {
-                        len += 3;
-                    }
-                    (0xED, 0xA0..=0xAF) => {
-                        if bytes.u8()? != 0xED {
-                            return Err(Error);
-                        }
-                        match bytes.u8()? {
-                            0xB0..=0xBF => (),
-                            _ => return Err(Error),
-                        }
-                        if bytes.u8()? & 0xC0 != 0x80 {
-                            return Err(Error);
-                        }
-                        len += 4;
-                    }
-                    _ => return Err(Error),
-                }
             }
+            0xE0..=0xEF => match bytes[..] {
+                [sec, third, ref rest @ ..] => {
+                    bytes = rest;
+                    if sec & 0xC0 != 0x80 || third & 0xC0 != 0x80 {
+                        return Err(Error);
+                    }
+                    match (byte, sec) {
+                        (0xE0, 0xA0..=0xBF)
+                        | (0xE1..=0xEC | 0xEE | 0xEF, 0x80..=0xBF)
+                        | (0xED, 0x80..=0x9F) => {
+                            len += 3;
+                        }
+                        (0xED, 0xA0..=0xAF) => match bytes[..] {
+                            [fourth, fifth, sixth, ref rest @ ..] => {
+                                bytes = rest;
+                                if fourth != 0xED {
+                                    return Err(Error);
+                                }
+                                match fifth {
+                                    0xB0..=0xBF => (),
+                                    _ => return Err(Error),
+                                }
+                                if sixth & 0xC0 != 0x80 {
+                                    return Err(Error);
+                                }
+                                len += 4;
+                            }
+                            _ => return Err(Error),
+                        },
+                        _ => return Err(Error),
+                    }
+                }
+                _ => return Err(Error),
+            },
             _ => return Err(Error),
         }
     }
