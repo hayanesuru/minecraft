@@ -1,16 +1,16 @@
-mod nbt;
+//mod nbt;
 
 use crate::str::BoxStr;
 use crate::{Identifier, List, Utf8};
 use alloc::vec::Vec;
 use uuid::Uuid;
 
-const NAME: &[u8] = b"name";
-const ID: &[u8] = b"id";
-const PROPERTIES: &[u8] = b"properties";
-const PROPERTY_NAME: &[u8] = b"name";
-const PROPERTY_VALUE: &[u8] = b"value";
-const PROPERTY_SIGNATURE: &[u8] = b"signature";
+// const NAME: &[u8] = b"name";
+// const ID: &[u8] = b"id";
+// const PROPERTIES: &[u8] = b"properties";
+// const PROPERTY_NAME: &[u8] = b"name";
+// const PROPERTY_VALUE: &[u8] = b"value";
+// const PROPERTY_SIGNATURE: &[u8] = b"signature";
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GameProfileRef<'a> {

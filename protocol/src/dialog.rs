@@ -1,6 +1,6 @@
 use crate::chat::{ClickEvent, Component};
 use crate::item::ItemStack;
-use crate::nbt::Compound;
+use crate::nbt::CompoundTag;
 use crate::str::BoxStr;
 use crate::{HolderSet, Identifier};
 use alloc::boxed::Box;
@@ -149,7 +149,7 @@ pub enum Action {
     },
     CustomAll {
         id: Identifier,
-        additions: Option<Compound>,
+        additions: Option<CompoundTag>,
     },
     Static {
         value: ClickEvent,
