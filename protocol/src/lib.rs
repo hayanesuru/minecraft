@@ -3,11 +3,11 @@
 use crate::str::BoxStr;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Bytes, Error, Read, UnsafeWriter, V21, V32, Write};
+use mser::{Error, Read, UnsafeWriter, V21, V32, Write};
 
-pub mod chat;
+// pub mod chat;
 pub mod clientbound;
-pub mod dialog;
+// pub mod dialog;
 pub mod item;
 pub mod nbt;
 pub mod profile;
@@ -75,7 +75,13 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
         if len > MAX * 3 {
             return Err(Error);
         }
-        let bytes = buf.slice(len)?;
+        let bytes = match buf.split_at_checked(len) {
+            Some((x, y)) => {
+                *buf = y;
+                x
+            }
+            None => return Err(Error),
+        };
         let s = match core::str::from_utf8(bytes) {
             Ok(x) => x,
             Err(_) => return Err(Error),
@@ -110,8 +116,13 @@ impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
         if len > MAX {
             return Err(Error);
         }
-        let bytes = buf.slice(len)?;
-        Ok(ByteArray(bytes))
+        match buf.split_at_checked(len) {
+            Some((x, y)) => {
+                *buf = y;
+                Ok(Self(x))
+            }
+            None => Err(Error),
+        }
     }
 }
 
@@ -171,7 +182,13 @@ impl<'a, const MAX: usize> Read<'a> for Rest<'a, MAX> {
         if len > MAX {
             return Err(Error);
         }
-        Ok(Rest(buf.slice(buf.len())?))
+        match buf.split_at_checked(len) {
+            Some((x, y)) => {
+                *buf = y;
+                Ok(Self(x))
+            }
+            None => Err(Error),
+        }
     }
 }
 
@@ -317,8 +334,10 @@ pub enum Holder<T> {
 #[test]
 fn test_write() {
     use crate::clientbound::login::LoginFinished;
+    use crate::profile::GameProfileRef;
     use crate::types::{Id, packet_id};
     use minecraft_data::clientbound__login;
+    use uuid::Uuid;
 
     let packet: LoginFinished = LoginFinished {
         game_profile: GameProfileRef {
@@ -339,10 +358,10 @@ fn test_write() {
         data.into_boxed_slice()
     };
     let mut data = &data[..];
-    let id = data.v32().unwrap();
+    let id = V32::read(&mut data).unwrap().0;
     assert_eq!(clientbound__login::new(id as _).unwrap(), LoginFinished::ID);
     assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
     assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");
-    assert_eq!(data.v32().unwrap(), 0);
+    assert_eq!(V32::read(&mut data).unwrap().0, 0);
     assert!(data.is_empty());
 }

@@ -1,5 +1,8 @@
 use super::*;
 use crate::BoxStr;
+use crate::nbt::byte_array::{i8_to_u8_slice, u8_to_i8_slice};
+use crate::nbt::int_array::IntArray;
+use crate::nbt::string::StringTag;
 
 #[derive(Clone)]
 pub enum List {
@@ -142,22 +145,22 @@ impl Write for List {
             match self {
                 Self::None => {}
                 Self::Byte(x) => {
-                    w.write(&*(x.as_slice() as *const [i8] as *const [u8]));
+                    w.write(i8_to_u8_slice(x));
                 }
                 Self::Short(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|x| x.write(w));
                 }
                 Self::Int(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|x| x.write(w));
                 }
                 Self::Long(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|x| x.write(w));
                 }
                 Self::Float(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|x| x.write(w));
                 }
                 Self::Double(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|x| x.write(w));
                 }
                 Self::String(x) => {
                     x.iter().for_each(|x| RefStringTag(x).write(w));
@@ -209,129 +212,177 @@ impl Write for List {
     }
 }
 
-pub fn decode_raw(n: &mut &[u8], ListInfo(id, len): ListInfo) -> Result<List, Error> {
-    let len = len as usize;
-    match id {
-        TagType::End => Ok(List::None),
-        TagType::Byte => unsafe {
-            Ok(List::Byte(Vec::from(
-                &*(n.slice(len)? as *const [u8] as *const [i8]),
-            )))
-        },
-        TagType::Short => {
-            let mut slice = n.slice(len << 1)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.i16()?);
-            }
-            Ok(List::Short(v))
-        }
-        TagType::Int => {
-            let mut slice = n.slice(len << 2)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.i32()?);
-            }
-            Ok(List::Int(v))
-        }
-        TagType::Long => {
-            let mut slice = n.slice(len << 3)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.i64()?);
-            }
-            Ok(List::Long(v))
-        }
-        TagType::Float => {
-            let mut slice = n.slice(len << 2)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.f32()?);
-            }
-            Ok(List::Float(v))
-        }
-        TagType::Double => {
-            let mut slice = n.slice(len << 3)?;
-            let mut v = Vec::with_capacity(len);
-            for _ in 0..len {
-                v.push(slice.f64()?);
-            }
-            Ok(List::Double(v))
-        }
-        TagType::ByteArray => unsafe {
-            if len * 4 > n.len() {
-                return Err(Error);
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let len = n.i32()? as usize;
-                let slice = &*(n.slice(len)? as *const [u8] as *const [i8]);
-                list.push(Vec::from(slice));
-            }
-            Ok(List::ByteArray(list))
-        },
-        TagType::String => {
-            if len * 2 > n.len() {
-                return Err(Error);
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                list.push(StringTag::read(n)?.0);
-            }
-            Ok(List::String(list))
-        }
-        TagType::List => {
-            if len << 2 > n.len() {
-                return Err(Error);
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let info = ListInfo::read(n)?;
-                list.push(decode_raw(n, info)?);
-            }
-            Ok(List::List(list))
-        }
-        TagType::Compound => {
-            if len > n.len() {
-                return Err(Error);
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                list.push(super::decode_raw(n)?);
-            }
-            Ok(List::Compound(list))
-        }
-        TagType::IntArray => {
-            if len * 4 > n.len() {
-                return Err(Error);
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let len = n.i32()? as usize;
-                let mut slice = n.slice(len << 2)?;
-                let mut v = Vec::with_capacity(len);
-                for _ in 0..len {
-                    v.push(slice.i32()?);
+impl ListInfo {
+    pub fn list(self, n: &mut &[u8]) -> Result<List, Error> {
+        let len = self.1 as usize;
+        match self.0 {
+            TagType::End => Ok(List::None),
+            TagType::Byte => match n.split_at_checked(len) {
+                Some((x, y)) => {
+                    *n = y;
+                    Ok(List::Byte(Vec::from(u8_to_i8_slice(x))))
                 }
-                list.push(v);
-            }
-            Ok(List::IntArray(list))
-        }
-        TagType::LongArray => {
-            if len * 4 > n.len() {
-                return Err(Error);
-            }
-            let mut list = Vec::with_capacity(len);
-            for _ in 0..len {
-                let len = n.i32()? as usize;
-                let mut slice = n.slice(len * 8)?;
-                let mut v = Vec::with_capacity(len);
-                for _ in 0..len {
-                    v.push(slice.i64()?);
+                None => Err(Error),
+            },
+            TagType::Short => match n.split_at_checked(len * 2) {
+                Some((slice, y)) => {
+                    *n = y;
+                    let mut v = Vec::with_capacity(len);
+                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+                    for index in 0..len {
+                        unsafe {
+                            *s.get_unchecked_mut(index) = i16::from_be_bytes(
+                                *slice.as_ptr().add(index * 2).cast::<[u8; 2]>(),
+                            );
+                        }
+                    }
+                    unsafe { v.set_len(len) }
+                    Ok(List::Short(v))
                 }
-                list.push(v);
+                None => Err(Error),
+            },
+            TagType::Int => match n.split_at_checked(len * 4) {
+                Some((slice, y)) => unsafe {
+                    *n = y;
+                    Ok(List::Int(int_list(len, slice)))
+                },
+                None => Err(Error),
+            },
+            TagType::Long => match n.split_at_checked(len * 8) {
+                Some((slice, y)) => {
+                    *n = y;
+                    let mut v = Vec::with_capacity(len);
+                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+                    for index in 0..len {
+                        unsafe {
+                            *s.get_unchecked_mut(index) = i64::from_be_bytes(
+                                *slice.as_ptr().add(index * 8).cast::<[u8; 8]>(),
+                            );
+                        }
+                    }
+                    unsafe { v.set_len(len) }
+                    Ok(List::Long(v))
+                }
+                None => Err(Error),
+            },
+            TagType::Float => match n.split_at_checked(len * 4) {
+                Some((slice, y)) => {
+                    *n = y;
+                    let mut v = Vec::with_capacity(len);
+                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+                    for index in 0..len {
+                        unsafe {
+                            *s.get_unchecked_mut(index) = f32::from_be_bytes(
+                                *slice.as_ptr().add(index * 4).cast::<[u8; 4]>(),
+                            );
+                        }
+                    }
+                    unsafe { v.set_len(len) }
+                    Ok(List::Float(v))
+                }
+                None => Err(Error),
+            },
+            TagType::Double => match n.split_at_checked(len * 8) {
+                Some((slice, y)) => {
+                    *n = y;
+                    let mut v = Vec::with_capacity(len);
+                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+                    for index in 0..len {
+                        unsafe {
+                            *s.get_unchecked_mut(index) = f64::from_be_bytes(
+                                *slice.as_ptr().add(index * 8).cast::<[u8; 8]>(),
+                            );
+                        }
+                    }
+                    unsafe { v.set_len(len) }
+                    Ok(List::Double(v))
+                }
+                None => Err(Error),
+            },
+            TagType::ByteArray => {
+                if len * 4 > n.len() {
+                    return Err(Error);
+                }
+                let mut list = Vec::with_capacity(len);
+                for _ in 0..len {
+                    let len = i32::read(n)? as usize;
+                    let slice = match n.split_at_checked(len) {
+                        Some((x, y)) => {
+                            *n = y;
+                            u8_to_i8_slice(x)
+                        }
+                        None => return Err(Error),
+                    };
+                    list.push(Vec::from(slice));
+                }
+                Ok(List::ByteArray(list))
             }
-            Ok(List::LongArray(list))
+            TagType::String => {
+                if len * 2 > n.len() {
+                    return Err(Error);
+                }
+                let mut list = Vec::with_capacity(len);
+                for _ in 0..len {
+                    list.push(StringTag::read(n)?.0);
+                }
+                Ok(List::String(list))
+            }
+            TagType::List => {
+                if len << 2 > n.len() {
+                    return Err(Error);
+                }
+                let mut list = Vec::with_capacity(len);
+                for _ in 0..len {
+                    let info = ListInfo::read(n)?;
+                    list.push(info.list(n)?);
+                }
+                Ok(List::List(list))
+            }
+            TagType::Compound => {
+                if len > n.len() {
+                    return Err(Error);
+                }
+                let mut list = Vec::with_capacity(len);
+                for _ in 0..len {
+                    list.push(Compound::read(n)?);
+                }
+                Ok(List::Compound(list))
+            }
+            TagType::IntArray => {
+                if len * 4 > n.len() {
+                    return Err(Error);
+                }
+                let mut list = Vec::with_capacity(len);
+                for _ in 0..len {
+                    list.push(IntArray::read(n)?.0);
+                }
+                Ok(List::IntArray(list))
+            }
+            TagType::LongArray => {
+                if len * 4 > n.len() {
+                    return Err(Error);
+                }
+                let mut list = Vec::with_capacity(len);
+                for _ in 0..len {
+                    list.push(LongArray::read(n)?.0);
+                }
+                Ok(List::LongArray(list))
+            }
         }
     }
+}
+
+pub unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
+    debug_assert_eq!(len * 4, slice.len());
+
+    let mut v = Vec::with_capacity(len);
+    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    for index in 0..len {
+        unsafe {
+            *s.get_unchecked_mut(index) =
+                i32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
+        }
+    }
+    unsafe { v.set_len(len) }
+    v
 }

@@ -1,5 +1,10 @@
-use crate::{Bytes, Error, Ident, Read, UnsafeWriter, Write};
-use mser::{encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8};
+use crate::str::BoxStr;
+use crate::{Error, Ident, Read, UnsafeWriter, Write};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use mser::{
+    decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8,
+};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -39,8 +44,14 @@ impl<'a> Write for StringTagRaw<'a> {
 impl<'a> Read<'a> for StringTagRaw<'a> {
     #[inline]
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let len = buf.u16()?;
-        let data = buf.slice(len as usize)?;
+        let len = u16::read(buf)?;
+        let data = match buf.split_at_checked(len as usize) {
+            Some((x, y)) => {
+                *buf = y;
+                x
+            }
+            None => return Err(Error),
+        };
         if is_ascii_mutf8(data) {
             Ok(Self(data))
         } else {
@@ -112,5 +123,58 @@ impl<'a> Read<'a> for IdentifierTag<'a> {
             Some(ident) => Ok(Self(ident)),
             None => Err(Error),
         }
+    }
+}
+
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct StringTag(pub BoxStr);
+
+impl Read<'_> for StringTag {
+    #[inline]
+    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+        let len = u16::read(buf)? as usize;
+        let data = match buf.split_at_checked(len) {
+            Some((x, y)) => {
+                *buf = y;
+                x
+            }
+            None => return Err(Error),
+        };
+        if is_ascii_mutf8(data) {
+            unsafe { Ok(Self(BoxStr::new_unchecked(Box::from(data)))) }
+        } else {
+            let len = decode_mutf8_len(data)?;
+            let mut x = Vec::with_capacity(len);
+            unsafe {
+                mser::write_unchecked(x.as_mut_ptr(), &(DecodeMutf8(data, len)));
+                x.set_len(len);
+                Ok(Self(BoxStr::new_unchecked(x.into_boxed_slice())))
+            }
+        }
+    }
+}
+
+pub struct DecodeMutf8<'a>(pub &'a [u8], pub usize);
+
+impl Write for DecodeMutf8<'_> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe { decode_mutf8(self.0, w).unwrap_unchecked() }
+    }
+
+    fn len_s(&self) -> usize {
+        self.1
+    }
+}
+
+impl Write for StringTag {
+    #[inline]
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe { RefStringTag(&self.0).write(w) }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        RefStringTag(&self.0).len_s()
     }
 }
