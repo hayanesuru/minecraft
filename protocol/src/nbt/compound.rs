@@ -201,7 +201,7 @@ impl Compound {
 
     #[inline]
     pub fn sort(&mut self) {
-        self.0.sort_unstable_by(|x, y| (*x.0).cmp(&*y.0));
+        self.0.sort_unstable_by(|x, y| x.0.cmp(&*y.0));
     }
 
     #[inline]
