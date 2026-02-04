@@ -452,18 +452,18 @@ impl Tag {
     #[inline]
     pub const fn id(&self) -> TagType {
         match self {
-            Tag::Byte(_) => TagType::Byte,
-            Tag::Short(_) => TagType::Short,
-            Tag::Int(_) => TagType::Int,
-            Tag::Long(_) => TagType::Long,
-            Tag::Float(_) => TagType::Float,
-            Tag::Double(_) => TagType::Double,
-            Tag::String(_) => TagType::String,
-            Tag::ByteArray(_) => TagType::ByteArray,
-            Tag::IntArray(_) => TagType::IntArray,
-            Tag::LongArray(_) => TagType::LongArray,
-            Tag::List(_) => TagType::List,
-            Tag::Compound(_) => TagType::Compound,
+            Self::Byte(_) => TagType::Byte,
+            Self::Short(_) => TagType::Short,
+            Self::Int(_) => TagType::Int,
+            Self::Long(_) => TagType::Long,
+            Self::Float(_) => TagType::Float,
+            Self::Double(_) => TagType::Double,
+            Self::String(_) => TagType::String,
+            Self::ByteArray(_) => TagType::ByteArray,
+            Self::IntArray(_) => TagType::IntArray,
+            Self::LongArray(_) => TagType::LongArray,
+            Self::List(_) => TagType::List,
+            Self::Compound(_) => TagType::Compound,
         }
     }
 }
