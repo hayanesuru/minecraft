@@ -1,15 +1,12 @@
 use super::{Compound, List, Tag};
+use crate::nbt::TagArray;
 use crate::str::BoxStr;
 use crate::{Error, Read as _};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::hint::unreachable_unchecked;
-use core::ptr::NonNull;
 use mser::{parse_float, parse_int};
-use smallvec::SmallVec;
-
-const CAP: usize = 24;
 
 #[derive(Clone)]
 #[repr(transparent)]
@@ -30,13 +27,8 @@ impl StringifyCompound {
 
     #[inline]
     pub fn encode(&self, buf: &mut Vec<u8>) {
-        unsafe { encode(buf, NonNull::new_unchecked(&self.0 as *const _ as _)) }
+        unsafe { encode(buf, &self.0) }
     }
-}
-
-enum Block {
-    C(NonNull<Compound>),
-    L(NonNull<List>),
 }
 
 #[inline]
@@ -72,7 +64,7 @@ fn at(n: &[u8], i: usize) -> Result<u8, Error> {
     }
 }
 
-fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
+fn darr(n: &mut &[u8]) -> Result<TagArray, Error> {
     let first = at(n, 1)?;
     let second = at(n, 2)?;
     match [first, second] {
@@ -83,7 +75,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             skip_ws(n);
             if peek(n)? == b']' {
                 *n = n.get_unchecked(1..);
-                return Ok(Tag::from(vec));
+                return Ok(TagArray::ByteArray(vec));
             }
             loop {
                 skip_ws(n);
@@ -108,7 +100,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(Tag::from(vec))
+            Ok(TagArray::ByteArray(vec))
         },
         [b'I', b';'] => unsafe {
             let mut vec = Vec::<i32>::new();
@@ -117,7 +109,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             skip_ws(n);
             if peek(n)? == b']' {
                 *n = n.get_unchecked(1..);
-                return Ok(Tag::IntArray(vec));
+                return Ok(TagArray::IntArray(vec));
             }
             loop {
                 skip_ws(n);
@@ -132,7 +124,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(Tag::IntArray(vec))
+            Ok(TagArray::IntArray(vec))
         },
         [b'L', b';'] => unsafe {
             let mut vec = Vec::<i64>::new();
@@ -141,7 +133,7 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
             skip_ws(n);
             if peek(n)? == b']' {
                 *n = n.get_unchecked(1..);
-                return Ok(Tag::LongArray(vec));
+                return Ok(TagArray::LongArray(vec));
             }
             loop {
                 skip_ws(n);
@@ -160,527 +152,532 @@ fn darr(n: &mut &[u8]) -> Result<Tag, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(Tag::LongArray(vec))
+            Ok(TagArray::LongArray(vec))
         },
         _ => Err(Error),
     }
 }
 
 unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
+    enum Bl {
+        C(Compound),
+        L(List),
+    }
     let mut s = Vec::<u8>::new();
-    unsafe {
-        let mut root = Compound::new();
-        let mut ptrs = SmallVec::<[Block; CAP]>::new();
-        ptrs.push(Block::C(NonNull::new_unchecked(&mut root as *mut _)));
-        let mut on_start = true;
-        let mut on_end = false;
+    let mut names = Vec::<u8>::new();
+    let mut bls = Vec::<Bl>::new();
+    bls.push(Bl::C(Compound::new()));
+    let mut on_start = true;
+    let mut on_end = false;
+    loop {
+        let mut bl = match bls.pop() {
+            Some(x) => x,
+            None => return Err(Error),
+        };
+        skip_ws(n);
 
-        loop {
-            let ptr = match ptrs.pop() {
-                Some(x) => x,
-                None => return Err(Error),
-            };
-            skip_ws(n);
-
-            if on_start {
-                on_start = false;
-                if matches!(ptr, Block::C(..)) {
-                    if u8::read(n)? != b'{' {
-                        return Err(Error);
-                    }
-                    skip_ws(n);
-                    if peek(n)? == b'}' {
-                        *n = n.get_unchecked(1..);
-                        on_end = true;
-                    }
-                } else {
-                    if u8::read(n)? != b'[' {
-                        return Err(Error);
-                    }
-                    skip_ws(n);
-                    if peek(n)? == b']' {
-                        *n = n.get_unchecked(1..);
-                        on_end = true;
-                    }
-                }
-            } else if on_end {
-            } else if matches!(ptr, Block::C(..)) {
-                match u8::read(n)? {
-                    b'}' => on_end = true,
-                    b',' => (),
-                    _ => return Err(Error),
+        if on_start {
+            on_start = false;
+            if matches!(bl, Bl::C(..)) {
+                if u8::read(n)? != b'{' {
+                    return Err(Error);
                 }
                 skip_ws(n);
-            } else {
-                match u8::read(n)? {
-                    b']' => on_end = true,
-                    b',' => (),
-                    _ => return Err(Error),
-                }
-                skip_ws(n);
-            }
-            if !on_end {
-                if matches!(ptr, Block::C(..)) {
-                    if peek(n)? == b'}' {
-                        on_end = true;
-                        *n = n.get_unchecked(1..);
-                    }
-                } else if peek(n)? == b']' {
+                if peek(n)? == b'}' {
+                    *n = unsafe { n.get_unchecked(1..) };
                     on_end = true;
-                    *n = n.get_unchecked(1..);
+                }
+            } else {
+                if u8::read(n)? != b'[' {
+                    return Err(Error);
+                }
+                skip_ws(n);
+                if peek(n)? == b']' {
+                    *n = unsafe { n.get_unchecked(1..) };
+                    on_end = true;
                 }
             }
-            if on_end {
-                on_end = false;
-                match ptr {
-                    Block::C(mut x) => x.as_mut().shrink_to_fit(),
-                    Block::L(mut x) => match x.as_mut() {
-                        List::List(x) => x.shrink_to_fit(),
-                        List::Compound(x) => x.shrink_to_fit(),
-                        List::String(x) => x.shrink_to_fit(),
-                        List::Int(x) => x.shrink_to_fit(),
-                        List::Double(x) => x.shrink_to_fit(),
-                        List::Byte(x) => x.shrink_to_fit(),
-                        List::Short(x) => x.shrink_to_fit(),
-                        List::Long(x) => x.shrink_to_fit(),
-                        List::Float(x) => x.shrink_to_fit(),
-                        List::ByteArray(x) => x.shrink_to_fit(),
-                        List::IntArray(x) => x.shrink_to_fit(),
-                        List::LongArray(x) => x.shrink_to_fit(),
-                        List::None => (),
-                    },
+        } else if on_end {
+        } else if matches!(&bl, Bl::C(..)) {
+            match u8::read(n)? {
+                b'}' => on_end = true,
+                b',' => (),
+                _ => return Err(Error),
+            }
+            skip_ws(n);
+        } else {
+            match u8::read(n)? {
+                b']' => on_end = true,
+                b',' => (),
+                _ => return Err(Error),
+            }
+            skip_ws(n);
+        }
+        if !on_end {
+            if matches!(bl, Bl::C(..)) {
+                if peek(n)? == b'}' {
+                    on_end = true;
+                    *n = unsafe { n.get_unchecked(1..) };
                 }
-                if ptrs.is_empty() {
-                    return Ok(root);
-                } else {
+            } else if peek(n)? == b']' {
+                on_end = true;
+                *n = unsafe { n.get_unchecked(1..) };
+            }
+        }
+        if on_end {
+            on_end = false;
+            match &mut bl {
+                Bl::C(x) => x.shrink_to_fit(),
+                Bl::L(x) => match x {
+                    List::List(x) => x.shrink_to_fit(),
+                    List::Compound(x) => x.shrink_to_fit(),
+                    List::String(x) => x.shrink_to_fit(),
+                    List::Int(x) => x.shrink_to_fit(),
+                    List::Double(x) => x.shrink_to_fit(),
+                    List::Byte(x) => x.shrink_to_fit(),
+                    List::Short(x) => x.shrink_to_fit(),
+                    List::Long(x) => x.shrink_to_fit(),
+                    List::Float(x) => x.shrink_to_fit(),
+                    List::ByteArray(x) => x.shrink_to_fit(),
+                    List::IntArray(x) => x.shrink_to_fit(),
+                    List::LongArray(x) => x.shrink_to_fit(),
+                    List::None => (),
+                },
+            }
+            match (bls.last_mut(), bl) {
+                (Some(Bl::C(c)), bl2) => match names[..] {
+                    [ref rest @ .., l1, l2, l3, l4] => {
+                        let len = u32::from_le_bytes([l1, l2, l3, l4]) as usize;
+                        let new_len = rest.len() - len - 4;
+                        c.push(
+                            unsafe {
+                                BoxStr::new_unchecked(Box::from(
+                                    rest.get_unchecked(rest.len() - len..rest.len()),
+                                ))
+                            },
+                            match bl2 {
+                                Bl::C(x) => Tag::Compound(x),
+                                Bl::L(x) => Tag::List(x),
+                            },
+                        );
+                        names.truncate(new_len);
+                        continue;
+                    }
+                    _ => return Err(Error),
+                },
+                (Some(Bl::L(List::Compound(l))), Bl::C(x)) => {
+                    l.push(x);
                     continue;
                 }
+                (Some(Bl::L(List::List(l))), Bl::L(x)) => {
+                    l.push(x);
+                    continue;
+                }
+                (None, Bl::C(x)) => {
+                    return Ok(x);
+                }
+                _ => return Err(Error),
             }
+        }
 
-            match ptr {
-                Block::C(mut c) => {
-                    let curr = c.as_mut();
-                    let k = match peek(n)? {
-                        b'\"' => dqstr2(n, &mut s)?,
-                        b'\'' => dqstr1(n, &mut s)?,
-                        _ => {
-                            let x = find_ascii(n, |x| {
-                                matches!(x, b':' | b' ' | b'\n' | b'\t' | b'\r')
-                            })?;
-                            let m = BoxStr::new_unchecked(Box::from(n.get_unchecked(0..x)));
-                            *n = n.get_unchecked(x..);
-                            m
-                        }
-                    };
-                    skip_ws(n);
-                    *n = match n.get(1..) {
-                        Some(x) => x,
-                        None => return Err(Error),
-                    };
-                    skip_ws(n);
-                    match peek(n)? {
-                        b'{' => {
-                            let index = curr.len();
-                            curr.push(k, Compound::new());
-                            let (_, Tag::Compound(last)) = curr.get_unchecked_mut(index) else {
-                                unreachable_unchecked()
-                            };
-                            ptrs.push(Block::C(c));
-                            ptrs.push(Block::C(NonNull::new_unchecked(last)));
+        match bl {
+            Bl::C(mut c) => unsafe {
+                let k = match peek(n)? {
+                    b'\"' => dqstr2(n, &mut names)?,
+                    b'\'' => dqstr1(n, &mut names)?,
+                    _ => {
+                        let x =
+                            find_ascii(n, |x| matches!(x, b':' | b' ' | b'\n' | b'\t' | b'\r'))?;
+                        let m = n.get_unchecked(0..x);
+                        let a = names.len();
+                        names.extend(m);
+                        let m = core::str::from_utf8_unchecked(names.get_unchecked(a..));
+                        *n = n.get_unchecked(x..);
+                        m
+                    }
+                };
+                let kl = (k.len() as u32).to_le_bytes();
+                skip_ws(n);
+                *n = match n.get(1..) {
+                    Some(x) => x,
+                    None => return Err(Error),
+                };
+                skip_ws(n);
+                let t = match peek(n)? {
+                    b'{' => {
+                        names.extend(kl);
+                        bls.push(Bl::C(c));
+                        bls.push(Bl::C(Compound::new()));
+                        on_start = true;
+                        continue;
+                    }
+                    b'[' => match darr(n) {
+                        Ok(TagArray::ByteArray(x)) => Tag::ByteArray(x),
+                        Ok(TagArray::IntArray(x)) => Tag::IntArray(x),
+                        Ok(TagArray::LongArray(x)) => Tag::LongArray(x),
+                        Err(_) => {
+                            names.extend(kl);
+                            bls.push(Bl::C(c));
+                            bls.push(Bl::L(List::None));
                             on_start = true;
+                            continue;
                         }
-                        b'[' => {
-                            if let Ok(arr) = darr(n) {
-                                curr.push(k, arr);
-                            } else {
-                                let index = curr.len();
-                                curr.push(k, List::None);
-                                let (_, Tag::List(last)) = curr.get_unchecked_mut(index) else {
-                                    unreachable_unchecked()
-                                };
-                                ptrs.push(Block::C(c));
-                                ptrs.push(Block::L(NonNull::new_unchecked(last)));
-                                on_start = true;
+                    },
+                    b'"' => {
+                        s.clear();
+                        let s = dqstr2(n, &mut s)?;
+                        Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                    }
+                    b'\'' => {
+                        s.clear();
+                        let s = dqstr1(n, &mut s)?;
+                        Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                    }
+                    _ => {
+                        let mid = find_ascii(n, |x| {
+                            matches!(x, b',' | b'}' | b' ' | b'\n' | b'\t' | b'\r')
+                        })?;
+                        let s = match n.split_at_checked(mid) {
+                            Some((x, y)) => {
+                                *n = y;
+                                x
+                            }
+                            None => return Err(Error),
+                        };
+                        match dnum(s) {
+                            Ok(x) => x,
+                            Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
+                        }
+                    }
+                };
+                c.push(BoxStr::new_unchecked(Box::from(k.as_bytes())), t);
+            },
+            Bl::L(mut l) => match peek(n)? {
+                b'{' => {
+                    if let List::None = &l {
+                        l = List::Compound(Vec::new());
+                    }
+                    bls.push(Bl::L(l));
+                    bls.push(Bl::C(Compound::new()));
+                    on_start = true;
+                }
+                b'[' => {
+                    if let Ok(arr) = darr(n) {
+                        match arr {
+                            TagArray::ByteArray(b) => {
+                                if let List::None = &l {
+                                    l = List::ByteArray(Vec::new());
+                                }
+                                match &mut l {
+                                    List::ByteArray(x) => x.push(b),
+                                    _ => return Err(Error),
+                                }
+                            }
+                            TagArray::IntArray(b) => {
+                                if let List::None = &l {
+                                    l = List::IntArray(Vec::new());
+                                }
+                                match &mut l {
+                                    List::IntArray(x) => x.push(b),
+                                    _ => return Err(Error),
+                                }
+                            }
+                            TagArray::LongArray(b) => {
+                                if let List::None = &l {
+                                    l = List::LongArray(Vec::new());
+                                }
+                                match &mut l {
+                                    List::LongArray(x) => x.push(b),
+                                    _ => return Err(Error),
+                                }
                             }
                         }
+                        bls.push(Bl::L(l));
+                    } else {
+                        match &l {
+                            List::None => {
+                                l = List::List(Vec::new());
+                            }
+                            List::List(_) => (),
+                            _ => return Err(Error),
+                        }
+                        bls.push(Bl::L(l));
+                        bls.push(Bl::L(List::None));
+                        on_start = true;
+                    }
+                }
+                _ => unsafe {
+                    let first = peek(n)?;
+                    let tag = match first {
                         b'"' => {
+                            s.clear();
                             let s = dqstr2(n, &mut s)?;
-                            curr.push(k, s);
-                            ptrs.push(Block::C(c));
+                            Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         b'\'' => {
+                            s.clear();
                             let s = dqstr1(n, &mut s)?;
-                            curr.push(k, s);
-                            ptrs.push(Block::C(c));
+                            Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         _ => {
-                            let mid = find_ascii(n, |x| {
-                                matches!(x, b',' | b'}' | b' ' | b'\n' | b'\t' | b'\r')
+                            let i = find_ascii(n, |x| {
+                                matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
                             })?;
-
-                            let s = match n.split_at_checked(mid) {
+                            let s = match n.split_at_checked(i) {
                                 Some((x, y)) => {
                                     *n = y;
                                     x
                                 }
                                 None => return Err(Error),
                             };
-                            let v = match dnum(s) {
+                            match dnum(s) {
                                 Ok(x) => x,
                                 Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
-                            };
-                            curr.push(k, v);
-                            ptrs.push(Block::C(c));
+                            }
                         }
-                    }
-                }
-                Block::L(mut l) => {
-                    let ch = peek(n)?;
-                    if ch == b'{' {
-                        if let List::None = l.as_ref() {
-                            *l.as_mut() = List::Compound(Vec::new());
-                        }
-                        let comp = match l.as_mut() {
-                            List::Compound(x) => x,
-                            _ => return Err(Error),
-                        };
-                        let index = comp.len();
-                        comp.push(Compound::new());
-                        let last = comp.get_unchecked_mut(index);
-                        ptrs.push(Block::L(l));
-                        ptrs.push(Block::C(NonNull::new_unchecked(last as *const _ as _)));
-                        on_start = true;
-                    } else if ch == b'[' {
-                        if let Ok(arr) = darr(n) {
-                            match arr {
-                                Tag::ByteArray(b) => {
-                                    if let List::None = l.as_ref() {
-                                        *l.as_mut() = List::ByteArray(Vec::new());
-                                    }
-                                    match l.as_mut() {
-                                        List::ByteArray(x) => x.push(b),
-                                        _ => return Err(Error),
-                                    }
-                                }
-                                Tag::IntArray(b) => {
-                                    if let List::None = l.as_ref() {
-                                        *l.as_mut() = List::IntArray(Vec::new());
-                                    }
-                                    match l.as_mut() {
-                                        List::IntArray(x) => x.push(b),
-                                        _ => return Err(Error),
-                                    }
-                                }
-                                Tag::LongArray(b) => {
-                                    if let List::None = l.as_ref() {
-                                        *l.as_mut() = List::LongArray(Vec::new());
-                                    }
-                                    match l.as_mut() {
-                                        List::LongArray(x) => x.push(b),
-                                        _ => return Err(Error),
-                                    }
-                                }
-                                _ => unreachable_unchecked(),
-                            }
-                            ptrs.push(Block::L(l));
-                        } else {
-                            if let List::None = l.as_ref() {
-                                *l.as_mut() = List::List(Vec::new());
-                            }
-                            let list = match l.as_mut() {
-                                List::List(x) => x,
-                                _ => return Err(Error),
-                            };
-                            let index = list.len();
-                            list.push(List::None);
-                            let last = list.get_unchecked_mut(index);
-                            ptrs.push(Block::L(l));
-                            ptrs.push(Block::L(NonNull::new_unchecked(last as *const _ as _)));
-                            on_start = true;
-                        }
-                    } else {
-                        let first = peek(n)?;
-                        let tag = match first {
-                            b'"' => {
-                                let s = dqstr2(n, &mut s)?;
-                                Tag::String(s)
-                            }
-                            b'\'' => {
-                                let s = dqstr1(n, &mut s)?;
-                                Tag::String(s)
-                            }
-                            _ => {
-                                let i = find_ascii(n, |x| {
-                                    matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
-                                })?;
-
-                                let s = match n.split_at_checked(i) {
-                                    Some((x, y)) => {
-                                        *n = y;
-                                        x
-                                    }
-                                    None => return Err(Error),
-                                };
-                                match dnum(s) {
-                                    Ok(x) => x,
-                                    Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
-                                }
-                            }
-                        };
-                        if let Tag::Byte(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b'+' | b'-' | b'0'..=b'9' => {
-                                                let (a, b) = parse_int::<i8>(n);
-                                                *n = n.get_unchecked(b..);
-                                                if let b'b' | b'B' = peek(n)? {
-                                                    *n = n.get_unchecked(1..);
-                                                }
-                                                list.push(a);
-                                            }
-                                            b't' | b'T' => {
-                                                *n = match n.get(4..) {
-                                                    Some(x) => x,
-                                                    None => return Err(Error),
-                                                };
-                                                list.push(1);
-                                            }
-                                            b'f' | b'F' => {
-                                                *n = match n.get(5..) {
-                                                    Some(x) => x,
-                                                    None => return Err(Error),
-                                                };
-                                                list.push(0);
-                                            }
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => return Err(Error),
-                                        }
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::Byte(list));
-                        } else if let Tag::Short(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b'+' | b'-' | b'0'..=b'9' => {}
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => return Err(Error),
-                                        }
-                                        let (a, b) = parse_int::<i16>(n);
-                                        *n = n.get_unchecked(b..);
-                                        if let b's' | b'S' = peek(n)? {
-                                            *n = n.get_unchecked(1..);
-                                        }
-                                        list.push(a);
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::Short(list));
-                        } else if let Tag::Int(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b'+' | b'-' | b'0'..=b'9' => {}
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => return Err(Error),
-                                        }
-                                        let (a, b) = parse_int::<i32>(n);
-                                        *n = n.get_unchecked(b..);
-                                        list.push(a);
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::Int(list));
-                        } else if let Tag::Long(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b'+' | b'-' | b'0'..=b'9' => {}
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => return Err(Error),
-                                        }
-                                        let (a, b) = parse_int::<i64>(n);
-                                        *n = n.get_unchecked(b..);
-                                        if let b'l' | b'L' = peek(n)? {
-                                            *n = n.get_unchecked(1..);
-                                        }
-                                        list.push(a);
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::Long(list));
-                        } else if let Tag::Float(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b'+' | b'-' | b'0'..=b'9' | b'.' => {}
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => return Err(Error),
-                                        }
-                                        let (a, b) = parse_float(n);
-                                        *n = n.get_unchecked(b..);
-                                        if let b'f' | b'F' = peek(n)? {
-                                            *n = n.get_unchecked(1..);
-                                        }
-                                        list.push(a);
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::Float(list));
-                        } else if let Tag::Double(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b'+' | b'-' | b'0'..=b'9' | b'.' => {}
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => return Err(Error),
-                                        }
-                                        let (a, b) = parse_float(n);
-                                        *n = n.get_unchecked(b..);
-                                        if let b'd' | b'D' = peek(n)? {
-                                            *n = n.get_unchecked(1..);
-                                        }
-                                        list.push(a);
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::Double(list));
-                        } else if let Tag::String(x) = tag {
-                            let mut list = vec![x];
-                            loop {
-                                skip_ws(n);
-                                match u8::read(n)? {
-                                    b',' => {
-                                        skip_ws(n);
-                                        match peek(n)? {
-                                            b']' => {
-                                                *n = n.get_unchecked(1..);
-                                                on_end = true;
-                                                break;
-                                            }
-                                            _ => {
-                                                let x = match peek(n)? {
-                                                    b'\"' => dqstr2(n, &mut s)?,
-                                                    b'\'' => dqstr1(n, &mut s)?,
-                                                    _ => {
-                                                        let x = find_ascii(n, |x| {
-                                                            matches!(
-                                                                x,
-                                                                b',' | b']'
-                                                                    | b' '
-                                                                    | b'\n'
-                                                                    | b'\t'
-                                                                    | b'\r'
-                                                            )
-                                                        })?;
-                                                        let m = BoxStr::new_unchecked(Box::from(
-                                                            n.get_unchecked(0..x),
-                                                        ));
-                                                        *n = n.get_unchecked(x..);
-                                                        m
-                                                    }
-                                                };
-                                                list.push(x);
-                                            }
-                                        };
-                                    }
-                                    b']' => {
-                                        on_end = true;
-                                        break;
-                                    }
-                                    _ => return Err(Error),
-                                }
-                            }
-                            l.replace(List::String(list));
-                        } else {
-                            unreachable_unchecked()
-                        }
-                        ptrs.push(Block::L(l));
-                    }
-                }
-            }
+                    };
+                    let l = dec_list_non_array(n, &mut s, tag)?;
+                    bls.push(Bl::L(l));
+                },
+            },
         }
     }
+}
+
+unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result<List, Error> {
+    Ok(match tag {
+        Tag::Byte(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b'+' | b'-' | b'0'..=b'9' => {
+                                let (a, b) = parse_int::<i8>(n);
+                                *n = n.get_unchecked(b..);
+                                if let b'b' | b'B' = peek(n)? {
+                                    *n = n.get_unchecked(1..);
+                                }
+                                list.push(a);
+                            }
+                            b't' | b'T' => {
+                                *n = match n.get(4..) {
+                                    Some(x) => x,
+                                    None => return Err(Error),
+                                };
+                                list.push(1);
+                            }
+                            b'f' | b'F' => {
+                                *n = match n.get(5..) {
+                                    Some(x) => x,
+                                    None => return Err(Error),
+                                };
+                                list.push(0);
+                            }
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => return Err(Error),
+                        }
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::Byte(list)
+        },
+        Tag::Short(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b'+' | b'-' | b'0'..=b'9' => {}
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => return Err(Error),
+                        }
+                        let (a, b) = parse_int::<i16>(n);
+                        *n = n.get_unchecked(b..);
+                        if let b's' | b'S' = peek(n)? {
+                            *n = n.get_unchecked(1..);
+                        }
+                        list.push(a);
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::Short(list)
+        },
+        Tag::Int(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b'+' | b'-' | b'0'..=b'9' => {}
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => return Err(Error),
+                        }
+                        let (a, b) = parse_int::<i32>(n);
+                        *n = n.get_unchecked(b..);
+                        list.push(a);
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::Int(list)
+        },
+        Tag::Long(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b'+' | b'-' | b'0'..=b'9' => {}
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => return Err(Error),
+                        }
+                        let (a, b) = parse_int::<i64>(n);
+                        *n = n.get_unchecked(b..);
+                        if let b'l' | b'L' = peek(n)? {
+                            *n = n.get_unchecked(1..);
+                        }
+                        list.push(a);
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::Long(list)
+        },
+        Tag::Float(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b'+' | b'-' | b'0'..=b'9' | b'.' => {}
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => return Err(Error),
+                        }
+                        let (a, b) = parse_float(n);
+                        *n = n.get_unchecked(b..);
+                        if let b'f' | b'F' = peek(n)? {
+                            *n = n.get_unchecked(1..);
+                        }
+                        list.push(a);
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::Float(list)
+        },
+        Tag::Double(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b'+' | b'-' | b'0'..=b'9' | b'.' => {}
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => return Err(Error),
+                        }
+                        let (a, b) = parse_float(n);
+                        *n = n.get_unchecked(b..);
+                        if let b'd' | b'D' = peek(n)? {
+                            *n = n.get_unchecked(1..);
+                        }
+                        list.push(a);
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::Double(list)
+        },
+        Tag::String(x) => unsafe {
+            let mut list = vec![x];
+            loop {
+                skip_ws(n);
+                match u8::read(n)? {
+                    b',' => {
+                        skip_ws(n);
+                        match peek(n)? {
+                            b']' => {
+                                *n = n.get_unchecked(1..);
+                                break;
+                            }
+                            _ => {
+                                s.clear();
+                                let x = match peek(n)? {
+                                    b'\"' => Box::from(dqstr2(n, s)?.as_bytes()),
+                                    b'\'' => Box::from(dqstr1(n, s)?.as_bytes()),
+                                    _ => {
+                                        let x = find_ascii(n, |x| {
+                                            matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
+                                        })?;
+                                        let m = Box::from(n.get_unchecked(0..x));
+                                        *n = n.get_unchecked(x..);
+                                        m
+                                    }
+                                };
+                                list.push(BoxStr::new_unchecked(x));
+                            }
+                        };
+                    }
+                    b']' => {
+                        break;
+                    }
+                    _ => return Err(Error),
+                }
+            }
+            List::String(list)
+        },
+        _ => unsafe { unreachable_unchecked() },
+    })
 }
 
 fn dnum(n: &[u8]) -> Result<Tag, Error> {
@@ -769,8 +766,8 @@ fn dnum(n: &[u8]) -> Result<Tag, Error> {
 const ESCAPE: u8 = b'\\';
 
 /// decode single quoted string
-unsafe fn dqstr1(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
-    buf.clear();
+unsafe fn dqstr1<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>) -> Result<&'a str, Error> {
+    let begin = buf.len();
     unsafe {
         *n = n.get_unchecked(1..);
         let mut last = 0;
@@ -809,13 +806,13 @@ unsafe fn dqstr1(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
             Some(x) => x,
             None => return Err(Error),
         };
-        Ok(BoxStr::new_unchecked(Box::from(&buf[..])))
+        Ok(core::str::from_utf8_unchecked(buf.get_unchecked(begin..)))
     }
 }
 
 /// decode a double quoted string
-unsafe fn dqstr2(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
-    buf.clear();
+unsafe fn dqstr2<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>) -> Result<&'a str, Error> {
+    let begin = buf.len();
     unsafe {
         *n = n.get_unchecked(1..);
         let mut last = 0;
@@ -854,7 +851,7 @@ unsafe fn dqstr2(n: &mut &[u8], buf: &mut Vec<u8>) -> Result<BoxStr, Error> {
             Some(x) => x,
             None => return Err(Error),
         };
-        Ok(BoxStr::new_unchecked(Box::from(&buf[..])))
+        Ok(core::str::from_utf8_unchecked(buf.get_unchecked(begin..)))
     }
 }
 
@@ -869,318 +866,345 @@ fn skip_ws(n: &mut &[u8]) {
 const SPACE: &[u8] = b"    ";
 const DELIMITER: &[u8] = b", ";
 
-unsafe fn encode(buf: &mut Vec<u8>, n: NonNull<Compound>) {
+unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
+    #[derive(Clone, Copy)]
+    enum Bl<'a> {
+        C(&'a [(BoxStr, Tag)]),
+        None,
+        Byte(&'a [i8]),
+        Short(&'a [i16]),
+        Int(&'a [i32]),
+        Long(&'a [i64]),
+        Float(&'a [f32]),
+        Double(&'a [f64]),
+        String(&'a [BoxStr]),
+        ByteArray(&'a [Vec<i8>]),
+        IntArray(&'a [Vec<i32>]),
+        LongArray(&'a [Vec<i64>]),
+        List(&'a [List]),
+        Compound(&'a [Compound]),
+    }
+    impl<'a> From<&'a List> for Bl<'a> {
+        fn from(value: &'a List) -> Self {
+            match value {
+                List::None => Self::None,
+                List::Byte(items) => Self::Byte(items),
+                List::Short(items) => Self::Short(items),
+                List::Int(items) => Self::Int(items),
+                List::Long(items) => Self::Long(items),
+                List::Float(items) => Self::Float(items),
+                List::Double(items) => Self::Double(items),
+                List::String(box_strs) => Self::String(box_strs),
+                List::ByteArray(items) => Self::ByteArray(items),
+                List::IntArray(items) => Self::IntArray(items),
+                List::LongArray(items) => Self::LongArray(items),
+                List::List(lists) => Self::List(lists),
+                List::Compound(compounds) => Self::Compound(compounds),
+            }
+        }
+    }
+
     let mut itoa_buf = itoa::Buffer::new();
     let mut ryu_buf = ryu::Buffer::new();
-    let mut ptrs = SmallVec::<[(Block, usize); CAP]>::new();
-    ptrs.push((Block::C(n), 0));
+    let mut bls = vec![(Bl::C(n.as_ref()), 0)];
 
     buf.push(b'{');
-    unsafe {
-        loop {
-            let (ptr, x) = ptrs.pop().unwrap_unchecked();
-            match ptr {
-                Block::C(y) => {
-                    let (name, tag) = match y.as_ref().get(x) {
-                        Some(t) => t,
-                        None => {
-                            buf.push(b'\n');
-                            for _ in 0..ptrs.len() {
-                                buf.extend(SPACE);
-                            }
-                            buf.push(b'}');
-                            if ptrs.is_empty() {
-                                return;
-                            }
-                            continue;
+
+    loop {
+        let (bl, x) = unsafe { bls.pop().unwrap_unchecked() };
+        match bl {
+            Bl::C(y) => {
+                let (name, tag) = match y.get(x) {
+                    Some(t) => t,
+                    None => {
+                        buf.push(b'\n');
+                        for _ in 0..bls.len() {
+                            buf.extend(SPACE);
                         }
-                    };
-                    if x != 0 {
-                        buf.push(b',');
+                        buf.push(b'}');
+                        if bls.is_empty() {
+                            return;
+                        }
+                        continue;
                     }
-                    buf.push(b'\n');
-                    ptrs.push((Block::C(y), x + 1));
-                    for _ in 0..ptrs.len() {
-                        buf.extend(SPACE);
+                };
+                if x != 0 {
+                    buf.push(b',');
+                }
+                buf.push(b'\n');
+                bls.push((Bl::C(y), x + 1));
+                for _ in 0..bls.len() {
+                    buf.extend(SPACE);
+                }
+                buf.push(b'"');
+                buf.extend(name.as_bytes());
+                buf.extend(b"\": ");
+                match &tag {
+                    Tag::Byte(x) => {
+                        let s = itoa_buf.format(*x);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'B');
                     }
-                    buf.push(b'"');
-                    buf.extend(name.as_bytes());
-                    buf.extend(b"\": ");
-                    match &tag {
-                        Tag::Byte(x) => {
-                            let s = itoa_buf.format(*x);
-                            buf.extend(s.as_bytes());
-                            buf.push(b'B');
-                        }
-                        Tag::Short(x) => {
-                            let s = itoa_buf.format(*x);
-                            buf.extend(s.as_bytes());
-                            buf.push(b'S');
-                        }
-                        Tag::Int(x) => {
-                            let s = itoa_buf.format(*x);
-                            buf.extend(s.as_bytes());
-                        }
-                        Tag::Long(x) => {
-                            let s = itoa_buf.format(*x);
-                            buf.extend(s.as_bytes());
-                            buf.push(b'L');
-                        }
-                        Tag::Float(x) => {
-                            let s = ryu_buf.format(*x);
-                            buf.extend(s.as_bytes());
-                            buf.push(b'F');
-                        }
-                        Tag::Double(x) => {
-                            let s = ryu_buf.format(*x);
-                            buf.extend(s.as_bytes());
-                            buf.push(b'D');
-                        }
-                        Tag::String(x) => {
-                            buf.push(b'"');
-                            buf.extend(x.as_str().as_bytes());
-                            buf.push(b'"');
-                        }
-                        Tag::ByteArray(x) => {
-                            buf.extend(b"[B;");
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b'b');
+                    Tag::Short(x) => {
+                        let s = itoa_buf.format(*x);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'S');
+                    }
+                    Tag::Int(x) => {
+                        let s = itoa_buf.format(*x);
+                        buf.extend(s.as_bytes());
+                    }
+                    Tag::Long(x) => {
+                        let s = itoa_buf.format(*x);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'L');
+                    }
+                    Tag::Float(x) => {
+                        let s = ryu_buf.format(*x);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'F');
+                    }
+                    Tag::Double(x) => {
+                        let s = ryu_buf.format(*x);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'D');
+                    }
+                    Tag::String(x) => {
+                        buf.push(b'"');
+                        buf.extend(x.as_str().as_bytes());
+                        buf.push(b'"');
+                    }
+                    Tag::ByteArray(x) => {
+                        buf.extend(b"[B;");
+                        let mut flag = false;
+                        for &y in x {
+                            if flag {
+                                buf.extend(DELIMITER);
                             }
-                            buf.push(b']');
+                            flag = true;
+                            let s = itoa_buf.format(y);
+                            buf.extend(s.as_bytes());
+                            buf.push(b'b');
                         }
-                        Tag::IntArray(x) => {
-                            buf.extend(b"[I;");
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
+                        buf.push(b']');
+                    }
+                    Tag::IntArray(x) => {
+                        buf.extend(b"[I;");
+                        let mut flag = false;
+                        for &y in x {
+                            if flag {
+                                buf.extend(DELIMITER);
                             }
-                            buf.push(b']');
+                            flag = true;
+                            let s = itoa_buf.format(y);
+                            buf.extend(s.as_bytes());
                         }
-                        Tag::LongArray(x) => {
-                            buf.extend(b"[L;");
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b'l');
+                        buf.push(b']');
+                    }
+                    Tag::LongArray(x) => {
+                        buf.extend(b"[L;");
+                        let mut flag = false;
+                        for &y in x {
+                            if flag {
+                                buf.extend(DELIMITER);
                             }
-                            buf.push(b']');
+                            flag = true;
+                            let s = itoa_buf.format(y);
+                            buf.extend(s.as_bytes());
+                            buf.push(b'l');
                         }
-                        Tag::List(x) => {
-                            buf.push(b'[');
-                            ptrs.push((Block::L(NonNull::new_unchecked(x as *const _ as _)), 0));
-                        }
-                        Tag::Compound(x) => {
-                            buf.push(b'{');
-                            ptrs.push((Block::C(NonNull::new_unchecked(x as *const _ as _)), 0));
-                        }
+                        buf.push(b']');
+                    }
+                    Tag::List(x) => {
+                        buf.push(b'[');
+                        bls.push((Bl::from(x), 0));
+                    }
+                    Tag::Compound(x) => {
+                        buf.push(b'{');
+                        bls.push((Bl::C(x.as_ref()), 0));
                     }
                 }
-                Block::L(y) => {
-                    match y.as_ref() {
-                        List::None => {}
-                        List::Byte(x) => {
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b'b');
-                            }
-                        }
-                        List::Short(x) => {
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b's');
-                            }
-                        }
-                        List::Int(x) => {
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
-                            }
-                        }
-                        List::Long(x) => {
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = itoa_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b'l');
-                            }
-                        }
-                        List::Float(x) => {
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = ryu_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b'f');
-                            }
-                        }
-                        List::Double(x) => {
-                            let mut flag = false;
-                            for &y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                let s = ryu_buf.format(y);
-                                buf.extend(s.as_bytes());
-                                buf.push(b'd');
-                            }
-                        }
-                        List::String(x) => {
-                            let mut flag = false;
-                            for y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                buf.push(b'"');
-                                buf.extend(y.as_bytes());
-                                buf.push(b'"');
-                            }
-                        }
-                        List::ByteArray(x) => {
-                            let mut flag = false;
-                            for y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                buf.extend(b"[B;");
-                                let mut flag1 = false;
-                                for &z in y {
-                                    if flag1 {
-                                        buf.extend(DELIMITER);
-                                    }
-                                    flag1 = true;
-                                    let s = itoa_buf.format(z);
-                                    buf.extend(s.as_bytes());
-                                    buf.push(b'b');
-                                }
-                                buf.push(b']');
-                            }
-                        }
-                        List::IntArray(x) => {
-                            let mut flag = false;
-                            for y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                buf.extend(b"[I;");
-                                let mut flag1 = false;
-                                for &z in y {
-                                    if flag1 {
-                                        buf.extend(DELIMITER);
-                                    }
-                                    flag1 = true;
-                                    let s = itoa_buf.format(z);
-                                    buf.extend(s.as_bytes());
-                                }
-                                buf.push(b']');
-                            }
-                        }
-                        List::LongArray(x) => {
-                            let mut flag = false;
-                            for y in x {
-                                if flag {
-                                    buf.extend(DELIMITER);
-                                }
-                                flag = true;
-                                buf.extend(b"[B;");
-                                let mut flag1 = false;
-                                for &z in y {
-                                    if flag1 {
-                                        buf.extend(DELIMITER);
-                                    }
-                                    flag1 = true;
-                                    let s = itoa_buf.format(z);
-                                    buf.extend(s.as_bytes());
-                                    buf.push(b'l');
-                                }
-                                buf.push(b']');
-                            }
-                        }
-                        List::List(l) => {
-                            if let Some(l) = l.get(x) {
-                                if x != 0 {
-                                    buf.extend(DELIMITER);
-                                }
-                                ptrs.push((Block::L(y), x + 1));
-                                ptrs.push((
-                                    Block::L(NonNull::new_unchecked(l as *const _ as _)),
-                                    0,
-                                ));
-                                buf.push(b'[');
-                                continue;
-                            }
-                        }
-                        List::Compound(l) => {
-                            if let Some(l) = l.get(x) {
-                                if x != 0 {
-                                    buf.extend(b",\n");
-                                    for _ in 0..=ptrs.len() {
-                                        buf.extend(SPACE);
-                                    }
-                                }
-                                ptrs.push((Block::L(y), x + 1));
-                                ptrs.push((
-                                    Block::C(NonNull::new_unchecked(l as *const _ as _)),
-                                    0,
-                                ));
-                                buf.extend(b"{\n");
-                                for _ in 0..=ptrs.len() {
-                                    buf.extend(SPACE);
-                                }
-                                continue;
-                            }
-                        }
+
+                continue;
+            }
+            Bl::None => {}
+            Bl::Byte(x) => {
+                let mut flag = false;
+                for &y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
                     }
-                    buf.push(b']');
-                    if ptrs.is_empty() {
-                        return;
-                    }
+                    flag = true;
+                    let s = itoa_buf.format(y);
+                    buf.extend(s.as_bytes());
+                    buf.push(b'b');
                 }
             }
+            Bl::Short(x) => {
+                let mut flag = false;
+                for &y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    let s = itoa_buf.format(y);
+                    buf.extend(s.as_bytes());
+                    buf.push(b's');
+                }
+            }
+            Bl::Int(x) => {
+                let mut flag = false;
+                for &y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    let s = itoa_buf.format(y);
+                    buf.extend(s.as_bytes());
+                }
+            }
+            Bl::Long(x) => {
+                let mut flag = false;
+                for &y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    let s = itoa_buf.format(y);
+                    buf.extend(s.as_bytes());
+                    buf.push(b'l');
+                }
+            }
+            Bl::Float(x) => {
+                let mut flag = false;
+                for &y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    let s = ryu_buf.format(y);
+                    buf.extend(s.as_bytes());
+                    buf.push(b'f');
+                }
+            }
+            Bl::Double(x) => {
+                let mut flag = false;
+                for &y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    let s = ryu_buf.format(y);
+                    buf.extend(s.as_bytes());
+                    buf.push(b'd');
+                }
+            }
+            Bl::String(x) => {
+                let mut flag = false;
+                for y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    buf.push(b'"');
+                    buf.extend(y.as_bytes());
+                    buf.push(b'"');
+                }
+            }
+            Bl::ByteArray(x) => {
+                let mut flag = false;
+                for y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    buf.extend(b"[B;");
+                    let mut flag1 = false;
+                    for &z in y {
+                        if flag1 {
+                            buf.extend(DELIMITER);
+                        }
+                        flag1 = true;
+                        let s = itoa_buf.format(z);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'b');
+                    }
+                    buf.push(b']');
+                }
+            }
+            Bl::IntArray(x) => {
+                let mut flag = false;
+                for y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    buf.extend(b"[I;");
+                    let mut flag1 = false;
+                    for &z in y {
+                        if flag1 {
+                            buf.extend(DELIMITER);
+                        }
+                        flag1 = true;
+                        let s = itoa_buf.format(z);
+                        buf.extend(s.as_bytes());
+                    }
+                    buf.push(b']');
+                }
+            }
+            Bl::LongArray(x) => {
+                let mut flag = false;
+                for y in x {
+                    if flag {
+                        buf.extend(DELIMITER);
+                    }
+                    flag = true;
+                    buf.extend(b"[B;");
+                    let mut flag1 = false;
+                    for &z in y {
+                        if flag1 {
+                            buf.extend(DELIMITER);
+                        }
+                        flag1 = true;
+                        let s = itoa_buf.format(z);
+                        buf.extend(s.as_bytes());
+                        buf.push(b'l');
+                    }
+                    buf.push(b']');
+                }
+            }
+            Bl::List(y) => {
+                if let Some(l) = y.get(x) {
+                    if x != 0 {
+                        buf.extend(DELIMITER);
+                    }
+                    bls.push((Bl::List(y), x + 1));
+                    bls.push((Bl::from(l), 0));
+                    buf.push(b'[');
+                    continue;
+                }
+            }
+            Bl::Compound(y) => {
+                if let Some(l) = y.get(x) {
+                    if x != 0 {
+                        buf.extend(b",\n");
+                        for _ in 0..=bls.len() {
+                            buf.extend(SPACE);
+                        }
+                    }
+                    bls.push((Bl::Compound(y), x + 1));
+                    bls.push((Bl::C(l.as_ref()), 0));
+                    buf.extend(b"{\n");
+                    for _ in 0..=bls.len() {
+                        buf.extend(SPACE);
+                    }
+                    continue;
+                }
+            }
+        }
+        buf.push(b']');
+        if bls.is_empty() {
+            return;
         }
     }
 }

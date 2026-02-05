@@ -1,5 +1,6 @@
 #![no_std]
 
+use crate::nbt::Tag;
 use crate::str::BoxStr;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -306,6 +307,9 @@ impl Identifier {
         }
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Component(pub Tag);
 
 #[derive(Clone)]
 pub struct ResourceKey {

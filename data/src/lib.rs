@@ -301,13 +301,11 @@ impl block_state {
 
     #[inline]
     #[cfg(not(debug_assertions))]
-    const fn static_bounds(self) -> Option<u64> {
+    const fn static_bounds(self) -> u64 {
         unsafe {
-            Some(
-                *BLOCK_STATE_BOUNDS
-                    .as_ptr()
-                    .add(*BLOCK_STATE_BOUNDS_INDEX.as_ptr().add(self.id() as usize) as usize),
-            )
+            *BLOCK_STATE_BOUNDS
+                .as_ptr()
+                .add(*BLOCK_STATE_BOUNDS_INDEX.as_ptr().add(self.id() as usize) as usize)
         }
     }
 

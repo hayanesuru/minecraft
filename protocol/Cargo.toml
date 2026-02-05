@@ -15,7 +15,6 @@ minecraft_data = { workspace = true }
 mser = { workspace = true }
 mser_macro = { workspace = true }
 uuid = { version = "1", default-features = false }
-smallvec = "1"
 itoa = "1"
 ryu = "1"
 
