@@ -5,7 +5,6 @@ use crate::{Error, Read as _};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::hint::unreachable_unchecked;
 use mser::{parse_float, parse_int};
 
 const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
@@ -356,7 +355,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                             None => return Err(Error),
                         };
                         match dec_num(s) {
-                            Ok(x) => x,
+                            Ok(x) => Tag::from(x),
                             Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
                         }
                     }
@@ -423,12 +422,12 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                         b'"' => {
                             s.clear();
                             let s = dec_dq_str(n, &mut s)?;
-                            Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                            TagNonArray::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         b'\'' => {
                             s.clear();
                             let s = dec_sq_str(n, &mut s)?;
-                            Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                            TagNonArray::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         _ => {
                             let i = find_ascii(n, |x| {
@@ -443,7 +442,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                             };
                             match dec_num(s) {
                                 Ok(x) => x,
-                                Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(s))),
+                                Err(_) => TagNonArray::String(BoxStr::new_unchecked(Box::from(s))),
                             }
                         }
                     };
@@ -455,9 +454,13 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
     }
 }
 
-unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result<List, Error> {
+unsafe fn dec_list_non_array(
+    n: &mut &[u8],
+    s: &mut Vec<u8>,
+    tag: TagNonArray,
+) -> Result<List, Error> {
     Ok(match tag {
-        Tag::Byte(x) => unsafe {
+        TagNonArray::Byte(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -497,7 +500,7 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::Byte(list)
         },
-        Tag::Short(x) => unsafe {
+        TagNonArray::Short(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -527,7 +530,7 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::Short(list)
         },
-        Tag::Int(x) => unsafe {
+        TagNonArray::Int(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -554,7 +557,7 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::Int(list)
         },
-        Tag::Long(x) => unsafe {
+        TagNonArray::Long(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -584,7 +587,7 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::Long(list)
         },
-        Tag::Float(x) => unsafe {
+        TagNonArray::Float(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -614,7 +617,7 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::Float(list)
         },
-        Tag::Double(x) => unsafe {
+        TagNonArray::Double(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -644,7 +647,7 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::Double(list)
         },
-        Tag::String(x) => unsafe {
+        TagNonArray::String(x) => unsafe {
             let mut list = vec![x];
             loop {
                 skip_ws(n);
@@ -682,7 +685,6 @@ unsafe fn dec_list_non_array(n: &mut &[u8], s: &mut Vec<u8>, tag: Tag) -> Result
             }
             List::String(list)
         },
-        _ => unsafe { unreachable_unchecked() },
     })
 }
 
@@ -712,13 +714,37 @@ unsafe fn dec_false_peek(n: &mut &[u8]) -> Result<(), Error> {
     }
 }
 
-fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
+#[derive(Clone)]
+enum TagNonArray {
+    Byte(i8),
+    Short(i16),
+    Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
+    String(BoxStr),
+}
+
+impl From<TagNonArray> for Tag {
+    fn from(value: TagNonArray) -> Self {
+        match value {
+            TagNonArray::Byte(x) => Self::Byte(x),
+            TagNonArray::Short(x) => Self::Short(x),
+            TagNonArray::Int(x) => Self::Int(x),
+            TagNonArray::Long(x) => Self::Long(x),
+            TagNonArray::Float(x) => Self::Float(x),
+            TagNonArray::Double(x) => Self::Double(x),
+            TagNonArray::String(x) => Self::String(x),
+        }
+    }
+}
+fn dec_num(mut n: &[u8]) -> Result<TagNonArray, Error> {
     match peek(n)? {
         b'+' | b'-' | b'0'..=b'9' | b'.' => (),
         b't' | b'T' => unsafe {
             dec_true_peek(&mut n)?;
             return if n.is_empty() {
-                Ok(Tag::Byte(1))
+                Ok(TagNonArray::Byte(1))
             } else {
                 Err(Error)
             };
@@ -726,7 +752,7 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
         b'f' | b'F' => unsafe {
             dec_false_peek(&mut n)?;
             return if n.is_empty() {
-                Ok(Tag::Byte(0))
+                Ok(TagNonArray::Byte(0))
             } else {
                 Err(Error)
             };
@@ -741,7 +767,7 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
                 if b != rest.len() {
                     Err(Error)
                 } else {
-                    Ok(Tag::Byte(a))
+                    Ok(TagNonArray::Byte(a))
                 }
             }
             b'S' | b's' => {
@@ -749,7 +775,7 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
                 if b != rest.len() {
                     Err(Error)
                 } else {
-                    Ok(Tag::Short(a))
+                    Ok(TagNonArray::Short(a))
                 }
             }
             b'L' | b'l' => {
@@ -757,7 +783,7 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
                 if b != rest.len() {
                     Err(Error)
                 } else {
-                    Ok(Tag::Long(a))
+                    Ok(TagNonArray::Long(a))
                 }
             }
             b'F' | b'f' => {
@@ -765,7 +791,7 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
                 if b != rest.len() {
                     Err(Error)
                 } else {
-                    Ok(Tag::Float(a))
+                    Ok(TagNonArray::Float(a))
                 }
             }
             b'D' | b'd' => {
@@ -773,7 +799,7 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
                 if b != rest.len() {
                     Err(Error)
                 } else {
-                    Ok(Tag::Double(a))
+                    Ok(TagNonArray::Double(a))
                 }
             }
             _ => unsafe {
@@ -782,14 +808,14 @@ fn dec_num(mut n: &[u8]) -> Result<Tag, Error> {
                     if b != n.len() {
                         Err(Error)
                     } else {
-                        Ok(Tag::Int(a))
+                        Ok(TagNonArray::Int(a))
                     }
                 } else {
                     let (a, b) = parse_float(n);
                     if b != n.len() {
                         Err(Error)
                     } else {
-                        Ok(Tag::Double(a))
+                        Ok(TagNonArray::Double(a))
                     }
                 }
             },
@@ -1244,16 +1270,17 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
             }
             Bl::Compound(y) => {
                 if let Some(l) = y.get(x) {
+                    bls.push((Bl::Compound(y), x + 1));
+                    bls.push((Bl::C(l.as_ref()), 0));
                     if x != 0 {
                         buf.extend(b",\n");
-                        for _ in 0..=bls.len() {
+                        for _ in 0..bls.len() {
                             buf.extend(SPACE);
                         }
                     }
-                    bls.push((Bl::Compound(y), x + 1));
-                    bls.push((Bl::C(l.as_ref()), 0));
                     buf.extend(b"{\n");
-                    for _ in 0..=bls.len() {
+                    // next depth
+                    for _ in 0..bls.len() + 1 {
                         buf.extend(SPACE);
                     }
                     continue;
