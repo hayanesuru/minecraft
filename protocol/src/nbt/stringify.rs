@@ -8,6 +8,10 @@ use alloc::vec::Vec;
 use core::hint::unreachable_unchecked;
 use mser::{parse_float, parse_int};
 
+const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
+const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
+const LONG_ARRAY_PREFIX: &[u8; 3] = b"[L;";
+
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct StringifyCompound(pub Compound);
@@ -69,10 +73,10 @@ fn darr(n: &mut &[u8]) -> Result<TagArray, Error> {
     let second = at(n, 2)?;
     match [first, second] {
         [b'B', b';'] => unsafe {
-            let mut vec = Vec::<i8>::new();
-
             *n = n.get_unchecked(3..);
             skip_ws(n);
+
+            let mut vec = Vec::<i8>::new();
             if peek(n)? == b']' {
                 *n = n.get_unchecked(1..);
                 return Ok(TagArray::ByteArray(vec));
@@ -103,10 +107,10 @@ fn darr(n: &mut &[u8]) -> Result<TagArray, Error> {
             Ok(TagArray::ByteArray(vec))
         },
         [b'I', b';'] => unsafe {
-            let mut vec = Vec::<i32>::new();
-
             *n = n.get_unchecked(3..);
             skip_ws(n);
+            let mut vec = Vec::<i32>::new();
+
             if peek(n)? == b']' {
                 *n = n.get_unchecked(1..);
                 return Ok(TagArray::IntArray(vec));
@@ -127,10 +131,10 @@ fn darr(n: &mut &[u8]) -> Result<TagArray, Error> {
             Ok(TagArray::IntArray(vec))
         },
         [b'L', b';'] => unsafe {
-            let mut vec = Vec::<i64>::new();
-
-            *n = n.get_unchecked(2..);
+            *n = n.get_unchecked(3..);
             skip_ws(n);
+
+            let mut vec = Vec::<i64>::new();
             if peek(n)? == b']' {
                 *n = n.get_unchecked(1..);
                 return Ok(TagArray::LongArray(vec));
@@ -975,7 +979,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.push(b'"');
                     }
                     Tag::ByteArray(x) => {
-                        buf.extend(b"[B;");
+                        buf.extend(BYTE_ARRAY_PREFIX);
                         let mut flag = false;
                         for &y in x {
                             if flag {
@@ -989,7 +993,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.push(b']');
                     }
                     Tag::IntArray(x) => {
-                        buf.extend(b"[I;");
+                        buf.extend(INT_ARRAY_PREFIX);
                         let mut flag = false;
                         for &y in x {
                             if flag {
@@ -1002,7 +1006,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.push(b']');
                     }
                     Tag::LongArray(x) => {
-                        buf.extend(b"[L;");
+                        buf.extend(LONG_ARRAY_PREFIX);
                         let mut flag = false;
                         for &y in x {
                             if flag {
@@ -1118,7 +1122,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    buf.extend(b"[B;");
+                    buf.extend(BYTE_ARRAY_PREFIX);
                     let mut flag1 = false;
                     for &z in y {
                         if flag1 {
@@ -1139,7 +1143,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    buf.extend(b"[I;");
+                    buf.extend(INT_ARRAY_PREFIX);
                     let mut flag1 = false;
                     for &z in y {
                         if flag1 {
@@ -1159,7 +1163,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    buf.extend(b"[B;");
+                    buf.extend(LONG_ARRAY_PREFIX);
                     let mut flag1 = false;
                     for &z in y {
                         if flag1 {
