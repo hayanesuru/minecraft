@@ -14,7 +14,7 @@ mod writer;
 pub use self::float::parse_float;
 pub use self::hex::{hex_to_u8, parse_hex, u8_to_hex};
 pub use self::integer::{parse_int, parse_int_s};
-pub use self::json::JsonStr;
+pub use self::json::json_char_width_escaped;
 pub use self::mutf8::{
     decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len, is_ascii_mutf8, is_mutf8,
 };

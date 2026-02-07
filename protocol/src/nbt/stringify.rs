@@ -5,7 +5,7 @@ use crate::{Error, Read as _};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use mser::{parse_float, parse_int, parse_int_s};
+use mser::{hex_to_u8, parse_float, parse_int, parse_int_s, u8_to_hex};
 
 const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
 const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
@@ -35,22 +35,11 @@ impl StringifyCompound {
 }
 
 #[inline]
-fn find_ascii(n: &[u8], mut p: impl FnMut(u8) -> bool) -> Result<usize, Error> {
-    let mut index = 0;
-    while let Some(&byte) = n.get(index) {
-        match byte {
-            x @ 0..=0x7F => {
-                if p(x) {
-                    return Ok(index);
-                }
-                index += 1
-            }
-            0x80..=0xDF => index += 2,
-            0xE0..=0xEF => index += 3,
-            _ => index += 4,
-        }
+fn find_ascii(n: &[u8], p: impl FnMut(u8) -> bool) -> Result<usize, Error> {
+    match n.iter().copied().position(p) {
+        Some(x) => Ok(x),
+        None => Err(Error),
     }
-    Err(Error)
 }
 
 fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
@@ -60,19 +49,14 @@ fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
     }
 }
 
-fn at(n: &[u8], i: usize) -> Result<u8, Error> {
-    match n.get(i) {
-        Some(&byte) => Ok(byte),
-        None => Err(Error),
-    }
-}
-
 fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
-    let first = at(n, 1)?;
-    let second = at(n, 2)?;
+    let (first, second, rest) = match n {
+        [_, b, c, rest @ ..] => (*b, *c, rest),
+        _ => return Err(Error),
+    };
     match [first, second] {
-        [b'B', b';'] => unsafe {
-            *n = n.get_unchecked(3..);
+        [b'B', b';'] => {
+            *n = rest;
             skip_ws(n);
 
             let mut vec = Vec::new();
@@ -110,9 +94,9 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             vec.shrink_to_fit();
             Ok(TagArray::ByteArray(vec))
-        },
-        [b'I', b';'] => unsafe {
-            *n = n.get_unchecked(3..);
+        }
+        [b'I', b';'] => {
+            *n = rest;
             skip_ws(n);
 
             let mut vec = Vec::new();
@@ -134,9 +118,9 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             vec.shrink_to_fit();
             Ok(TagArray::IntArray(vec))
-        },
-        [b'L', b';'] => unsafe {
-            *n = n.get_unchecked(3..);
+        }
+        [b'L', b';'] => {
+            *n = rest;
             skip_ws(n);
 
             let mut vec = Vec::new();
@@ -161,7 +145,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             vec.shrink_to_fit();
             Ok(TagArray::LongArray(vec))
-        },
+        }
         _ => Err(Error),
     }
 }
@@ -293,11 +277,11 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                 let k = match peek(n)? {
                     (b'\"', rest) => {
                         *n = rest;
-                        dec_dq_str(n, &mut names)?
+                        dec_quoted_str(n, &mut names, b'\"')?
                     }
                     (b'\'', rest) => {
                         *n = rest;
-                        dec_sq_str(n, &mut names)?
+                        dec_quoted_str(n, &mut names, b'\'')?
                     }
                     _ => {
                         let x =
@@ -341,13 +325,13 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                     (b'"', rest) => {
                         *n = rest;
                         s.clear();
-                        let s = dec_dq_str(n, &mut s)?;
+                        let s = dec_quoted_str(n, &mut s, b'"')?;
                         Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                     }
                     (b'\'', rest) => {
                         *n = rest;
                         s.clear();
-                        let s = dec_sq_str(n, &mut s)?;
+                        let s = dec_quoted_str(n, &mut s, b'\'')?;
                         Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                     }
                     _ => {
@@ -429,13 +413,13 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                         (b'"', rest) => {
                             *n = rest;
                             s.clear();
-                            let s = dec_dq_str(n, &mut s)?;
+                            let s = dec_quoted_str(n, &mut s, b'"')?;
                             TagNonArray::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         (b'\'', rest) => {
                             *n = rest;
                             s.clear();
-                            let s = dec_sq_str(n, &mut s)?;
+                            let s = dec_quoted_str(n, &mut s, b'\'')?;
                             TagNonArray::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         _ => {
@@ -673,11 +657,11 @@ unsafe fn dec_list_non_array(
                                 let x = match peek(n)? {
                                     (b'\"', rest) => {
                                         *n = rest;
-                                        Box::from(dec_dq_str(n, s)?.as_bytes())
+                                        Box::from(dec_quoted_str(n, s, b'\"')?.as_bytes())
                                     }
                                     (b'\'', rest) => {
                                         *n = rest;
-                                        Box::from(dec_sq_str(n, s)?.as_bytes())
+                                        Box::from(dec_quoted_str(n, s, b'\'')?.as_bytes())
                                     }
                                     _ => {
                                         let x = find_ascii(n, |x| {
@@ -838,43 +822,47 @@ fn dec_num(n: &[u8]) -> Result<TagNonArray, Error> {
 
 const ESCAPE: u8 = b'\\';
 
-/// decode single quoted string
-unsafe fn dec_sq_str<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>) -> Result<&'a str, Error> {
+unsafe fn dec_quoted_str<'a>(
+    n: &mut &[u8],
+    buf: &'a mut Vec<u8>,
+    quote: u8,
+) -> Result<&'a str, Error> {
     let begin = buf.len();
     let mut last = 0;
     let mut cur = 0;
 
     loop {
-        let x = at(n, cur)?;
-        if x == ESCAPE {
-            let y = at(n, cur + 1)?;
-            if matches!(y, ESCAPE | b'\'' | b'\"' | b'n' | b'x' | b'u' | b'U' | b'N') {
-                buf.extend(unsafe { n.get_unchecked(last..cur) });
-                match y {
-                    ESCAPE | b'\'' | b'"' => buf.push(y),
-                    b'n' => buf.push(b'\n'),
-                    b'x' => todo!("cp 2 hex"),
-                    b'u' => todo!("cp 4 hex"),
-                    b'U' => todo!("cp 8 hex"),
-                    b'N' => todo!("{{<name>}}"),
-                    _ => (),
+        let x = match n.get(cur) {
+            Some(x) => *x,
+            None => return Err(Error),
+        };
+        let adv = if x == ESCAPE {
+            let (peek, y) = match n.get(cur + 1..) {
+                Some(x) => peek(x)?,
+                None => return Err(Error),
+            };
+            buf.extend(unsafe { n.get_unchecked(last..cur) });
+            cur += 2;
+            last = cur;
+            match quoted_elsape(peek, y) {
+                Some((ch, adv)) => {
+                    buf.extend(ch.encode_utf8(&mut [0; 4]).as_bytes());
+                    2 + adv
                 }
-                cur += 2;
-                last = cur;
-            } else {
-                cur += 1;
+                None => 2,
             }
-        } else if x == b'\'' {
+        } else if x == quote {
             break;
         } else if x < 0x80 {
-            cur += 1;
+            1
         } else if x < 0xE0 {
-            cur += 2;
+            2
         } else if x < 0xF0 {
-            cur += 3;
+            3
         } else {
-            cur += 4;
-        }
+            4
+        };
+        cur += adv;
     }
     unsafe {
         buf.extend(n.get_unchecked(last..cur));
@@ -883,62 +871,105 @@ unsafe fn dec_sq_str<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>) -> Result<&'a str,
     }
 }
 
-/// decode a double quoted string
-unsafe fn dec_dq_str<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>) -> Result<&'a str, Error> {
-    let begin = buf.len();
-    let mut last = 0;
-    let mut cur = 0;
-
-    loop {
-        let x = at(n, cur)?;
-        if x == ESCAPE {
-            let y = at(n, cur + 1)?;
-            if matches!(y, ESCAPE | b'\'' | b'\"' | b'n' | b'x' | b'u' | b'U' | b'N') {
-                buf.extend(unsafe { n.get_unchecked(last..cur) });
-                match y {
-                    ESCAPE | b'\'' | b'"' => buf.push(y),
-                    b'n' => buf.push(b'\n'),
-                    b'x' => todo!("cp 2 hex"),
-                    b'u' => todo!("cp 4 hex"),
-                    b'U' => todo!("cp 8 hex"),
-                    b'N' => todo!("{{<name>}}"),
-                    _ => (),
-                }
-                cur += 2;
-                last = cur;
+fn quoted_elsape(peek: u8, y: &[u8]) -> Option<(char, usize)> {
+    match peek {
+        ESCAPE => Some(('\\', 0usize)),
+        b'\'' => Some(('\'', 0)),
+        b'"' => Some(('"', 0)),
+        b'b' => Some(('\x08', 0)),
+        b't' => Some(('\t', 0)),
+        b'r' => Some(('\r', 0)),
+        b'f' => Some(('\x0c', 0)),
+        b'n' => Some(('\n', 0)),
+        b'x' => {
+            if let [a, b, ..] = y[..]
+                && let Some(a) = hex_to_u8(a)
+                && let Some(b) = hex_to_u8(b)
+            {
+                let ch = (a as u32) << 4 | (b as u32);
+                char::from_u32(ch).map(|x| (x, 2))
             } else {
-                cur += 1;
+                None
             }
-        } else if x == b'\"' {
-            break;
-        } else if x < 0x80 {
-            cur += 1;
-        } else if x < 0xE0 {
-            cur += 2;
-        } else if x < 0xF0 {
-            cur += 3;
-        } else {
-            cur += 4;
         }
-    }
-    unsafe {
-        buf.extend(n.get_unchecked(last..cur));
-        *n = n.get_unchecked(1 + cur..);
-        Ok(core::str::from_utf8_unchecked(buf.get_unchecked(begin..)))
+        b'u' => {
+            if let [a, b, c, d, ..] = y[..]
+                && let Some(a) = hex_to_u8(a)
+                && let Some(b) = hex_to_u8(b)
+                && let Some(c) = hex_to_u8(c)
+                && let Some(d) = hex_to_u8(d)
+            {
+                let ch = (a as u32) << 12 | (b as u32) << 8 | (c as u32) << 4 | (d as u32);
+                char::from_u32(ch).map(|x| (x, 4))
+            } else {
+                None
+            }
+        }
+        b'U' => {
+            if let [a, b, c, d, e, f, g, h, ..] = y[..]
+                && let Some(a) = hex_to_u8(a)
+                && let Some(b) = hex_to_u8(b)
+                && let Some(c) = hex_to_u8(c)
+                && let Some(d) = hex_to_u8(d)
+                && let Some(e) = hex_to_u8(e)
+                && let Some(f) = hex_to_u8(f)
+                && let Some(g) = hex_to_u8(g)
+                && let Some(h) = hex_to_u8(h)
+            {
+                let ch = (a as u32) << 28
+                    | (b as u32) << 24
+                    | (c as u32) << 20
+                    | (d as u32) << 16
+                    | (e as u32) << 12
+                    | (f as u32) << 8
+                    | (g as u32) << 4
+                    | (h as u32);
+                char::from_u32(ch).map(|x| (x, 8))
+            } else {
+                None
+            }
+        }
+        b'N' => {
+            if let [b'{', rest @ ..] = y
+                && let Ok(index) = find_ascii(rest, |x| x == b'}')
+                && let Some(x) = unicode_names2::character(unsafe {
+                    core::str::from_utf8_unchecked(rest.get_unchecked(0..index)).trim_ascii()
+                })
+            {
+                Some((x, index + 2))
+            } else {
+                None
+            }
+        }
+        _ => None,
     }
 }
 
 fn enc_str(buf: &mut Vec<u8>, s: &str) {
     buf.push(b'"');
+
     let mut last_end = 0;
-    for (start, part) in s.match_indices(['\"', ESCAPE as char, '\n']) {
+    for (start, part) in s.match_indices(|x: char| matches!(x, '\\' | '"' | '\0'..='\x1F' | '\x7F'))
+    {
         buf.extend(unsafe { s.get_unchecked(last_end..start).as_bytes() });
         buf.push(ESCAPE);
         if let [p] = part.as_bytes() {
-            match *p {
-                b'"' => buf.push(b'"'),
-                ESCAPE => buf.push(ESCAPE),
-                _ => buf.push(b'n'),
+            'lb: {
+                let e = match *p {
+                    b'"' => b'"',
+                    b'\x08' => b'b',
+                    b'\t' => b't',
+                    b'\n' => b'n',
+                    b'\r' => b'r',
+                    b'\x0c' => b'f',
+                    b'\\' => ESCAPE,
+                    p => {
+                        let (high, low) = u8_to_hex(p);
+                        buf.extend([b'x', high, low]);
+                        break 'lb;
+                    }
+                };
+                buf.push(e);
             }
         }
         last_end = start + part.len();

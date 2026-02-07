@@ -17,6 +17,7 @@ mser_macro = { workspace = true }
 uuid = { version = "1", default-features = false }
 itoa = "1"
 ryu = "1"
+unicode_names2 = "2.0.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
