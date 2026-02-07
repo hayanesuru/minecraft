@@ -312,10 +312,11 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                 };
                 let kl = (k.len() as u32).to_le_bytes();
                 skip_ws(n);
-                *n = match n.get(1..) {
-                    Some(x) => x,
-                    None => return Err(Error),
-                };
+                if let (b':', rest) = peek(n)? {
+                    *n = rest;
+                } else {
+                    return Err(Error);
+                }
                 skip_ws(n);
                 let t = match peek(n)? {
                     (b'{', _) => {
