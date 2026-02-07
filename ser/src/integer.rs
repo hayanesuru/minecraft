@@ -1,48 +1,43 @@
 macro_rules! parse_signed {
     ($t:ty) => {
         impl Integer for $t {
-            fn parse(mut x: &[u8]) -> (Self, usize) {
-                let first = match x.first() {
-                    Some(x) => *x,
-                    None => return (0, 0),
+            fn parse(mut x: &[u8]) -> ($t, &[u8]) {
+                let is_neg;
+                let dig = match x[..] {
+                    [b'+', dig @ b'0'..=b'9', ref rest @ ..] => {
+                        x = rest;
+                        is_neg = false;
+                        dig
+                    }
+                    [b'-', dig @ b'0'..=b'9', ref rest @ ..] => {
+                        x = rest;
+                        is_neg = true;
+                        dig
+                    }
+                    [dig @ b'0'..=b'9', ref rest @ ..] => {
+                        x = rest;
+                        is_neg = false;
+                        dig
+                    }
+                    _ => return (0, x),
                 };
-                let len = x.len();
-                let mut pos = true;
-                if first == b'-' {
-                    unsafe {
-                        x = x.get_unchecked(1..);
-                    }
-                    pos = false;
-                } else if first == b'+' {
-                    unsafe {
-                        x = x.get_unchecked(1..);
-                    }
-                }
-                let mut out: $t = 0;
-                if pos {
-                    if let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
-                        x = y;
-                        out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
-                    } else {
-                        return (0, 0);
-                    }
+                let out = if !is_neg {
+                    let mut out: $t = (dig - b'0') as $t;
                     while let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
                         x = y;
-                        out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
+                        out = out.wrapping_mul(10).wrapping_add((dig - b'0') as $t);
                     }
+                    out
                 } else {
-                    if let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
-                        x = y;
-                        out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as _);
-                    } else {
-                        return (0, 0);
-                    }
+                    let mut out: $t = 0;
+                    out = out.wrapping_sub((dig - b'0') as $t);
                     while let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
                         x = y;
-                        out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as _);
+                        out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as $t);
                     }
-                }
-                (out, len - x.len())
+                    out
+                };
+                (out, x)
             }
         }
     };
@@ -51,39 +46,40 @@ macro_rules! parse_signed {
 macro_rules! parse_unsigned {
     ($t:ty) => {
         impl Integer for $t {
-            fn parse(mut x: &[u8]) -> (Self, usize) {
-                let first = match x.first() {
-                    Some(x) => *x,
-                    None => return (0, 0),
-                };
-                let len = x.len();
-                if first == b'+' {
-                    unsafe {
-                        x = x.get_unchecked(1..);
+            fn parse(mut x: &[u8]) -> ($t, &[u8]) {
+                let dig = match x[..] {
+                    [b'+', dig @ b'0'..=b'9', ref rest @ ..] => {
+                        x = rest;
+                        dig
                     }
-                }
-                let mut out: $t = 0;
-                if let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
-                    x = y;
-                    out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
-                } else {
-                    return (0, 0);
-                }
+                    [dig @ b'0'..=b'9', ref rest @ ..] => {
+                        x = rest;
+                        dig
+                    }
+                    _ => return (0, x),
+                };
+                let mut out: $t = (dig - b'0') as $t;
                 while let [dig @ b'0'..=b'9', ref y @ ..] = x[..] {
                     x = y;
-                    out = out.wrapping_mul(10).wrapping_add((dig - b'0') as _);
+                    out = out.wrapping_mul(10).wrapping_add((dig - b'0') as $t);
                 }
-                (out, len - x.len())
+                (out, x)
             }
         }
     };
 }
 
 pub trait Integer: Copy {
-    fn parse(buf: &[u8]) -> (Self, usize);
+    fn parse(buf: &[u8]) -> (Self, &[u8]);
 }
 
 pub fn parse_int<T: Integer>(n: &[u8]) -> (T, usize) {
+    let len = n.len();
+    let (out, x) = T::parse(n);
+    (out, len - x.len())
+}
+
+pub fn parse_int_s<T: Integer>(n: &[u8]) -> (T, &[u8]) {
     T::parse(n)
 }
 
