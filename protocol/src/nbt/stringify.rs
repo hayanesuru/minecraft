@@ -842,12 +842,12 @@ unsafe fn dec_quoted_str<'a>(
                 None => return Err(Error),
             };
             buf.extend(unsafe { n.get_unchecked(last..cur) });
-            cur += 2;
             last = cur;
+
             match quoted_elsape(peek, y) {
                 Some((ch, adv)) => {
                     buf.extend(ch.encode_utf8(&mut [0; 4]).as_bytes());
-                    2 + adv
+                    adv + 2
                 }
                 None => 2,
             }
