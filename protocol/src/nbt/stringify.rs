@@ -842,15 +842,15 @@ unsafe fn dec_quoted_str<'a>(
                 None => return Err(Error),
             };
             buf.extend(unsafe { n.get_unchecked(last..cur) });
-            last = cur;
-
-            match quoted_elsape(peek, y) {
+            cur += match quoted_elsape(peek, y) {
                 Some((ch, adv)) => {
                     buf.extend(ch.encode_utf8(&mut [0; 4]).as_bytes());
                     adv + 2
                 }
                 None => 2,
-            }
+            };
+            last = cur;
+            continue;
         } else if x == quote {
             break;
         } else if x < 0x80 {
