@@ -998,10 +998,13 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
     buf.push(b'{');
 
     loop {
-        let (bl, x) = unsafe { bls.pop().unwrap_unchecked() };
+        let (bl, index) = match bls.pop() {
+            Some(x) => x,
+            None => return,
+        };
         match bl {
-            Bl::C(y) => {
-                let (name, tag) = match y.get(x) {
+            Bl::C(x) => {
+                let (name, tag) = match x.get(index) {
                     Some(t) => t,
                     None => {
                         buf.push(b'\n');
@@ -1009,17 +1012,14 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                             buf.extend(SPACE);
                         }
                         buf.push(b'}');
-                        if bls.is_empty() {
-                            return;
-                        }
                         continue;
                     }
                 };
-                if x != 0 {
+                if index != 0 {
                     buf.push(b',');
                 }
                 buf.push(b'\n');
-                bls.push((Bl::C(y), x + 1));
+                bls.push((Bl::C(x), index + 1));
                 for _ in 0..bls.len() {
                     buf.extend(SPACE);
                 }
@@ -1258,21 +1258,21 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                 }
             }
             Bl::List(y) => {
-                if let Some(l) = y.get(x) {
-                    if x != 0 {
+                if let Some(l) = y.get(index) {
+                    if index != 0 {
                         buf.extend(DELIMITER);
                     }
-                    bls.push((Bl::List(y), x + 1));
+                    bls.push((Bl::List(y), index + 1));
                     bls.push((Bl::from(l), 0));
                     buf.push(b'[');
                     continue;
                 }
             }
             Bl::Compound(y) => {
-                if let Some(l) = y.get(x) {
-                    bls.push((Bl::Compound(y), x + 1));
+                if let Some(l) = y.get(index) {
+                    bls.push((Bl::Compound(y), index + 1));
                     bls.push((Bl::C(l.as_ref()), 0));
-                    if x != 0 {
+                    if index != 0 {
                         buf.extend(b",\n");
                         for _ in 0..bls.len() {
                             buf.extend(SPACE);
@@ -1288,8 +1288,5 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
             }
         }
         buf.push(b']');
-        if bls.is_empty() {
-            return;
-        }
     }
 }
