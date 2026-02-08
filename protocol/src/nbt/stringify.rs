@@ -1075,14 +1075,14 @@ unsafe fn dec_quoted_str<'a>(
 ) -> Result<&'a str, Error> {
     let begin = buf.len();
     let mut last = 0;
-    let mut cur = 0;
+    let mut cur = find_ascii(n, |p| p == ESCAPE || p == quote)?;
 
     loop {
         let x = match n.get(cur) {
             Some(x) => *x,
             None => return Err(Error),
         };
-        let adv = if x == ESCAPE {
+        if x == ESCAPE {
             let (peek, y) = match n.get(cur + 1..) {
                 Some(x) => peek(x)?,
                 None => return Err(Error),
@@ -1099,16 +1099,9 @@ unsafe fn dec_quoted_str<'a>(
             continue;
         } else if x == quote {
             break;
-        } else if x < 0x80 {
-            1
-        } else if x < 0xE0 {
-            2
-        } else if x < 0xF0 {
-            3
         } else {
-            4
-        };
-        cur += adv;
+            cur += 1;
+        }
     }
     unsafe {
         buf.extend(n.get_unchecked(last..cur));
