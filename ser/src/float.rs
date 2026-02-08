@@ -1355,39 +1355,33 @@ fn parse_inf_nan<F: Float>(s: &[u8], is_positive: Option<bool>) -> (F, usize) {
             3
         }
     }
-    if s.len() >= 3 {
-        if s.eq_ignore_case(b"nan") {
-            return (F::NAN, 3);
-        } else if s.eq_ignore_case(b"inf") {
-            return (F::INFINITY, parse_inf_rest(s));
-        } else if s.len() >= 4 {
-            let (s, is_positive_) = match is_positive {
-                Some(x) => (s, x),
-                None => {
-                    let first = s.get_first();
-                    if first == b'+' {
-                        let s = s.advance(1);
-                        (s, true)
-                    } else if first == b'-' {
-                        let s = s.advance(1);
-                        (s, false)
-                    } else {
-                        (s, true)
-                    }
-                }
-            };
-            if is_positive_ {
-                if s.eq_ignore_case(b"nan") {
-                    return (F::NAN, 4);
-                } else if s.eq_ignore_case(b"inf") {
-                    return (F::INFINITY, 1 + parse_inf_rest(s));
-                }
+    let (s, is_positive, sign_adv) = match is_positive {
+        Some(x) => (s, x, 0),
+        None => {
+            let first = s.get_first();
+            if first == b'+' {
+                let s = s.advance(1);
+                (s, true, 1)
+            } else if first == b'-' {
+                let s = s.advance(1);
+                (s, false, 1)
             } else {
-                if s.eq_ignore_case(b"nan") {
-                    return (F::NEG_NAN, 4);
-                } else if s.eq_ignore_case(b"inf") {
-                    return (F::NEG_INFINITY, 1 + parse_inf_rest(s));
-                }
+                (s, true, 0)
+            }
+        }
+    };
+    if s.len() >= 3 {
+        if is_positive {
+            if s.eq_ignore_case(b"nan") {
+                return (F::NAN, sign_adv + 3);
+            } else if s.eq_ignore_case(b"inf") {
+                return (F::INFINITY, sign_adv + parse_inf_rest(s));
+            }
+        } else {
+            if s.eq_ignore_case(b"nan") {
+                return (F::NEG_NAN, sign_adv + 3);
+            } else if s.eq_ignore_case(b"inf") {
+                return (F::NEG_INFINITY, sign_adv + parse_inf_rest(s));
             }
         }
     }
