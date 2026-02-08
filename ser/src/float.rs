@@ -869,7 +869,7 @@ impl<'a> AsciiStr<'a> {
 
     #[inline]
     pub fn offset_from(&self, other: &Self) -> isize {
-        isize::wrapping_sub(self.ptr as _, other.ptr as _) // assuming the same end
+        unsafe { self.ptr.offset_from(other.ptr) }
     }
 }
 
@@ -1092,12 +1092,12 @@ impl Float for f64 {
     }
 }
 
-pub fn parse_float<F: Float>(s: &[u8]) -> (F, usize) {
+pub fn parse_float<F: Float>(s: &[u8], is_positive: Option<bool>) -> (F, usize) {
     if s.is_empty() {
         return (F::default(), 0);
     }
 
-    let (num, rest) = match parse_number(s) {
+    let (num, rest) = match parse_number(s, is_positive) {
         Some(r) => r,
         None => return parse_inf_nan(s),
     };
@@ -1246,7 +1246,7 @@ fn parse_scientific(s: &mut AsciiStr<'_>) -> i64 {
 }
 
 #[inline]
-pub fn parse_number(s: &[u8]) -> Option<(Number, usize)> {
+fn parse_number(s: &[u8], is_positive: Option<bool>) -> Option<(Number, usize)> {
     debug_assert!(!s.is_empty());
 
     let mut s = AsciiStr::new(s);
@@ -1254,7 +1254,9 @@ pub fn parse_number(s: &[u8]) -> Option<(Number, usize)> {
 
     // handle optional +/- sign
     let mut negative = false;
-    if s.first() == b'-' {
+    if let Some(is_positive) = is_positive {
+        negative = !is_positive;
+    } else if s.first() == b'-' {
         negative = true;
         if s.step().is_empty() {
             return None;
