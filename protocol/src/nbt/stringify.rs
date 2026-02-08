@@ -789,7 +789,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
     };
 
     let radix = match peek(n)? {
-        (b'0'..=b'9', rest) => match rest {
+        (b'0', rest) => match rest {
             [b'x' | b'X', rest @ ..] => {
                 n = rest;
                 Radix::Hexadecimal
