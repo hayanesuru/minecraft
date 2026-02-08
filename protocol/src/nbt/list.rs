@@ -1,8 +1,4 @@
 use super::*;
-use crate::BoxStr;
-use crate::nbt::byte_array::{i8_to_u8_slice, u8_to_i8_slice};
-use crate::nbt::int_array::IntArray;
-use crate::nbt::string::StringTag;
 
 #[derive(Clone)]
 pub enum List {
@@ -145,7 +141,7 @@ impl Write for List {
             match self {
                 Self::None => {}
                 Self::Byte(x) => {
-                    w.write(i8_to_u8_slice(x));
+                    w.write(byte_array::i8_to_u8_slice(x));
                 }
                 Self::Short(x) => {
                     x.iter().for_each(|x| x.write(w));
@@ -220,7 +216,7 @@ impl ListInfo {
             TagType::Byte => match n.split_at_checked(len) {
                 Some((x, y)) => {
                     *n = y;
-                    Ok(List::Byte(Vec::from(u8_to_i8_slice(x))))
+                    Ok(List::Byte(Vec::from(byte_array::u8_to_i8_slice(x))))
                 }
                 None => Err(Error),
             },
@@ -305,15 +301,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(len);
                 for _ in 0..len {
-                    let len = i32::read(n)? as usize;
-                    let slice = match n.split_at_checked(len) {
-                        Some((x, y)) => {
-                            *n = y;
-                            u8_to_i8_slice(x)
-                        }
-                        None => return Err(Error),
-                    };
-                    list.push(Vec::from(slice));
+                    list.push(byte_array::ByteArray::read(n)?.0);
                 }
                 Ok(List::ByteArray(list))
             }
@@ -354,7 +342,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(len);
                 for _ in 0..len {
-                    list.push(IntArray::read(n)?.0);
+                    list.push(int_array::IntArray::read(n)?.0);
                 }
                 Ok(List::IntArray(list))
             }
@@ -364,7 +352,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(len);
                 for _ in 0..len {
-                    list.push(LongArray::read(n)?.0);
+                    list.push(long_array::LongArray::read(n)?.0);
                 }
                 Ok(List::LongArray(list))
             }

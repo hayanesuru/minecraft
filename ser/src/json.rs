@@ -1,5 +1,3 @@
-use crate::{UnsafeWriter, Write, u8_to_hex};
-
 const B: u8 = b'b'; // \x08
 const T: u8 = b't'; // \x09
 const N: u8 = b'n'; // \x0a
@@ -8,66 +6,27 @@ const R: u8 = b'r'; // \x0d
 const Q: u8 = b'"'; // \x22
 const S: u8 = b'\\'; // \x5c
 const U: u8 = 0xff; // non-printable
+const E: u8 = 0xff; // error
 
-const ESCAPE: [u8; 256] = [
-    U, U, U, U, U, U, U, U, B, T, N, U, F, R, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
-    1, 1, Q, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, S, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+const ESCAPE: &[u8; 256] = &[
+    U, U, U, U, U, U, U, U, B, T, N, U, F, R, U, U, // 0
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, // 1
+    1, 1, Q, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 2
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 3
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 4
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, S, 1, 1, 1, // 5
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 6
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 7
+    E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, // 8
+    E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, // 9
+    E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, // A
+    E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, E, // B
+    E, E, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // C
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // D
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // E
+    4, 4, 4, 4, 4, E, E, E, E, E, E, E, E, E, E, E, // F
 ];
 
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct JsonStr<'a>(pub &'a [u8]);
-
-impl Write for JsonStr<'_> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        let mut start = 0;
-        let mut cur = 0;
-        unsafe {
-            while let Some(&byte) = self.0.get(cur) {
-                let esc = *ESCAPE.get_unchecked(byte as usize);
-                if esc <= 4 {
-                    cur += esc as usize;
-                    continue;
-                }
-                w.write(&self.0[start..cur]);
-                if esc == U {
-                    let (d1, d2) = u8_to_hex(byte);
-                    w.write(&[b'\\', b'u', b'0', b'0', d1, d2]);
-                } else {
-                    w.write(&[b'\\', esc]);
-                }
-                cur += 1;
-                start = cur;
-            }
-            w.write(self.0.get_unchecked(start..));
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        let mut cur = 0usize;
-        let mut len = 0usize;
-        unsafe {
-            while let Some(&byte) = self.0.get(cur) {
-                let esc = *ESCAPE.get_unchecked(byte as usize);
-                if esc <= 4 {
-                    cur += esc as usize;
-                    continue;
-                }
-
-                if esc == U {
-                    len += 5;
-                } else {
-                    len += 1;
-                }
-                cur += 1;
-            }
-        }
-        self.0.len() + len
-    }
+pub const fn json_char_width_escaped(ch: u8) -> u8 {
+    ESCAPE[ch as usize]
 }

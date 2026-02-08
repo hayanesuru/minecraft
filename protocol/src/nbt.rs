@@ -6,11 +6,8 @@ mod long_array;
 mod string;
 mod stringify;
 
-use self::byte_array::u8_to_i8_slice;
 pub use self::compound::{Compound, CompoundNamed, CompoundUnamed};
-use self::int_array::IntArray;
 pub use self::list::{List, ListInfo};
-use self::long_array::LongArray;
 use self::string::DecodeMutf8;
 pub use self::string::{IdentifierTag, RefStringTag, StringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
@@ -312,7 +309,7 @@ impl TagType {
 
     pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
         match self {
-            Self::IntArray => Ok(IntArray::read(buf)?.0),
+            Self::IntArray => Ok(int_array::IntArray::read(buf)?.0),
             Self::List => {
                 let ListInfo(tag, len) = ListInfo::read(buf)?;
                 let len = len as usize;
@@ -339,21 +336,15 @@ impl TagType {
             Self::Long => Tag::from(i64::read(n)?),
             Self::Float => Tag::from(f32::read(n)?),
             Self::Double => Tag::from(f64::read(n)?),
-            Self::ByteArray => match n.split_at_checked(i32::read(n)? as usize) {
-                Some((x, y)) => {
-                    *n = y;
-                    Tag::from(Vec::from(u8_to_i8_slice(x)))
-                }
-                None => return Err(Error),
-            },
+            Self::ByteArray => Tag::from(byte_array::ByteArray::read(n)?.0),
             Self::String => Tag::from(StringTag::read(n)?.0),
             Self::List => {
                 let info = ListInfo::read(n)?;
                 Tag::from(info.list(n)?)
             }
             Self::Compound => Tag::from(Compound::read(n)?),
-            Self::IntArray => Tag::from(IntArray::read(n)?.0),
-            Self::LongArray => Tag::from(LongArray::read(n)?.0),
+            Self::IntArray => Tag::from(int_array::IntArray::read(n)?.0),
+            Self::LongArray => Tag::from(long_array::LongArray::read(n)?.0),
             Self::End => unsafe { core::hint::unreachable_unchecked() },
         })
     }
@@ -397,6 +388,13 @@ pub enum Tag {
     LongArray(Vec<i64>),
     List(List),
     Compound(Compound),
+}
+
+#[derive(Clone)]
+pub enum TagArray {
+    ByteArray(Vec<i8>),
+    IntArray(Vec<i32>),
+    LongArray(Vec<i64>),
 }
 
 impl Write for Tag {
@@ -452,18 +450,18 @@ impl Tag {
     #[inline]
     pub const fn id(&self) -> TagType {
         match self {
-            Tag::Byte(_) => TagType::Byte,
-            Tag::Short(_) => TagType::Short,
-            Tag::Int(_) => TagType::Int,
-            Tag::Long(_) => TagType::Long,
-            Tag::Float(_) => TagType::Float,
-            Tag::Double(_) => TagType::Double,
-            Tag::String(_) => TagType::String,
-            Tag::ByteArray(_) => TagType::ByteArray,
-            Tag::IntArray(_) => TagType::IntArray,
-            Tag::LongArray(_) => TagType::LongArray,
-            Tag::List(_) => TagType::List,
-            Tag::Compound(_) => TagType::Compound,
+            Self::Byte(_) => TagType::Byte,
+            Self::Short(_) => TagType::Short,
+            Self::Int(_) => TagType::Int,
+            Self::Long(_) => TagType::Long,
+            Self::Float(_) => TagType::Float,
+            Self::Double(_) => TagType::Double,
+            Self::String(_) => TagType::String,
+            Self::ByteArray(_) => TagType::ByteArray,
+            Self::IntArray(_) => TagType::IntArray,
+            Self::LongArray(_) => TagType::LongArray,
+            Self::List(_) => TagType::List,
+            Self::Compound(_) => TagType::Compound,
         }
     }
 }

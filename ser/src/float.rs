@@ -869,7 +869,7 @@ impl<'a> AsciiStr<'a> {
 
     #[inline]
     pub fn offset_from(&self, other: &Self) -> isize {
-        isize::wrapping_sub(self.ptr as _, other.ptr as _) // assuming the same end
+        unsafe { self.ptr.offset_from(other.ptr) }
     }
 }
 
@@ -1092,14 +1092,14 @@ impl Float for f64 {
     }
 }
 
-pub fn parse_float<F: Float>(s: &[u8]) -> (F, usize) {
+pub fn parse_float<F: Float>(s: &[u8], is_positive: Option<bool>) -> (F, usize) {
     if s.is_empty() {
         return (F::default(), 0);
     }
 
-    let (num, rest) = match parse_number(s) {
+    let (num, rest) = match parse_number(s, is_positive) {
         Some(r) => r,
-        None => return parse_inf_nan(s),
+        None => return parse_inf_nan(s, is_positive),
     };
     if let Some(value) = num.try_fast_path::<F>() {
         return (value, rest);
@@ -1246,7 +1246,7 @@ fn parse_scientific(s: &mut AsciiStr<'_>) -> i64 {
 }
 
 #[inline]
-pub fn parse_number(s: &[u8]) -> Option<(Number, usize)> {
+fn parse_number(s: &[u8], is_positive: Option<bool>) -> Option<(Number, usize)> {
     debug_assert!(!s.is_empty());
 
     let mut s = AsciiStr::new(s);
@@ -1254,7 +1254,9 @@ pub fn parse_number(s: &[u8]) -> Option<(Number, usize)> {
 
     // handle optional +/- sign
     let mut negative = false;
-    if s.first() == b'-' {
+    if let Some(is_positive) = is_positive {
+        negative = !is_positive;
+    } else if s.first() == b'-' {
         negative = true;
         if s.step().is_empty() {
             return None;
@@ -1345,7 +1347,7 @@ pub fn parse_number(s: &[u8]) -> Option<(Number, usize)> {
     ))
 }
 
-pub fn parse_inf_nan<F: Float>(s: &[u8]) -> (F, usize) {
+fn parse_inf_nan<F: Float>(s: &[u8], is_positive: Option<bool>) -> (F, usize) {
     fn parse_inf_rest(s: &[u8]) -> usize {
         if s.len() >= 8 && s[3..].eq_ignore_case(b"inity") {
             8
@@ -1353,26 +1355,33 @@ pub fn parse_inf_nan<F: Float>(s: &[u8]) -> (F, usize) {
             3
         }
     }
+    let (s, is_positive, sign_adv) = match is_positive {
+        Some(x) => (s, x, 0),
+        None => {
+            let first = s.get_first();
+            if first == b'+' {
+                let s = s.advance(1);
+                (s, true, 1)
+            } else if first == b'-' {
+                let s = s.advance(1);
+                (s, false, 1)
+            } else {
+                (s, true, 0)
+            }
+        }
+    };
     if s.len() >= 3 {
-        if s.eq_ignore_case(b"nan") {
-            return (F::NAN, 3);
-        } else if s.eq_ignore_case(b"inf") {
-            return (F::INFINITY, parse_inf_rest(s));
-        } else if s.len() >= 4 {
-            if s.get_first() == b'+' {
-                let s = s.advance(1);
-                if s.eq_ignore_case(b"nan") {
-                    return (F::NAN, 4);
-                } else if s.eq_ignore_case(b"inf") {
-                    return (F::INFINITY, 1 + parse_inf_rest(s));
-                }
-            } else if s.get_first() == b'-' {
-                let s = s.advance(1);
-                if s.eq_ignore_case(b"nan") {
-                    return (F::NEG_NAN, 4);
-                } else if s.eq_ignore_case(b"inf") {
-                    return (F::NEG_INFINITY, 1 + parse_inf_rest(s));
-                }
+        if is_positive {
+            if s.eq_ignore_case(b"nan") {
+                return (F::NAN, sign_adv + 3);
+            } else if s.eq_ignore_case(b"inf") {
+                return (F::INFINITY, sign_adv + parse_inf_rest(s));
+            }
+        } else {
+            if s.eq_ignore_case(b"nan") {
+                return (F::NEG_NAN, sign_adv + 3);
+            } else if s.eq_ignore_case(b"inf") {
+                return (F::NEG_INFINITY, sign_adv + parse_inf_rest(s));
             }
         }
     }
