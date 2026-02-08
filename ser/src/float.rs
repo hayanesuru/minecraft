@@ -1099,7 +1099,7 @@ pub fn parse_float<F: Float>(s: &[u8], is_positive: Option<bool>) -> (F, usize) 
 
     let (num, rest) = match parse_number(s, is_positive) {
         Some(r) => r,
-        None => return parse_inf_nan(s),
+        None => return parse_inf_nan(s, is_positive),
     };
     if let Some(value) = num.try_fast_path::<F>() {
         return (value, rest);
@@ -1347,7 +1347,7 @@ fn parse_number(s: &[u8], is_positive: Option<bool>) -> Option<(Number, usize)> 
     ))
 }
 
-pub fn parse_inf_nan<F: Float>(s: &[u8]) -> (F, usize) {
+fn parse_inf_nan<F: Float>(s: &[u8], is_positive: Option<bool>) -> (F, usize) {
     fn parse_inf_rest(s: &[u8]) -> usize {
         if s.len() >= 8 && s[3..].eq_ignore_case(b"inity") {
             8
@@ -1361,15 +1361,28 @@ pub fn parse_inf_nan<F: Float>(s: &[u8]) -> (F, usize) {
         } else if s.eq_ignore_case(b"inf") {
             return (F::INFINITY, parse_inf_rest(s));
         } else if s.len() >= 4 {
-            if s.get_first() == b'+' {
-                let s = s.advance(1);
+            let (s, is_positive_) = match is_positive {
+                Some(x) => (s, x),
+                None => {
+                    let first = s.get_first();
+                    if first == b'+' {
+                        let s = s.advance(1);
+                        (s, true)
+                    } else if first == b'-' {
+                        let s = s.advance(1);
+                        (s, false)
+                    } else {
+                        (s, true)
+                    }
+                }
+            };
+            if is_positive_ {
                 if s.eq_ignore_case(b"nan") {
                     return (F::NAN, 4);
                 } else if s.eq_ignore_case(b"inf") {
                     return (F::INFINITY, 1 + parse_inf_rest(s));
                 }
-            } else if s.get_first() == b'-' {
-                let s = s.advance(1);
+            } else {
                 if s.eq_ignore_case(b"nan") {
                     return (F::NEG_NAN, 4);
                 } else if s.eq_ignore_case(b"inf") {
