@@ -7,10 +7,10 @@ use core::ops::{Deref, DerefMut};
 pub struct BoxStr(Box<[u8]>);
 
 impl BoxStr {
-    pub fn new(bytes: Box<[u8]>) -> Option<Self> {
+    pub fn new(bytes: Box<[u8]>) -> Result<Self, core::str::Utf8Error> {
         match core::str::from_utf8(&bytes) {
-            Ok(_) => Some(Self(bytes)),
-            Err(_) => None,
+            Ok(_) => Ok(Self(bytes)),
+            Err(e) => Err(e),
         }
     }
 
