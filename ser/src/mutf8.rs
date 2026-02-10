@@ -22,7 +22,7 @@ const CHAR_WIDTH: &[u8; 256] = &[
 
 #[must_use]
 pub const fn is_ascii_mutf8(bytes: &[u8]) -> bool {
-    bytes.is_ascii() && !has_zero(bytes)
+    !has_zero_nonascii(bytes)
 }
 
 #[must_use]
@@ -40,32 +40,14 @@ pub const fn is_mutf8(bytes: &[u8]) -> bool {
     true
 }
 
-#[inline]
-const fn has_zero(bytes: &[u8]) -> bool {
-    const CHUNK_SIZE: usize = 16;
-
+const fn has_zero_nonascii(bytes: &[u8]) -> bool {
     let mut i = 0;
-
-    while i + CHUNK_SIZE <= bytes.len() {
-        let chunk_end = i + CHUNK_SIZE;
-
-        let mut flag = false;
-        while i < chunk_end {
-            flag |= bytes[i] == 0;
-            i += 1;
-        }
-
-        if flag {
-            return true;
-        }
-    }
-
     let mut flag = false;
     while i < bytes.len() {
-        flag |= bytes[i] == 0;
+        let x = bytes[i];
+        flag |= x > 127 || x == 0;
         i += 1;
     }
-
     flag
 }
 
