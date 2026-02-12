@@ -1,7 +1,8 @@
 pub trait Packet: mser::Write + for<'a> mser::Read<'a> + Clone + Copy + Eq {}
 
-pub trait Id<T: Packet> {
-    const ID: T;
+pub trait Id {
+    type T: Packet;
+    const ID: Self::T;
 }
 
 impl Packet for minecraft_data::clientbound__status {}
@@ -14,6 +15,6 @@ impl Packet for minecraft_data::serverbound__configuration {}
 impl Packet for minecraft_data::serverbound__login {}
 impl Packet for minecraft_data::serverbound__play {}
 
-pub fn packet_id<R: Packet, T: Id<R>>(_: &T) -> R {
+pub fn packet_id<R: Packet, T: Id<T = R>>(_: &T) -> R {
     T::ID
 }

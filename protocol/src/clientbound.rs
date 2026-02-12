@@ -12,20 +12,22 @@ macro_rules! packets {
         packets!(@munch $m; $($rest)*);
     };
     (@munch $m:ty;
-        $type:ty => $variant:ident,
+      $variant:ident = $type:ty,
         $($tail:tt)*
     ) => {
         #[automatically_derived]
-        impl crate::types::Id<$m> for $type {
+        impl crate::types::Id for $type {
+            type T = $m;
             const ID: $m = <$m>::$variant;
         }
         packets!(@munch $m; $($tail)*);
     };
     (@munch $m:ty;
-        $type:ty => $variant:ident
+     $variant:ident = $type:ty
     ) => {
         #[automatically_derived]
-        impl crate::types::Id<$m> for $type {
+        impl crate::types::Id for $type {
+            type T = $m;
             const ID: $m = <$m>::$variant;
         }
     };
@@ -37,27 +39,27 @@ macro_rules! packets {
 }
 packets! {
     clientbound__status,
-    status::StatusResponse<'_> => status_response,
-    ping::PongResponse => pong_response,
+    status_response = status::StatusResponse<'_>,
+    pong_response = ping::PongResponse,
 }
 packets! {
     clientbound__login,
-    login::LoginDisconnect<'_> => login_disconnect,
-    login::Hello<'_> => hello,
-    login::LoginFinished<'_>  => login_finished,
-    login::LoginCompression => login_compression,
-    login::CustomQuery<'_> => custom_query,
-    cookie::CookieRequest<'_> => cookie_request,
+    login_disconnect = login::LoginDisconnect<'_>,
+    hello = login::Hello<'_>,
+    login_finished = login::LoginFinished<'_>,
+    login_compression = login::LoginCompression,
+    custom_query = login::CustomQuery<'_>,
+    cookie_request = cookie::LoginCookieRequest<'_>,
 }
 packets! {
     clientbound__configuration,
-    cookie::CookieRequest<'_> => cookie_request,
-    common::CustomPayload<'_> => custom_payload,
-    common::Disconnect => disconnect,
-    configuration::FinishConfiguration => finish_configuration,
-    common::KeepAlive => keep_alive,
-    common::Ping => ping,
-    common::ResetChat => reset_chat,
+    cookie_request = cookie::ConfigCookieRequest<'_>,
+    custom_payload = common::CustomPayload<'_>,
+    disconnect = common::Disconnect,
+    finish_configuration = configuration::FinishConfiguration,
+    keep_alive = common::KeepAlive,
+    ping = common::Ping,
+    reset_chat = common::ResetChat,
     // registry_data,
     // resource_pack_pop,
     // resource_pack_push,

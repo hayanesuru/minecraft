@@ -363,7 +363,7 @@ pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
 fn test_write() {
     use crate::clientbound::login::LoginFinished;
     use crate::profile::GameProfileRef;
-    use crate::types::{Id, packet_id};
+    use crate::types::Id as _;
     use minecraft_data::clientbound__login;
     use uuid::Uuid;
 
@@ -375,7 +375,7 @@ fn test_write() {
         },
     };
 
-    let id = packet_id(&packet);
+    let id = LoginFinished::ID;
     let len1 = id.len_s();
     let len2 = packet.len_s() + len1;
     let data = unsafe {

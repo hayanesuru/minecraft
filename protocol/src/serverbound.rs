@@ -1,6 +1,9 @@
-use minecraft_data::{serverbound__handshake, serverbound__login, serverbound__status};
+use minecraft_data::{
+    serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__status,
+};
 
 pub mod common;
+pub mod configuration;
 pub mod cookie;
 pub mod handshake;
 pub mod login;
@@ -12,20 +15,22 @@ macro_rules! packets {
         packets!(@munch $m; $($rest)*);
     };
     (@munch $m:ty;
-        $type:ty => $variant:ident,
+        $variant:ident = $type:ty,
         $($tail:tt)*
     ) => {
         #[automatically_derived]
-        impl crate::types::Id<$m> for $type {
+        impl crate::types::Id for $type {
+            type T = $m;
             const ID: $m = <$m>::$variant;
         }
         packets!(@munch $m; $($tail)*);
     };
     (@munch $m:ty;
-        $type:ty => $variant:ident
+        $variant:ident = $type:ty
     ) => {
         #[automatically_derived]
-        impl crate::types::Id<$m> for $type {
+        impl crate::types::Id for $type {
+            type T = $m;
             const ID: $m = <$m>::$variant;
         }
     };
@@ -37,18 +42,22 @@ macro_rules! packets {
 }
 packets! {
     serverbound__handshake,
-    handshake::Intention<'_> => intention
+    intention = handshake::Intention<'_>,
 }
 packets! {
     serverbound__status,
-    status::StatusRequest => status_request,
-    ping::PingRequest => ping_request,
+    status_request = status::StatusRequest,
+    ping_request = ping::PingRequest,
 }
 packets! {
     serverbound__login,
-    login::Hello<'_> => hello,
-    login::Key<'_> => key,
-    login::CustomQueryAnswer<'_> => custom_query_answer,
-    login::LoginAcknowledged => login_acknowledged,
-    cookie::CookieResponse<'_> => cookie_response,
+    hello = login::Hello<'_>,
+    key = login::Key<'_>,
+    custom_query_answer = login::CustomQueryAnswer<'_>,
+    login_acknowledged = login::LoginAcknowledged,
+    cookie_response = cookie::CookieResponse<'_>,
+}
+packets! {
+    serverbound__configuration,
+
 }
