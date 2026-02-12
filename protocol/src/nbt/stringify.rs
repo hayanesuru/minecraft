@@ -1,11 +1,12 @@
 use super::{Compound, List, Tag};
-use crate::nbt::TagArray;
+use crate::nbt::list::ListPrimitive;
+use crate::nbt::{TagArray, TagPrimitive};
 use crate::str::BoxStr;
 use crate::{Error, Read as _};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use mser::{hex_to_u8, parse_float, parse_int_s, u8_to_hex};
+use mser::{hex_to_u8, parse_int_s, u8_to_hex};
 
 const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
 const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
@@ -414,13 +415,13 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                             *n = rest;
                             tmp.clear();
                             let s = dec_quoted_str(n, &mut tmp, b'"')?;
-                            TagNonArray::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                            Err(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         (b'\'', rest) => {
                             *n = rest;
                             tmp.clear();
                             let s = dec_quoted_str(n, &mut tmp, b'\'')?;
-                            TagNonArray::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                            Err(BoxStr::new_unchecked(Box::from(s.as_bytes())))
                         }
                         _ => {
                             let i = find_ascii(n, |x| {
@@ -434,12 +435,19 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                                 None => return Err(Error),
                             };
                             match dec_num(b, &mut tmp) {
-                                Ok(x) => x,
-                                Err(_) => TagNonArray::String(BoxStr::new_unchecked(Box::from(b))),
+                                Ok(x) => Ok(x),
+                                Err(_) => Err(BoxStr::new_unchecked(Box::from(b))),
                             }
                         }
                     };
-                    let l = dec_list_non_array(n, &mut tmp, tag)?;
+                    let l = match tag {
+                        Ok(x) => List::from(dec_list_primitive(n, &mut tmp, x)?),
+                        Err(e) => {
+                            let mut list = vec![e];
+                            dec_list_string(n, &mut tmp, &mut list)?;
+                            List::String(list)
+                        }
+                    };
                     bls.push(Bl::L(l));
                 },
             },
@@ -447,260 +455,102 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
     }
 }
 
-unsafe fn dec_list_non_array(
+unsafe fn dec_list_string(
     n: &mut &[u8],
-    s: &mut Vec<u8>,
-    tag: TagNonArray,
-) -> Result<List, Error> {
-    Ok(match tag {
-        TagNonArray::Byte(x) => {
-            let mut list = vec![x];
-            loop {
+    tmp: &mut Vec<u8>,
+    list: &mut Vec<BoxStr>,
+) -> Result<(), Error> {
+    loop {
+        skip_ws(n);
+        match u8::read(n)? {
+            b',' => {
                 skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        let num = match peek(n)? {
-                            (b'+' | b'-' | b'0'..=b'9', _) => {
-                                let (a, b) = parse_int_s::<i8>(n);
-                                *n = b;
-                                if let (b'b' | b'B', rest) = peek(n)? {
-                                    *n = rest;
-                                }
-                                a
-                            }
-                            (b't' | b'T', rest) => {
-                                *n = dec_true_peek(rest)?;
-                                1
-                            }
-                            (b'f' | b'F', rest) => {
-                                *n = dec_false_peek(rest)?;
-                                0
-                            }
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => return Err(Error),
-                        };
-                        list.push(num);
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
-                }
+                tmp.clear();
+                let x = match peek(n)? {
+                    (b'\"', rest) => unsafe {
+                        *n = rest;
+                        Box::from(dec_quoted_str(n, tmp, b'\"')?.as_bytes())
+                    },
+                    (b'\'', rest) => unsafe {
+                        *n = rest;
+                        Box::from(dec_quoted_str(n, tmp, b'\'')?.as_bytes())
+                    },
+                    _ => unsafe {
+                        let x = find_ascii(n, |x| {
+                            matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
+                        })?;
+                        let m = Box::from(n.get_unchecked(0..x));
+                        *n = n.get_unchecked(x..);
+                        m
+                    },
+                };
+                list.push(unsafe { BoxStr::new_unchecked(x) });
             }
-            List::Byte(list)
+            b']' => return Ok(()),
+            _ => return Err(Error),
         }
-        TagNonArray::Short(x) => {
-            let mut list = vec![x];
-            loop {
+    }
+}
+
+unsafe fn dec_list_primitive(
+    n: &mut &[u8],
+    tmp: &mut Vec<u8>,
+    tag: TagPrimitive,
+) -> Result<ListPrimitive, Error> {
+    let mut list = match tag {
+        TagPrimitive::Byte(_) => ListPrimitive::Byte(Vec::new()),
+        TagPrimitive::Short(_) => ListPrimitive::Short(Vec::new()),
+        TagPrimitive::Int(_) => ListPrimitive::Int(Vec::new()),
+        TagPrimitive::Long(_) => ListPrimitive::Long(Vec::new()),
+        TagPrimitive::Float(_) => ListPrimitive::Float(Vec::new()),
+        TagPrimitive::Double(_) => ListPrimitive::Double(Vec::new()),
+    };
+    loop {
+        skip_ws(n);
+        match u8::read(n)? {
+            b',' => 'l: {
                 skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        match peek(n)? {
-                            (b'+' | b'-' | b'0'..=b'9', _) => {}
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => return Err(Error),
+                let num = match dec_num(n, tmp)? {
+                    TagPrimitive::Byte(x) => x as i64,
+                    TagPrimitive::Short(x) => x as i64,
+                    TagPrimitive::Int(x) => x as i64,
+                    TagPrimitive::Long(x) => x,
+                    TagPrimitive::Float(x) => match &mut list {
+                        ListPrimitive::Float(v) => {
+                            v.push(x);
+                            break 'l;
                         }
-                        let (a, b) = parse_int_s::<i16>(n);
-                        *n = b;
-                        if let (b's' | b'S', rest) = peek(n)? {
-                            *n = rest;
+                        ListPrimitive::Double(v) => {
+                            v.push(x as f64);
+                            break 'l;
                         }
-                        list.push(a);
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
+                        _ => return Err(Error),
+                    },
+                    TagPrimitive::Double(x) => match &mut list {
+                        ListPrimitive::Float(v) => {
+                            v.push(x as f32);
+                            break 'l;
+                        }
+                        ListPrimitive::Double(v) => {
+                            v.push(x);
+                            break 'l;
+                        }
+                        _ => return Err(Error),
+                    },
+                };
+                match &mut list {
+                    ListPrimitive::Byte(v) => v.push(num as i8),
+                    ListPrimitive::Short(v) => v.push(num as i16),
+                    ListPrimitive::Int(v) => v.push(num as i32),
+                    ListPrimitive::Long(v) => v.push(num as i64),
+                    ListPrimitive::Float(v) => v.push(num as f32),
+                    ListPrimitive::Double(v) => v.push(num as f64),
                 }
             }
-            List::Short(list)
+            b']' => return Ok(list),
+            _ => return Err(Error),
         }
-        TagNonArray::Int(x) => {
-            let mut list = vec![x];
-            loop {
-                skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        match peek(n)? {
-                            (b'+' | b'-' | b'0'..=b'9', _) => {}
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => return Err(Error),
-                        }
-                        let (a, b) = parse_int_s::<i32>(n);
-                        *n = b;
-                        list.push(a);
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
-                }
-            }
-            List::Int(list)
-        }
-        TagNonArray::Long(x) => {
-            let mut list = vec![x];
-            loop {
-                skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        match peek(n)? {
-                            (b'+' | b'-' | b'0'..=b'9', _) => {}
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => return Err(Error),
-                        }
-                        let (a, b) = parse_int_s::<i64>(n);
-                        *n = b;
-                        if let (b'l' | b'L', rest) = peek(n)? {
-                            *n = rest;
-                        }
-                        list.push(a);
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
-                }
-            }
-            List::Long(list)
-        }
-        TagNonArray::Float(x) => unsafe {
-            let mut list = vec![x];
-            loop {
-                skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        let is_positive = match peek(n)? {
-                            (b'+', rest) => {
-                                *n = rest;
-                                true
-                            }
-                            (b'-', rest) => {
-                                *n = rest;
-                                false
-                            }
-                            (b'0'..=b'9' | b'.', _) => true,
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => return Err(Error),
-                        };
-                        let (a, b) = parse_float(n, Some(is_positive));
-                        *n = n.get_unchecked(b..);
-                        if let (b'f' | b'F', rest) = peek(n)? {
-                            *n = rest;
-                        }
-                        list.push(a);
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
-                }
-            }
-            List::Float(list)
-        },
-        TagNonArray::Double(x) => unsafe {
-            let mut list = vec![x];
-            loop {
-                skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        let is_positive = match peek(n)? {
-                            (b'+', rest) => {
-                                *n = rest;
-                                true
-                            }
-                            (b'-', rest) => {
-                                *n = rest;
-                                false
-                            }
-                            (b'0'..=b'9' | b'.', _) => true,
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => return Err(Error),
-                        };
-                        let (a, b) = parse_float(n, Some(is_positive));
-                        *n = n.get_unchecked(b..);
-                        if let (b'd' | b'D', rest) = peek(n)? {
-                            *n = rest;
-                        }
-                        list.push(a);
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
-                }
-            }
-            List::Double(list)
-        },
-        TagNonArray::String(x) => unsafe {
-            let mut list = vec![x];
-            loop {
-                skip_ws(n);
-                match u8::read(n)? {
-                    b',' => {
-                        skip_ws(n);
-                        match peek(n)? {
-                            (b']', rest) => {
-                                *n = rest;
-                                break;
-                            }
-                            _ => {
-                                s.clear();
-                                let x = match peek(n)? {
-                                    (b'\"', rest) => {
-                                        *n = rest;
-                                        Box::from(dec_quoted_str(n, s, b'\"')?.as_bytes())
-                                    }
-                                    (b'\'', rest) => {
-                                        *n = rest;
-                                        Box::from(dec_quoted_str(n, s, b'\'')?.as_bytes())
-                                    }
-                                    _ => {
-                                        let x = find_ascii(n, |x| {
-                                            matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
-                                        })?;
-                                        let m = Box::from(n.get_unchecked(0..x));
-                                        *n = n.get_unchecked(x..);
-                                        m
-                                    }
-                                };
-                                list.push(BoxStr::new_unchecked(x));
-                            }
-                        };
-                    }
-                    b']' => {
-                        break;
-                    }
-                    _ => return Err(Error),
-                }
-            }
-            List::String(list)
-        },
-    })
+    }
 }
 
 fn dec_true_peek(n: &[u8]) -> Result<&[u8], Error> {
@@ -723,32 +573,7 @@ fn dec_false_peek(n: &[u8]) -> Result<&[u8], Error> {
     }
 }
 
-#[derive(Clone)]
-enum TagNonArray {
-    Byte(i8),
-    Short(i16),
-    Int(i32),
-    Long(i64),
-    Float(f32),
-    Double(f64),
-    String(BoxStr),
-}
-
-impl From<TagNonArray> for Tag {
-    fn from(value: TagNonArray) -> Self {
-        match value {
-            TagNonArray::Byte(x) => Self::Byte(x),
-            TagNonArray::Short(x) => Self::Short(x),
-            TagNonArray::Int(x) => Self::Int(x),
-            TagNonArray::Long(x) => Self::Long(x),
-            TagNonArray::Float(x) => Self::Float(x),
-            TagNonArray::Double(x) => Self::Double(x),
-            TagNonArray::String(x) => Self::String(x),
-        }
-    }
-}
-
-fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
+fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
     #[derive(Clone, Copy)]
     enum Suffix {
         SignedByte,
@@ -767,6 +592,9 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
         Hexadecimal,
         Binary,
         Decimal,
+        NegativeHexadecimal,
+        NegativeBinary,
+        NegativeDecimal,
     }
 
     #[derive(Clone, Copy)]
@@ -776,53 +604,55 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
         None,
     }
 
-    let is_positive = match peek(n)? {
-        (b'+', rest) => {
-            n = rest;
-            true
-        }
-        (b'-', rest) => {
-            n = rest;
-            false
-        }
-        _ => true,
-    };
-
-    let radix = match peek(n)? {
-        (b'0', rest) => match rest {
-            [b'x' | b'X', rest @ ..] => {
-                n = rest;
-                Radix::Hexadecimal
-            }
-            [b'b' | b'B', rest @ ..] => {
-                n = rest;
-                Radix::Binary
-            }
-            _ => Radix::Decimal,
-        },
-        (b'.', _) => Radix::Decimal,
+    match peek(n)? {
         (b't' | b'T', rest) => {
             return if dec_true_peek(rest)?.is_empty() {
-                Ok(TagNonArray::Byte(1))
+                Ok(TagPrimitive::Byte(1))
             } else {
                 Err(Error)
             };
         }
         (b'f' | b'F', rest) => {
             return if dec_false_peek(rest)?.is_empty() {
-                Ok(TagNonArray::Byte(0))
+                Ok(TagPrimitive::Byte(0))
             } else {
                 Err(Error)
             };
         }
+        _ => (),
+    }
+    let radix = match n {
+        [b'0', b'x' | b'X', rest @ ..] => {
+            n = rest;
+            Radix::Hexadecimal
+        }
+        [b'0', b'b' | b'B', rest @ ..] => {
+            n = rest;
+            Radix::Binary
+        }
+        [b'-', b'0', b'x' | b'X', rest @ ..] => {
+            n = rest;
+            Radix::NegativeHexadecimal
+        }
+        [b'-', b'0', b'b' | b'B', rest @ ..] => {
+            n = rest;
+            Radix::NegativeBinary
+        }
+        [b'+', b'0', b'x' | b'X', rest @ ..] => {
+            n = rest;
+            Radix::Hexadecimal
+        }
+        [b'+', b'0', b'b' | b'B', rest @ ..] => {
+            n = rest;
+            Radix::Binary
+        }
+        [b'.' | b'0'..=b'9' | b'+' | b'-', ..] => Radix::Decimal,
         _ => return Err(Error),
     };
-
     let (last, rest) = match n {
         [rest @ .., a] => (*a, rest),
         _ => return Err(Error),
     };
-
     let suffix = match last {
         b'B' | b'b' => match rest[..] {
             [ref rest @ .., b'U' | b'u'] => {
@@ -834,7 +664,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
                 Suffix::SignedByte
             }
             _ => match radix {
-                Radix::Hexadecimal => Suffix::SignedInt,
+                Radix::Hexadecimal | Radix::NegativeHexadecimal => Suffix::SignedInt,
                 _ => {
                     n = rest;
                     Suffix::SignedByte
@@ -885,7 +715,6 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
         },
         _ => Suffix::Auto,
     };
-
     let parser = if let Suffix::Auto = suffix
         && let Radix::Decimal = radix
     {
@@ -899,7 +728,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
                 FloatParser::Double
             }
             _ => {
-                if n.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_')) {
+                if n[1..].iter().all(|&x| matches!(x, b'0'..=b'9' | b'_')) {
                     FloatParser::None
                 } else {
                     FloatParser::Double
@@ -908,6 +737,21 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
         }
     } else {
         FloatParser::None
+    };
+    let radix = if matches!(parser, FloatParser::None) && matches!(radix, Radix::Decimal) {
+        match peek(n)? {
+            (b'+', rest) => {
+                n = rest;
+                Radix::Decimal
+            }
+            (b'-', rest) => {
+                n = rest;
+                Radix::NegativeDecimal
+            }
+            _ => Radix::Decimal,
+        }
+    } else {
+        radix
     };
 
     let mut start = 0;
@@ -924,6 +768,23 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
     } else {
         n
     };
+
+    match parser {
+        FloatParser::Double => unsafe {
+            return match core::str::from_utf8_unchecked(n).parse() {
+                Ok(x) => Ok(TagPrimitive::Double(x)),
+                Err(_) => Err(Error),
+            };
+        },
+        FloatParser::Float => unsafe {
+            return match core::str::from_utf8_unchecked(n).parse() {
+                Ok(x) => Ok(TagPrimitive::Float(x)),
+                Err(_) => Err(Error),
+            };
+        },
+        _ => {}
+    }
+
     while let [first, rest @ ..] = n {
         if *first == b'0' {
             n = rest;
@@ -931,50 +792,26 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
             break;
         }
     }
-    let ret = match parser {
-        FloatParser::Double => unsafe {
-            let (f, l) = parse_float(n, Some(is_positive));
-            n = n.get_unchecked(l..);
-            Ok(TagNonArray::Double(f))
-        },
-        FloatParser::Float => unsafe {
-            let (f, l) = parse_float(n, Some(is_positive));
-            n = n.get_unchecked(l..);
-            Ok(TagNonArray::Float(f))
-        },
-        FloatParser::None => match suffix {
-            Suffix::UnsignedByte
-            | Suffix::UnsignedShort
-            | Suffix::UnsignedInt
-            | Suffix::UnsignedLong => match radix {
+    let ret = match suffix {
+        Suffix::UnsignedByte
+        | Suffix::UnsignedShort
+        | Suffix::UnsignedInt
+        | Suffix::UnsignedLong => {
+            let mut out: u64 = 0;
+            match radix {
                 Radix::Binary => {
-                    let mut out: u64 = 0;
                     while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
                         n = y;
                         out = out.wrapping_mul(2).wrapping_add((dig - b'0') as u64);
                     }
-                    match suffix {
-                        Suffix::UnsignedByte => Ok(TagNonArray::Byte(out as u8 as i8)),
-                        Suffix::UnsignedShort => Ok(TagNonArray::Short(out as u16 as i16)),
-                        Suffix::UnsignedInt => Ok(TagNonArray::Int(out as u32 as i32)),
-                        _ => Ok(TagNonArray::Long(out as i64)),
-                    }
                 }
                 Radix::Decimal => {
-                    let mut out: u64 = 0;
                     while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
                         n = y;
                         out = out.wrapping_mul(10).wrapping_add((dig - b'0') as u64);
                     }
-                    match suffix {
-                        Suffix::UnsignedByte => Ok(TagNonArray::Byte(out as u8 as i8)),
-                        Suffix::UnsignedShort => Ok(TagNonArray::Short(out as u16 as i16)),
-                        Suffix::UnsignedInt => Ok(TagNonArray::Int(out as u32 as i32)),
-                        _ => Ok(TagNonArray::Long(out as i64)),
-                    }
                 }
                 Radix::Hexadecimal => {
-                    let mut out: u64 = 0;
                     while let [dig, ref y @ ..] = n[..] {
                         let dig = match hex_to_u8(dig) {
                             Some(x) => x,
@@ -983,85 +820,71 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagNonArray, Error> {
                         n = y;
                         out = out.wrapping_mul(16).wrapping_add(dig as u64);
                     }
-                    match suffix {
-                        Suffix::UnsignedByte => Ok(TagNonArray::Byte(out as u8 as i8)),
-                        Suffix::UnsignedShort => Ok(TagNonArray::Short(out as u16 as i16)),
-                        Suffix::UnsignedInt => Ok(TagNonArray::Int(out as u32 as i32)),
-                        _ => Ok(TagNonArray::Long(out as i64)),
+                }
+                _ => return Err(Error),
+            }
+            match suffix {
+                Suffix::UnsignedByte => Ok(TagPrimitive::Byte(out as u8 as i8)),
+                Suffix::UnsignedShort => Ok(TagPrimitive::Short(out as u16 as i16)),
+                Suffix::UnsignedInt => Ok(TagPrimitive::Int(out as u32 as i32)),
+                _ => Ok(TagPrimitive::Long(out as i64)),
+            }
+        }
+        _ => {
+            let mut out: i64 = 0;
+            match radix {
+                Radix::Binary => {
+                    while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
+                        n = y;
+                        out = out.wrapping_mul(2).wrapping_add((dig - b'0') as i64);
                     }
                 }
-            },
-            _ => match radix {
-                Radix::Binary => {
-                    let mut out: i64 = 0;
-                    if is_positive {
-                        while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
-                            n = y;
-                            out = out.wrapping_mul(2).wrapping_add((dig - b'0') as i64);
-                        }
-                    } else {
-                        while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
-                            n = y;
-                            out = out.wrapping_mul(2).wrapping_sub((dig - b'0') as i64);
-                        }
-                    }
-                    match suffix {
-                        Suffix::SignedByte => Ok(TagNonArray::Byte(out as i8)),
-                        Suffix::SignedShort => Ok(TagNonArray::Short(out as i16)),
-                        Suffix::SignedInt | Suffix::Auto => Ok(TagNonArray::Int(out as i32)),
-                        _ => Ok(TagNonArray::Long(out)),
+                Radix::NegativeBinary => {
+                    while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
+                        n = y;
+                        out = out.wrapping_mul(2).wrapping_sub((dig - b'0') as i64);
                     }
                 }
                 Radix::Decimal => {
-                    let mut out: i64 = 0;
-                    if is_positive {
-                        while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
-                            n = y;
-                            out = out.wrapping_mul(10).wrapping_add((dig - b'0') as i64);
-                        }
-                    } else {
-                        while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
-                            n = y;
-                            out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as i64);
-                        }
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
+                        n = y;
+                        out = out.wrapping_mul(10).wrapping_add((dig - b'0') as i64);
                     }
-                    match suffix {
-                        Suffix::SignedByte => Ok(TagNonArray::Byte(out as i8)),
-                        Suffix::SignedShort => Ok(TagNonArray::Short(out as i16)),
-                        Suffix::SignedInt | Suffix::Auto => Ok(TagNonArray::Int(out as i32)),
-                        _ => Ok(TagNonArray::Long(out)),
+                }
+                Radix::NegativeDecimal => {
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
+                        n = y;
+                        out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as i64);
                     }
                 }
                 Radix::Hexadecimal => {
-                    let mut out: i64 = 0;
-                    if is_positive {
-                        while let [dig, ref y @ ..] = n[..] {
-                            let dig = match hex_to_u8(dig) {
-                                Some(x) => x,
-                                None => break,
-                            };
-                            n = y;
-                            out = out.wrapping_mul(16).wrapping_add(dig as i64);
-                        }
-                    } else {
-                        while let [dig, ref y @ ..] = n[..] {
-                            let dig = match hex_to_u8(dig) {
-                                Some(x) => x,
-                                None => break,
-                            };
-                            n = y;
-                            out = out.wrapping_mul(16).wrapping_sub(dig as i64);
-                        }
-                    }
-                    match suffix {
-                        Suffix::SignedByte => Ok(TagNonArray::Byte(out as i8)),
-                        Suffix::SignedShort => Ok(TagNonArray::Short(out as i16)),
-                        Suffix::SignedInt | Suffix::Auto => Ok(TagNonArray::Int(out as i32)),
-                        _ => Ok(TagNonArray::Long(out)),
+                    while let [dig, ref y @ ..] = n[..] {
+                        let dig = match hex_to_u8(dig) {
+                            Some(x) => x,
+                            None => break,
+                        };
+                        n = y;
+                        out = out.wrapping_mul(16).wrapping_add(dig as i64);
                     }
                 }
-            },
-        },
+                Radix::NegativeHexadecimal => {
+                    while let [dig, ref y @ ..] = n[..] {
+                        let dig = match hex_to_u8(dig) {
+                            Some(x) => x,
+                            None => break,
+                        };
+                        n = y;
+                        out = out.wrapping_mul(16).wrapping_sub(dig as i64);
+                    }
+                }
+            }
+            match suffix {
+                Suffix::SignedByte => Ok(TagPrimitive::Byte(out as i8)),
+                Suffix::SignedShort => Ok(TagPrimitive::Short(out as i16)),
+                Suffix::SignedInt | Suffix::Auto => Ok(TagPrimitive::Int(out as i32)),
+                _ => Ok(TagPrimitive::Long(out)),
+            }
+        }
     };
     if n.is_empty() { ret } else { Err(Error) }
 }

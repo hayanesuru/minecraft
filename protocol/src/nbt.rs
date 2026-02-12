@@ -391,6 +391,28 @@ pub enum Tag {
 }
 
 #[derive(Clone)]
+pub enum TagPrimitive {
+    Byte(i8),
+    Short(i16),
+    Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
+}
+
+impl From<TagPrimitive> for Tag {
+    fn from(value: TagPrimitive) -> Self {
+        match value {
+            TagPrimitive::Byte(x) => Self::Byte(x),
+            TagPrimitive::Short(x) => Self::Short(x),
+            TagPrimitive::Int(x) => Self::Int(x),
+            TagPrimitive::Long(x) => Self::Long(x),
+            TagPrimitive::Float(x) => Self::Float(x),
+            TagPrimitive::Double(x) => Self::Double(x),
+        }
+    }
+}
+#[derive(Clone)]
 pub enum TagArray {
     ByteArray(Vec<i8>),
     IntArray(Vec<i32>),

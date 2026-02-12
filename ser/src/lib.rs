@@ -1,7 +1,6 @@
 #![no_std]
 #![allow(internal_features)]
 
-mod float;
 mod hex;
 mod integer;
 mod json;
@@ -11,7 +10,6 @@ mod varint;
 mod write;
 mod writer;
 
-pub use self::float::parse_float;
 pub use self::hex::{hex_to_u8, parse_hex, u8_to_hex};
 pub use self::integer::{parse_int, parse_int_s};
 pub use self::json::json_char_width_escaped;
