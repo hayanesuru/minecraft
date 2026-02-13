@@ -340,6 +340,25 @@ pub enum Holder<T> {
     Reference(ResourceKey),
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TagNetworkEntry<'a> {
+    pub registry: RegistryKey<'a>,
+    pub tags: List<'a, NetworkPayload<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct NetworkPayload<'a> {
+    pub key: Ident<'a>,
+    pub ids: List<'a, V32>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct KnownPack<'a> {
+    pub namespace: Utf8<'a>,
+    pub id: Utf8<'a>,
+    pub version: Utf8<'a>,
+}
+
 pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
     let mut start = 0;
     let mut cur = 0;

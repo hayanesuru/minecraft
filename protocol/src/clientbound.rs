@@ -1,4 +1,4 @@
-use minecraft_data::{clientbound__login, clientbound__status};
+use minecraft_data::{clientbound__configuration, clientbound__login, clientbound__status};
 
 pub mod common;
 pub mod configuration;
@@ -71,9 +71,9 @@ packets! {
 //     store_cookie = common::StoreCookie<'_>,
 //     transfer = common::Transfer<'_>,
 //     update_enabled_features = configuration::UpdateEnabledFeatures<'_>,
-//     update_tags,
-//     select_known_packs,
-//     custom_report_details,
+//     update_tags = common::UpdateTags<'_>,
+//     select_known_packs = configuration::SelectKnownPacks<'_>,
+//     custom_report_details = common::CustomReportDetails<'_>,
 //     server_links,
 //     clear_dialog,
 //     show_dialog,

@@ -1,5 +1,5 @@
 use crate::nbt::Tag;
-use crate::{Ident, List, RegistryKey};
+use crate::{Ident, KnownPack, List, RegistryKey};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FinishConfiguration {}
@@ -19,4 +19,9 @@ pub struct RegistryEntry<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateEnabledFeatures<'a> {
     pub features: List<'a, Ident<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SelectKnownPacks<'a> {
+    pub known_packs: List<'a, KnownPack<'a>>,
 }

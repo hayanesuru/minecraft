@@ -62,4 +62,15 @@ packets! {
 }
 // packets! {
 //     serverbound__configuration,
+//     ConfigurationHandler,
+//     client_information,
+//     cookie_response,
+//     custom_payload,
+//     finish_configuration,
+//     keep_alive,
+//     pong,
+//     resource_pack,
+//     select_known_packs,
+//     custom_click_action,
+//     accept_code_of_conduct,
 // }

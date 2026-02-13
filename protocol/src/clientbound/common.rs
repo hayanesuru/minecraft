@@ -1,4 +1,4 @@
-use crate::{ByteArray, Component, Ident, Rest, Utf8};
+use crate::{ByteArray, Component, Ident, List, Rest, TagNetworkEntry, Utf8};
 use mser::V32;
 use uuid::Uuid;
 
@@ -50,4 +50,20 @@ pub struct StoreCookie<'a> {
 pub struct Transfer<'a> {
     pub host: Utf8<'a>,
     pub port: V32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateTags<'a> {
+    pub tags: List<'a, TagNetworkEntry<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomReportDetails<'a> {
+    pub details: List<'a, CustomReportDetailsEntry<'a>, 32>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomReportDetailsEntry<'a> {
+    pub key: Utf8<'a, 128>,
+    pub value: Utf8<'a, 4096>,
 }
