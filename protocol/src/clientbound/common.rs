@@ -1,4 +1,7 @@
-use crate::{ByteArray, Component, Ident, List, Rest, TagNetworkEntry, Utf8};
+use crate::nbt::Tag;
+use crate::{
+    ByteArray, Component, Ident, List, Rest, ServerLinkUntrustedEntry, TagNetworkEntry, Utf8,
+};
 use mser::V32;
 use uuid::Uuid;
 
@@ -66,4 +69,17 @@ pub struct CustomReportDetails<'a> {
 pub struct CustomReportDetailsEntry<'a> {
     pub key: Utf8<'a, 128>,
     pub value: Utf8<'a, 4096>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ServerLinks<'a> {
+    pub links: List<'a, ServerLinkUntrustedEntry<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ClearDialog {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShowDialog {
+    dialog: Tag,
 }
