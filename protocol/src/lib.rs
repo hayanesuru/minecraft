@@ -317,6 +317,11 @@ pub struct ResourceKey {
     pub identifier: Identifier,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RegistryKey<'a> {
+    pub identifier: Ident<'a>,
+}
+
 #[derive(Clone)]
 pub struct TagKey {
     pub registry: ResourceKey,
@@ -335,6 +340,102 @@ pub enum Holder<T> {
     Reference(ResourceKey),
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TagNetworkEntry<'a> {
+    pub registry: RegistryKey<'a>,
+    pub tags: List<'a, NetworkPayload<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct NetworkPayload<'a> {
+    pub key: Ident<'a>,
+    pub ids: List<'a, V32>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct KnownPack<'a> {
+    pub namespace: Utf8<'a>,
+    pub id: Utf8<'a>,
+    pub version: Utf8<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ServerLinkUntrustedEntry<'a> {
+    pub ty: ServerLinkUntrustedEntryType,
+    pub url: Utf8<'a>,
+}
+
+#[derive(Clone)]
+pub enum ServerLinkUntrustedEntryType {
+    Known(KnownLinkType),
+    Custom(Component),
+}
+
+impl<'a> Read<'a> for ServerLinkUntrustedEntryType {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        if bool::read(buf)? {
+            Ok(Self::Known(KnownLinkType::read(buf)?))
+        } else {
+            Ok(Self::Custom(Component::read(buf)?))
+        }
+    }
+}
+
+impl Write for ServerLinkUntrustedEntryType {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            match self {
+                Self::Known(k) => {
+                    true.write(w);
+                    k.write(w);
+                }
+                Self::Custom(c) => {
+                    false.write(w);
+                    c.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Known(k) => true.len_s() + k.len_s(),
+            Self::Custom(c) => false.len_s() + c.len_s(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum KnownLinkType {
+    ReportBug,
+    CommunityGuidelines,
+    Support,
+    Status,
+    Feedback,
+    Community,
+    Website,
+    Forums,
+    News,
+    Announcements,
+}
+
+impl KnownLinkType {
+    pub const fn display_name(self) -> &'static str {
+        match self {
+            Self::ReportBug => "known_server_link.report_bug",
+            Self::CommunityGuidelines => "known_server_link.community_guidelines",
+            Self::Support => "known_server_link.support",
+            Self::Status => "known_server_link.status",
+            Self::Feedback => "known_server_link.feedback",
+            Self::Community => "known_server_link.community",
+            Self::Website => "known_server_link.website",
+            Self::Forums => "known_server_link.forums",
+            Self::News => "known_server_link.news",
+            Self::Announcements => "known_server_link.announcements",
+        }
+    }
+}
 pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
     let mut start = 0;
     let mut cur = 0;
@@ -363,7 +464,7 @@ pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
 fn test_write() {
     use crate::clientbound::login::LoginFinished;
     use crate::profile::GameProfileRef;
-    use crate::types::{Id, packet_id};
+    use crate::types::Id as _;
     use minecraft_data::clientbound__login;
     use uuid::Uuid;
 
@@ -375,7 +476,7 @@ fn test_write() {
         },
     };
 
-    let id = packet_id(&packet);
+    let id = LoginFinished::ID;
     let len1 = id.len_s();
     let len2 = packet.len_s() + len1;
     let data = unsafe {

@@ -345,7 +345,7 @@ impl TagType {
             Self::Compound => Tag::from(Compound::read(n)?),
             Self::IntArray => Tag::from(int_array::IntArray::read(n)?.0),
             Self::LongArray => Tag::from(long_array::LongArray::read(n)?.0),
-            Self::End => unsafe { core::hint::unreachable_unchecked() },
+            Self::End => return Err(Error),
         })
     }
 }
@@ -390,6 +390,28 @@ pub enum Tag {
     Compound(Compound),
 }
 
+#[derive(Clone)]
+pub enum TagPrimitive {
+    Byte(i8),
+    Short(i16),
+    Int(i32),
+    Long(i64),
+    Float(f32),
+    Double(f64),
+}
+
+impl From<TagPrimitive> for Tag {
+    fn from(value: TagPrimitive) -> Self {
+        match value {
+            TagPrimitive::Byte(x) => Self::Byte(x),
+            TagPrimitive::Short(x) => Self::Short(x),
+            TagPrimitive::Int(x) => Self::Int(x),
+            TagPrimitive::Long(x) => Self::Long(x),
+            TagPrimitive::Float(x) => Self::Float(x),
+            TagPrimitive::Double(x) => Self::Double(x),
+        }
+    }
+}
 #[derive(Clone)]
 pub enum TagArray {
     ByteArray(Vec<i8>),

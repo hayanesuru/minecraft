@@ -17,6 +17,28 @@ pub enum List {
     Compound(Vec<Compound>),
 }
 
+#[derive(Clone)]
+pub enum ListPrimitive {
+    Byte(Vec<i8>),
+    Short(Vec<i16>),
+    Int(Vec<i32>),
+    Long(Vec<i64>),
+    Float(Vec<f32>),
+    Double(Vec<f64>),
+}
+
+impl From<ListPrimitive> for List {
+    fn from(value: ListPrimitive) -> Self {
+        match value {
+            ListPrimitive::Byte(x) => Self::Byte(x),
+            ListPrimitive::Short(x) => Self::Short(x),
+            ListPrimitive::Int(x) => Self::Int(x),
+            ListPrimitive::Long(x) => Self::Long(x),
+            ListPrimitive::Float(x) => Self::Float(x),
+            ListPrimitive::Double(x) => Self::Double(x),
+        }
+    }
+}
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct ListInfo(pub TagType, pub u32);
 
