@@ -81,5 +81,5 @@ pub struct ClearDialog {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ShowDialog {
-    dialog: Tag,
+    pub dialog: Tag,
 }
