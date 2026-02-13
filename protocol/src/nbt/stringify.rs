@@ -509,12 +509,12 @@ unsafe fn dec_list_primitive(
     tag: TagPrimitive,
 ) -> Result<ListPrimitive, Error> {
     let mut list = match tag {
-        TagPrimitive::Byte(_) => ListPrimitive::Byte(Vec::new()),
-        TagPrimitive::Short(_) => ListPrimitive::Short(Vec::new()),
-        TagPrimitive::Int(_) => ListPrimitive::Int(Vec::new()),
-        TagPrimitive::Long(_) => ListPrimitive::Long(Vec::new()),
-        TagPrimitive::Float(_) => ListPrimitive::Float(Vec::new()),
-        TagPrimitive::Double(_) => ListPrimitive::Double(Vec::new()),
+        TagPrimitive::Byte(x) => ListPrimitive::Byte(vec![x]),
+        TagPrimitive::Short(x) => ListPrimitive::Short(vec![x]),
+        TagPrimitive::Int(x) => ListPrimitive::Int(vec![x]),
+        TagPrimitive::Long(x) => ListPrimitive::Long(vec![x]),
+        TagPrimitive::Float(x) => ListPrimitive::Float(vec![x]),
+        TagPrimitive::Double(x) => ListPrimitive::Double(vec![x]),
     };
     loop {
         skip_ws(n);
