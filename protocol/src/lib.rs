@@ -317,6 +317,11 @@ pub struct ResourceKey {
     pub identifier: Identifier,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RegistryKey<'a> {
+    pub identifier: Ident<'a>,
+}
+
 #[derive(Clone)]
 pub struct TagKey {
     pub registry: ResourceKey,

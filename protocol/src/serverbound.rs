@@ -1,6 +1,4 @@
-use minecraft_data::{
-    serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__status,
-};
+use minecraft_data::{serverbound__handshake, serverbound__login, serverbound__status};
 
 pub mod common;
 pub mod configuration;

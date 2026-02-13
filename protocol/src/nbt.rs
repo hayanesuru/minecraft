@@ -345,7 +345,7 @@ impl TagType {
             Self::Compound => Tag::from(Compound::read(n)?),
             Self::IntArray => Tag::from(int_array::IntArray::read(n)?.0),
             Self::LongArray => Tag::from(long_array::LongArray::read(n)?.0),
-            Self::End => unsafe { core::hint::unreachable_unchecked() },
+            Self::End => return Err(Error),
         })
     }
 }
