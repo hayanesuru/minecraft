@@ -51,12 +51,8 @@ fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
 }
 
 fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
-    let (first, second, rest) = match n {
-        [_, b, c, rest @ ..] => (*b, *c, rest),
-        _ => return Err(Error),
-    };
-    match [first, second] {
-        [b'B', b';'] => {
+    match n {
+        [b'B', b';', rest @ ..] => {
             *n = rest;
             skip_ws(n);
 
@@ -96,7 +92,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             vec.shrink_to_fit();
             Ok(TagArray::ByteArray(vec))
         }
-        [b'I', b';'] => {
+        [b'I', b';', rest @ ..] => {
             *n = rest;
             skip_ws(n);
 
@@ -120,7 +116,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             vec.shrink_to_fit();
             Ok(TagArray::IntArray(vec))
         }
-        [b'L', b';'] => {
+        [b'L', b';', rest @ ..] => {
             *n = rest;
             skip_ws(n);
 
@@ -158,10 +154,14 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
     }
     let mut tmp = Vec::<u8>::new();
     let mut names = Vec::<u8>::new();
-    let mut bls = Vec::<Bl>::new();
-    bls.push(Bl::C(Compound::new()));
+    let mut bls = vec![Bl::C(Compound::new())];
     let mut on_start = true;
     let mut on_end = false;
+
+    skip_ws(n);
+    if u8::read(n)? != b'{' {
+        return Err(Error);
+    }
     loop {
         let mut bl = match bls.pop() {
             Some(x) => x,
@@ -172,19 +172,11 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
         if on_start {
             on_start = false;
             if matches!(bl, Bl::C(..)) {
-                if u8::read(n)? != b'{' {
-                    return Err(Error);
-                }
-                skip_ws(n);
                 if let (b'}', rest) = peek(n)? {
                     *n = rest;
                     on_end = true;
                 }
             } else {
-                if u8::read(n)? != b'[' {
-                    return Err(Error);
-                }
-                skip_ws(n);
                 if let (b']', rest) = peek(n)? {
                     *n = rest;
                     on_end = true;
@@ -197,16 +189,15 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                 b',' => (),
                 _ => return Err(Error),
             }
-            skip_ws(n);
         } else {
             match u8::read(n)? {
                 b']' => on_end = true,
                 b',' => (),
                 _ => return Err(Error),
             }
-            skip_ws(n);
         }
         if !on_end {
+            skip_ws(n);
             if matches!(bl, Bl::C(..)) {
                 if let (b'}', rest) = peek(n)? {
                     *n = rest;
@@ -258,21 +249,32 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                     }
                     _ => return Err(Error),
                 },
-                (Some(Bl::L(List::Compound(l))), Bl::C(x)) => {
-                    l.push(x);
-                    continue;
+                (Some(Bl::L(l)), Bl::C(x)) => {
+                    if let List::None = l {
+                        *l = List::Compound(Vec::new())
+                    }
+                    if let List::Compound(l) = l {
+                        l.push(x);
+                        continue;
+                    } else {
+                        return Err(Error);
+                    }
                 }
-                (Some(Bl::L(List::List(l))), Bl::L(x)) => {
-                    l.push(x);
-                    continue;
+                (Some(Bl::L(l)), Bl::L(x)) => {
+                    if let List::None = l {
+                        *l = List::List(Vec::new())
+                    }
+                    if let List::List(l) = l {
+                        l.push(x);
+                        continue;
+                    } else {
+                        return Err(Error);
+                    }
                 }
-                (None, Bl::C(x)) => {
-                    return Ok(x);
-                }
+                (None, Bl::C(x)) => return Ok(x),
                 _ => return Err(Error),
             }
         }
-
         match bl {
             Bl::C(mut c) => unsafe {
                 let k = match peek(n)? {
@@ -304,25 +306,29 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                 }
                 skip_ws(n);
                 let t = match peek(n)? {
-                    (b'{', _) => {
+                    (b'{', rest) => {
                         names.extend(kl);
                         bls.push(Bl::C(c));
                         bls.push(Bl::C(Compound::new()));
+                        *n = rest;
                         on_start = true;
                         continue;
                     }
-                    (b'[', _) => match dec_arr_peek(n) {
-                        Ok(TagArray::ByteArray(x)) => Tag::ByteArray(x),
-                        Ok(TagArray::IntArray(x)) => Tag::IntArray(x),
-                        Ok(TagArray::LongArray(x)) => Tag::LongArray(x),
-                        Err(_) => {
-                            names.extend(kl);
-                            bls.push(Bl::C(c));
-                            bls.push(Bl::L(List::None));
-                            on_start = true;
-                            continue;
+                    (b'[', rest) => {
+                        *n = rest;
+                        match dec_arr_peek(n) {
+                            Ok(TagArray::ByteArray(x)) => Tag::ByteArray(x),
+                            Ok(TagArray::IntArray(x)) => Tag::IntArray(x),
+                            Ok(TagArray::LongArray(x)) => Tag::LongArray(x),
+                            Err(_) => {
+                                names.extend(kl);
+                                bls.push(Bl::C(c));
+                                bls.push(Bl::L(List::None));
+                                on_start = true;
+                                continue;
+                            }
                         }
-                    },
+                    }
                     (b'"', rest) => {
                         *n = rest;
                         tmp.clear();
@@ -355,57 +361,62 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                 c.push(BoxStr::new_unchecked(Box::from(k.as_bytes())), t);
             },
             Bl::L(mut l) => match peek(n)? {
-                (b'{', _) => {
+                (b'{', rest) => {
                     if let List::None = &l {
                         l = List::Compound(Vec::new());
                     }
                     bls.push(Bl::L(l));
                     bls.push(Bl::C(Compound::new()));
+                    *n = rest;
                     on_start = true;
                 }
-                (b'[', _) => {
-                    if let Ok(arr) = dec_arr_peek(n) {
-                        match arr {
-                            TagArray::ByteArray(b) => {
-                                if let List::None = &l {
-                                    l = List::ByteArray(Vec::new());
+                (b'[', rest) => {
+                    *n = rest;
+                    match dec_arr_peek(n) {
+                        Ok(arr) => {
+                            match arr {
+                                TagArray::ByteArray(b) => {
+                                    if let List::None = &l {
+                                        l = List::ByteArray(Vec::new());
+                                    }
+                                    match &mut l {
+                                        List::ByteArray(x) => x.push(b),
+                                        _ => return Err(Error),
+                                    }
                                 }
-                                match &mut l {
-                                    List::ByteArray(x) => x.push(b),
-                                    _ => return Err(Error),
+                                TagArray::IntArray(b) => {
+                                    if let List::None = &l {
+                                        l = List::IntArray(Vec::new());
+                                    }
+                                    match &mut l {
+                                        List::IntArray(x) => x.push(b),
+                                        _ => return Err(Error),
+                                    }
+                                }
+                                TagArray::LongArray(b) => {
+                                    if let List::None = &l {
+                                        l = List::LongArray(Vec::new());
+                                    }
+                                    match &mut l {
+                                        List::LongArray(x) => x.push(b),
+                                        _ => return Err(Error),
+                                    }
                                 }
                             }
-                            TagArray::IntArray(b) => {
-                                if let List::None = &l {
-                                    l = List::IntArray(Vec::new());
-                                }
-                                match &mut l {
-                                    List::IntArray(x) => x.push(b),
-                                    _ => return Err(Error),
-                                }
-                            }
-                            TagArray::LongArray(b) => {
-                                if let List::None = &l {
-                                    l = List::LongArray(Vec::new());
-                                }
-                                match &mut l {
-                                    List::LongArray(x) => x.push(b),
-                                    _ => return Err(Error),
-                                }
-                            }
+                            bls.push(Bl::L(l));
                         }
-                        bls.push(Bl::L(l));
-                    } else {
-                        match &l {
-                            List::None => {
-                                l = List::List(Vec::new());
+                        Err(_) => {
+                            match &l {
+                                List::None => {
+                                    l = List::List(Vec::new());
+                                }
+                                List::List(_) => (),
+                                _ => return Err(Error),
                             }
-                            List::List(_) => (),
-                            _ => return Err(Error),
+                            bls.push(Bl::L(l));
+                            bls.push(Bl::L(List::None));
+                            on_start = true;
                         }
-                        bls.push(Bl::L(l));
-                        bls.push(Bl::L(List::None));
-                        on_start = true;
                     }
                 }
                 _ => unsafe {
@@ -542,7 +553,7 @@ unsafe fn dec_list_primitive(
                     ListPrimitive::Byte(v) => v.push(num as i8),
                     ListPrimitive::Short(v) => v.push(num as i16),
                     ListPrimitive::Int(v) => v.push(num as i32),
-                    ListPrimitive::Long(v) => v.push(num as i64),
+                    ListPrimitive::Long(v) => v.push(num),
                     ListPrimitive::Float(v) => v.push(num as f32),
                     ListPrimitive::Double(v) => v.push(num as f64),
                 }
