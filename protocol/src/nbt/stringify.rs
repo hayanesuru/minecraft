@@ -741,11 +741,20 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
     let radix = if let FloatParser::None = parser
         && let Radix::Decimal = radix
     {
-        match peek(n)? {
+        let p = peek(n)?;
+        let only_dig = if let Suffix::Auto = suffix {
+            match p {
+                (b'+' | b'-', rest) => rest,
+                _ => n,
+            }
+            .iter()
+            .all(|&x| matches!(x, b'0'..=b'9' | b'_'))
+        } else {
+            true
+        };
+        match p {
             (b'+', rest) => {
-                if let Suffix::Auto = suffix
-                    && !rest.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
-                {
+                if !only_dig {
                     parser = FloatParser::Double;
                 } else {
                     n = rest;
@@ -753,16 +762,19 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
                 Radix::Decimal
             }
             (b'-', rest) => {
-                if let Suffix::Auto = suffix
-                    && !rest.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
-                {
+                if !only_dig {
                     parser = FloatParser::Double;
                 } else {
                     n = rest;
                 }
                 Radix::NegativeDecimal
             }
-            _ => Radix::Decimal,
+            _ => {
+                if !only_dig {
+                    parser = FloatParser::Double;
+                }
+                Radix::Decimal
+            }
         }
     } else {
         radix
