@@ -161,7 +161,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     }
     let mut tmp = Vec::<u8>::new();
     let mut names = Vec::<u8>::new();
-    let mut bls = vec![Bl::C(Compound::new())];
+    let mut blocks = vec![Bl::C(Compound::new())];
     let mut on_start = true;
     let mut on_end = false;
 
@@ -171,10 +171,10 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     }
     loop {
         // step 1 or none
-        if bls.len() == max_depth {
+        if blocks.len() == max_depth {
             return Err(Error);
         }
-        let mut bl = match bls.pop() {
+        let mut bl = match blocks.pop() {
             Some(x) => x,
             None => return Err(Error),
         };
@@ -239,7 +239,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     List::None => (),
                 },
             }
-            match (bls.last_mut(), bl) {
+            match (blocks.last_mut(), bl) {
                 (Some(Bl::C(c)), bl2) => match names[..] {
                     [ref rest @ .., l1, l2, l3, l4] => {
                         let len = u32::from_le_bytes([l1, l2, l3, l4]) as usize;
@@ -319,8 +319,8 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                 let t = match peek(n)? {
                     (b'{', rest) => {
                         names.extend(kl);
-                        bls.push(Bl::C(c));
-                        bls.push(Bl::C(Compound::new()));
+                        blocks.push(Bl::C(c));
+                        blocks.push(Bl::C(Compound::new()));
                         *n = rest;
                         on_start = true;
                         continue;
@@ -333,8 +333,8 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                             Ok(TagArray::LongArray(x)) => Tag::LongArray(x),
                             Err(_) => {
                                 names.extend(kl);
-                                bls.push(Bl::C(c));
-                                bls.push(Bl::L(List::None));
+                                blocks.push(Bl::C(c));
+                                blocks.push(Bl::L(List::None));
                                 on_start = true;
                                 continue;
                             }
@@ -368,8 +368,8 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     if let List::None = &l {
                         l = List::Compound(Vec::new());
                     }
-                    bls.push(Bl::L(l));
-                    bls.push(Bl::C(Compound::new()));
+                    blocks.push(Bl::L(l));
+                    blocks.push(Bl::C(Compound::new()));
                     *n = rest;
                     on_start = true;
                 }
@@ -406,7 +406,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                                     }
                                 }
                             }
-                            bls.push(Bl::L(l));
+                            blocks.push(Bl::L(l));
                         }
                         Err(_) => {
                             match &l {
@@ -416,8 +416,8 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                                 List::List(_) => (),
                                 _ => return Err(Error),
                             }
-                            bls.push(Bl::L(l));
-                            bls.push(Bl::L(List::None));
+                            blocks.push(Bl::L(l));
+                            blocks.push(Bl::L(List::None));
                             on_start = true;
                         }
                     }
@@ -454,7 +454,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                             List::String(list)
                         }
                     };
-                    bls.push(Bl::L(l));
+                    blocks.push(Bl::L(l));
                 },
             },
         }
@@ -921,7 +921,7 @@ fn dec_quoted_str<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>, quote: u8) -> Result<
                 None => return Err(Error),
             };
             buf.extend(unsafe { n.get_unchecked(last..cur) });
-            cur += match quoted_elsape(peek, y) {
+            cur += match escape_quoted(peek, y) {
                 Some((ch, adv)) => {
                     buf.extend(ch.encode_utf8(&mut [0; 4]).as_bytes());
                     adv + 2
@@ -943,7 +943,7 @@ fn dec_quoted_str<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>, quote: u8) -> Result<
     }
 }
 
-fn quoted_elsape(peek: u8, y: &[u8]) -> Option<(char, usize)> {
+fn escape_quoted(peek: u8, y: &[u8]) -> Option<(char, usize)> {
     match peek {
         ESCAPE => Some(('\\', 0usize)),
         b'\'' => Some(('\'', 0)),
@@ -953,54 +953,9 @@ fn quoted_elsape(peek: u8, y: &[u8]) -> Option<(char, usize)> {
         b'r' => Some(('\r', 0)),
         b'f' => Some(('\x0c', 0)),
         b'n' => Some(('\n', 0)),
-        b'x' => {
-            if let [a, b, ..] = y[..]
-                && let Some(a) = hex_to_u8(a)
-                && let Some(b) = hex_to_u8(b)
-            {
-                let ch = (a as u32) << 4 | (b as u32);
-                char::from_u32(ch).map(|x| (x, 2))
-            } else {
-                None
-            }
-        }
-        b'u' => {
-            if let [a, b, c, d, ..] = y[..]
-                && let Some(a) = hex_to_u8(a)
-                && let Some(b) = hex_to_u8(b)
-                && let Some(c) = hex_to_u8(c)
-                && let Some(d) = hex_to_u8(d)
-            {
-                let ch = (a as u32) << 12 | (b as u32) << 8 | (c as u32) << 4 | (d as u32);
-                char::from_u32(ch).map(|x| (x, 4))
-            } else {
-                None
-            }
-        }
-        b'U' => {
-            if let [a, b, c, d, e, f, g, h, ..] = y[..]
-                && let Some(a) = hex_to_u8(a)
-                && let Some(b) = hex_to_u8(b)
-                && let Some(c) = hex_to_u8(c)
-                && let Some(d) = hex_to_u8(d)
-                && let Some(e) = hex_to_u8(e)
-                && let Some(f) = hex_to_u8(f)
-                && let Some(g) = hex_to_u8(g)
-                && let Some(h) = hex_to_u8(h)
-            {
-                let ch = (a as u32) << 28
-                    | (b as u32) << 24
-                    | (c as u32) << 20
-                    | (d as u32) << 16
-                    | (e as u32) << 12
-                    | (f as u32) << 8
-                    | (g as u32) << 4
-                    | (h as u32);
-                char::from_u32(ch).map(|x| (x, 8))
-            } else {
-                None
-            }
-        }
+        b'x' => dec_char2(y),
+        b'u' => dec_char4(y),
+        b'U' => dec_char8(y),
         b'N' => {
             if let [b'{', rest @ ..] = y
                 && let Ok(index) = find_ascii(rest, |x| x == b'}')
@@ -1014,6 +969,57 @@ fn quoted_elsape(peek: u8, y: &[u8]) -> Option<(char, usize)> {
             }
         }
         _ => None,
+    }
+}
+
+fn dec_char2(y: &[u8]) -> Option<(char, usize)> {
+    if let [a, b, ..] = y[..]
+        && let Some(a) = hex_to_u8(a)
+        && let Some(b) = hex_to_u8(b)
+    {
+        let ch = (a as u32) << 4 | (b as u32);
+        char::from_u32(ch).map(|x| (x, 2))
+    } else {
+        None
+    }
+}
+
+fn dec_char4(y: &[u8]) -> Option<(char, usize)> {
+    if let [a, b, c, d, ..] = y[..]
+        && let Some(a) = hex_to_u8(a)
+        && let Some(b) = hex_to_u8(b)
+        && let Some(c) = hex_to_u8(c)
+        && let Some(d) = hex_to_u8(d)
+    {
+        let ch = (a as u32) << 12 | (b as u32) << 8 | (c as u32) << 4 | (d as u32);
+        char::from_u32(ch).map(|x| (x, 4))
+    } else {
+        None
+    }
+}
+
+fn dec_char8(y: &[u8]) -> Option<(char, usize)> {
+    if let [a, b, c, d, e, f, g, h, ..] = y[..]
+        && let Some(a) = hex_to_u8(a)
+        && let Some(b) = hex_to_u8(b)
+        && let Some(c) = hex_to_u8(c)
+        && let Some(d) = hex_to_u8(d)
+        && let Some(e) = hex_to_u8(e)
+        && let Some(f) = hex_to_u8(f)
+        && let Some(g) = hex_to_u8(g)
+        && let Some(h) = hex_to_u8(h)
+    {
+        let ch = (a as u32) << 28
+            | (b as u32) << 24
+            | (c as u32) << 20
+            | (d as u32) << 16
+            | (e as u32) << 12
+            | (f as u32) << 8
+            | (g as u32) << 4
+            | (h as u32);
+        char::from_u32(ch).map(|x| (x, 8))
+    } else {
+        None
     }
 }
 
@@ -1101,12 +1107,12 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
 
     let mut i_buf = itoa::Buffer::new();
     let mut r_buf = ryu::Buffer::new();
-    let mut bls = vec![(Bl::C(n.as_ref()), 0)];
+    let mut blocks = vec![(Bl::C(n.as_ref()), 0)];
 
     buf.push(b'{');
 
     loop {
-        let (bl, index) = match bls.pop() {
+        let (bl, index) = match blocks.pop() {
             Some(x) => x,
             None => return,
         };
@@ -1116,7 +1122,7 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
                     Some(t) => t,
                     None => {
                         buf.push(b'\n');
-                        for _ in 0..bls.len() {
+                        for _ in 0..blocks.len() {
                             buf.extend(SPACE);
                         }
                         buf.push(b'}');
@@ -1127,8 +1133,8 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
                     buf.push(b',');
                 }
                 buf.push(b'\n');
-                bls.push((Bl::C(x), index + 1));
-                for _ in 0..bls.len() {
+                blocks.push((Bl::C(x), index + 1));
+                for _ in 0..blocks.len() {
                     buf.extend(SPACE);
                 }
                 enc_str(buf, name);
@@ -1209,11 +1215,11 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
                     }
                     Tag::List(x) => {
                         buf.push(b'[');
-                        bls.push((Bl::from(x), 0));
+                        blocks.push((Bl::from(x), 0));
                     }
                     Tag::Compound(x) => {
                         buf.push(b'{');
-                        bls.push((Bl::C(x.as_ref()), 0));
+                        blocks.push((Bl::C(x.as_ref()), 0));
                     }
                 }
 
@@ -1370,25 +1376,25 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
                     if index != 0 {
                         buf.extend(DELIMITER);
                     }
-                    bls.push((Bl::List(y), index + 1));
-                    bls.push((Bl::from(l), 0));
+                    blocks.push((Bl::List(y), index + 1));
+                    blocks.push((Bl::from(l), 0));
                     buf.push(b'[');
                     continue;
                 }
             }
             Bl::Compound(y) => {
                 if let Some(l) = y.get(index) {
-                    bls.push((Bl::Compound(y), index + 1));
-                    bls.push((Bl::C(l.as_ref()), 0));
+                    blocks.push((Bl::Compound(y), index + 1));
+                    blocks.push((Bl::C(l.as_ref()), 0));
                     if index != 0 {
                         buf.extend(b",\n");
-                        for _ in 0..bls.len() {
+                        for _ in 0..blocks.len() {
                             buf.extend(SPACE);
                         }
                     }
                     buf.extend(b"{\n");
                     // next depth
-                    for _ in 0..bls.len() + 1 {
+                    for _ in 0..blocks.len() + 1 {
                         buf.extend(SPACE);
                     }
                     continue;
