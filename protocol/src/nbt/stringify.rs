@@ -26,12 +26,12 @@ impl From<Compound> for StringifyCompound {
 impl StringifyCompound {
     #[inline]
     pub fn decode(n: &str) -> Result<Self, Error> {
-        unsafe { decode(&mut n.as_bytes()).map(Self) }
+        unsafe { decode(&mut n.as_bytes(), 512).map(Self) }
     }
 
     #[inline]
     pub fn encode(&self, buf: &mut Vec<u8>) {
-        unsafe { encode(buf, &self.0) }
+        encode(buf, &self.0)
     }
 }
 
@@ -41,6 +41,13 @@ fn find_ascii(n: &[u8], p: impl FnMut(u8) -> bool) -> Result<usize, Error> {
         Some(x) => Ok(x),
         None => Err(Error),
     }
+}
+
+fn find_next_value(n: &[u8]) -> Result<(&[u8], &[u8]), Error> {
+    let i = find_ascii(n, |x| {
+        matches!(x, b',' | b']' | b'}' | b' ' | b'\n' | b'\t' | b'\r')
+    })?;
+    unsafe { Ok(n.split_at_unchecked(i)) }
 }
 
 fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
@@ -147,7 +154,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
     }
 }
 
-unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
+unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     enum Bl {
         C(Compound),
         L(List),
@@ -163,6 +170,10 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
         return Err(Error);
     }
     loop {
+        // step 1 or none
+        if bls.len() == max_depth {
+            return Err(Error);
+        }
         let mut bl = match bls.pop() {
             Some(x) => x,
             None => return Err(Error),
@@ -292,7 +303,7 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                         let m = n.get_unchecked(0..x);
                         let a = names.len();
                         names.extend(m);
-                        let m = core::str::from_utf8_unchecked(names.get_unchecked(a..));
+                        let m = names.get_unchecked(a..);
                         *n = n.get_unchecked(x..);
                         m
                     }
@@ -333,32 +344,24 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                         *n = rest;
                         tmp.clear();
                         let s = dec_quoted_str(n, &mut tmp, b'"')?;
-                        Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                        Tag::String(BoxStr::new_unchecked(Box::from(s)))
                     }
                     (b'\'', rest) => {
                         *n = rest;
                         tmp.clear();
                         let s = dec_quoted_str(n, &mut tmp, b'\'')?;
-                        Tag::String(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                        Tag::String(BoxStr::new_unchecked(Box::from(s)))
                     }
                     _ => {
-                        let mid = find_ascii(n, |x| {
-                            matches!(x, b',' | b'}' | b' ' | b'\n' | b'\t' | b'\r')
-                        })?;
-                        let b = match n.split_at_checked(mid) {
-                            Some((x, y)) => {
-                                *n = y;
-                                x
-                            }
-                            None => return Err(Error),
-                        };
-                        match dec_num(b, &mut tmp) {
+                        let (value, rest) = find_next_value(n)?;
+                        *n = rest;
+                        match dec_num(value, &mut tmp) {
                             Ok(x) => Tag::from(x),
-                            Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(b))),
+                            Err(_) => Tag::String(BoxStr::new_unchecked(Box::from(value))),
                         }
                     }
                 };
-                c.push(BoxStr::new_unchecked(Box::from(k.as_bytes())), t);
+                c.push(BoxStr::new_unchecked(Box::from(k)), t);
             },
             Bl::L(mut l) => match peek(n)? {
                 (b'{', rest) => {
@@ -426,28 +429,20 @@ unsafe fn decode(n: &mut &[u8]) -> Result<Compound, Error> {
                             *n = rest;
                             tmp.clear();
                             let s = dec_quoted_str(n, &mut tmp, b'"')?;
-                            Err(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                            Err(BoxStr::new_unchecked(Box::from(s)))
                         }
                         (b'\'', rest) => {
                             *n = rest;
                             tmp.clear();
                             let s = dec_quoted_str(n, &mut tmp, b'\'')?;
-                            Err(BoxStr::new_unchecked(Box::from(s.as_bytes())))
+                            Err(BoxStr::new_unchecked(Box::from(s)))
                         }
                         _ => {
-                            let i = find_ascii(n, |x| {
-                                matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
-                            })?;
-                            let b = match n.split_at_checked(i) {
-                                Some((x, y)) => {
-                                    *n = y;
-                                    x
-                                }
-                                None => return Err(Error),
-                            };
-                            match dec_num(b, &mut tmp) {
+                            let (value, rest) = find_next_value(n)?;
+                            *n = rest;
+                            match dec_num(value, &mut tmp) {
                                 Ok(x) => Ok(x),
-                                Err(_) => Err(BoxStr::new_unchecked(Box::from(b))),
+                                Err(_) => Err(BoxStr::new_unchecked(Box::from(value))),
                             }
                         }
                     };
@@ -478,22 +473,20 @@ unsafe fn dec_list_string(
                 skip_ws(n);
                 tmp.clear();
                 let x = match peek(n)? {
-                    (b'\"', rest) => unsafe {
+                    (b'\"', rest) => {
                         *n = rest;
-                        Box::from(dec_quoted_str(n, tmp, b'\"')?.as_bytes())
-                    },
-                    (b'\'', rest) => unsafe {
+                        Box::from(dec_quoted_str(n, tmp, b'\"')?)
+                    }
+                    (b'\'', rest) => {
                         *n = rest;
-                        Box::from(dec_quoted_str(n, tmp, b'\'')?.as_bytes())
-                    },
-                    _ => unsafe {
-                        let x = find_ascii(n, |x| {
-                            matches!(x, b',' | b']' | b' ' | b'\n' | b'\t' | b'\r')
-                        })?;
-                        let m = Box::from(n.get_unchecked(0..x));
-                        *n = n.get_unchecked(x..);
-                        m
-                    },
+                        Box::from(dec_quoted_str(n, tmp, b'\'')?)
+                    }
+                    _ => {
+                        let (value, rest) = find_next_value(n)?;
+                        let cloned = Box::from(value);
+                        *n = rest;
+                        cloned
+                    }
                 };
                 list.push(unsafe { BoxStr::new_unchecked(x) });
             }
@@ -521,7 +514,9 @@ unsafe fn dec_list_primitive(
         match u8::read(n)? {
             b',' => 'l: {
                 skip_ws(n);
-                let num = match dec_num(n, tmp)? {
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let num = match dec_num(value, tmp)? {
                     TagPrimitive::Byte(x) => x as i64,
                     TagPrimitive::Short(x) => x as i64,
                     TagPrimitive::Int(x) => x as i64,
@@ -910,11 +905,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
 
 const ESCAPE: u8 = b'\\';
 
-unsafe fn dec_quoted_str<'a>(
-    n: &mut &[u8],
-    buf: &'a mut Vec<u8>,
-    quote: u8,
-) -> Result<&'a str, Error> {
+fn dec_quoted_str<'a>(n: &mut &[u8], buf: &'a mut Vec<u8>, quote: u8) -> Result<&'a [u8], Error> {
     let begin = buf.len();
     let mut last = 0;
     let mut cur = find_ascii(n, |p| p == ESCAPE || p == quote)?;
@@ -948,7 +939,7 @@ unsafe fn dec_quoted_str<'a>(
     unsafe {
         buf.extend(n.get_unchecked(last..cur));
         *n = n.get_unchecked(1 + cur..);
-        Ok(core::str::from_utf8_unchecked(buf.get_unchecked(begin..)))
+        Ok(buf.get_unchecked(begin..))
     }
 }
 
@@ -1070,7 +1061,7 @@ fn skip_ws(n: &mut &[u8]) {
 const SPACE: &[u8] = b"    ";
 const DELIMITER: &[u8] = b", ";
 
-unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
+fn encode(buf: &mut Vec<u8>, n: &Compound) {
     #[derive(Clone, Copy)]
     enum Bl<'a> {
         C(&'a [(BoxStr, Tag)]),
@@ -1108,8 +1099,8 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
         }
     }
 
-    let mut itoa_buf = itoa::Buffer::new();
-    let mut ryu_buf = ryu::Buffer::new();
+    let mut i_buf = itoa::Buffer::new();
+    let mut r_buf = ryu::Buffer::new();
     let mut bls = vec![(Bl::C(n.as_ref()), 0)];
 
     buf.push(b'{');
@@ -1144,31 +1135,31 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                 buf.extend(b": ");
                 match &tag {
                     Tag::Byte(x) => {
-                        let s = itoa_buf.format(*x);
+                        let s = i_buf.format(*x);
                         buf.extend(s.as_bytes());
                         buf.push(b'B');
                     }
                     Tag::Short(x) => {
-                        let s = itoa_buf.format(*x);
+                        let s = i_buf.format(*x);
                         buf.extend(s.as_bytes());
                         buf.push(b'S');
                     }
                     Tag::Int(x) => {
-                        let s = itoa_buf.format(*x);
+                        let s = i_buf.format(*x);
                         buf.extend(s.as_bytes());
                     }
                     Tag::Long(x) => {
-                        let s = itoa_buf.format(*x);
+                        let s = i_buf.format(*x);
                         buf.extend(s.as_bytes());
                         buf.push(b'L');
                     }
                     Tag::Float(x) => {
-                        let s = ryu_buf.format(*x);
+                        let s = r_buf.format(*x);
                         buf.extend(s.as_bytes());
                         buf.push(b'F');
                     }
                     Tag::Double(x) => {
-                        let s = ryu_buf.format(*x);
+                        let s = r_buf.format(*x);
                         buf.extend(s.as_bytes());
                         buf.push(b'D');
                     }
@@ -1183,7 +1174,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                                 buf.extend(DELIMITER);
                             }
                             flag = true;
-                            let s = itoa_buf.format(y);
+                            let s = i_buf.format(y);
                             buf.extend(s.as_bytes());
                             buf.push(b'b');
                         }
@@ -1197,7 +1188,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                                 buf.extend(DELIMITER);
                             }
                             flag = true;
-                            let s = itoa_buf.format(y);
+                            let s = i_buf.format(y);
                             buf.extend(s.as_bytes());
                         }
                         buf.push(b']');
@@ -1210,7 +1201,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                                 buf.extend(DELIMITER);
                             }
                             flag = true;
-                            let s = itoa_buf.format(y);
+                            let s = i_buf.format(y);
                             buf.extend(s.as_bytes());
                             buf.push(b'l');
                         }
@@ -1236,7 +1227,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    let s = itoa_buf.format(y);
+                    let s = i_buf.format(y);
                     buf.extend(s.as_bytes());
                     buf.push(b'b');
                 }
@@ -1248,7 +1239,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    let s = itoa_buf.format(y);
+                    let s = i_buf.format(y);
                     buf.extend(s.as_bytes());
                     buf.push(b's');
                 }
@@ -1260,7 +1251,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    let s = itoa_buf.format(y);
+                    let s = i_buf.format(y);
                     buf.extend(s.as_bytes());
                 }
             }
@@ -1271,7 +1262,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    let s = itoa_buf.format(y);
+                    let s = i_buf.format(y);
                     buf.extend(s.as_bytes());
                     buf.push(b'l');
                 }
@@ -1283,7 +1274,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    let s = ryu_buf.format(y);
+                    let s = r_buf.format(y);
                     buf.extend(s.as_bytes());
                     buf.push(b'f');
                 }
@@ -1295,7 +1286,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.extend(DELIMITER);
                     }
                     flag = true;
-                    let s = ryu_buf.format(y);
+                    let s = r_buf.format(y);
                     buf.extend(s.as_bytes());
                     buf.push(b'd');
                 }
@@ -1326,7 +1317,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                             buf.extend(DELIMITER);
                         }
                         flag1 = true;
-                        let s = itoa_buf.format(z);
+                        let s = i_buf.format(z);
                         buf.extend(s.as_bytes());
                         buf.push(b'b');
                     }
@@ -1347,7 +1338,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                             buf.extend(DELIMITER);
                         }
                         flag1 = true;
-                        let s = itoa_buf.format(z);
+                        let s = i_buf.format(z);
                         buf.extend(s.as_bytes());
                     }
                     buf.push(b']');
@@ -1367,7 +1358,7 @@ unsafe fn encode(buf: &mut Vec<u8>, n: &Compound) {
                             buf.extend(DELIMITER);
                         }
                         flag1 = true;
-                        let s = itoa_buf.format(z);
+                        let s = i_buf.format(z);
                         buf.extend(s.as_bytes());
                         buf.push(b'l');
                     }
