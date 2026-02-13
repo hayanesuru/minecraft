@@ -726,7 +726,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
         },
         _ => Suffix::Auto,
     };
-    let parser = if let Suffix::Auto = suffix
+    let mut parser = if let Suffix::Auto = suffix
         && let Radix::Decimal = radix
     {
         match last {
@@ -738,25 +738,33 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
                 n = rest;
                 FloatParser::Double
             }
-            _ => {
-                if n[1..].iter().all(|&x| matches!(x, b'0'..=b'9' | b'_')) {
-                    FloatParser::None
-                } else {
-                    FloatParser::Double
-                }
-            }
+            _ => FloatParser::None,
         }
     } else {
         FloatParser::None
     };
-    let radix = if matches!(parser, FloatParser::None) && matches!(radix, Radix::Decimal) {
+    let radix = if let FloatParser::None = parser
+        && let Radix::Decimal = radix
+    {
         match peek(n)? {
             (b'+', rest) => {
-                n = rest;
+                if let Suffix::Auto = suffix
+                    && !n.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
+                {
+                    parser = FloatParser::Double;
+                } else {
+                    n = rest;
+                }
                 Radix::Decimal
             }
             (b'-', rest) => {
-                n = rest;
+                if let Suffix::Auto = suffix
+                    && !n.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
+                {
+                    parser = FloatParser::Double;
+                } else {
+                    n = rest;
+                }
                 Radix::NegativeDecimal
             }
             _ => Radix::Decimal,
@@ -793,7 +801,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
                 Err(_) => Err(Error),
             };
         },
-        _ => {}
+        FloatParser::None => {}
     }
 
     while let [first, rest @ ..] = n {
