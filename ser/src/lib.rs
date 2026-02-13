@@ -40,7 +40,9 @@ pub trait Read<'a>: Sized {
 
 /// # Safety
 ///
-/// `ptr` must be valid for writes of `x.sz()` bytes.
+/// `ptr` must be valid for writes of [`len_s`] bytes.
+///
+/// [`len_s`]: Write::len_s
 #[inline]
 pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
     unsafe {
