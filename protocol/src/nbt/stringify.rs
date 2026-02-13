@@ -744,7 +744,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
         match peek(n)? {
             (b'+', rest) => {
                 if let Suffix::Auto = suffix
-                    && !n.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
+                    && !rest.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
                 {
                     parser = FloatParser::Double;
                 } else {
@@ -754,7 +754,7 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
             }
             (b'-', rest) => {
                 if let Suffix::Auto = suffix
-                    && !n.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
+                    && !rest.iter().all(|&x| matches!(x, b'0'..=b'9' | b'_'))
                 {
                     parser = FloatParser::Double;
                 } else {
