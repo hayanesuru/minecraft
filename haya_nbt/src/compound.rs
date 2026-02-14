@@ -1,5 +1,4 @@
-use crate::string::StringTag;
-use crate::{RefStringTag, Tag, TagType};
+use crate::{RefStringTag, StringTag, Tag, TagType};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, UnsafeWriter, Write};

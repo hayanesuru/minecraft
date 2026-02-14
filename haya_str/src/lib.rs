@@ -1,5 +1,8 @@
 #![no_std]
 
+use core::mem::transmute;
+use core::ptr::copy_nonoverlapping;
+
 const MAX: usize = 31;
 
 #[derive(Clone, Copy)]
@@ -64,7 +67,7 @@ impl AsMut<str> for HayaStr {
 impl core::fmt::Debug for HayaStr {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.as_ref())
+        write!(f, "{:?}", self.as_ref())
     }
 }
 
@@ -104,6 +107,15 @@ impl core::hash::Hash for HayaStr {
     }
 }
 
+impl Default for HayaStr {
+    fn default() -> Self {
+        Self {
+            len: Len::N0,
+            data: [0; MAX],
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OutOfBoundsError;
 
@@ -124,11 +136,9 @@ impl HayaStr {
         let new_len = ch_len + len;
         if new_len <= MAX {
             unsafe {
-                ch.encode_utf8(core::slice::from_raw_parts_mut(
-                    self.data.as_mut_ptr().add(len),
-                    ch_len,
-                ));
-                self.len = core::mem::transmute::<u8, Len>(new_len as u8);
+                let ptr = self.data.as_mut_ptr().add(len);
+                ch.encode_utf8(core::slice::from_raw_parts_mut(ptr, ch_len));
+                self.len = transmute::<u8, Len>(new_len as u8);
             }
             Ok(())
         } else {
@@ -141,17 +151,18 @@ impl HayaStr {
         let new_len = len + s.len();
         if new_len <= MAX {
             unsafe {
-                core::ptr::copy_nonoverlapping(
-                    s.as_ptr(),
-                    self.data.as_mut_ptr().add(len),
-                    s.len(),
-                );
-                self.len = core::mem::transmute::<u8, Len>(new_len as u8);
+                let ptr = self.data.as_mut_ptr().add(len);
+                copy_nonoverlapping(s.as_ptr(), ptr, s.len());
+                self.len = transmute::<u8, Len>(new_len as u8);
                 Ok(())
             }
         } else {
             Err(OutOfBoundsError)
         }
+    }
+
+    pub const fn clear(&mut self) {
+        self.len = unsafe { transmute::<u8, Len>(0) };
     }
 
     pub const fn new(s: &str) -> Result<Self, OutOfBoundsError> {
@@ -160,9 +171,9 @@ impl HayaStr {
         } else {
             unsafe {
                 let mut data = [0; MAX];
-                core::ptr::copy_nonoverlapping(s.as_ptr(), data.as_mut_ptr(), s.len());
+                copy_nonoverlapping(s.as_ptr(), data.as_mut_ptr(), s.len());
                 Ok(Self {
-                    len: core::mem::transmute::<u8, Len>(s.len() as u8),
+                    len: transmute::<u8, Len>(s.len() as u8),
                     data,
                 })
             }
