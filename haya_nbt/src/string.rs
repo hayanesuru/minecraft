@@ -1,5 +1,4 @@
-use crate::str::BoxStr;
-use crate::{Error, Ident, Read, UnsafeWriter, Write};
+use crate::{Error, Read, UnsafeWriter, Write};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{
@@ -97,38 +96,39 @@ impl<'a> Read<'a> for RefStringTag<'a> {
         }
     }
 }
-#[derive(Clone)]
-pub struct IdentifierTag<'a>(pub Ident<'a>);
 
-impl Write for IdentifierTag<'_> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            let l = self.0.namespace.len() + 1 + self.0.path.len();
-            (l as u16).write(w);
-            w.write(self.0.namespace.as_bytes());
-            w.write_byte(b':');
-            w.write(self.0.path.as_bytes());
-        }
-    }
+// #[derive(Clone)]
+// pub struct IdentifierTag<'a>(pub Ident<'a>);
 
-    fn len_s(&self) -> usize {
-        2 + self.0.namespace.len() + 1 + self.0.path.len()
-    }
-}
+// impl Write for IdentifierTag<'_> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             let l = self.0.namespace.len() + 1 + self.0.path.len();
+//             (l as u16).write(w);
+//             w.write(self.0.namespace.as_bytes());
+//             w.write_byte(b':');
+//             w.write(self.0.path.as_bytes());
+//         }
+//     }
 
-impl<'a> Read<'a> for IdentifierTag<'a> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let s = unsafe { core::str::from_utf8_unchecked(StringTagRaw::read(buf)?.inner()) };
-        match Ident::parse(s) {
-            Some(ident) => Ok(Self(ident)),
-            None => Err(Error),
-        }
-    }
-}
+//     fn len_s(&self) -> usize {
+//         2 + self.0.namespace.len() + 1 + self.0.path.len()
+//     }
+// }
+
+// impl<'a> Read<'a> for IdentifierTag<'a> {
+//     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+//         let s = unsafe { core::str::from_utf8_unchecked(StringTagRaw::read(buf)?.inner()) };
+//         match Ident::parse(s) {
+//             Some(ident) => Ok(Self(ident)),
+//             None => Err(Error),
+//         }
+//     }
+// }
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct StringTag(pub BoxStr);
+pub struct StringTag(pub Box<str>);
 
 impl Read<'_> for StringTag {
     #[inline]
@@ -142,20 +142,22 @@ impl Read<'_> for StringTag {
             None => return Err(Error),
         };
         if is_ascii_mutf8(data) {
-            unsafe { Ok(Self(BoxStr::new_unchecked(Box::from(data)))) }
+            unsafe { Ok(Self(Box::from(core::str::from_utf8_unchecked(data)))) }
         } else {
             let len = decode_mutf8_len(data)?;
             let mut x = Vec::with_capacity(len);
             unsafe {
                 mser::write_unchecked(x.as_mut_ptr(), &(DecodeMutf8(data, len)));
                 x.set_len(len);
-                Ok(Self(BoxStr::new_unchecked(x.into_boxed_slice())))
+                Ok(Self(
+                    alloc::string::String::from_utf8_unchecked(x).into_boxed_str(),
+                ))
             }
         }
     }
 }
 
-pub struct DecodeMutf8<'a>(pub &'a [u8], pub usize);
+pub(crate) struct DecodeMutf8<'a>(pub &'a [u8], pub usize);
 
 impl Write for DecodeMutf8<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {

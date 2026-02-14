@@ -1,3 +1,7 @@
+#![no_std]
+
+extern crate alloc;
+
 mod byte_array;
 mod compound;
 mod int_array;
@@ -6,91 +10,90 @@ mod long_array;
 mod string;
 mod stringify;
 
-pub use self::compound::{Compound, CompoundNamed, CompoundUnamed};
+pub use self::byte_array::ByteArray;
+pub use self::compound::{Compound, CompoundNamed};
+pub use self::int_array::IntArray;
 pub use self::list::{List, ListInfo};
-use self::string::DecodeMutf8;
-pub use self::string::{IdentifierTag, RefStringTag, StringTag, StringTagRaw};
+pub use self::long_array::LongArray;
+pub use self::string::{RefStringTag, StringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
-use crate::str::BoxStr;
-use crate::{Error, Ident, Identifier, Read, UnsafeWriter, Write};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{decode_mutf8_len, is_ascii_mutf8};
-use uuid::Uuid;
+use mser::{Error, Read, UnsafeWriter, Write};
 
-pub struct Map<T>(pub T);
+// pub struct Map<T>(pub T);
 
-impl<'a, T: MapCodec> Read<'a> for Map<T> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        match TagType::read(buf) {
-            Ok(TagType::Compound) => match T::read_kv(buf) {
-                Ok(x) => Ok(Map(x)),
-                Err(e) => Err(e),
-            },
-            _ => Err(Error),
-        }
-    }
-}
+// impl<'a, T: MapCodec> Read<'a> for Map<T> {
+//     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+//         match TagType::read(buf) {
+//             Ok(TagType::Compound) => match T::read_kv(buf) {
+//                 Ok(x) => Ok(Map(x)),
+//                 Err(e) => Err(e),
+//             },
+//             _ => Err(Error),
+//         }
+//     }
+// }
 
-impl<T: MapCodec> Write for Map<T> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Compound.write(w);
-            self.0.write_kv(w);
-        }
-    }
+// impl<T: MapCodec> Write for Map<T> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::Compound.write(w);
+//             self.0.write_kv(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::Compound.len_s() + self.0.len_kv()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::Compound.len_s() + self.0.len_kv()
+//     }
+// }
 
-pub trait MapCodec: Sized {
-    fn read_kv(buf: &mut &[u8]) -> Result<Self, Error>;
-    /// # Safety
-    ///
-    /// Must write [`len_kv`] bytes exactly.
-    ///
-    /// [`len_kv`]: MapCodec::len_kv
-    unsafe fn write_kv(&self, w: &mut UnsafeWriter);
-    fn len_kv(&self) -> usize;
-}
+// pub trait MapCodec: Sized {
+//     fn read_kv(buf: &mut &[u8]) -> Result<Self, Error>;
+//     /// # Safety
+//     ///
+//     /// Must write [`len_kv`] bytes exactly.
+//     ///
+//     /// [`len_kv`]: MapCodec::len_kv
+//     unsafe fn write_kv(&self, w: &mut UnsafeWriter);
+//     fn len_kv(&self) -> usize;
+// }
 
-pub trait MapReader<T: Sized = Self>: Sized {
-    fn visit(&mut self, ty: TagType, k: &[u8], buf: &mut &[u8]) -> Result<(), Error>;
-    fn end(self) -> Result<T, Error>;
-    fn read_map(mut self, buf: &mut &[u8]) -> Result<T, Error> {
-        let mut temp = Vec::new();
-        loop {
-            let ty = TagType::read(buf)?;
-            if matches!(ty, TagType::End) {
-                mser::cold_path();
-                return self.end();
-            }
-            let len = u16::read(buf)? as usize;
-            let a = match buf.split_at_checked(len) {
-                Some((x, y)) => {
-                    *buf = y;
-                    x
-                }
-                None => return Err(Error),
-            };
-            let k = if is_ascii_mutf8(a) {
-                a
-            } else {
-                let len = decode_mutf8_len(a)?;
-                temp.clear();
-                temp.reserve_exact(len);
-                unsafe {
-                    mser::write_unchecked(temp.as_mut_ptr(), &(DecodeMutf8(a, len)));
-                    temp.set_len(len);
-                    &temp
-                }
-            };
-            self.visit(ty, k, buf)?;
-        }
-    }
-}
+// pub trait MapReader<T: Sized = Self>: Sized {
+//     fn visit(&mut self, ty: TagType, k: &[u8], buf: &mut &[u8]) -> Result<(), Error>;
+//     fn end(self) -> Result<T, Error>;
+//     fn read_map(mut self, buf: &mut &[u8]) -> Result<T, Error> {
+//         let mut temp = Vec::new();
+//         loop {
+//             let ty = TagType::read(buf)?;
+//             if matches!(ty, TagType::End) {
+//                 mser::cold_path();
+//                 return self.end();
+//             }
+//             let len = u16::read(buf)? as usize;
+//             let a = match buf.split_at_checked(len) {
+//                 Some((x, y)) => {
+//                     *buf = y;
+//                     x
+//                 }
+//                 None => return Err(Error),
+//             };
+//             let k = if is_ascii_mutf8(a) {
+//                 a
+//             } else {
+//                 let len = decode_mutf8_len(a)?;
+//                 temp.clear();
+//                 temp.reserve_exact(len);
+//                 unsafe {
+//                     mser::write_unchecked(temp.as_mut_ptr(), &(DecodeMutf8(a, len)));
+//                     temp.set_len(len);
+//                     &temp
+//                 }
+//             };
+//             self.visit(ty, k, buf)?;
+//         }
+//     }
+// }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -110,160 +113,160 @@ pub enum TagType {
     LongArray,
 }
 
-#[must_use]
-pub struct Kv<'a, T>(pub &'a [u8], pub T);
+// #[must_use]
+// pub struct Kv<'a, T>(pub &'a [u8], pub T);
 
-pub struct End;
+// pub struct End;
 
-impl Write for End {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe { TagType::End.write(w) }
-    }
+// impl Write for End {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe { TagType::End.write(w) }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::End.len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::End.len_s()
+//     }
+// }
 
-impl<'a> Read<'a> for End {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        match TagType::read(buf) {
-            Ok(TagType::End) => Ok(Self),
-            _ => Err(Error),
-        }
-    }
-}
+// impl<'a> Read<'a> for End {
+//     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+//         match TagType::read(buf) {
+//             Ok(TagType::End) => Ok(Self),
+//             _ => Err(Error),
+//         }
+//     }
+// }
 
-impl<'a> Write for Kv<'a, &'a BoxStr> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            Kv(self.0, self.1.as_str()).write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, &'a BoxStr> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             Kv(self.0, self.1.as_str()).write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        Kv(self.0, self.1.as_str()).len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         Kv(self.0, self.1.as_str()).len_s()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, &'a str> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::String.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            RefStringTag(self.1).write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, &'a str> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::String.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             RefStringTag(self.1).write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::String.len_s()
-            + StringTagRaw::new_unchecked(self.0).len_s()
-            + RefStringTag(self.1).len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::String.len_s()
+//             + StringTagRaw::new_unchecked(self.0).len_s()
+//             + RefStringTag(self.1).len_s()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, ListInfo> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::List.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            self.1.write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, ListInfo> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::List.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             self.1.write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::List.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::List.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, StringTagRaw<'a>> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::String.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            self.1.write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, StringTagRaw<'a>> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::String.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             self.1.write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::String.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::String.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, bool> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Byte.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            self.1.write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, bool> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::Byte.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             self.1.write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::Byte.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::Byte.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_s()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, Ident<'a>> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::String.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            IdentifierTag(self.1).write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, Ident<'a>> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::String.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             IdentifierTag(self.1).write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::String.len_s()
-            + StringTagRaw::new_unchecked(self.0).len_s()
-            + IdentifierTag(self.1).len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::String.len_s()
+//             + StringTagRaw::new_unchecked(self.0).len_s()
+//             + IdentifierTag(self.1).len_s()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, &'a Identifier> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::String.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            IdentifierTag(self.1.as_ident()).write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, &'a Identifier> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::String.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             IdentifierTag(self.1.as_ident()).write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::String.len_s()
-            + StringTagRaw::new_unchecked(self.0).len_s()
-            + IdentifierTag(self.1.as_ident()).len_s()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::String.len_s()
+//             + StringTagRaw::new_unchecked(self.0).len_s()
+//             + IdentifierTag(self.1.as_ident()).len_s()
+//     }
+// }
 
-impl<'a, T: MapCodec> Write for Kv<'a, &'a T> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Compound.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            self.1.write_kv(w);
-        }
-    }
+// impl<'a, T: MapCodec> Write for Kv<'a, &'a T> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::Compound.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             self.1.write_kv(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::Compound.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_kv()
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::Compound.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + self.1.len_kv()
+//     }
+// }
 
-impl<'a> Write for Kv<'a, Uuid> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::IntArray.write(w);
-            StringTagRaw::new_unchecked(self.0).write(w);
-            4u32.write(w);
-            self.1.as_bytes().write(w);
-        }
-    }
+// impl<'a> Write for Kv<'a, Uuid> {
+//     unsafe fn write(&self, w: &mut UnsafeWriter) {
+//         unsafe {
+//             TagType::IntArray.write(w);
+//             StringTagRaw::new_unchecked(self.0).write(w);
+//             4u32.write(w);
+//             self.1.as_bytes().write(w);
+//         }
+//     }
 
-    fn len_s(&self) -> usize {
-        TagType::Compound.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + 4u32.len_s() + 16
-    }
-}
+//     fn len_s(&self) -> usize {
+//         TagType::Compound.len_s() + StringTagRaw::new_unchecked(self.0).len_s() + 4u32.len_s() + 16
+//     }
+// }
 
 impl TagType {
     pub fn bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
@@ -278,7 +281,7 @@ impl TagType {
         }
     }
 
-    pub fn string(self, buf: &mut &[u8]) -> Result<BoxStr, Error> {
+    pub fn string(self, buf: &mut &[u8]) -> Result<Box<str>, Error> {
         match self {
             Self::String => match StringTag::read(buf) {
                 Ok(x) => Ok(x.0),
@@ -288,24 +291,24 @@ impl TagType {
         }
     }
 
-    pub fn ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
-        match self {
-            Self::String => match IdentifierTag::read(buf) {
-                Ok(x) => unsafe {
-                    Ok(Identifier {
-                        namespace: if x.0.namespace == Ident::MINECRAFT {
-                            None
-                        } else {
-                            Some(BoxStr::new_unchecked(Box::from(x.0.namespace.as_bytes())))
-                        },
-                        path: BoxStr::new_unchecked(Box::from(x.0.path.as_bytes())),
-                    })
-                },
-                Err(e) => Err(e),
-            },
-            _ => Err(Error),
-        }
-    }
+    // pub fn ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
+    //     match self {
+    //         Self::String => match IdentifierTag::read(buf) {
+    //             Ok(x) => unsafe {
+    //                 Ok(Identifier {
+    //                     namespace: if x.0.namespace == Ident::MINECRAFT {
+    //                         None
+    //                     } else {
+    //                         Some(Box::from(x.0.namespace.as_bytes()))
+    //                     },
+    //                     path: Box::from(x.0.path.as_bytes()),
+    //                 })
+    //             },
+    //             Err(e) => Err(e),
+    //         },
+    //         _ => Err(Error),
+    //     }
+    // }
 
     pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
         match self {
@@ -382,7 +385,7 @@ pub enum Tag {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(BoxStr),
+    String(Box<str>),
     ByteArray(Vec<i8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
@@ -391,7 +394,7 @@ pub enum Tag {
 }
 
 #[derive(Clone)]
-pub enum TagPrimitive {
+pub(crate) enum TagPrimitive {
     Byte(i8),
     Short(i16),
     Int(i32),
@@ -552,20 +555,20 @@ impl From<Vec<i8>> for Tag {
 impl<'a> From<&'a str> for Tag {
     #[inline]
     fn from(value: &'a str) -> Self {
-        unsafe { Self::String(BoxStr::new_unchecked(Box::from(value.as_bytes()))) }
+        Self::String(Box::from(value))
     }
 }
 
 impl<'a> From<&'a mut str> for Tag {
     #[inline]
     fn from(value: &'a mut str) -> Self {
-        unsafe { Self::String(BoxStr::new_unchecked(Box::from(value.as_bytes()))) }
+        Self::String(Box::from(value))
     }
 }
 
-impl From<BoxStr> for Tag {
+impl From<Box<str>> for Tag {
     #[inline]
-    fn from(value: BoxStr) -> Self {
+    fn from(value: Box<str>) -> Self {
         Self::String(value)
     }
 }

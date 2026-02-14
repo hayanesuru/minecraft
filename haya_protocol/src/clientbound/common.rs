@@ -1,7 +1,7 @@
-use crate::nbt::Tag;
 use crate::{
     ByteArray, Component, Ident, List, Rest, ServerLinkUntrustedEntry, TagNetworkEntry, Utf8,
 };
+use haya_nbt::Tag;
 use mser::V32;
 use uuid::Uuid;
 

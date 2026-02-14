@@ -1,5 +1,5 @@
-use crate::nbt::Tag;
 use crate::{Ident, KnownPack, List, RegistryKey, Utf8};
+use haya_nbt::Tag;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FinishConfiguration {}

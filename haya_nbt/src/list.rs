@@ -1,4 +1,7 @@
-use super::*;
+use crate::{ByteArray, Compound, IntArray, LongArray, RefStringTag, StringTag, TagType};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone)]
 pub enum List {
@@ -9,7 +12,7 @@ pub enum List {
     Long(Vec<i64>),
     Float(Vec<f32>),
     Double(Vec<f64>),
-    String(Vec<BoxStr>),
+    String(Vec<Box<str>>),
     ByteArray(Vec<Vec<i8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
@@ -18,7 +21,7 @@ pub enum List {
 }
 
 #[derive(Clone)]
-pub enum ListPrimitive {
+pub(crate) enum ListPrimitive {
     Byte(Vec<i8>),
     Short(Vec<i16>),
     Int(Vec<i32>),
@@ -39,8 +42,29 @@ impl From<ListPrimitive> for List {
         }
     }
 }
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy)]
 pub struct ListInfo(pub TagType, pub u32);
+
+impl<'a> Read<'a> for ListInfo {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let t = TagType::read(buf)?;
+        let l = u32::read(buf)?;
+        Ok(Self(t, l))
+    }
+}
+
+impl Write for ListInfo {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            self.0.write(w);
+            self.1.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len_s() + self.1.len_s()
+    }
+}
 
 impl From<Vec<u8>> for List {
     #[inline]
@@ -94,9 +118,9 @@ impl From<Vec<f64>> for List {
     }
 }
 
-impl From<Vec<BoxStr>> for List {
+impl From<Vec<Box<str>>> for List {
     #[inline]
-    fn from(value: Vec<BoxStr>) -> Self {
+    fn from(value: Vec<Box<str>>) -> Self {
         Self::String(value)
     }
 }
@@ -163,7 +187,7 @@ impl Write for List {
             match self {
                 Self::None => {}
                 Self::Byte(x) => {
-                    w.write(byte_array::i8_to_u8_slice(x));
+                    w.write(crate::byte_array::i8_to_u8_slice(x));
                 }
                 Self::Short(x) => {
                     x.iter().for_each(|x| x.write(w));
@@ -238,7 +262,7 @@ impl ListInfo {
             TagType::Byte => match n.split_at_checked(len) {
                 Some((x, y)) => {
                     *n = y;
-                    Ok(List::Byte(Vec::from(byte_array::u8_to_i8_slice(x))))
+                    Ok(List::Byte(Vec::from(crate::byte_array::u8_to_i8_slice(x))))
                 }
                 None => Err(Error),
             },
@@ -323,7 +347,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(len);
                 for _ in 0..len {
-                    list.push(byte_array::ByteArray::read(n)?.0);
+                    list.push(ByteArray::read(n)?.0);
                 }
                 Ok(List::ByteArray(list))
             }
@@ -364,7 +388,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(len);
                 for _ in 0..len {
-                    list.push(int_array::IntArray::read(n)?.0);
+                    list.push(IntArray::read(n)?.0);
                 }
                 Ok(List::IntArray(list))
             }
@@ -374,7 +398,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(len);
                 for _ in 0..len {
-                    list.push(long_array::LongArray::read(n)?.0);
+                    list.push(LongArray::read(n)?.0);
                 }
                 Ok(List::LongArray(list))
             }

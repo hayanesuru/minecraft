@@ -1,23 +1,23 @@
-use crate::nbt::string::StringTag;
-use crate::nbt::{RefStringTag, Tag, TagType};
-use crate::str::BoxStr;
+use crate::string::StringTag;
+use crate::{RefStringTag, Tag, TagType};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct Compound(Vec<(BoxStr, Tag)>);
+pub struct Compound(Vec<(Box<str>, Tag)>);
 
-impl AsRef<[(BoxStr, Tag)]> for Compound {
+impl AsRef<[(Box<str>, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(BoxStr, Tag)] {
+    fn as_ref(&self) -> &[(Box<str>, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(BoxStr, Tag)]> for Compound {
+impl AsMut<[(Box<str>, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(BoxStr, Tag)] {
+    fn as_mut(&mut self) -> &mut [(Box<str>, Tag)] {
         self.0.as_mut_slice()
     }
 }
@@ -80,7 +80,7 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct CompoundNamed(pub BoxStr, pub Compound);
+pub struct CompoundNamed(pub Box<str>, pub Compound);
 
 impl Read<'_> for CompoundNamed {
     #[inline]
@@ -98,54 +98,18 @@ impl Write for CompoundNamed {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             TagType::Compound.write(w);
-            RefStringTag(self.0.as_str()).write(w);
+            RefStringTag(&self.0).write(w);
             self.1.write(w);
         }
     }
 
     #[inline]
     fn len_s(&self) -> usize {
-        1 + Write::len_s(&RefStringTag(self.0.as_str())) + Write::len_s(&self.1)
+        1 + Write::len_s(&RefStringTag(&self.0)) + Write::len_s(&self.1)
     }
 }
 
-#[derive(Clone)]
-pub struct CompoundUnamed(pub Compound);
-
-impl Read<'_> for CompoundUnamed {
-    #[inline]
-    fn read(n: &mut &[u8]) -> Result<Self, Error> {
-        if matches!(TagType::read(n)?, TagType::Compound) {
-            Ok(Self(Compound::read(n)?))
-        } else {
-            Err(Error)
-        }
-    }
-}
-
-impl Write for CompoundUnamed {
-    #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Compound.write(w);
-            self.0.write(w);
-        }
-    }
-
-    #[inline]
-    fn len_s(&self) -> usize {
-        1 + Write::len_s(&self.0)
-    }
-}
-
-impl From<Compound> for CompoundUnamed {
-    #[inline]
-    fn from(value: Compound) -> Self {
-        Self(value)
-    }
-}
-
-impl<K: Into<BoxStr>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<Box<str>>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -190,18 +154,18 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (BoxStr, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (Box<str>, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (BoxStr, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (Box<str>, Tag)> {
         self.0.iter_mut()
     }
 
     #[inline]
     pub fn sort(&mut self) {
-        self.0.sort_unstable_by(|x, y| x.0.cmp(&*y.0));
+        self.0.sort_unstable_by(|x, y| x.0.cmp(&y.0));
     }
 
     #[inline]
@@ -223,7 +187,7 @@ impl Compound {
     /// [`len`]: Self::len
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> (&str, &mut Tag) {
         let (x, y) = unsafe { self.0.get_unchecked_mut(index) };
-        (x.as_str(), y)
+        (&**x, y)
     }
 
     #[inline]
@@ -233,12 +197,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: impl Into<BoxStr>, v: impl Into<Tag>) {
-        self.push_(k.into(), v.into());
-    }
-
-    #[inline]
-    fn push_(&mut self, k: BoxStr, v: Tag) {
+    pub fn push(&mut self, k: Box<str>, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -276,7 +235,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(BoxStr, Tag)> {
+    pub fn into_inner(self) -> Vec<(Box<str>, Tag)> {
         self.0
     }
 }
@@ -294,14 +253,14 @@ impl Read<'_> for Compound {
             }
             let k = StringTag::read(buf)?.0;
             let v = ty.tag(buf)?;
-            compound.push_(k, v);
+            compound.push(k, v);
         }
     }
 }
 
-impl From<Vec<(BoxStr, Tag)>> for Compound {
+impl From<Vec<(Box<str>, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(BoxStr, Tag)>) -> Self {
+    fn from(value: Vec<(Box<str>, Tag)>) -> Self {
         Self(value)
     }
 }
