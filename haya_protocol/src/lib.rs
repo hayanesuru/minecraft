@@ -1,16 +1,15 @@
 #![no_std]
 
-use crate::nbt::Tag;
 use crate::str::BoxStr;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use haya_nbt::Tag;
 use mser::{Error, Read, UnsafeWriter, V21, V32, Write};
 
 // pub mod chat;
 pub mod clientbound;
 // pub mod dialog;
 pub mod item;
-pub mod nbt;
 pub mod profile;
 pub mod serverbound;
 pub mod str;

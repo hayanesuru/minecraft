@@ -29,6 +29,8 @@ jobs:
           toolchain: nightly
           components: clippy
       - name: Clippy
-        uses: auguwu/clippy-action@1.4.0
+        uses: auguwu/clippy-action@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Spell Check Repo
+        uses: crate-ci/typos@master

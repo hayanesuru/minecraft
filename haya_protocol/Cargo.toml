@@ -1,5 +1,5 @@
 [package]
-name = "minecraft_data_protocol"
+name = "haya_protocol"
 version = "0.1.0-rc.0+1.21.11"
 authors.workspace = true
 readme.workspace = true
@@ -14,10 +14,9 @@ default = []
 minecraft_data = { workspace = true }
 mser = { workspace = true }
 mser_macro = { workspace = true }
-uuid = { version = "1", default-features = false }
-itoa = "1"
-ryu = "1"
-unicode_names2 = "2"
+haya_nbt = { workspace = true }
+
+uuid = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

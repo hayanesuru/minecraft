@@ -1,4 +1,4 @@
-use crate::nbt::Compound;
+use haya_nbt::Compound;
 use minecraft_data::item;
 
 #[derive(Clone)]

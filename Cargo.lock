@@ -20,6 +20,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "haya_nbt"
+version = "0.1.0"
+dependencies = [
+ "itoa",
+ "mser",
+ "ryu",
+ "unicode_names2",
+]
+
+[[package]]
+name = "haya_protocol"
+version = "0.1.0-rc.0+1.21.11"
+dependencies = [
+ "haya_nbt",
+ "minecraft_data",
+ "mser",
+ "mser_macro",
+ "uuid",
+]
+
+[[package]]
+name = "haya_str"
+version = "0.1.0"
+
+[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -39,19 +64,6 @@ dependencies = [
  "mser",
  "nested",
  "ryu",
-]
-
-[[package]]
-name = "minecraft_data_protocol"
-version = "0.1.0-rc.0+1.21.11"
-dependencies = [
- "itoa",
- "minecraft_data",
- "mser",
- "mser_macro",
- "ryu",
- "unicode_names2",
- "uuid",
 ]
 
 [[package]]

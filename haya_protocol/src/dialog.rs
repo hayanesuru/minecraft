@@ -131,12 +131,12 @@ pub enum AfterAction {
 
 #[derive(Clone)]
 pub struct ActionButton {
-    pub botton: Botton,
+    pub button: Button,
     pub action: Option<Action>,
 }
 
 #[derive(Clone)]
-pub struct Botton {
+pub struct Button {
     pub label: Box<Component>,
     pub tooltip: Option<Box<Component>>,
     pub width: u32,

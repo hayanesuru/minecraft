@@ -1,18 +1,22 @@
 [workspace]
-members = ["data", "ser", "ser_macro", "protocol"]
+members = ["haya_data", "haya_nbt", "haya_protocol", "haya_ser", "haya_ser_macro", "haya_str"]
 resolver = "2"
 
 [workspace.package]
-authors = ["hayanesuru"]
+authors = ["hayanesuru <hayanesuru@outlook.jp>"]
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/hayanesuru/minecraft"
 edition = "2024"
 
 [workspace.dependencies]
-mser = { path = "ser", version = "2.2.0", default-features = false }
-mser_macro = { path = "ser_macro", version = "2.2.0", default-features = false }
-minecraft_data = { path = "data", version = "2.2.0", default-features = false }
+mser = { path = "haya_ser", version = "2.2", default-features = false }
+mser_macro = { path = "haya_ser_macro", version = "2.2", default-features = false }
+minecraft_data = { path = "haya_data", version = "2.2", default-features = false }
+haya_nbt = { path = "haya_nbt", version = "0.1" }
+
+uuid = { version = "1", default-features = false }
 
 [profile.dev.package."minecraft_data"]
 incremental = false
+opt-level = 1
