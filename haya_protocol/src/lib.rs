@@ -204,70 +204,15 @@ impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Ident<'a> {
-    pub namespace: &'a str,
+    pub namespace: Option<&'a str>,
     pub path: &'a str,
-}
-
-impl<'a> Ident<'a> {
-    pub const MINECRAFT: &'static str = "minecraft";
-
-    pub fn is_valid_path(c: char) -> bool {
-        matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.' | '/')
-    }
-
-    pub fn is_valid_namespace(c: char) -> bool {
-        matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.')
-    }
-
-    pub fn parse(identifier: &'a str) -> Option<Self> {
-        match identifier.strip_prefix("minecraft:") {
-            Some(path) => {
-                if path.chars().all(Self::is_valid_path) {
-                    Some(Self {
-                        namespace: Self::MINECRAFT,
-                        path,
-                    })
-                } else {
-                    None
-                }
-            }
-            None => match identifier.split_once(':') {
-                Some((namespace, path)) => {
-                    if namespace.chars().all(Self::is_valid_namespace)
-                        && path.chars().all(Self::is_valid_path)
-                    {
-                        Some(Self {
-                            namespace: if !namespace.is_empty() {
-                                namespace
-                            } else {
-                                Self::MINECRAFT
-                            },
-                            path,
-                        })
-                    } else {
-                        None
-                    }
-                }
-                None => {
-                    if identifier.chars().all(Self::is_valid_path) {
-                        Some(Self {
-                            namespace: Self::MINECRAFT,
-                            path: identifier,
-                        })
-                    } else {
-                        None
-                    }
-                }
-            },
-        }
-    }
 }
 
 impl<'a> Read<'a> for Ident<'a> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let identifier = Utf8::<32767>::read(buf)?.0;
-        match Self::parse(identifier) {
-            Some(x) => Ok(x),
+        let identifier = ByteArray::<32767>::read(buf)?.0;
+        match haya_ident::parse_ident(identifier) {
+            Some((namespace, path)) => Ok(Self { namespace, path }),
             None => Err(Error),
         }
     }
@@ -276,15 +221,23 @@ impl<'a> Read<'a> for Ident<'a> {
 impl Write for Ident<'_> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            V21((self.namespace.len() + 1 + self.path.len()) as _).write(w);
-            w.write(self.namespace.as_bytes());
+            let namespace = match self.namespace {
+                Some(x) => x,
+                None => haya_ident::MINECRAFT,
+            };
+            V21((namespace.len() + 1 + self.path.len()) as _).write(w);
+            w.write(namespace.as_bytes());
             w.write_byte(b':');
             w.write(self.path.as_bytes());
         }
     }
 
     fn len_s(&self) -> usize {
-        let a = self.namespace.len() + 1 + self.path.len();
+        let namespace = match self.namespace {
+            Some(x) => x,
+            None => haya_ident::MINECRAFT,
+        };
+        let a = namespace.len() + 1 + self.path.len();
         V21(a as u32).len_s() + a
     }
 }
@@ -298,10 +251,7 @@ pub struct Identifier {
 impl Identifier {
     pub fn as_ident(&self) -> Ident<'_> {
         Ident {
-            namespace: match self.namespace.as_deref() {
-                Some(x) => x,
-                None => Ident::MINECRAFT,
-            },
+            namespace: self.namespace.as_deref(),
             path: &self.path,
         }
     }

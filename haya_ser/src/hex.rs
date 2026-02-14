@@ -1,5 +1,5 @@
 macro_rules! parse_impl {
-    ($($t:ident => $to:ident),* $(,)?) => {
+    ($($t:ident),* $(,)?) => {
         $(
         impl Integer for $t {
             fn parse(buf: &[u8]) -> (Self, usize) {
@@ -14,7 +14,7 @@ macro_rules! parse_impl {
                         x = x.get_unchecked(1..);
                     }
                 }
-                let mut out: $to = 0;
+                let mut out: $t = 0;
                 match x.split_first() {
                     Some((&dig, y)) => {
                         if let Some(dig) = hex_to_u8(dig) {
@@ -34,7 +34,7 @@ macro_rules! parse_impl {
                         break;
                     }
                 }
-                ($t::from_ne_bytes(out.to_ne_bytes()), buf.len() - x.len())
+                (out, buf.len() - x.len())
             }
         }
         )*
@@ -50,16 +50,12 @@ pub fn parse_hex<T: Integer>(n: &[u8]) -> (T, usize) {
 }
 
 parse_impl! {
-    u8 => u8,
-    u16 => u16,
-    u32 => u32,
-    u64 => u64,
-    i8 => u8,
-    i16 => u16,
-    i32 => u32,
-    f32 => u32,
-    f64 => u64,
+    u8,
+    u16,
+    u32,
+    u64,
 }
+
 const HEX_DIG: &[u8; 16] = b"0123456789abcdef";
 
 #[inline]

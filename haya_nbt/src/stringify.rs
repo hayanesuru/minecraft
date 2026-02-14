@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::str::from_utf8_unchecked;
-use mser::{hex_to_u8, parse_int_s, u8_to_hex};
+use mser::{hex_to_u8, u8_to_hex};
 
 const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
 const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
@@ -55,7 +55,8 @@ fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
     }
 }
 
-fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
+fn dec_arr_peek(n: &mut &[u8], tmp: &mut Vec<u8>) -> Result<TagArray, Error> {
+    tmp.clear();
     match n {
         [b'B', b';', rest @ ..] => {
             *n = rest;
@@ -68,26 +69,14 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             loop {
                 skip_ws(n);
-                let x = match peek(n)? {
-                    (b't' | b'T', rest) => {
-                        *n = dec_true_peek(rest)?;
-                        1
-                    }
-                    (b'f' | b'F', rest) => {
-                        *n = dec_false_peek(rest)?;
-                        0
-                    }
-                    _ => {
-                        let (a, b) = parse_int_s::<i8>(n);
-                        *n = match peek(b)? {
-                            (b'B' | b'b', rest) => rest,
-                            _ => b,
-                        };
-                        a
-                    }
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let a = match dec_num(value, tmp) {
+                    Ok(TagPrimitive::Byte(l)) => l,
+                    _ => return Err(Error),
                 };
                 skip_ws(n);
-                vec.push(x);
+                vec.push(a);
                 match u8::read(n)? {
                     b']' => break,
                     b',' => continue,
@@ -108,10 +97,14 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             loop {
                 skip_ws(n);
-                let (x, l) = parse_int_s::<i32>(n);
-                *n = l;
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let a = match dec_num(value, tmp) {
+                    Ok(TagPrimitive::Int(l)) => l,
+                    _ => return Err(Error),
+                };
                 skip_ws(n);
-                vec.push(x);
+                vec.push(a);
                 match u8::read(n)? {
                     b']' => break,
                     b',' => continue,
@@ -132,10 +125,11 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             loop {
                 skip_ws(n);
-                let (a, b) = parse_int_s::<i64>(n);
-                *n = match peek(b)? {
-                    (b'L' | b'l', rest) => rest,
-                    _ => b,
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let a = match dec_num(value, tmp) {
+                    Ok(TagPrimitive::Long(l)) => l,
+                    _ => return Err(Error),
                 };
                 skip_ws(n);
                 vec.push(a);
@@ -325,7 +319,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     }
                     (b'[', rest) => {
                         *n = rest;
-                        match dec_arr_peek(n) {
+                        match dec_arr_peek(n, &mut tmp) {
                             Ok(TagArray::Byte(x)) => Tag::ByteArray(x),
                             Ok(TagArray::Int(x)) => Tag::IntArray(x),
                             Ok(TagArray::Long(x)) => Tag::LongArray(x),
@@ -375,7 +369,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                 }
                 (b'[', rest) => {
                     *n = rest;
-                    match dec_arr_peek(n) {
+                    match dec_arr_peek(n, &mut tmp) {
                         Ok(arr) => {
                             match arr {
                                 TagArray::Byte(b) => {
