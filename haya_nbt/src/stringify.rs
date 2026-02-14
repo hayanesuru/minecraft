@@ -48,6 +48,19 @@ fn find_next_value(n: &[u8]) -> Result<(&[u8], &[u8]), Error> {
     unsafe { Ok(n.split_at_unchecked(i)) }
 }
 
+/// Returns the first byte of the slice and the remainder of the slice.
+///
+/// # Errors
+///
+/// Returns `Err(Error)` if the input slice is empty.
+///
+/// # Examples
+///
+/// ```
+/// let (b, rest) = peek(b"hello").unwrap();
+/// assert_eq!(b, b'h');
+/// assert_eq!(rest, b"ello");
+/// ```
 fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
     match n {
         [x, rest @ ..] => Ok((*x, rest)),
@@ -55,6 +68,26 @@ fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
     }
 }
 
+/// Parses a typed array literal for Byte (`B;`), Int (`I;`), or Long (`L;`) from the start of `n`,
+/// consumes the parsed bytes from `n`, and returns the corresponding `TagArray`.
+///
+/// The function expects the input slice to begin with one of the type prefixes `B;`, `I;` or `L;`
+/// (i.e. immediately after a leading `'['`), then a comma-separated list of values and a closing `]`.
+/// Values are decoded with `dec_num` using the provided temporary buffer `tmp`. An empty array
+/// (immediately followed by `]`) is accepted. Returns `Err(Error)` on malformed input or if any
+/// element fails to decode to the required primitive type.
+///
+/// # Examples
+///
+/// ```
+/// let mut slice: &[u8] = b"B; 1b, 2b, 3b]";
+/// let mut tmp = TBuf(Vec::new());
+/// match dec_arr_peek(&mut slice, &mut tmp) {
+///     Ok(TagArray::Byte(v)) => assert_eq!(v, vec![1i8, 2, 3]),
+///     other => panic!("unexpected parse result: {:?}", other),
+/// }
+/// // `slice` has been advanced past the parsed array (now empty or pointing after `]`)
+/// ```
 fn dec_arr_peek(n: &mut &[u8], tmp: &mut TBuf) -> Result<TagArray, Error> {
     match n {
         [b'B', b';', rest @ ..] => {
@@ -147,12 +180,44 @@ fn dec_arr_peek(n: &mut &[u8], tmp: &mut TBuf) -> Result<TagArray, Error> {
 
 struct TBuf(Vec<u8>);
 impl TBuf {
+    /// Clears the internal buffer and returns a mutable reference to it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut buf = TBuf(Vec::from(&b"data"[..]));
+    /// let v = buf.next();
+    /// assert!(v.is_empty());
+    /// v.extend_from_slice(b"hi");
+    /// assert_eq!(buf.0.as_slice(), b"hi");
+    /// ```
     fn next(&mut self) -> &mut Vec<u8> {
         self.0.clear();
         &mut self.0
     }
 }
 
+/// Parses a textual Compound from a byte slice and advances the input past the parsed value.
+///
+/// Constructs a `Compound` from a textual representation that begins with `{` and may contain nested
+/// compounds, lists, primitive values, strings, and typed arrays. On success the input slice `n` is
+/// advanced to the first byte after the parsed compound; on failure the slice may be left at an
+/// indeterminate position and an `Error` is returned.
+///
+/// # Safety
+///
+/// This function is `unsafe` because it performs unchecked UTF-8 conversions and advances the input
+/// slice by raw pointer/index operations. The caller must ensure the provided slice is valid for
+/// reads for the duration of the call and that advancing the slice is acceptable for the caller's
+/// use of the original buffer.
+///
+/// # Examples
+///
+/// ```
+/// let mut input: &[u8] = b"{}";
+/// let compound = unsafe { decode(&mut input, 512).unwrap() };
+/// assert!(input.is_empty());
+/// ```
 unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     enum Bl {
         C(Compound),
@@ -459,6 +524,36 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     }
 }
 
+/// Parses a comma-separated list of string values from a bracketed list in `n` and appends them to `list`.
+///
+/// `n` must point at the input immediately after the opening `[`; on success it is advanced past the closing `]`.
+/// Supports double-quoted and single-quoted strings with escape processing, and unquoted bare values delimited by commas or the closing bracket.
+///
+/// # Parameters
+///
+/// - `n`: input byte slice cursor, advanced as values are consumed.
+/// - `tmp`: temporary buffer reused for decoding quoted strings.
+/// - `list`: destination vector receiving parsed string values as `Box<str>`.
+///
+/// # Returns
+///
+/// `Ok(())` on successful parse; `Err(Error)` if the list is malformed or a value cannot be decoded.
+///
+/// # Examples
+///
+/// ```
+/// # use haya_nbt::stringify::{dec_list_string, TBuf};
+/// # use haya_nbt::Error;
+/// let mut input: &[u8] = b"\"one\", 'two', three ]";
+/// let mut tmp = TBuf(Vec::new());
+/// let mut out: Vec<Box<str>> = Vec::new();
+/// unsafe {
+///     dec_list_string(&mut input, &mut tmp, &mut out).unwrap();
+/// }
+/// assert_eq!(&*out[0], "one");
+/// assert_eq!(&*out[1], "two");
+/// assert_eq!(&*out[2], "three");
+/// ```
 unsafe fn dec_list_string(
     n: &mut &[u8],
     tmp: &mut TBuf,
@@ -494,6 +589,29 @@ unsafe fn dec_list_string(
     }
 }
 
+/// Parses a comma-separated list of primitive values, continuing a list that already has its first element.
+///
+/// Continues reading values from `n` (which should begin at the next token after the already-consumed first element)
+/// and appends parsed values to a `ListPrimitive` whose variant is determined by `tag`. The returned `ListPrimitive`
+/// will use the same primitive type as `tag`.
+///
+/// On success returns the completed `ListPrimitive`. Returns `Err(Error)` if the input is malformed, if separators
+/// or terminators are incorrect, or if a parsed value cannot be converted into the list's primitive type (for example,
+/// attempting to append a non-integer float into an integer list).
+///
+/// # Examples
+///
+/// ```
+/// // Continue a list that started with the integer 1 and then contains ",2,3]"
+/// let mut input: &[u8] = b",2,3]";
+/// let mut tmp = TBuf(Vec::new());
+/// let tag = TagPrimitive::Int(1);
+/// let list = unsafe { dec_list_primitive(&mut input, &mut tmp, tag) }.unwrap();
+/// match list {
+///     ListPrimitive::Int(v) => assert_eq!(v, vec![1, 2, 3]),
+///     _ => panic!("unexpected variant"),
+/// }
+/// ```
 unsafe fn dec_list_primitive(
     n: &mut &[u8],
     tmp: &mut TBuf,
@@ -577,6 +695,42 @@ fn dec_false_peek(n: &[u8]) -> Result<&[u8], Error> {
     }
 }
 
+/// Parses a numeric or boolean literal from a byte slice and returns the corresponding `TagPrimitive`.
+///
+/// Accepts boolean literals `true`/`false` (case-insensitive first letter), integer literals with
+/// optional prefixes (`0x` hex, `0b` binary), optional leading `+`/`-`, embedded `_` digit separators,
+/// and type suffixes (`b/s/i/l` for byte/short/int/long with optional `u` for unsigned). When no
+/// explicit integer suffix is present, decimal tokens may be parsed as `Float`/`Double` if they
+/// contain non-digit punctuation or explicit `f`/`d` suffixes. On success returns the parsed
+/// `TagPrimitive`; on failure returns `Err(Error)`.
+///
+/// # Parameters
+///
+/// - `n`: the input byte slice containing the literal to parse. The slice is not modified, but the
+///   function advances through it conceptually and validates that the entire token is consumed.
+/// - `tmp`: temporary scratch buffer used to collect digits when input contains underscore `_`
+///   separators; callers may reuse a single `Vec<u8>` across calls to avoid allocations.
+///
+/// # Returns
+///
+/// `Ok(TagPrimitive)` with the parsed numeric or boolean value if parsing succeeds, `Err(Error)` if
+/// the token is malformed or leftover input remains after parsing.
+///
+/// # Examples
+///
+/// ```
+/// # use haya_nbt::{stringify::dec_num, TagPrimitive, Error};
+/// let mut tmp = Vec::new();
+/// assert_eq!(dec_num(b"123", &mut tmp).unwrap(), TagPrimitive::Int(123));
+/// tmp.clear();
+/// assert_eq!(dec_num(b"true", &mut tmp).unwrap(), TagPrimitive::Byte(1));
+/// tmp.clear();
+/// // hex with byte suffix
+/// assert_eq!(dec_num(b"0xFFb", &mut tmp).unwrap(), TagPrimitive::Byte(-1));
+/// tmp.clear();
+/// // float literal with suffix
+/// assert!(matches!(dec_num(b"1.5f", &mut tmp).unwrap(), TagPrimitive::Float(_)));
+/// ```
 fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
     #[derive(Clone, Copy)]
     enum Suffix {

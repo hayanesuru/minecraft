@@ -45,6 +45,27 @@ pub trait Integer: Copy {
     fn parse(buf: &[u8]) -> (Self, usize);
 }
 
+/// Parse a hexadecimal-encoded integer of type `T` from a byte slice.
+///
+/// The function reads consecutive ASCII hex digits (`0-9`, `a-f`, `A-F`) from the start of `n`,
+/// optionally prefixed by a `'+'`, and returns the parsed value along with the number of bytes consumed.
+/// If no valid hex digit is found, it returns `(0, 0)`.
+///
+/// # Examples
+///
+/// ```
+/// let (v, len) = parse_hex::<u8>(b"1azz");
+/// assert_eq!(v, 0x1a);
+/// assert_eq!(len, 2);
+///
+/// let (v, len) = parse_hex::<u16>(b"+FF00rest");
+/// assert_eq!(v, 0xFF00);
+/// assert_eq!(len, 4);
+///
+/// let (v, len) = parse_hex::<u32>(b"");
+/// assert_eq!(v, 0);
+/// assert_eq!(len, 0);
+/// ```
 pub fn parse_hex<T: Integer>(n: &[u8]) -> (T, usize) {
     T::parse(n)
 }

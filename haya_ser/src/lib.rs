@@ -52,6 +52,21 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
 #[cold]
 pub const fn cold_path() {}
 
+/// Computes a 128-bit hash of a byte slice using the provided seed.
+///
+/// The result is a deterministic 128-bit value derived from `n` and `seed`.
+///
+/// # Examples
+///
+/// ```
+/// let a = hash128(b"hello", 0);
+/// let b = hash128(b"hello", 1);
+/// assert_ne!(a, b);
+/// ```
+///
+/// # Returns
+///
+/// A `[u64; 2]` where element `0` is the high 64 bits and element `1` is the low 64 bits of the 128-bit hash.
 pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
     const M: u64 = 0xc6a4a7935bd1e995;
     const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
@@ -75,6 +90,28 @@ pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
 pub struct ByteArray<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
 
 impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
+    /// Writes the byte slice as a V21 length-prefixed payload into the provided `UnsafeWriter`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure `w` points to a writable region large enough to accept exactly
+    /// `self.len_s()` bytes; violating this may cause undefined behavior.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let payload = b"hello";
+    /// let ba = haya_ser::ByteArray::<{ usize::MAX }>(payload.as_ref());
+    ///
+    /// // prepare a buffer large enough for the length prefix + payload
+    /// let mut buf = [0u8; 16];
+    /// let mut uw = haya_ser::UnsafeWriter::new(&mut buf);
+    ///
+    /// unsafe {
+    ///     ba.write(&mut uw);
+    /// }
+    /// // after writing, the first bytes of `buf` contain the V21 length prefix followed by "hello"
+    /// ```
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             V21(self.0.len() as u32).write(w);
@@ -82,12 +119,43 @@ impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
         }
     }
 
+    /// Compute the number of bytes that will be written for this `ByteArray`.
+    ///
+    /// The result is the size of the V21-encoded length prefix followed by the payload length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let ba = ByteArray(b"abc");
+    /// let expected = V21(ba.0.len() as u32).len_s() + ba.0.len();
+    /// assert_eq!(ba.len_s(), expected);
+    /// ```
     fn len_s(&self) -> usize {
         V21(self.0.len() as u32).len_s() + self.0.len()
     }
 }
 
 impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
+    /// Reads a length-prefixed byte slice from `buf` and returns a `ByteArray` referencing that slice.
+    ///
+    /// The function first reads a V21 length prefix, verifies the length does not exceed `MAX`,
+    /// then attempts to take that many bytes from `buf`. On success `buf` is advanced past the
+    /// consumed bytes and a `ByteArray` containing the slice is returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(Error)` if the decoded length is greater than `MAX` or if `buf` does not contain
+    /// enough bytes for the requested length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Buffer layout: [len = 1 (V21), payload = b'a']
+    /// let mut buf: &[u8] = &[0x01, b'a'];
+    /// let ba = ByteArray::<10>::read(&mut buf).unwrap();
+    /// assert_eq!(ba.0, b"a");
+    /// assert_eq!(buf, &[] as &[u8]); // remaining buffer is empty
+    /// ```
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX {

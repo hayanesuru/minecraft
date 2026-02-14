@@ -69,6 +69,23 @@ impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
 }
 
 impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
+    /// Reads a length-prefixed UTF-8 string from the buffer and returns it as `Utf8<'a, MAX>`.
+    ///
+    /// The function first reads the length as a `V21`, ensures the byte length does not exceed `MAX * 3`,
+    /// then reads that many bytes and validates they are UTF-8. Finally it verifies the UTF-16 code unit
+    /// length of the decoded string is `<= MAX`.
+    ///
+    /// Returns `Err(Error)` if the declared length exceeds `MAX * 3`, the buffer is too short, the bytes
+    /// are not valid UTF-8, or the UTF-16 code unit length is greater than `MAX`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // For small lengths `V21` is encoded in a single byte; here 3 then "abc".
+    /// let mut buf: &[u8] = &[3, b'a', b'b', b'c'];
+    /// let s = crate::Utf8::<16>::read(&mut buf).unwrap();
+    /// assert_eq!(s.0, "abc");
+    /// ```
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX * 3 {
@@ -164,6 +181,16 @@ impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
         unsafe { w.write(self.0) }
     }
 
+    /// Number of bytes in the underlying slice.
+    ///
+    /// Returns the length in bytes of the contained slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let r = Rest(b"abc");
+    /// assert_eq!(r.len_s(), 3);
+    /// ```
     fn len_s(&self) -> usize {
         self.0.len()
     }

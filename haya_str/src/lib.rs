@@ -56,6 +56,20 @@ impl AsRef<str> for HayaStr {
 }
 
 impl AsMut<str> for HayaStr {
+    /// Provide a mutable `&str` view of the currently initialized bytes.
+    ///
+    /// This returns a mutable string slice that borrows the portion of the internal
+    /// buffer indicated by the stored length. The bytes are interpreted as UTF‑8
+    /// without additional validation (code assumes the stored bytes are valid UTF‑8).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut s = HayaStr::new("hi").unwrap();
+    /// let slice = s.as_mut();
+    /// slice.make_ascii_uppercase();
+    /// assert_eq!(&*s, "HI");
+    /// ```
     #[inline]
     fn as_mut(&mut self) -> &mut str {
         unsafe {
@@ -67,6 +81,17 @@ impl AsMut<str> for HayaStr {
 impl core::ops::Deref for HayaStr {
     type Target = str;
 
+    /// Dereferences this `HayaStr` to a string slice view of its contents.
+    ///
+    /// Returns a `&str` that borrows the stored UTF-8 bytes for the current length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut s = HayaStr::new("hi").unwrap();
+    /// let slice: &str = s.deref();
+    /// assert_eq!(slice, "hi");
+    /// ```
     #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_ref()
@@ -74,13 +99,30 @@ impl core::ops::Deref for HayaStr {
 }
 
 impl core::ops::DerefMut for HayaStr {
-    #[inline]
+    /// Mutably dereferences the HayaStr to its underlying `str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut s = HayaStr::new("ab").unwrap();
+    /// let slice: &mut str = s.deref_mut();
+    /// slice.make_ascii_uppercase();
+    /// assert_eq!(&*s, "AB");
+    /// ```
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_mut()
     }
 }
 
 impl core::fmt::Debug for HayaStr {
+    /// Formats the value using the underlying string's debug representation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let s = HayaStr::new("hi").unwrap();
+    /// assert_eq!(format!("{:?}", s), "\"hi\"");
+    /// ```
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:?}", self.as_ref())
