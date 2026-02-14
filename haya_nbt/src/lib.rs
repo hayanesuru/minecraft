@@ -62,25 +62,6 @@ impl TagType {
         }
     }
 
-    // pub fn ident(self, buf: &mut &[u8]) -> Result<Identifier, Error> {
-    //     match self {
-    //         Self::String => match IdentifierTag::read(buf) {
-    //             Ok(x) => unsafe {
-    //                 Ok(Identifier {
-    //                     namespace: if x.0.namespace == Ident::MINECRAFT {
-    //                         None
-    //                     } else {
-    //                         Some(Box::from(x.0.namespace.as_bytes()))
-    //                     },
-    //                     path: Box::from(x.0.path.as_bytes()),
-    //                 })
-    //             },
-    //             Err(e) => Err(e),
-    //         },
-    //         _ => Err(Error),
-    //     }
-    // }
-
     pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
         match self {
             Self::IntArray => Ok(int_array::IntArray::read(buf)?.0),
@@ -186,11 +167,12 @@ impl From<TagPrimitive> for Tag {
         }
     }
 }
+
 #[derive(Clone)]
-pub enum TagArray {
-    ByteArray(Vec<i8>),
-    IntArray(Vec<i32>),
-    LongArray(Vec<i64>),
+pub(crate) enum TagArray {
+    Byte(Vec<i8>),
+    Int(Vec<i32>),
+    Long(Vec<i64>),
 }
 
 impl Write for Tag {

@@ -64,7 +64,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             let mut vec = Vec::new();
             if let (b']', rest) = peek(n)? {
                 *n = rest;
-                return Ok(TagArray::ByteArray(vec));
+                return Ok(TagArray::Byte(vec));
             }
             loop {
                 skip_ws(n);
@@ -95,7 +95,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(TagArray::ByteArray(vec))
+            Ok(TagArray::Byte(vec))
         }
         [b'I', b';', rest @ ..] => {
             *n = rest;
@@ -104,7 +104,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             let mut vec = Vec::new();
             if let (b']', rest) = peek(n)? {
                 *n = rest;
-                return Ok(TagArray::IntArray(vec));
+                return Ok(TagArray::Int(vec));
             }
             loop {
                 skip_ws(n);
@@ -119,7 +119,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(TagArray::IntArray(vec))
+            Ok(TagArray::Int(vec))
         }
         [b'L', b';', rest @ ..] => {
             *n = rest;
@@ -128,7 +128,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             let mut vec = Vec::new();
             if let (b']', rest) = peek(n)? {
                 *n = rest;
-                return Ok(TagArray::LongArray(vec));
+                return Ok(TagArray::Long(vec));
             }
             loop {
                 skip_ws(n);
@@ -146,7 +146,7 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(TagArray::LongArray(vec))
+            Ok(TagArray::Long(vec))
         }
         _ => Err(Error),
     }
@@ -326,9 +326,9 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     (b'[', rest) => {
                         *n = rest;
                         match dec_arr_peek(n) {
-                            Ok(TagArray::ByteArray(x)) => Tag::ByteArray(x),
-                            Ok(TagArray::IntArray(x)) => Tag::IntArray(x),
-                            Ok(TagArray::LongArray(x)) => Tag::LongArray(x),
+                            Ok(TagArray::Byte(x)) => Tag::ByteArray(x),
+                            Ok(TagArray::Int(x)) => Tag::IntArray(x),
+                            Ok(TagArray::Long(x)) => Tag::LongArray(x),
                             Err(_) => {
                                 names.extend(kl);
                                 blocks.push(Bl::C(c));
@@ -378,7 +378,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     match dec_arr_peek(n) {
                         Ok(arr) => {
                             match arr {
-                                TagArray::ByteArray(b) => {
+                                TagArray::Byte(b) => {
                                     if let List::None = &l {
                                         l = List::ByteArray(Vec::new());
                                     }
@@ -387,7 +387,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                                         _ => return Err(Error),
                                     }
                                 }
-                                TagArray::IntArray(b) => {
+                                TagArray::Int(b) => {
                                     if let List::None = &l {
                                         l = List::IntArray(Vec::new());
                                     }
@@ -396,7 +396,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                                         _ => return Err(Error),
                                     }
                                 }
-                                TagArray::LongArray(b) => {
+                                TagArray::Long(b) => {
                                     if let List::None = &l {
                                         l = List::LongArray(Vec::new());
                                     }
