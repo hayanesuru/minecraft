@@ -224,8 +224,8 @@ impl Write for Tag {
     }
 }
 
-impl From<Tag> for TagType {
-    fn from(value: Tag) -> Self {
+impl From<&Tag> for TagType {
+    fn from(value: &Tag) -> Self {
         value.id()
     }
 }
