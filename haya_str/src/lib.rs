@@ -162,7 +162,7 @@ impl HayaStr {
     }
 
     pub const fn clear(&mut self) {
-        self.len = unsafe { transmute::<u8, Len>(0) };
+        self.len = Len::N0;
     }
 
     pub const fn new(s: &str) -> Result<Self, OutOfBoundsError> {

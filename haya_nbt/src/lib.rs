@@ -224,6 +224,12 @@ impl Write for Tag {
     }
 }
 
+impl From<Tag> for TagType {
+    fn from(value: Tag) -> Self {
+        value.id()
+    }
+}
+
 impl Tag {
     #[inline]
     pub const fn id(&self) -> TagType {
