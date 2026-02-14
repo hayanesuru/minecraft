@@ -67,7 +67,7 @@ fn parse_ident_ascii(ident: &[u8]) -> Option<(Option<&str>, &str)> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Ident<'a> {
     namespace: Option<&'a str>,
     path: &'a str,
@@ -117,7 +117,7 @@ impl Write for Ident<'_> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier(Inner);
 
 impl Identifier {
@@ -155,7 +155,7 @@ impl Identifier {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum Inner {
     Thin { path: HayaStr },
     Heap { path: Box<str> },
