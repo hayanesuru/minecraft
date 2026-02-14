@@ -1,4 +1,5 @@
-use crate::{ByteArray, Ident};
+use haya_ident::Ident;
+use mser::ByteArray;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CookieResponse<'a> {

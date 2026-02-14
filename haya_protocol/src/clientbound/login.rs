@@ -1,6 +1,7 @@
 use crate::profile::GameProfileRef;
-use crate::{ByteArray, Ident, Rest, Utf8};
-use mser::V32;
+use crate::{Rest, Utf8};
+use haya_ident::Ident;
+use mser::{ByteArray, V32};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {

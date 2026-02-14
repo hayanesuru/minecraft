@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use mser::{Error, Read};
 
 #[derive(Clone)]
-pub struct LongArray(pub Vec<i64>);
+pub(crate) struct LongArray(pub Vec<i64>);
 
 impl<'a> Read<'a> for LongArray {
     fn read(buf: &mut &'a [u8]) -> Result<Self, mser::Error> {

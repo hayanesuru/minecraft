@@ -70,3 +70,35 @@ pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
     let h = h.wrapping_mul(N);
     [(h >> 64) as u64, h as u64]
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct ByteArray<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
+
+impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            V21(self.0.len() as u32).write(w);
+            w.write(self.0);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        V21(self.0.len() as u32).len_s() + self.0.len()
+    }
+}
+
+impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let len = V21::read(buf)?.0 as usize;
+        if len > MAX {
+            return Err(Error);
+        }
+        match buf.split_at_checked(len) {
+            Some((x, y)) => {
+                *buf = y;
+                Ok(Self(x))
+            }
+            None => Err(Error),
+        }
+    }
+}

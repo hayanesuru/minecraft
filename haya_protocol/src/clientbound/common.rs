@@ -1,8 +1,7 @@
-use crate::{
-    ByteArray, Component, Ident, List, Rest, ServerLinkUntrustedEntry, TagNetworkEntry, Utf8,
-};
+use crate::{Component, List, Rest, ServerLinkUntrustedEntry, TagNetworkEntry, Utf8};
+use haya_ident::Ident;
 use haya_nbt::Tag;
-use mser::V32;
+use mser::{ByteArray, V32};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -22,6 +22,10 @@ dependencies = [
 [[package]]
 name = "haya_ident"
 version = "0.1.0"
+dependencies = [
+ "haya_str",
+ "mser",
+]
 
 [[package]]
 name = "haya_nbt"

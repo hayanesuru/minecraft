@@ -9,7 +9,7 @@ pub(crate) const fn i8_to_u8_slice(x: &[i8]) -> &[u8] {
     unsafe { core::slice::from_raw_parts(x.as_ptr().cast::<u8>(), x.len()) }
 }
 
-pub struct ByteArray(pub Vec<i8>);
+pub(crate) struct ByteArray(pub Vec<i8>);
 
 impl<'a> Read<'a> for ByteArray {
     fn read(buf: &mut &'a [u8]) -> Result<Self, mser::Error> {

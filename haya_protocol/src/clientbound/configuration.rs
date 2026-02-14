@@ -1,4 +1,5 @@
-use crate::{Ident, KnownPack, List, RegistryKey, Utf8};
+use crate::{KnownPack, List, RegistryKey, Utf8};
+use haya_ident::Ident;
 use haya_nbt::Tag;
 
 #[derive(Clone, Serialize, Deserialize)]
