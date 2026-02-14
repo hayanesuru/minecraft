@@ -15,6 +15,7 @@ minecraft_data = { workspace = true }
 mser = { workspace = true }
 mser_macro = { workspace = true }
 haya_nbt = { workspace = true }
+haya_ident = { workspace = true }
 
 uuid = { workspace = true }
 

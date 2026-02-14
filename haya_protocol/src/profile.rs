@@ -1,7 +1,7 @@
 //mod nbt;
 
-use crate::str::BoxStr;
-use crate::{Identifier, List, Utf8};
+use crate::{List, Utf8};
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use uuid::Uuid;
 
@@ -28,7 +28,7 @@ pub struct PropertyRef<'a> {
 
 #[derive(Clone)]
 pub struct ResolvableProfile {
-    pub name: Option<BoxStr>,
+    pub name: Option<Box<str>>,
     pub id: Option<Uuid>,
     pub properties: PropertyMap,
     pub patch: PlayerSkin,
@@ -36,7 +36,7 @@ pub struct ResolvableProfile {
 
 #[derive(Clone)]
 pub struct GameProfile {
-    pub name: BoxStr,
+    pub name: Box<str>,
     pub id: Uuid,
     pub properties: PropertyMap,
     pub patch: PlayerSkin,
@@ -47,16 +47,16 @@ pub struct PropertyMap(pub Vec<Property>);
 
 #[derive(Clone)]
 pub struct Property {
-    pub name: BoxStr,
-    pub value: BoxStr,
-    pub signature: Option<BoxStr>,
+    pub name: Box<str>,
+    pub value: Box<str>,
+    pub signature: Option<Box<str>>,
 }
 
 #[derive(Clone)]
 pub struct PlayerSkin {
-    pub texture: Option<Identifier>,
-    pub cape: Option<Identifier>,
-    pub elytra: Option<Identifier>,
+    pub texture: Option<Box<str>>,
+    pub cape: Option<Box<str>>,
+    pub elytra: Option<Box<str>>,
     pub model: Option<PlayerModelType>,
 }
 

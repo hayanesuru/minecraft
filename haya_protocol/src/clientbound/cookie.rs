@@ -1,4 +1,4 @@
-use crate::Ident;
+use haya_ident::Ident;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginCookieRequest<'a> {

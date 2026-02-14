@@ -20,6 +20,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "haya_ident"
+version = "0.1.0"
+dependencies = [
+ "haya_str",
+ "mser",
+]
+
+[[package]]
 name = "haya_nbt"
 version = "0.1.0"
 dependencies = [
@@ -33,6 +41,7 @@ dependencies = [
 name = "haya_protocol"
 version = "0.1.0-rc.0+1.21.11"
 dependencies = [
+ "haya_ident",
  "haya_nbt",
  "minecraft_data",
  "mser",

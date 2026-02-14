@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::str::from_utf8_unchecked;
-use mser::{hex_to_u8, parse_int_s, u8_to_hex};
+use mser::{hex_to_u8, u8_to_hex};
 
 const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
 const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
@@ -55,7 +55,7 @@ fn peek(n: &[u8]) -> Result<(u8, &[u8]), Error> {
     }
 }
 
-fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
+fn dec_arr_peek(n: &mut &[u8], tmp: &mut TBuf) -> Result<TagArray, Error> {
     match n {
         [b'B', b';', rest @ ..] => {
             *n = rest;
@@ -68,26 +68,14 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             loop {
                 skip_ws(n);
-                let x = match peek(n)? {
-                    (b't' | b'T', rest) => {
-                        *n = dec_true_peek(rest)?;
-                        1
-                    }
-                    (b'f' | b'F', rest) => {
-                        *n = dec_false_peek(rest)?;
-                        0
-                    }
-                    _ => {
-                        let (a, b) = parse_int_s::<i8>(n);
-                        *n = match peek(b)? {
-                            (b'B' | b'b', rest) => rest,
-                            _ => b,
-                        };
-                        a
-                    }
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let a = match dec_num(value, tmp.next()) {
+                    Ok(TagPrimitive::Byte(l)) => l,
+                    _ => return Err(Error),
                 };
                 skip_ws(n);
-                vec.push(x);
+                vec.push(a);
                 match u8::read(n)? {
                     b']' => break,
                     b',' => continue,
@@ -108,10 +96,14 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             loop {
                 skip_ws(n);
-                let (x, l) = parse_int_s::<i32>(n);
-                *n = l;
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let a = match dec_num(value, tmp.next()) {
+                    Ok(TagPrimitive::Int(l)) => l,
+                    _ => return Err(Error),
+                };
                 skip_ws(n);
-                vec.push(x);
+                vec.push(a);
                 match u8::read(n)? {
                     b']' => break,
                     b',' => continue,
@@ -132,10 +124,11 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
             }
             loop {
                 skip_ws(n);
-                let (a, b) = parse_int_s::<i64>(n);
-                *n = match peek(b)? {
-                    (b'L' | b'l', rest) => rest,
-                    _ => b,
+                let (value, rest) = find_next_value(n)?;
+                *n = rest;
+                let a = match dec_num(value, tmp.next()) {
+                    Ok(TagPrimitive::Long(l)) => l,
+                    _ => return Err(Error),
                 };
                 skip_ws(n);
                 vec.push(a);
@@ -152,12 +145,21 @@ fn dec_arr_peek(n: &mut &[u8]) -> Result<TagArray, Error> {
     }
 }
 
+struct TBuf(Vec<u8>);
+impl TBuf {
+    fn next(&mut self) -> &mut Vec<u8> {
+        self.0.clear();
+        &mut self.0
+    }
+}
+
 unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     enum Bl {
         C(Compound),
         L(List),
     }
-    let mut tmp = Vec::<u8>::new();
+
+    let mut tmp = TBuf(Vec::new());
     let mut names = Vec::<u8>::new();
     let mut blocks = vec![Bl::C(Compound::new())];
     let mut on_start = true;
@@ -325,7 +327,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     }
                     (b'[', rest) => {
                         *n = rest;
-                        match dec_arr_peek(n) {
+                        match dec_arr_peek(n, &mut tmp) {
                             Ok(TagArray::Byte(x)) => Tag::ByteArray(x),
                             Ok(TagArray::Int(x)) => Tag::IntArray(x),
                             Ok(TagArray::Long(x)) => Tag::LongArray(x),
@@ -340,20 +342,18 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     }
                     (b'"', rest) => unsafe {
                         *n = rest;
-                        tmp.clear();
-                        let s = dec_quoted_str(n, &mut tmp, b'"')?;
+                        let s = dec_quoted_str(n, tmp.next(), b'"')?;
                         Tag::String(Box::from(from_utf8_unchecked(s)))
                     },
                     (b'\'', rest) => unsafe {
                         *n = rest;
-                        tmp.clear();
-                        let s = dec_quoted_str(n, &mut tmp, b'\'')?;
+                        let s = dec_quoted_str(n, tmp.next(), b'\'')?;
                         Tag::String(Box::from(from_utf8_unchecked(s)))
                     },
                     _ => unsafe {
                         let (value, rest) = find_next_value(n)?;
                         *n = rest;
-                        match dec_num(value, &mut tmp) {
+                        match dec_num(value, tmp.next()) {
                             Ok(x) => Tag::from(x),
                             Err(_) => Tag::String(Box::from(from_utf8_unchecked(value))),
                         }
@@ -375,7 +375,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                 }
                 (b'[', rest) => {
                     *n = rest;
-                    match dec_arr_peek(n) {
+                    match dec_arr_peek(n, &mut tmp) {
                         Ok(arr) => {
                             match arr {
                                 TagArray::Byte(b) => {
@@ -427,20 +427,18 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     let tag = match first {
                         (b'"', rest) => {
                             *n = rest;
-                            tmp.clear();
-                            let s = dec_quoted_str(n, &mut tmp, b'"')?;
+                            let s = dec_quoted_str(n, tmp.next(), b'"')?;
                             Err(Box::from(from_utf8_unchecked(s)))
                         }
                         (b'\'', rest) => {
                             *n = rest;
-                            tmp.clear();
-                            let s = dec_quoted_str(n, &mut tmp, b'\'')?;
+                            let s = dec_quoted_str(n, tmp.next(), b'\'')?;
                             Err(Box::from(from_utf8_unchecked(s)))
                         }
                         _ => {
                             let (value, rest) = find_next_value(n)?;
                             *n = rest;
-                            match dec_num(value, &mut tmp) {
+                            match dec_num(value, tmp.next()) {
                                 Ok(x) => Ok(x),
                                 Err(_) => Err(Box::from(from_utf8_unchecked(value))),
                             }
@@ -463,7 +461,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
 
 unsafe fn dec_list_string(
     n: &mut &[u8],
-    tmp: &mut Vec<u8>,
+    tmp: &mut TBuf,
     list: &mut Vec<Box<str>>,
 ) -> Result<(), Error> {
     loop {
@@ -471,15 +469,15 @@ unsafe fn dec_list_string(
         match u8::read(n)? {
             b',' => {
                 skip_ws(n);
-                tmp.clear();
+                let buf = tmp.next();
                 let x = match peek(n)? {
                     (b'\"', rest) => unsafe {
                         *n = rest;
-                        Box::from(from_utf8_unchecked(dec_quoted_str(n, tmp, b'\"')?))
+                        Box::from(from_utf8_unchecked(dec_quoted_str(n, buf, b'\"')?))
                     },
                     (b'\'', rest) => unsafe {
                         *n = rest;
-                        Box::from(from_utf8_unchecked(dec_quoted_str(n, tmp, b'\'')?))
+                        Box::from(from_utf8_unchecked(dec_quoted_str(n, buf, b'\'')?))
                     },
                     _ => unsafe {
                         let (value, rest) = find_next_value(n)?;
@@ -498,7 +496,7 @@ unsafe fn dec_list_string(
 
 unsafe fn dec_list_primitive(
     n: &mut &[u8],
-    tmp: &mut Vec<u8>,
+    tmp: &mut TBuf,
     tag: TagPrimitive,
 ) -> Result<ListPrimitive, Error> {
     let mut list = match tag {
@@ -516,7 +514,7 @@ unsafe fn dec_list_primitive(
                 skip_ws(n);
                 let (value, rest) = find_next_value(n)?;
                 *n = rest;
-                let num = match dec_num(value, tmp)? {
+                let num = match dec_num(value, tmp.next())? {
                     TagPrimitive::Byte(x) => x as i64,
                     TagPrimitive::Short(x) => x as i64,
                     TagPrimitive::Int(x) => x as i64,
@@ -782,7 +780,6 @@ fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimitive, Error> {
 
     let mut start = 0;
     let mut cur = 0;
-    tmp.clear();
     while let Some(b'_') = n.get(cur) {
         tmp.extend(unsafe { n.get_unchecked(start..cur) });
         cur += 1;

@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use mser::{Error, Read};
 
 #[derive(Clone)]
-pub struct IntArray(pub Vec<i32>);
+pub(crate) struct IntArray(pub Vec<i32>);
 
 impl<'a> Read<'a> for IntArray {
     fn read(buf: &mut &'a [u8]) -> Result<Self, mser::Error> {

@@ -64,6 +64,22 @@ impl AsMut<str> for HayaStr {
     }
 }
 
+impl core::ops::Deref for HayaStr {
+    type Target = str;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+impl core::ops::DerefMut for HayaStr {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_mut()
+    }
+}
+
 impl core::fmt::Debug for HayaStr {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

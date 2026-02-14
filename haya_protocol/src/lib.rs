@@ -1,8 +1,8 @@
 #![no_std]
 
-use crate::str::BoxStr;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use haya_ident::Ident;
 use haya_nbt::Tag;
 use mser::{Error, Read, UnsafeWriter, V21, V32, Write};
 
@@ -12,7 +12,6 @@ pub mod clientbound;
 pub mod item;
 pub mod profile;
 pub mod serverbound;
-pub mod str;
 pub mod types;
 
 #[macro_use]
@@ -94,38 +93,6 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct ByteArray<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
-
-impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            V21(self.0.len() as u32).write(w);
-            w.write(self.0);
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        V21(self.0.len() as u32).len_s() + self.0.len()
-    }
-}
-
-impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let len = V21::read(buf)?.0 as usize;
-        if len > MAX {
-            return Err(Error);
-        }
-        match buf.split_at_checked(len) {
-            Some((x, y)) => {
-                *buf = y;
-                Ok(Self(x))
-            }
-            None => Err(Error),
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub enum List<'a, T: 'a, const MAX: usize = { usize::MAX }> {
     Borrowed(&'a [T]),
@@ -202,141 +169,12 @@ impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Ident<'a> {
-    pub namespace: &'a str,
-    pub path: &'a str,
-}
-
-impl<'a> Ident<'a> {
-    pub const MINECRAFT: &'static str = "minecraft";
-
-    pub fn is_valid_path(c: char) -> bool {
-        matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.' | '/')
-    }
-
-    pub fn is_valid_namespace(c: char) -> bool {
-        matches!(c, 'a'..='z' | '0'..='9' | '_' | '-' | '.')
-    }
-
-    pub fn parse(identifier: &'a str) -> Option<Self> {
-        match identifier.strip_prefix("minecraft:") {
-            Some(path) => {
-                if path.chars().all(Self::is_valid_path) {
-                    Some(Self {
-                        namespace: Self::MINECRAFT,
-                        path,
-                    })
-                } else {
-                    None
-                }
-            }
-            None => match identifier.split_once(':') {
-                Some((namespace, path)) => {
-                    if namespace.chars().all(Self::is_valid_namespace)
-                        && path.chars().all(Self::is_valid_path)
-                    {
-                        Some(Self {
-                            namespace: if !namespace.is_empty() {
-                                namespace
-                            } else {
-                                Self::MINECRAFT
-                            },
-                            path,
-                        })
-                    } else {
-                        None
-                    }
-                }
-                None => {
-                    if identifier.chars().all(Self::is_valid_path) {
-                        Some(Self {
-                            namespace: Self::MINECRAFT,
-                            path: identifier,
-                        })
-                    } else {
-                        None
-                    }
-                }
-            },
-        }
-    }
-}
-
-impl<'a> Read<'a> for Ident<'a> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        let identifier = Utf8::<32767>::read(buf)?.0;
-        match Self::parse(identifier) {
-            Some(x) => Ok(x),
-            None => Err(Error),
-        }
-    }
-}
-
-impl Write for Ident<'_> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            V21((self.namespace.len() + 1 + self.path.len()) as _).write(w);
-            w.write(self.namespace.as_bytes());
-            w.write_byte(b':');
-            w.write(self.path.as_bytes());
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        let a = self.namespace.len() + 1 + self.path.len();
-        V21(a as u32).len_s() + a
-    }
-}
-
-#[derive(Clone)]
-pub struct Identifier {
-    pub namespace: Option<BoxStr>,
-    pub path: BoxStr,
-}
-
-impl Identifier {
-    pub fn as_ident(&self) -> Ident<'_> {
-        Ident {
-            namespace: match self.namespace.as_deref() {
-                Some(x) => x,
-                None => Ident::MINECRAFT,
-            },
-            path: &self.path,
-        }
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Component(pub Tag);
-
-#[derive(Clone)]
-pub struct ResourceKey {
-    pub registry_name: Identifier,
-    pub identifier: Identifier,
-}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RegistryKey<'a> {
     pub identifier: Ident<'a>,
-}
-
-#[derive(Clone)]
-pub struct TagKey {
-    pub registry: ResourceKey,
-    pub location: Identifier,
-}
-
-#[derive(Clone)]
-pub enum HolderSet<T> {
-    Direct(Vec<Holder<T>>),
-    Named(TagKey),
-}
-
-#[derive(Clone)]
-pub enum Holder<T> {
-    Direct(T),
-    Reference(ResourceKey),
 }
 
 #[derive(Clone, Serialize, Deserialize)]

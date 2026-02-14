@@ -1,5 +1,5 @@
-use crate::{ByteArray, Rest, Utf8};
-use mser::V32;
+use crate::{Rest, Utf8};
+use mser::{ByteArray, V32};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
