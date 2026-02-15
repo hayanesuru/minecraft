@@ -276,15 +276,15 @@ impl KnownLinkType {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ClientInformation<'a> {
-    language: Utf8<'a, 16>,
-    view_distance: u8,
-    chat_visibility: ChatVisibility,
-    chat_colors: bool,
-    model_customisation: u8,
-    main_hand: HumanoidArm,
-    text_filtering_enabled: bool,
-    allows_listing: bool,
-    particle_status: ParticleStatus,
+    pub language: Utf8<'a, 16>,
+    pub view_distance: u8,
+    pub chat_visibility: ChatVisibility,
+    pub chat_colors: bool,
+    pub model_customisation: u8,
+    pub main_hand: HumanoidArm,
+    pub text_filtering_enabled: bool,
+    pub allows_listing: bool,
+    pub particle_status: ParticleStatus,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
