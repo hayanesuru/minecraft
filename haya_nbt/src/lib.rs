@@ -64,7 +64,7 @@ impl TagType {
 
     pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
         match self {
-            Self::IntArray => Ok(int_array::IntArray::read(buf)?.0),
+            Self::IntArray => Ok(IntArray::read(buf)?.0),
             Self::List => {
                 let ListInfo(tag, len) = ListInfo::read(buf)?;
                 let len = len as usize;
@@ -91,15 +91,15 @@ impl TagType {
             Self::Long => Tag::from(i64::read(n)?),
             Self::Float => Tag::from(f32::read(n)?),
             Self::Double => Tag::from(f64::read(n)?),
-            Self::ByteArray => Tag::from(byte_array::ByteArray::read(n)?.0),
+            Self::ByteArray => Tag::from(ByteArray::read(n)?.0),
             Self::String => Tag::from(StringTag::read(n)?.0),
             Self::List => {
                 let info = ListInfo::read(n)?;
                 Tag::from(info.list(n)?)
             }
             Self::Compound => Tag::from(Compound::read(n)?),
-            Self::IntArray => Tag::from(int_array::IntArray::read(n)?.0),
-            Self::LongArray => Tag::from(long_array::LongArray::read(n)?.0),
+            Self::IntArray => Tag::from(IntArray::read(n)?.0),
+            Self::LongArray => Tag::from(LongArray::read(n)?.0),
             Self::End => return Err(Error),
         })
     }
