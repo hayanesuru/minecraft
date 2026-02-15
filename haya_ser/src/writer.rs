@@ -3,7 +3,7 @@ pub struct UnsafeWriter(pub(crate) *mut u8);
 impl UnsafeWriter {
     /// # Safety
     ///
-    /// must be vaild for write
+    /// must be valid for write.
     #[inline(always)]
     pub unsafe fn write_byte(&mut self, byte: u8) {
         unsafe {
@@ -14,7 +14,7 @@ impl UnsafeWriter {
 
     /// # Safety
     ///
-    /// must be vaild for write
+    /// must be valid for write.
     #[inline(always)]
     pub unsafe fn write(&mut self, slice: &[u8]) {
         unsafe {

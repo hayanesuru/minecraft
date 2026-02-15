@@ -278,7 +278,7 @@ impl KnownLinkType {
 pub struct ClientInformation<'a> {
     language: Utf8<'a, 16>,
     view_distance: u8,
-    chat_visibility: ChatVisiblity,
+    chat_visibility: ChatVisibility,
     chat_colors: bool,
     model_customisation: u8,
     main_hand: HumanoidArm,
@@ -289,13 +289,13 @@ pub struct ClientInformation<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
-pub enum ChatVisiblity {
+pub enum ChatVisibility {
     Full,
     System,
     Hidden,
 }
 
-impl ChatVisiblity {
+impl ChatVisibility {
     pub const fn key(self) -> &'static str {
         match self {
             Self::Full => "options.chat.visibility.full",

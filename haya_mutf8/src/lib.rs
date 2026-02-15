@@ -80,7 +80,7 @@ pub struct Mutf8<'a>(&'a [u8]);
 impl<'a> Mutf8<'a> {
     /// # Safety
     ///
-    /// `n` must be vaild mutf-8.
+    /// `n` must be valid mutf-8.
     pub const fn new_unchecked(n: &'a [u8]) -> Self {
         Self(n)
     }
