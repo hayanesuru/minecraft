@@ -141,6 +141,8 @@ pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
                     bytes = rest;
                     if sec == 0x80 {
                         len += 1;
+                    } else {
+                        return Err(Error);
                     }
                 } else {
                     return Err(Error);
@@ -211,10 +213,10 @@ pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut UnsafeWriter) -> Result<
                     Some(&byte) => byte,
                     _ => return Err(Error),
                 };
-                index += 2;
                 if sec == 0x80 {
                     w.write(bytes.get_unchecked(start..index));
                     w.write_byte(b'\0');
+                    index += 2;
                     start = index;
                 } else {
                     return Err(Error);
