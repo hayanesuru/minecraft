@@ -136,14 +136,23 @@ pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
         bytes = rest;
         match byte {
             0x01..=0x7F => len += 1,
+            0xC0 => {
+                if let [sec, ref rest @ ..] = bytes[..] {
+                    bytes = rest;
+                    if sec == 0x80 {
+                        len += 1;
+                    }
+                } else {
+                    return Err(Error);
+                }
+            }
             0xC2..=0xDF => {
                 if let [sec, ref rest @ ..] = bytes[..] {
                     bytes = rest;
-                    if !(byte == 0xC0 && sec == 0x80) {
-                        len += 2;
-                    } else {
-                        len += 1;
+                    if sec as i8 >= -64 {
+                        return Err(Error);
                     }
+                    len += 2;
                 } else {
                     return Err(Error);
                 }
@@ -197,19 +206,30 @@ pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut UnsafeWriter) -> Result<
     while let Some(&byte) = bytes.get(index) {
         match byte {
             0x01..=0x7F => index += 1,
-            0xC2..=0xDF => unsafe {
+            0xC0 => unsafe {
                 let sec = match bytes.get(index + 1) {
                     Some(&byte) => byte,
                     _ => return Err(Error),
                 };
                 index += 2;
-                if !(byte == 0xC0 && sec == 0x80) {
-                } else {
+                if sec == 0x80 {
                     w.write(bytes.get_unchecked(start..index));
                     w.write_byte(b'\0');
                     start = index;
+                } else {
+                    return Err(Error);
                 }
             },
+            0xC2..=0xDF => {
+                let sec = match bytes.get(index + 1) {
+                    Some(&byte) => byte,
+                    _ => return Err(Error),
+                };
+                if sec as i8 >= -64 {
+                    return Err(Error);
+                }
+                index += 2;
+            }
             0xE0..=0xEF => unsafe {
                 let sec = match bytes.get(index + 1) {
                     Some(&byte) if byte & 0xC0 == 0x80 => byte,
@@ -241,12 +261,15 @@ pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut UnsafeWriter) -> Result<
                         let s1 = 0xD000 | (u32::from(sec & 0x3F) << 6) | u32::from(third & 0x3F);
                         let s2 = 0xD000 | (u32::from(fifth) << 6) | u32::from(sixth);
                         let point = 0x10000 + (((s1 - 0xD800) << 10) | (s2 - 0xDC00));
+                        w.write(bytes.get_unchecked(start..index));
                         w.write(&[
                             0xF0 | ((point & 0x1C0000) >> 18) as u8,
                             0x80 | ((point & 0x3F000) >> 12) as u8,
                             0x80 | ((point & 0xFC0) >> 6) as u8,
                             0x80 | (point & 0x3F) as u8,
                         ]);
+                        index += 6;
+                        start = index;
                     }
                     _ => return Err(Error),
                 }
