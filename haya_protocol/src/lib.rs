@@ -258,7 +258,7 @@ pub enum KnownLinkType {
 }
 
 impl KnownLinkType {
-    pub const fn display_name(self) -> &'static str {
+    pub const fn key(self) -> &'static str {
         match self {
             Self::ReportBug => "known_server_link.report_bug",
             Self::CommunityGuidelines => "known_server_link.community_guidelines",
@@ -273,6 +273,79 @@ impl KnownLinkType {
         }
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ClientInformation<'a> {
+    language: Utf8<'a, 16>,
+    view_distance: u8,
+    chat_visibility: ChatVisiblity,
+    chat_colors: bool,
+    model_customisation: u8,
+    main_hand: HumanoidArm,
+    text_filtering_enabled: bool,
+    allows_listing: bool,
+    particle_status: ParticleStatus,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum ChatVisiblity {
+    Full,
+    System,
+    Hidden,
+}
+
+impl ChatVisiblity {
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Full => "options.chat.visibility.full",
+            Self::System => "options.chat.visibility.system",
+            Self::Hidden => "options.chat.visibility.hidden",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum HumanoidArm {
+    Left,
+    Right,
+}
+
+impl HumanoidArm {
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Left => "options.mainHand.left",
+            Self::Right => "options.mainHand.right",
+        }
+    }
+
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Left => "left",
+            Self::Right => "right",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum ParticleStatus {
+    All,
+    Decreased,
+    Minimal,
+}
+
+impl ParticleStatus {
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::All => "options.particles.all",
+            Self::Decreased => "options.particles.decreased",
+            Self::Minimal => "options.particles.minimal",
+        }
+    }
+}
+
 pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
     let mut start = 0;
     let mut cur = 0;
