@@ -1,5 +1,5 @@
 [workspace]
-members = ["haya_data", "haya_ident", "haya_nbt", "haya_protocol", "haya_ser", "haya_ser_macro", "haya_str"]
+members = ["haya_data", "haya_ident", "haya_mutf8", "haya_nbt", "haya_protocol", "haya_ser", "haya_ser_macro", "haya_str"]
 resolver = "2"
 
 [workspace.package]
@@ -16,9 +16,9 @@ minecraft_data = { path = "haya_data", version = "2.2", default-features = false
 haya_nbt = { path = "haya_nbt", version = "0.1" }
 haya_str = { path = "haya_str", version = "0.1" }
 haya_ident = { path = "haya_ident", version = "0.1" }
+haya_mutf8 = { path = "haya_mutf8", version = "0.1" }
 
 uuid = { version = "1", default-features = false }
 
 [profile.dev.package."minecraft_data"]
 incremental = false
-opt-level = 1

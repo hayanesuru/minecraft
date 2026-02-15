@@ -28,9 +28,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "haya_mutf8"
+version = "0.1.0"
+dependencies = [
+ "haya_str",
+ "mser",
+]
+
+[[package]]
 name = "haya_nbt"
 version = "0.1.0"
 dependencies = [
+ "haya_mutf8",
  "itoa",
  "mser",
  "ryu",

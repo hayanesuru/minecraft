@@ -54,7 +54,7 @@ fn read(buf: &mut String, path: PathBuf) -> std::io::Result<usize> {
 
 fn main() -> std::io::Result<()> {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
-    let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("generated");
     let mut w = String::with_capacity(0x80000);
     let mut name_buf = Vec::with_capacity(0x80000);
     let mut data = String::with_capacity(0x40000);

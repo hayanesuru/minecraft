@@ -8,7 +8,7 @@ pub mod ping;
 pub mod status;
 
 macro_rules! packets {
-    ($m:ty, $handler:ident, $($variant:ident = $type:ty),+ $(,)*) => {
+    ($m:ty, $handler:ident, $handle:ident, $($variant:ident = $type:ty),+ $(,)*) => {
         $(
         #[automatically_derived]
         impl crate::types::Id for $type {
@@ -18,7 +18,7 @@ macro_rules! packets {
         )+
 
         pub trait $handler {
-            fn handle(&mut self, mut packet: &[u8]) -> Result<(), mser::Error> {
+            fn $handle(&mut self, mut packet: &[u8]) -> Result<(), mser::Error> {
                 match <$m as mser::Read>::read(&mut packet)? {
                     $(
                         <$m>::$variant => {
@@ -42,12 +42,14 @@ macro_rules! packets {
 packets! {
     clientbound__status,
     StatusHandler,
+    handle,
     status_response = status::StatusResponse<'_>,
     pong_response = ping::PongResponse,
 }
 packets! {
     clientbound__login,
     LoginHandler,
+    handle,
     login_disconnect = login::LoginDisconnect<'_>,
     hello = login::Hello<'_>,
     login_finished = login::LoginFinished<'_>,
@@ -58,7 +60,8 @@ packets! {
 packets! {
     clientbound__configuration,
     ConfigurationHandler,
-    cookie_request = cookie::ConfigCookieRequest<'_>,
+    handle,
+    cookie_request = cookie::ConfigurationCookieRequest<'_>,
     custom_payload = common::CustomPayload<'_>,
     disconnect = common::Disconnect,
     finish_configuration = configuration::FinishConfiguration,

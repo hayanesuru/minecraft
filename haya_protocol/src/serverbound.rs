@@ -9,7 +9,7 @@ pub mod ping;
 pub mod status;
 
 macro_rules! packets {
-    ($m:ty, $handler:ident, $($variant:ident = $type:ty),+ $(,)*) => {
+    ($m:ty, $handler:ident, $handle:ident, $($variant:ident = $type:ty),+ $(,)*) => {
         $(
         #[automatically_derived]
         impl crate::types::Id for $type {
@@ -19,7 +19,7 @@ macro_rules! packets {
         )+
 
         pub trait $handler {
-            fn handle(&mut self, mut packet: &[u8]) -> Result<(), mser::Error> {
+            fn $handle(&mut self, mut packet: &[u8]) -> Result<(), mser::Error> {
                 match <$m as mser::Read>::read(&mut packet)? {
                     $(
                         <$m>::$variant => {
@@ -43,17 +43,20 @@ macro_rules! packets {
 packets! {
     serverbound__handshake,
     HandshakeHandler,
+    handle,
     intention = handshake::Intention<'_>,
 }
 packets! {
     serverbound__status,
     StatusHandler,
+    handle,
     status_request = status::StatusRequest,
     ping_request = ping::PingRequest,
 }
 packets! {
     serverbound__login,
     LoginHandler,
+    handle,
     hello = login::Hello<'_>,
     key = login::Key<'_>,
     custom_query_answer = login::CustomQueryAnswer<'_>,

@@ -1,4 +1,6 @@
-use crate::{Error, UnsafeWriter};
+#![no_std]
+
+use mser::{Error, UnsafeWriter};
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -17,16 +19,16 @@ const CHAR_WIDTH: &[u8; 256] = &[
     0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // C
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // D
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, // E
-    4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // F
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // F
 ];
 
 #[must_use]
-pub const fn is_ascii_mutf8(bytes: &[u8]) -> bool {
+pub const fn mutf8_is_ascii(bytes: &[u8]) -> bool {
     !has_zero_nonascii(bytes)
 }
 
 #[must_use]
-pub const fn is_mutf8(bytes: &[u8]) -> bool {
+pub const fn mutf8_is_utf8(bytes: &[u8]) -> bool {
     let mut index = 0;
     while index < bytes.len() {
         let byte = bytes[index];
@@ -72,13 +74,22 @@ pub const fn encode_mutf8_len(bytes: &str) -> usize {
     l + index
 }
 
-/// # Safety
-///
-/// `bytes` is UTF-8
-pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
+#[derive(Clone, Copy)]
+pub struct Mutf8<'a>(&'a [u8]);
+
+impl<'a> Mutf8<'a> {
+    /// # Safety
+    ///
+    /// `n` must be valid mutf-8.
+    pub const fn new_unchecked(n: &'a [u8]) -> Self {
+        Self(n)
+    }
+}
+
+pub fn encode_mutf8(s: &str, w: &mut UnsafeWriter) {
     let mut index = 0;
     let mut start = 0;
-
+    let bytes = s.as_bytes();
     while let Some(&byte) = bytes.get(index) {
         let x = unsafe { *CHAR_WIDTH.get_unchecked(byte as usize) };
         index += x as usize;
@@ -93,25 +104,22 @@ pub unsafe fn encode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) {
             index += 1;
             start = index;
         } else {
-            let code_point = unsafe {
-                core::str::from_utf8_unchecked(&bytes[index..index + 4])
-                    .chars()
-                    .next()
-                    .unwrap_unchecked() as u32
-            };
-            let code_point = code_point - 0x10000;
-            let first = ((code_point >> 10) as u16) | 0xD800;
-            let second = ((code_point & 0x3FF) as u16) | 0xDC00;
-
+            let b2 = unsafe { *bytes.get_unchecked(index + 1) };
+            let b3 = unsafe { *bytes.get_unchecked(index + 2) };
+            let b4 = unsafe { *bytes.get_unchecked(index + 3) };
+            let mut bits: u32 = ((byte as u32) & 0x07) << 18;
+            bits += ((b2 as u32) & 0x3F) << 12;
+            bits += ((b3 as u32) & 0x3F) << 6;
+            bits += (b4 as u32) & 0x3F;
             unsafe {
                 w.write(bytes.get_unchecked(start..index));
                 w.write(&[
-                    0xE0 | ((first & 0xF000) >> 12) as u8,
-                    0x80 | ((first & 0xFC0) >> 6) as u8,
-                    0x80 | ((first & 0x3F) as u8),
-                    0xE0 | ((second & 0xF000) >> 12) as u8,
-                    0x80 | ((second & 0xFC0) >> 6) as u8,
-                    0x80 | (second & 0x3F) as u8,
+                    0xED,
+                    (0xA0 + (((bits >> 16) - 1) & 0x0F)) as u8,
+                    (0x80 + ((bits >> 10) & 0x3F)) as u8,
+                    0xED,
+                    (0xB0 + ((bits >> 6) & 0x0F)) as u8,
+                    b4,
                 ]);
             }
             index += 4;
@@ -181,7 +189,8 @@ pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
 }
 
 /// # Safety
-pub unsafe fn decode_mutf8(bytes: &[u8], w: &mut UnsafeWriter) -> Result<(), Error> {
+/// `w` is valid for write
+pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut UnsafeWriter) -> Result<(), Error> {
     let mut index = 0;
     let mut start = 0;
 
