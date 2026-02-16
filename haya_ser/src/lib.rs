@@ -24,7 +24,7 @@ pub trait Write {
     fn len_s(&self) -> usize;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Error;
 
 pub trait Read<'a>: Sized {

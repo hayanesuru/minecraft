@@ -83,30 +83,6 @@ impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'
     }
 }
 
-impl<T: Write> Write for core::slice::Iter<'_, T> {
-    #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        self.clone().for_each(|x| unsafe { x.write(w) });
-    }
-
-    #[inline(always)]
-    fn len_s(&self) -> usize {
-        self.clone().map(|x| x.len_s()).sum()
-    }
-}
-
-impl<T: Write> Write for core::slice::IterMut<'_, T> {
-    #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        self.as_slice().iter().for_each(|x| unsafe { x.write(w) });
-    }
-
-    #[inline(always)]
-    fn len_s(&self) -> usize {
-        self.as_slice().iter().map(|x| x.len_s()).sum()
-    }
-}
-
 impl Write for bool {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {

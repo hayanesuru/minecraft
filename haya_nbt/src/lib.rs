@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(coroutines, coroutine_trait, stmt_expr_attributes)]
 
 extern crate alloc;
 
@@ -13,12 +14,15 @@ mod stringify;
 use self::byte_array::ByteArray;
 pub use self::compound::{Compound, CompoundNamed};
 use self::int_array::IntArray;
+use self::list::ListRec;
 pub use self::list::{List, ListInfo};
 use self::long_array::LongArray;
 pub use self::string::{RefStringTag, StringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::ops::{Coroutine, CoroutineState};
+use core::pin::Pin;
 use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -83,8 +87,8 @@ impl TagType {
         }
     }
 
-    pub fn tag(self, n: &mut &[u8]) -> Result<Tag, Error> {
-        Ok(match self {
+    fn tag_no_rec(self, n: &mut &[u8]) -> Result<Result<Tag, TagRec>, Error> {
+        Ok(Ok(match self {
             Self::Byte => Tag::from(i8::read(n)?),
             Self::Short => Tag::from(i16::read(n)?),
             Self::Int => Tag::from(i32::read(n)?),
@@ -93,16 +97,187 @@ impl TagType {
             Self::Double => Tag::from(f64::read(n)?),
             Self::ByteArray => Tag::from(ByteArray::read(n)?.0),
             Self::String => Tag::from(StringTag::read(n)?.0),
-            Self::List => {
-                let info = ListInfo::read(n)?;
-                Tag::from(info.list(n)?)
-            }
-            Self::Compound => Tag::from(Compound::read(n)?),
             Self::IntArray => Tag::from(IntArray::read(n)?.0),
             Self::LongArray => Tag::from(LongArray::read(n)?.0),
+            Self::List => return Ok(Err(TagRec::List)),
+            Self::Compound => return Ok(Err(TagRec::Compound)),
             Self::End => return Err(Error),
-        })
+        }))
     }
+}
+
+impl TagType {
+    pub fn tag(self, n: &mut &[u8]) -> Result<Tag, Error> {
+        match read_tag(Step::T(self, n), 512) {
+            Ret::Ok(x, m) => {
+                *n = m;
+                Ok(x)
+            }
+            Ret::Err(e, m) => {
+                *n = m;
+                Err(e)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Step<'a> {
+    T(TagType, &'a [u8]),
+    L(ListInfo, &'a [u8]),
+}
+
+#[derive(Clone)]
+enum Ret<'a> {
+    Ok(Tag, &'a [u8]),
+    Err(Error, &'a [u8]),
+}
+
+fn read_tag<'a>(init: Step<'a>, max_depth: usize) -> Ret<'a> {
+    let f = |step| {
+        #[coroutine]
+        move |_| match step {
+            Step::T(s, mut n) => match match s.tag_no_rec(&mut n) {
+                Ok(x) => x,
+                Err(e) => return Ret::Err(e, n),
+            } {
+                Ok(x) => Ret::Ok(x, n),
+                Err(TagRec::List) => {
+                    let info = match ListInfo::read(&mut n) {
+                        Ok(x) => x,
+                        Err(e) => return Ret::Err(e, n),
+                    };
+                    match yield Step::L(info, n) {
+                        Ret::Ok(x, y) => Ret::Ok(x, y),
+                        Ret::Err(e, n) => Ret::Err(e, n),
+                    }
+                }
+                Err(TagRec::Compound) => {
+                    let mut compound = Vec::new();
+                    loop {
+                        let ty = match TagType::read(&mut n) {
+                            Ok(x) => x,
+                            Err(e) => return Ret::Err(e, n),
+                        };
+                        if let TagType::End = ty {
+                            compound.shrink_to_fit();
+                            return Ret::Ok(Tag::Compound(Compound::from(compound)), n);
+                        }
+                        let k = match StringTag::read(&mut n) {
+                            Ok(x) => x.0,
+                            Err(e) => return Ret::Err(e, n),
+                        };
+                        let v = match yield Step::T(ty, n) {
+                            Ret::Ok(x, y) => {
+                                n = y;
+                                x
+                            }
+                            Ret::Err(e, n) => return Ret::Err(e, n),
+                        };
+                        compound.push((k, v));
+                    }
+                }
+            },
+            Step::L(s, mut n) => match match s.list_no_rec(&mut n) {
+                Ok(x) => x,
+                Err(e) => return Ret::Err(e, n),
+            } {
+                Ok(x) => Ret::Ok(Tag::List(x), n),
+                Err(ListRec::List) => {
+                    let len = s.1 as usize;
+                    if len << 2 > n.len() {
+                        return Ret::Err(Error, n);
+                    }
+                    let mut list = Vec::with_capacity(len);
+                    for _ in 0..len {
+                        let info = match ListInfo::read(&mut n) {
+                            Ok(x) => x,
+                            Err(e) => return Ret::Err(e, n),
+                        };
+                        let t = match yield Step::L(info, n) {
+                            Ret::Ok(x, y) => {
+                                n = y;
+                                x
+                            }
+                            Ret::Err(e, n) => return Ret::Err(e, n),
+                        };
+                        match t {
+                            Tag::List(x) => list.push(x),
+                            _ => return Ret::Err(Error, n),
+                        }
+                    }
+                    Ret::Ok(Tag::List(List::List(list)), n)
+                }
+                Err(ListRec::Compound) => {
+                    let len = s.1 as usize;
+                    if len > n.len() {
+                        return Ret::Err(Error, n);
+                    }
+                    let mut list = Vec::with_capacity(len);
+                    for _ in 0..len {
+                        let mut compound = Vec::new();
+                        loop {
+                            let ty = match TagType::read(&mut n) {
+                                Ok(x) => x,
+                                Err(e) => return Ret::Err(e, n),
+                            };
+                            if let TagType::End = ty {
+                                compound.shrink_to_fit();
+                                break;
+                            }
+                            let k = match StringTag::read(&mut n) {
+                                Ok(x) => x.0,
+                                Err(e) => return Ret::Err(e, n),
+                            };
+                            let v = match yield Step::T(ty, n) {
+                                Ret::Ok(x, y) => {
+                                    n = y;
+                                    x
+                                }
+                                Ret::Err(e, n) => return Ret::Err(e, n),
+                            };
+                            compound.push((k, v));
+                        }
+                        list.push(Compound::from(compound));
+                    }
+                    Ret::Ok(Tag::List(List::Compound(list)), n)
+                }
+            },
+        }
+    };
+
+    let mut depth = Vec::new();
+    let mut current = f(init);
+    let mut ret = Ret::Err(Error, &[]);
+
+    loop {
+        match Pin::new(&mut current).resume(ret) {
+            CoroutineState::Yielded(arg) => {
+                if depth.len() == max_depth {
+                    match arg {
+                        Step::T(_, n) => return Ret::Err(Error, n),
+                        Step::L(_, n) => return Ret::Err(Error, n),
+                    }
+                }
+                depth.push(current);
+                current = f(arg);
+                ret = Ret::Err(Error, &[]);
+            }
+            CoroutineState::Complete(real_res) => match depth.pop() {
+                None => return real_res,
+                Some(top) => {
+                    current = top;
+                    ret = real_res;
+                }
+            },
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum TagRec {
+    List,
+    Compound,
 }
 
 impl Read<'_> for TagType {
@@ -193,11 +368,11 @@ impl Write for Tag {
                 }
                 Tag::IntArray(x) => {
                     (x.len() as u32).write(w);
-                    x.iter().write(w);
+                    x.iter().for_each(|i| i.write(w));
                 }
                 Tag::LongArray(x) => {
                     (x.len() as u32).write(w);
-                    x.iter().write(w);
+                    x.iter().for_each(|i| i.write(w));
                 }
                 Tag::List(x) => x.write(w),
                 Tag::Compound(x) => x.write(w),

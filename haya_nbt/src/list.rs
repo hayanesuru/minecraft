@@ -42,6 +42,7 @@ impl From<ListPrimitive> for List {
         }
     }
 }
+
 #[derive(Clone, Copy)]
 pub struct ListInfo(pub TagType, pub u32);
 
@@ -210,26 +211,26 @@ impl Write for List {
                 Self::ByteArray(x) => {
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
-                        y.iter().write(w);
+                        y.iter().for_each(|z| z.write(w));
                     });
                 }
                 Self::IntArray(x) => {
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
-                        y.iter().write(w);
+                        y.iter().for_each(|z| z.write(w));
                     });
                 }
                 Self::LongArray(x) => {
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
-                        y.iter().write(w);
+                        y.iter().for_each(|z| z.write(w));
                     });
                 }
                 Self::List(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|y| y.write(w));
                 }
                 Self::Compound(x) => {
-                    x.iter().write(w);
+                    x.iter().for_each(|y| y.write(w));
                 }
             }
         }
@@ -248,45 +249,43 @@ impl Write for List {
             Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
             Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
             Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
-            Self::List(x) => x.iter().len_s(),
-            Self::Compound(x) => x.iter().len_s(),
+            Self::List(x) => x.iter().map(|x| x.len_s()).sum::<usize>(),
+            Self::Compound(x) => x.iter().map(|x| x.len_s()).sum::<usize>(),
         }
     }
 }
 
+#[derive(Clone, Copy)]
+pub(crate) enum ListRec {
+    Compound,
+    List,
+}
+
 impl ListInfo {
-    pub fn list(self, n: &mut &[u8]) -> Result<List, Error> {
+    pub(crate) fn list_no_rec(self, n: &mut &[u8]) -> Result<Result<List, ListRec>, Error> {
         let len = self.1 as usize;
         match self.0 {
-            TagType::End => Ok(List::None),
+            TagType::End => Ok(Ok(List::None)),
             TagType::Byte => match n.split_at_checked(len) {
                 Some((x, y)) => {
                     *n = y;
-                    Ok(List::Byte(Vec::from(crate::byte_array::u8_to_i8_slice(x))))
+                    Ok(Ok(List::Byte(Vec::from(
+                        crate::byte_array::u8_to_i8_slice(x),
+                    ))))
                 }
                 None => Err(Error),
             },
             TagType::Short => match n.split_at_checked(len * 2) {
-                Some((slice, y)) => {
+                Some((slice, y)) => unsafe {
                     *n = y;
-                    let mut v = Vec::with_capacity(len);
-                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
-                    for index in 0..len {
-                        unsafe {
-                            *s.get_unchecked_mut(index) = i16::from_be_bytes(
-                                *slice.as_ptr().add(index * 2).cast::<[u8; 2]>(),
-                            );
-                        }
-                    }
-                    unsafe { v.set_len(len) }
-                    Ok(List::Short(v))
-                }
+                    Ok(Ok(List::Short(short_list(len, slice))))
+                },
                 None => Err(Error),
             },
             TagType::Int => match n.split_at_checked(len * 4) {
                 Some((slice, y)) => unsafe {
                     *n = y;
-                    Ok(List::Int(int_list(len, slice)))
+                    Ok(Ok(List::Int(int_list(len, slice))))
                 },
                 None => Err(Error),
             },
@@ -303,7 +302,7 @@ impl ListInfo {
                         }
                     }
                     unsafe { v.set_len(len) }
-                    Ok(List::Long(v))
+                    Ok(Ok(List::Long(v)))
                 }
                 None => Err(Error),
             },
@@ -320,7 +319,7 @@ impl ListInfo {
                         }
                     }
                     unsafe { v.set_len(len) }
-                    Ok(List::Float(v))
+                    Ok(Ok(List::Float(v)))
                 }
                 None => Err(Error),
             },
@@ -337,7 +336,7 @@ impl ListInfo {
                         }
                     }
                     unsafe { v.set_len(len) }
-                    Ok(List::Double(v))
+                    Ok(Ok(List::Double(v)))
                 }
                 None => Err(Error),
             },
@@ -349,7 +348,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(ByteArray::read(n)?.0);
                 }
-                Ok(List::ByteArray(list))
+                Ok(Ok(List::ByteArray(list)))
             }
             TagType::String => {
                 if len * 2 > n.len() {
@@ -359,29 +358,10 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(StringTag::read(n)?.0);
                 }
-                Ok(List::String(list))
+                Ok(Ok(List::String(list)))
             }
-            TagType::List => {
-                if len << 2 > n.len() {
-                    return Err(Error);
-                }
-                let mut list = Vec::with_capacity(len);
-                for _ in 0..len {
-                    let info = ListInfo::read(n)?;
-                    list.push(info.list(n)?);
-                }
-                Ok(List::List(list))
-            }
-            TagType::Compound => {
-                if len > n.len() {
-                    return Err(Error);
-                }
-                let mut list = Vec::with_capacity(len);
-                for _ in 0..len {
-                    list.push(Compound::read(n)?);
-                }
-                Ok(List::Compound(list))
-            }
+            TagType::List => Ok(Err(ListRec::List)),
+            TagType::Compound => Ok(Err(ListRec::Compound)),
             TagType::IntArray => {
                 if len * 4 > n.len() {
                     return Err(Error);
@@ -390,7 +370,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(IntArray::read(n)?.0);
                 }
-                Ok(List::IntArray(list))
+                Ok(Ok(List::IntArray(list)))
             }
             TagType::LongArray => {
                 if len * 4 > n.len() {
@@ -400,13 +380,13 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(LongArray::read(n)?.0);
                 }
-                Ok(List::LongArray(list))
+                Ok(Ok(List::LongArray(list)))
             }
         }
     }
 }
 
-pub unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
+pub(crate) unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
     debug_assert_eq!(len * 4, slice.len());
 
     let mut v = Vec::with_capacity(len);
@@ -415,6 +395,21 @@ pub unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
         unsafe {
             *s.get_unchecked_mut(index) =
                 i32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
+        }
+    }
+    unsafe { v.set_len(len) }
+    v
+}
+
+pub(crate) unsafe fn short_list(len: usize, slice: &[u8]) -> Vec<i16> {
+    debug_assert_eq!(len * 2, slice.len());
+
+    let mut v = Vec::with_capacity(len);
+    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    for index in 0..len {
+        unsafe {
+            *s.get_unchecked_mut(index) =
+                i16::from_be_bytes(*slice.as_ptr().add(index * 2).cast::<[u8; 2]>());
         }
     }
     unsafe { v.set_len(len) }
