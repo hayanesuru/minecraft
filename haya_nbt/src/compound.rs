@@ -242,16 +242,10 @@ impl Compound {
 impl Read<'_> for Compound {
     #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        let mut compound = Vec::new();
-        loop {
-            let ty = TagType::read(buf)?;
-            if matches!(ty, TagType::End) {
-                compound.shrink_to_fit();
-                return Ok(Self::from(compound));
-            }
-            let k = StringTag::read(buf)?.0;
-            let v = ty.tag(buf)?;
-            compound.push((k, v));
+        match TagType::Compound.tag(buf) {
+            Ok(Tag::Compound(x)) => Ok(x),
+            Ok(_) => Err(Error),
+            Err(e) => Err(e),
         }
     }
 }
