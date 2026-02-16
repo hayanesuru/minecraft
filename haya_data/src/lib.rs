@@ -6,30 +6,11 @@ use mser::{cold_path, hash128};
 
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
-/// `block_name(prop_expr)`
-#[macro_export]
-macro_rules! encode_state {
-    ($b:ident($x:expr)) => {
-        $crate::block_state::new(
-            $x.encode() as $crate::raw_block_state + $crate::block::$b.state_index(),
-        )
-        .unwrap()
-    };
-}
-
-/// `block_name(prop_expr)`
-#[macro_export]
-macro_rules! decode_state {
-    ($b:ident($x:expr)) => {
-        $crate::$b::decode(($x.id() - $crate::block::$b.state_index()) as _)
-    };
-}
-
 #[inline]
 fn name_u8<const K: u64, const N: usize, const M: usize>(
-    disps: [u64; N],
-    names: *const u8,
-    vals: [u8; M],
+    disps: &'static [u64; N],
+    names: *const &'static str,
+    vals: &'static [u8; M],
     name: &[u8],
 ) -> Option<u8> {
     let [a, b] = hash128(name, K);
@@ -41,18 +22,15 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
     let d2 = d as u32;
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % (M as u32);
     let v = unsafe { *vals.get_unchecked(index as usize) };
-    let packed = unsafe { u64::from_le_bytes(*names.add(8 * v as usize).cast::<[u8; 8]>()) };
-    let len = (packed >> 32) as usize;
-    let offset = (packed as u32) as usize;
-    let k = unsafe { core::slice::from_raw_parts(names.add(offset), len) };
-    if name == k { Some(v) } else { None }
+    let k = unsafe { *names.add(v as usize) };
+    if name == k.as_bytes() { Some(v) } else { None }
 }
 
 #[inline]
 fn name_u16<const K: u64, const N: usize, const M: usize>(
-    disps: [u64; N],
-    names: *const u8,
-    vals: [u16; M],
+    disps: &'static [u64; N],
+    names: *const &'static str,
+    vals: &'static [u16; M],
     name: &[u8],
 ) -> Option<u16> {
     let [a, b] = hash128(name, K);
@@ -65,11 +43,8 @@ fn name_u16<const K: u64, const N: usize, const M: usize>(
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
     let index = (index % (M as u32)) as usize;
     let v = unsafe { *vals.get_unchecked(index) };
-    let packed = unsafe { u64::from_le_bytes(*names.add(8 * v as usize).cast::<[u8; 8]>()) };
-    let len = (packed >> 32) as usize;
-    let offset = (packed as u32) as usize;
-    let k = unsafe { core::slice::from_raw_parts(names.add(offset), len) };
-    if name == k { Some(v) } else { None }
+    let k = unsafe { *names.add(v as usize) };
+    if name == k.as_bytes() { Some(v) } else { None }
 }
 
 fn make_block_state(
@@ -196,23 +171,7 @@ impl block_state {
 
     #[inline]
     pub const fn to_fluid(self) -> fluid_state {
-        unsafe {
-            // 1
-            let b = self.to_block();
-            // 2
-            let i = *FLUID_STATE_INDEX.as_ptr().add(b as usize);
-            // 3
-            let a = *FLUID_STATE_ARRAY.as_ptr().add(i as usize);
-            if a.len() == 1 {
-                // 4
-                fluid_state(*a.as_ptr())
-            } else {
-                // 4
-                let o = b.state_index();
-                // 5
-                fluid_state(*a.as_ptr().add((self.id() - o) as usize))
-            }
-        }
+        unsafe { fluid_state(*FLUID_STATE_INDEX.as_ptr().add(self.0 as usize)) }
     }
 
     #[inline]
@@ -623,123 +582,157 @@ impl core::fmt::Debug for fluid_state {
     }
 }
 
-#[test]
-fn test_block_state() {
-    assert!(
-        block_state::new(block_state::MAX)
-            .unwrap()
-            .collision_shape()
-            .is_some()
-    );
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    assert_eq!(game_event::block_activate.name(), "block_activate");
-    assert_eq!(
-        sound_event::block_bamboo_wood_pressure_plate_click_on,
-        sound_event::parse(b"block.bamboo_wood_pressure_plate.click_on").unwrap()
-    );
+    #[test]
+    fn test_parse() {
+        assert_eq!(game_event::block_activate.name(), "block_activate");
+        assert_eq!(
+            sound_event::block_bamboo_wood_pressure_plate_click_on,
+            sound_event::parse(b"block.bamboo_wood_pressure_plate.click_on").unwrap()
+        );
+    }
 
-    let white_concrete_bs = encode_state!(white_concrete(white_concrete::new()));
-    assert_eq!(white_concrete_bs.side_solid_full(), Some(0b111111));
-    assert_eq!(white_concrete_bs.side_solid_rigid(), Some(0b111111));
-    assert_eq!(white_concrete_bs.side_solid_center(), Some(0b111111));
-    assert_eq!(white_concrete_bs.full_cube(), Some(true));
-    assert_eq!(white_concrete_bs.solid(), Some(true));
-    assert!(white_concrete_bs.tool_required());
+    #[test]
+    fn test_air() {
+        let air_bl = block::air;
+        assert_eq!(air_bl.name(), "air");
+        assert_eq!(Some(air_bl), block::parse(air_bl.name().as_bytes()));
 
-    let b = white_concrete_bs.to_block();
-    assert_eq!(b.name(), "white_concrete");
-    assert_eq!(Some(b), block::parse(b.name().as_bytes()));
+        let air_bs = air_bl.state_default();
+        assert_eq!(air_bs.side_solid_full(), Some(0));
+        assert_eq!(air_bs.side_solid_rigid(), Some(0));
+        assert_eq!(air_bs.side_solid_center(), Some(0));
+        assert_eq!(air_bs.full_cube(), Some(false));
+    }
 
-    let air_bl = block::air;
-    assert_eq!(air_bl.name(), "air");
-    assert_eq!(Some(air_bl), block::parse(air_bl.name().as_bytes()));
+    #[test]
+    fn test_block_state() {
+        assert!(
+            block::firefly_bush
+                .state_default()
+                .collision_shape()
+                .is_some()
+        );
 
-    let air_bs = air_bl.state_default();
-    assert_eq!(air_bs.side_solid_full(), Some(0));
-    assert_eq!(air_bs.side_solid_rigid(), Some(0));
-    assert_eq!(air_bs.side_solid_center(), Some(0));
-    assert_eq!(air_bs.full_cube(), Some(false));
+        let white_concrete_bs = block_state::new(
+            (white_concrete::new()).encode() as raw_block_state
+                + block::white_concrete.state_index(),
+        )
+        .unwrap();
+        assert_eq!(white_concrete_bs.side_solid_full(), Some(0b111111));
+        assert_eq!(white_concrete_bs.side_solid_rigid(), Some(0b111111));
+        assert_eq!(white_concrete_bs.side_solid_center(), Some(0b111111));
+        assert_eq!(white_concrete_bs.full_cube(), Some(true));
+        assert_eq!(white_concrete_bs.solid(), Some(true));
+        assert!(white_concrete_bs.tool_required());
 
-    let oak_sapling_bs = encode_state!(oak_sapling(oak_sapling::new()));
-    let b = oak_sapling_bs.to_block();
-    assert_eq!(b.name(), "oak_sapling");
-    assert_eq!(Some(b), block::parse(b.name().as_bytes()));
+        let b = white_concrete_bs.to_block();
+        assert_eq!(b.name(), "white_concrete");
+        assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
-    assert_eq!(oak_sapling_bs.side_solid_full(), Some(0));
-    assert_eq!(oak_sapling_bs.side_solid_rigid(), Some(0));
-    assert_eq!(oak_sapling_bs.side_solid_center(), Some(0));
-    assert_eq!(oak_sapling_bs.full_cube(), Some(false));
+        let oak_sapling_bs = block_state::new(
+            (oak_sapling::new()).encode() as raw_block_state + block::oak_sapling.state_index(),
+        )
+        .unwrap();
+        let b = oak_sapling_bs.to_block();
+        assert_eq!(b.name(), "oak_sapling");
+        assert_eq!(Some(b), block::parse(b.name().as_bytes()));
 
-    let mud_bs = block::mud.state_default();
-    let b = mud_bs.to_block();
-    assert_eq!(b.name(), "mud");
-    assert_eq!(Some(b), block::parse(b"mud"));
+        assert_eq!(oak_sapling_bs.side_solid_full(), Some(0));
+        assert_eq!(oak_sapling_bs.side_solid_rigid(), Some(0));
+        assert_eq!(oak_sapling_bs.side_solid_center(), Some(0));
+        assert_eq!(oak_sapling_bs.full_cube(), Some(false));
 
-    assert_eq!(mud_bs.side_solid_full(), Some(0b111111));
-    assert_eq!(mud_bs.side_solid_rigid(), Some(0b111111));
-    assert_eq!(mud_bs.side_solid_center(), Some(0b111111));
-    assert!(!mud_bs.redstone_power_source());
-    assert_eq!(mud_bs.opaque_full_cube(), Some(true));
-    assert_eq!(mud_bs.full_cube(), Some(false));
+        let mud_bs = block::mud.state_default();
+        let b = mud_bs.to_block();
+        assert_eq!(b.name(), "mud");
+        assert_eq!(Some(b), block::parse(b"mud"));
 
-    let cactus_bs = block::cactus.state_default();
-    assert_eq!(cactus_bs.side_solid_full(), Some(0b000000));
-    assert_eq!(cactus_bs.side_solid_rigid(), Some(0b000000));
-    assert_eq!(cactus_bs.side_solid_center(), Some(0b000001));
-    assert_eq!(cactus_bs.full_cube(), Some(false));
-    assert!(!cactus_bs.exceeds_cube());
-    assert!(!cactus_bs.tool_required());
-    assert_eq!(cactus_bs.full_cube(), Some(false));
-    assert_eq!(
-        block_state::parse(block::redstone_wire, &mut [][..]),
-        block::redstone_wire.state_default()
-    );
-    assert_eq!(
-        block_state::parse(
-            block::redstone_wire,
-            &mut [(
-                block_state_property_key::parse(b"east").unwrap(),
-                block_state_property_value::parse(b"side").unwrap()
-            )][..]
-        ),
-        encode_state!(redstone_wire(
-            decode_state!(redstone_wire(block::redstone_wire.state_default()))
-                .with_east(prop_east_u_s_n::side)
-        ))
-    );
-    assert_eq!(
-        block_state::parse(
-            block::redstone_wire,
-            &mut [
-                (
+        assert_eq!(mud_bs.side_solid_full(), Some(0b111111));
+        assert_eq!(mud_bs.side_solid_rigid(), Some(0b111111));
+        assert_eq!(mud_bs.side_solid_center(), Some(0b111111));
+        assert!(!mud_bs.redstone_power_source());
+        assert_eq!(mud_bs.opaque_full_cube(), Some(true));
+        assert_eq!(mud_bs.full_cube(), Some(false));
+
+        let cactus_bs = block::cactus.state_default();
+        assert_eq!(cactus_bs.side_solid_full(), Some(0b000000));
+        assert_eq!(cactus_bs.side_solid_rigid(), Some(0b000000));
+        assert_eq!(cactus_bs.side_solid_center(), Some(0b000001));
+        assert_eq!(cactus_bs.full_cube(), Some(false));
+        assert!(!cactus_bs.exceeds_cube());
+        assert!(!cactus_bs.tool_required());
+        assert_eq!(cactus_bs.full_cube(), Some(false));
+        assert_eq!(
+            block_state::parse(block::redstone_wire, &mut [][..]),
+            block::redstone_wire.state_default()
+        );
+        let a = block_state::new(
+            (redstone_wire::decode(
+                ((block::redstone_wire.state_default()).id() - block::redstone_wire.state_index())
+                    as _,
+            )
+            .with_east(prop_east_u_s_n::side))
+            .encode() as raw_block_state
+                + block::redstone_wire.state_index(),
+        )
+        .unwrap();
+        assert_eq!(
+            block_state::parse(
+                block::redstone_wire,
+                &mut [(
                     block_state_property_key::parse(b"east").unwrap(),
                     block_state_property_value::parse(b"side").unwrap()
-                ),
-                (
-                    block_state_property_key::parse(b"power").unwrap(),
-                    block_state_property_value::parse(b"11").unwrap()
-                )
-            ][..]
-        ),
-        encode_state!(redstone_wire(
-            decode_state!(redstone_wire(block::redstone_wire.state_default()))
-                .with_east(prop_east_u_s_n::side)
-                .with_power(prop_power::d_11)
-        ))
-    );
-    assert_eq!(
-        block::spruce_slab.state_default().to_fluid(),
-        fluid_state::empty
-    );
-    assert_eq!(
-        encode_state!(spruce_slab(
-            decode_state!(spruce_slab(block::spruce_slab.state_default()))
-                .with_waterlogged(prop_waterlogged::r#true)
-        ))
-        .to_fluid(),
-        fluid_state::water_s_8
-    );
-    assert!(!block::dispenser.is_air());
-    assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
-    assert_eq!(block::fire.state_default().opacity().unwrap(), 0);
+                )][..]
+            ),
+            a
+        );
+        let a = block_state::new(
+            (redstone_wire::decode(
+                ((block::redstone_wire.state_default()).id() - block::redstone_wire.state_index())
+                    as _,
+            )
+            .with_east(prop_east_u_s_n::side)
+            .with_power(prop_power::d_11))
+            .encode() as raw_block_state
+                + block::redstone_wire.state_index(),
+        )
+        .unwrap();
+        assert_eq!(
+            block_state::parse(
+                block::redstone_wire,
+                &mut [
+                    (
+                        block_state_property_key::parse(b"east").unwrap(),
+                        block_state_property_value::parse(b"side").unwrap()
+                    ),
+                    (
+                        block_state_property_key::parse(b"power").unwrap(),
+                        block_state_property_value::parse(b"11").unwrap()
+                    )
+                ][..]
+            ),
+            a
+        );
+        assert_eq!(
+            block::spruce_slab.state_default().to_fluid(),
+            fluid_state::empty
+        );
+        let a = block_state::new(
+            (spruce_slab::decode(
+                ((block::spruce_slab.state_default()).id() - block::spruce_slab.state_index()) as _,
+            )
+            .with_waterlogged(prop_waterlogged::r#true))
+            .encode() as raw_block_state
+                + block::spruce_slab.state_index(),
+        )
+        .unwrap();
+        assert_eq!(a.to_fluid(), fluid_state::water_s_8);
+        assert!(!block::dispenser.is_air());
+        assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
+        assert_eq!(block::fire.state_default().opacity().unwrap(), 0);
+    }
 }

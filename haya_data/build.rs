@@ -56,7 +56,6 @@ fn main() -> std::io::Result<()> {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
     let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("generated");
     let mut w = String::with_capacity(0x80000);
-    let mut name_buf = Vec::with_capacity(0x80000);
     let mut data = String::with_capacity(0x40000);
     let mut gen_hash = GenerateHash::new();
 
@@ -94,33 +93,21 @@ fn main() -> std::io::Result<()> {
     let gat = read(&mut data, path.join("game_event_tags.txt"))?;
     let gat = ett.end..ett.end + gat;
 
-    let block_names = registries(&mut w, &mut name_buf, &data[reg], &mut gen_hash);
-    registries(&mut w, &mut name_buf, &data[pac], &mut gen_hash);
+    let block_names = registries(&mut w, &data[reg], &mut gen_hash);
+    registries(&mut w, &data[pac], &mut gen_hash);
 
     item(&mut w, &data[ite]);
-    entity(&mut w, &mut name_buf, &data[ent]);
+    entity(&mut w, &data[ent]);
 
-    let bs_repr = block_state(
-        &mut w,
-        &mut name_buf,
-        &data[blo],
-        &mut gen_hash,
-        &block_names,
-    );
-    fluid_state(&mut w, &data[flu], bs_repr);
+    let (bs_repr, bl_props, bs_size) = block_state(&mut w, &data[blo], &mut gen_hash, &block_names);
+    fluid_state(&mut w, &data[flu], bs_repr, &bl_props, &bs_size);
 
     block_tags(&mut w, &data[blt]);
     item_tags(&mut w, &data[itt]);
     entity_tags(&mut w, &data[ett]);
     game_event_tags(&mut w, &data[gat]);
 
-    w += "const NAMES: &[u8; ";
-    w += itoa::Buffer::new().format(name_buf.len());
-    w += "] = include_bytes!(\"";
-    w += "data";
-    w += ".bin\");\n";
     std::fs::write(out.join("data.rs"), w)?;
-    std::fs::write(out.join("data.bin"), name_buf)?;
     Ok(())
 }
 
@@ -137,12 +124,7 @@ fn version(w: &mut String, data: &str) {
     *w += ";\n";
 }
 
-fn registries<'a>(
-    w: &mut String,
-    name_buf: &mut Vec<u8>,
-    data: &'a str,
-    gen_hash: &mut GenerateHash,
-) -> Vec<&'a str> {
+fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) -> Vec<&'a str> {
     let mut zhash = Vec::<&str>::new();
     let mut iter = data.split('\n');
     let mut block_names = Vec::<&str>::new();
@@ -209,7 +191,7 @@ fn registries<'a>(
         *w += "::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
         *w += "::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
         *w += "}\n}\n}\n";
-        impl_name(w, gen_hash, name_buf, repr, &zhash, &name);
+        impl_name(w, gen_hash, repr, &zhash, &name);
         impl_common(w, &name, repr, size, 0);
     }
     block_names
@@ -293,7 +275,13 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "}\n";
 }
 
-fn fluid_state(w: &mut String, data: &str, bs_repr: Repr) {
+fn fluid_state(
+    w: &mut String,
+    data: &str,
+    bs_repr: Repr,
+    bl_props: &[u32],
+    bs_size: &[NonZeroUsize],
+) {
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
     let (name, size, repr) = head(iter.next(), "fluid_state");
@@ -312,62 +300,50 @@ fn fluid_state(w: &mut String, data: &str, bs_repr: Repr) {
     *w += "}\n";
     let (_, size, _) = head(iter.next(), "fluid_to_block");
     list_ty(w, "FLUID_STATE_TO_BLOCK", bs_repr, size);
-    list(
-        w,
-        (&mut iter)
-            .take(size)
-            .map(|x| parse_hex::<u32>(x.as_bytes()).0),
-    );
+    list(w, (&mut iter).take(size).map(parse_u32));
     *w += ";\n";
     let (_, size, _) = head(iter.next(), "fluid_state_level");
     list_ty(w, "FLUID_STATE_LEVEL", Repr::U8, size);
-    list(
-        w,
-        (&mut iter)
-            .take(size)
-            .map(|x| parse_hex::<u8>(x.as_bytes()).0),
-    );
+    list(w, (&mut iter).take(size).map(parse_u32));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "fluid_state_falling");
     list_ty(w, "FLUID_STATE_FALLING", Repr::U8, size);
-    list(
-        w,
-        (&mut iter)
-            .take(size)
-            .map(|x| parse_hex::<u8>(x.as_bytes()).0),
-    );
+    list(w, (&mut iter).take(size).map(parse_u32));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "fluid_state_to_fluid");
     list_ty(w, "FLUID_STATE_TO_FLUID", Repr::U8, size);
-    list(
-        w,
-        (&mut iter)
-            .take(size)
-            .map(|x| parse_hex::<u8>(x.as_bytes()).0),
-    );
+    list(w, (&mut iter).take(size).map(parse_u32));
     *w += ";\n";
 
     let (_, fs_size, fs_repr) = head(iter.next(), "fluid_state_array");
-    *w += "const FLUID_STATE_ARRAY: [&[";
-    *w += fs_repr.to_int();
-    *w += "]; ";
-    *w += ib.format(fs_size);
-    *w += "] = [\n";
-    for x in (&mut iter).take(fs_size).map(|arr| {
-        arr.split_ascii_whitespace()
-            .map(|x| parse_hex::<u32>(x.as_bytes()).0)
-    }) {
-        *w += "&";
-        list(w, x);
-        *w += ",\n";
-    }
-    *w += "];\n";
 
+    let arr = (&mut iter)
+        .take(fs_size)
+        .map(|arr| hex_line(arr).collect::<Box<_>>())
+        .collect::<Box<_>>();
     let (_, size, _) = head(iter.next(), "block_to_fluid_state");
-    list_ty(w, "FLUID_STATE_INDEX", fs_repr, size);
-    list(w, read_rl(size, &mut iter));
+
+    let mut out = Vec::<u32>::new();
+    for (bound, prop) in read_rl(size, &mut iter).zip(bl_props.iter().copied()) {
+        let bounds = &*arr[bound as usize];
+        let len = bs_size[prop as usize].get();
+        match bounds[..] {
+            [] => {
+                out.extend(repeat_n(0, len));
+            }
+            [b] => {
+                out.extend(repeat_n(b, len));
+            }
+            ref bounds => {
+                assert_eq!(len, bounds.len());
+                out.extend(bounds.iter().copied());
+            }
+        }
+    }
+    list_ty(w, "FLUID_STATE_INDEX", fs_repr, out.len());
+    list(w, out.into_iter());
     *w += ";\n";
 }
 
@@ -509,11 +485,10 @@ fn game_event_tags(w: &mut String, data: &str) {
 
 fn block_state(
     w: &mut String,
-    name_buf: &mut Vec<u8>,
     data: &str,
     gen_hash: &mut GenerateHash,
     block_names: &[&str],
-) -> Repr {
+) -> (Repr, Vec<u32>, Vec<NonZeroUsize>) {
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
@@ -559,8 +534,6 @@ fn block_state(
             vec.into_boxed_slice()
         })
         .collect::<Vec<_>>();
-    drop(pk3);
-    drop(pv3);
 
     enum_head(w, repr_k, name_k);
     for &s in &pk2 {
@@ -630,7 +603,7 @@ fn block_state(
         }
         *w += "}\n";
         impl_common(w, name, repr, x.len(), 0);
-        impl_name(w, gen_hash, name_buf, repr, x, name);
+        impl_name(w, gen_hash, repr, x, name);
 
         val_names.push(name);
     }
@@ -702,8 +675,8 @@ fn block_state(
     *w += "}\n";
     impl_common(w, name_kv, repr_kv, size_kv, 0);
 
-    impl_name(w, gen_hash, name_buf, repr_k, &pk2, name_k);
-    impl_name(w, gen_hash, name_buf, repr_v, &pv2, name_v);
+    impl_name(w, gen_hash, repr_k, &pk2, name_k);
+    impl_name(w, gen_hash, repr_v, &pv2, name_v);
 
     *w += "impl ";
     *w += name_kv;
@@ -713,11 +686,11 @@ fn block_state(
     list(w, kv.iter().map(|x| x[0]));
     *w += ";\n";
 
-    *w += "const V: [&'static [";
+    *w += "const V: &[&'static [";
     *w += repr_v.to_int();
     *w += "]; ";
     *w += ib.format(size_kv);
-    *w += "] = [";
+    *w += "] = &[";
     for data in &kv {
         *w += "&[";
         for &v in &data[1..] {
@@ -1128,11 +1101,11 @@ fn block_state(
     list(w, bl_props.iter().copied());
     *w += ";\n";
 
-    *w += "const PROPS: [&'static [";
+    *w += "const PROPS: &[&[";
     *w += repr_kv.to_int();
     *w += "]; ";
     *w += ib.format(bs_properties.len());
-    *w += "] = [\n";
+    *w += "] = &[\n";
     for prop in &bs_properties {
         *w += "&[";
         for &x in &**prop {
@@ -1229,7 +1202,7 @@ fn block_state(
     *w += "}\n";
     let (_, size, _) = head(iter.next(), "block_item_to_block");
 
-    *w += "const ITEM: [raw_block; item::MAX as usize + 1] = ";
+    *w += "const ITEM: &[raw_block; item::MAX as usize + 1] = ";
     let mut out = Vec::with_capacity(size);
     let _: u32 = read_rl(size, &mut iter).fold(0, |prev, x| {
         out.push(x.wrapping_add(prev));
@@ -1242,35 +1215,27 @@ fn block_state(
 
     let mut f32t = Vec::with_capacity(size);
     for _ in 0..size {
-        let (x, _) = parse_hex::<u32>(iter.next().unwrap().as_bytes());
+        let x = parse_u32(iter.next().unwrap());
         f32t.push(x);
     }
     let (_, size, _) = head(iter.next(), "float64_table");
 
     let mut f64t = Vec::with_capacity(size);
     for _ in 0..size {
-        let (x, _) = parse_hex::<u64>(iter.next().unwrap().as_bytes());
+        let x = parse_u64(iter.next().unwrap());
         let x = f64::from_be_bytes(x.to_be_bytes());
         f64t.push(x);
     }
     let (_, size, shape_repr) = head(iter.next(), "shape_table");
 
-    *w += "const SHAPES: [&[[f64; 6]]; ";
+    *w += "const SHAPES: &[&[[f64; 6]]; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = &[";
     let mut shape = Vec::new();
     let mut rb = ryu::Buffer::new();
     for _ in 0..size {
-        let mut s = iter.next().unwrap().as_bytes();
-        loop {
-            let (x, y) = parse_hex::<u32>(s);
-            if y == 0 {
-                break;
-            }
-            s = &s[y..];
-            if let [b' ', rest @ ..] = s {
-                s = rest;
-            }
+        let s = hex_line(iter.next().unwrap());
+        for x in s {
             shape.push(f64t[x as usize]);
         }
         *w += "&[";
@@ -1303,23 +1268,19 @@ fn block_state(
 
     let mut bs_ettings = Vec::with_capacity(size);
     for _ in 0..size {
-        let mut s = iter.next().unwrap().as_bytes();
+        let mut s = hex_line(iter.next().unwrap());
         let mut settings = [0_u32; 5];
         for s1 in &mut settings {
-            let (x, y) = parse_hex::<u32>(s);
-            s = &s[y..];
-            if let [b' ', rest @ ..] = s {
-                s = rest;
-            }
+            let x = s.next().unwrap();
             *s1 = f32t[x as usize];
         }
         bs_ettings.push(settings);
     }
-    *w += "const BLOCK_SETTINGS: [";
+    *w += "const BLOCK_SETTINGS: &[";
     *w += "[f32; 5]";
     *w += "; ";
     *w += ib.format(size);
-    *w += "] = [";
+    *w += "] = &[";
     for &x in bs_ettings.iter() {
         *w += "[";
         for x in x {
@@ -1360,22 +1321,18 @@ fn block_state(
     list_ty(w, "BLOCK_STATE_BOUNDS", Repr::U64, size);
     let mut out = Vec::with_capacity(size);
     for _ in 0..size {
-        let mut s = iter.next().unwrap().as_bytes();
+        let s = iter.next().unwrap();
         if s.is_empty() {
             out.push(0u64);
             continue;
         }
-        let (n1, y) = parse_hex::<u8>(s);
-        s = &s[y + 1..];
-        let (n2, y) = parse_hex::<u8>(s);
-        s = &s[y + 1..];
-        let (n3, y) = parse_hex::<u8>(s);
-        s = &s[y + 1..];
-        let (n4, y) = parse_hex::<u8>(s);
-        s = &s[y + 1..];
-        let (m5, y) = parse_hex::<u16>(s);
-        s = &s[y + 1..];
-        let (m6, _) = parse_hex::<u16>(s);
+        let mut line = hex_line(s);
+        let n1 = line.next().unwrap() as u8;
+        let n2 = line.next().unwrap() as u8;
+        let n3 = line.next().unwrap() as u8;
+        let n4 = line.next().unwrap() as u8;
+        let m5 = line.next().unwrap() as u16;
+        let m6 = line.next().unwrap() as u16;
         let [n5, n6] = m5.to_le_bytes();
         let [n7, n8] = m6.to_le_bytes();
         let v = u64::from_le_bytes([n1, n2, n3, n4, n5, n6, n7, n8]);
@@ -1388,11 +1345,7 @@ fn block_state(
 
     let prop_bounds = (&mut iter)
         .take(bsb_size)
-        .map(|arr| {
-            arr.split_ascii_whitespace()
-                .map(|x| parse_hex::<u32>(x.as_bytes()).0)
-                .collect::<Box<_>>()
-        })
+        .map(|arr| hex_line(arr).collect::<Box<_>>())
         .collect::<Box<_>>();
 
     let (_, size, _) = head(iter.next(), "block_state_static_bounds");
@@ -1400,14 +1353,9 @@ fn block_state(
     list_ty(w, "BLOCK_STATE_BOUNDS_INDEX", Repr::U16, bs_size);
 
     let mut out = Vec::with_capacity(bs_size);
-    for (i, b_idx) in read_rl(size, &mut iter).enumerate() {
-        let bounds = &*prop_bounds[b_idx as usize];
-        let props = &*bs_properties[bl_props[i] as usize];
-        let mut len = 1;
-        for &prop in props {
-            let prop = &*kv[prop as usize];
-            len *= prop.len() - 1;
-        }
+    for (bounds, prop) in read_rl(size, &mut iter).zip(bl_props.iter().copied()) {
+        let bounds = &*prop_bounds[bounds as usize];
+        let len = bs_prop_size[prop as usize].get();
         match bounds[..] {
             [] => {
                 out.extend(repeat_n(0, len));
@@ -1425,59 +1373,37 @@ fn block_state(
     list(w, out.into_iter());
     *w += ";\n";
 
-    bs_repr
+    (bs_repr, bl_props, bs_prop_size)
 }
 
 fn item(w: &mut String, data: &str) {
     let mut iter = data.split('\n');
     let (_, size, _) = head(iter.next(), "item_max_count");
     list_ty(w, "ITEM_MAX_COUNT", Repr::U8, size);
-    let mut x = size;
-    let mut out = Vec::new();
-    loop {
-        if x == 0 {
-            break;
-        }
-        let next = iter.next().unwrap().as_bytes();
-        let (n, count) = match next.first().copied() {
-            Some(b'~') => {
-                let (a, b) = parse_hex::<u32>(&next[1..]);
-                let next = &next[b + 2..];
-                let n = parse_hex::<u8>(next);
-                (n.0, a as usize)
-            }
-            _ => {
-                let n = parse_hex::<u8>(next);
-                (n.0, 1)
-            }
-        };
-        out.extend(core::iter::repeat_n(n, count));
-        x = x.checked_sub(count).unwrap();
-    }
-    list(w, out.iter().copied());
+    list(w, read_rl(size, &mut iter).map(|x| x as u8));
     *w += ";\n";
 }
 
-fn entity(w: &mut String, _: &mut [u8], data: &str) {
+fn entity(w: &mut String, data: &str) {
     let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
     let (_, size, _) = head(iter.next(), "entity_type_height");
-    *w += "const ENTITY_HEIGHT: [f32; ";
+    *w += "const ENTITY_HEIGHT: &[f32; ";
     *w += ib.format(size);
     *w += "] = ";
     list(w, read_rl(size, &mut iter).map(f32::from_bits));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_width");
-    *w += "const ENTITY_WIDTH: [f32; ";
+    *w += "const ENTITY_WIDTH: &[f32; ";
     *w += ib.format(size);
     *w += "] = ";
     list(w, read_rl(size, &mut iter).map(f32::from_bits));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_fixed");
-    *w += "const ENTITY_FIXED: [u8; ";
+    *w += "const ENTITY_FIXED: &[u8; ";
     *w += ib.format(size);
     *w += "] = ";
     list(w, read_rl(size, &mut iter));
@@ -1491,7 +1417,7 @@ fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
     };
     let (name, rest) = first.split_once(';').unwrap();
     let (_ty, size) = rest.split_once(';').unwrap();
-    let (size, _) = parse_hex::<u32>(size.as_bytes());
+    let size = parse_u32(size);
     let size = size as usize;
     if !expected.is_empty() {
         assert_eq!(expected, name);
@@ -1499,14 +1425,7 @@ fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
     (name, size, Repr::new(size))
 }
 
-fn impl_name(
-    w: &mut String,
-    g: &mut GenerateHash,
-    name_buf: &mut Vec<u8>,
-    repr: Repr,
-    names: &[&str],
-    name: &str,
-) {
+fn impl_name(w: &mut String, g: &mut GenerateHash, repr: Repr, names: &[&str], name: &str) {
     let mut ib = itoa::Buffer::new();
     *w += "impl ";
     *w += name;
@@ -1524,41 +1443,20 @@ fn impl_name(
     list_ty(w, "VALS", repr, state.map.len());
     list(w, state.map.iter().map(|&ele| ele.unwrap()));
     *w += ";\n";
-    while !name_buf.len().is_multiple_of(8) {
-        name_buf.push(0);
-    }
-    let start = name_buf.len();
-    name_buf.reserve(names.len() * 24);
-    let mut offset = names.len() * 8;
-    for &name in names {
-        let a = offset as u32;
-        let b = name.len() as u32;
-        let c = (a as u64) | ((b as u64) << 32);
-        name_buf.extend(c.to_le_bytes());
-        offset += name.len();
-    }
+    *w += "const N: &[&str; ";
+    *w += ib.format(names.len());
+    *w += "] = &[\n";
     for &val in names {
-        name_buf.extend(val.as_bytes());
+        *w += "\"";
+        *w += val;
+        *w += "\",\n";
     }
-    *w += "const N: *const u8 = ";
-    if start != 0 {
-        *w += "unsafe { NAMES.as_ptr().add(";
-        *w += ib.format(start);
-        *w += ") }"
-    } else {
-        *w += "NAMES.as_ptr()";
-    }
-    *w += ";\n";
+    *w += "];\n";
     *w += "#[inline]
 #[must_use]
 pub const fn name(self) -> &'static str {
 unsafe {
-let packed = u64::from_le_bytes(*Self::N.add(8 * self as usize).cast::<[u8; 8]>());
-let len = (packed >> 32) as usize;
-let offset = (packed as u32) as usize;
-::core::str::from_utf8_unchecked(
-::core::slice::from_raw_parts(Self::N.add(offset), len)
-)
+*Self::N.as_ptr().add(self as usize)
 }
 }
 #[inline]
@@ -1584,7 +1482,7 @@ pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {\n";
         _ => unimplemented!(),
     }
 
-    *w += ">(Self::DISPS, Self::N, Self::VALS, name) {\n";
+    *w += ">(Self::DISPS, Self::N.as_ptr(), Self::VALS, name) {\n";
     *w += "::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<";
     *w += repr.to_int();
     *w += ", Self>(x)) },
@@ -1635,9 +1533,8 @@ fn struct_head(w: &mut String, repr: Repr, name: &str) {
 }
 
 fn hex_line(x: &str) -> impl Iterator<Item = u32> + '_ {
-    x.as_bytes()
-        .split(|&x| x == b' ')
-        .map(|x| parse_hex::<u32>(x).0)
+    x.split_ascii_whitespace()
+        .map(|n| u32::from_str_radix(n, 16).expect("parse hex"))
 }
 
 struct GenerateHash {
@@ -1777,18 +1674,18 @@ impl<'a, T: Iterator<Item = &'a str>> Iterator for RunLength<T> {
         if self.take == 0 {
             None
         } else if self.count == 0 {
-            let next = self.i.next()?.as_bytes();
+            let next = self.i.next()?;
             self.take -= 1;
-            match next.first().copied() {
-                Some(b'~') => {
-                    let (a, b) = parse_hex::<u32>(&next[1..]);
-                    let next = &next[b + 2..];
-                    let (ctx, _) = parse_hex::<u32>(next);
+            match next.strip_prefix('~') {
+                Some(rest) => {
+                    let mut rest = hex_line(rest);
+                    let a = rest.next().unwrap();
+                    let ctx = rest.next().unwrap();
                     self.count = a as usize - 1;
                     self.prev = ctx;
                     Some(ctx)
                 }
-                _ => Some(parse_hex::<u32>(next).0),
+                _ => Some(parse_u32(next)),
             }
         } else {
             self.take -= 1;
@@ -1811,16 +1708,11 @@ fn list_ty(w: &mut String, name: &str, repr: Repr, size: usize) {
     *w += "#[allow(clippy::large_const_arrays)]\n";
     *w += "const ";
     *w += name;
-    w.push(':');
-    w.push(' ');
-    w.push('[');
+    *w += ": &[";
     *w += repr.to_int();
     *w += "; ";
     *w += itoa::Buffer::new().format(size);
-    w.push(']');
-    w.push(' ');
-    w.push('=');
-    w.push(' ');
+    *w += "] = ";
 }
 
 fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
@@ -1828,14 +1720,12 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     let first = match first {
         Some(x) => x,
         None => {
-            w.push('[');
-            w.push(']');
+            *w += "&[]";
             return;
         }
     };
     let mut c = 0usize;
-    w.push('[');
-    w.push('\n');
+    *w += "&[\n";
     let mut b = itoa::Buffer::new();
     let mut r = ryu::Buffer::new();
     first.format(w, &mut b, &mut r);
@@ -1948,4 +1838,12 @@ impl Format for f32 {
     fn format(&self, w: &mut String, _: &mut itoa::Buffer, b: &mut ryu::Buffer) {
         w.push_str(b.format(*self));
     }
+}
+
+fn parse_u32(n: &str) -> u32 {
+    u32::from_str_radix(n.trim_ascii(), 16).expect("parse hex")
+}
+
+fn parse_u64(n: &str) -> u64 {
+    u64::from_str_radix(n.trim_ascii(), 16).expect("parse hex")
 }

@@ -18,9 +18,6 @@ fn main() {
         oak_log::decode((state.id() - block::oak_log.state_index()) as _).axis(),
         prop_axis_x_y_z::z
     );
-    let state: block_state = encode_state!(oak_log(oak_log::new().with_axis(prop_axis_x_y_z::z)));
-    assert_eq!(decode_state!(oak_log(state)).axis(), prop_axis_x_y_z::z);
-    assert_eq!(state.to_fluid().to_fluid(), fluid::empty);
 
     let x = block::mud.state_default();
     let b = x.to_block();
