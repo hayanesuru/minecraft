@@ -1,6 +1,5 @@
-use crate::{Component, List, Rest, ServerLinkUntrustedEntry, TagNetworkEntry, Utf8};
+use crate::{Component, Dialog, List, Rest, ServerLinkUntrustedEntry, TagNetworkEntry, Utf8};
 use haya_ident::Ident;
-use haya_nbt::Tag;
 use mser::{ByteArray, V32};
 use uuid::Uuid;
 
@@ -80,5 +79,5 @@ pub struct ClearDialog {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ShowDialog {
-    pub dialog: Tag,
+    pub dialog: Dialog,
 }

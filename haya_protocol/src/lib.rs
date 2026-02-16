@@ -19,20 +19,17 @@ extern crate mser_macro;
 extern crate alloc;
 
 #[derive(Clone, Copy, Debug)]
+#[repr(u8)]
 pub enum ClientIntent {
-    Status,
-    Login,
-    Transfer,
+    Status = 1,
+    Login = 2,
+    Transfer = 3,
 }
 
 impl Write for ClientIntent {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            w.write_byte(match self {
-                Self::Status => 1,
-                Self::Login => 2,
-                Self::Transfer => 3,
-            });
+            w.write_byte(*self as u8);
         }
     }
 
@@ -170,7 +167,13 @@ impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ComponentJson<'a>(pub Utf8<'a, 262144>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Component(pub Tag);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Dialog(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RegistryKey<'a> {
@@ -198,37 +201,37 @@ pub struct KnownPack<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ServerLinkUntrustedEntry<'a> {
-    pub ty: ServerLinkUntrustedEntryType,
+    pub ty: Either<KnownLinkType, Component>,
     pub url: Utf8<'a>,
 }
 
 #[derive(Clone)]
-pub enum ServerLinkUntrustedEntryType {
-    Known(KnownLinkType),
-    Custom(Component),
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
 }
 
-impl<'a> Read<'a> for ServerLinkUntrustedEntryType {
+impl<'a, L: Read<'a>, R: Read<'a>> Read<'a> for Either<L, R> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         if bool::read(buf)? {
-            Ok(Self::Known(KnownLinkType::read(buf)?))
+            Ok(Self::Left(L::read(buf)?))
         } else {
-            Ok(Self::Custom(Component::read(buf)?))
+            Ok(Self::Right(R::read(buf)?))
         }
     }
 }
 
-impl Write for ServerLinkUntrustedEntryType {
+impl<L: Write, R: Write> Write for Either<L, R> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             match self {
-                Self::Known(k) => {
+                Self::Left(l) => {
                     true.write(w);
-                    k.write(w);
+                    l.write(w);
                 }
-                Self::Custom(c) => {
+                Self::Right(r) => {
                     false.write(w);
-                    c.write(w);
+                    r.write(w);
                 }
             }
         }
@@ -236,8 +239,8 @@ impl Write for ServerLinkUntrustedEntryType {
 
     fn len_s(&self) -> usize {
         match self {
-            Self::Known(k) => true.len_s() + k.len_s(),
-            Self::Custom(c) => false.len_s() + c.len_s(),
+            Self::Left(l) => true.len_s() + l.len_s(),
+            Self::Right(r) => false.len_s() + r.len_s(),
         }
     }
 }
