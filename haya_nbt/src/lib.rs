@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(coroutines, coroutine_trait, stmt_expr_attributes)]
 
 extern crate alloc;
 
@@ -15,14 +14,13 @@ use self::byte_array::ByteArray;
 pub use self::compound::{Compound, CompoundNamed};
 use self::int_array::IntArray;
 use self::list::ListRec;
-pub use self::list::{List, ListInfo};
+pub use self::list::{ListInfo, ListTag};
 use self::long_array::LongArray;
 pub use self::string::{RefStringTag, StringTag, StringTagRaw};
 pub use self::stringify::StringifyCompound;
+use crate::compound::Name;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::ops::{Coroutine, CoroutineState};
-use core::pin::Pin;
 use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -108,168 +106,147 @@ impl TagType {
 
 impl TagType {
     pub fn tag(self, n: &mut &[u8]) -> Result<Tag, Error> {
-        match read_tag(Step::T(self, n), 512) {
-            Ret::Ok(x, m) => {
-                *n = m;
-                Ok(x)
+        let t = match self.tag_no_rec(n)? {
+            Ok(x) => return Ok(x),
+            Err(TagRec::List) => {
+                let l = ListInfo::read(n)?;
+                match l.list_no_rec(n)? {
+                    Ok(x) => return Ok(Tag::List(x)),
+                    Err(e) => match e {
+                        ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
+                        ListRec::List => Entry::ListList(Vec::new(), l.1),
+                    },
+                }
             }
-            Ret::Err(e, m) => {
-                *n = m;
-                Err(e)
-            }
-        }
+            Err(TagRec::Compound) => Entry::Compound(Compound::new()),
+        };
+        read_tag(n, t, 512)
     }
 }
 
-#[derive(Clone, Copy)]
-enum Step<'a> {
-    T(TagType, &'a [u8]),
-    L(ListInfo, &'a [u8]),
+enum Entry {
+    Compound(Compound),
+    ListCompound(Vec<Compound>, u32),
+    ListList(Vec<ListTag>, u32),
 }
 
-#[derive(Clone)]
-enum Ret<'a> {
-    Ok(Tag, &'a [u8]),
-    Err(Error, &'a [u8]),
-}
-
-fn read_tag<'a>(init: Step<'a>, max_depth: usize) -> Ret<'a> {
-    let f = |step| {
-        #[coroutine]
-        move |_| match step {
-            Step::T(s, mut n) => match match s.tag_no_rec(&mut n) {
-                Ok(x) => x,
-                Err(e) => return Ret::Err(e, n),
-            } {
-                Ok(x) => Ret::Ok(x, n),
-                Err(TagRec::List) => {
-                    let info = match ListInfo::read(&mut n) {
-                        Ok(x) => x,
-                        Err(e) => return Ret::Err(e, n),
-                    };
-                    match yield Step::L(info, n) {
-                        Ret::Ok(x, y) => Ret::Ok(x, y),
-                        Ret::Err(e, n) => Ret::Err(e, n),
-                    }
-                }
-                Err(TagRec::Compound) => {
-                    let mut compound = Vec::new();
-                    loop {
-                        let ty = match TagType::read(&mut n) {
-                            Ok(x) => x,
-                            Err(e) => return Ret::Err(e, n),
-                        };
-                        if let TagType::End = ty {
-                            compound.shrink_to_fit();
-                            return Ret::Ok(Tag::Compound(Compound::from(compound)), n);
-                        }
-                        let k = match StringTag::read(&mut n) {
-                            Ok(x) => x.0,
-                            Err(e) => return Ret::Err(e, n),
-                        };
-                        let v = match yield Step::T(ty, n) {
-                            Ret::Ok(x, y) => {
-                                n = y;
-                                x
-                            }
-                            Ret::Err(e, n) => return Ret::Err(e, n),
-                        };
-                        compound.push((k, v));
-                    }
-                }
-            },
-            Step::L(s, mut n) => match match s.list_no_rec(&mut n) {
-                Ok(x) => x,
-                Err(e) => return Ret::Err(e, n),
-            } {
-                Ok(x) => Ret::Ok(Tag::List(x), n),
-                Err(ListRec::List) => {
-                    let len = s.1 as usize;
-                    if len << 2 > n.len() {
-                        return Ret::Err(Error, n);
-                    }
-                    let mut list = Vec::with_capacity(len);
-                    for _ in 0..len {
-                        let info = match ListInfo::read(&mut n) {
-                            Ok(x) => x,
-                            Err(e) => return Ret::Err(e, n),
-                        };
-                        let t = match yield Step::L(info, n) {
-                            Ret::Ok(x, y) => {
-                                n = y;
-                                x
-                            }
-                            Ret::Err(e, n) => return Ret::Err(e, n),
-                        };
-                        match t {
-                            Tag::List(x) => list.push(x),
-                            _ => return Ret::Err(Error, n),
-                        }
-                    }
-                    Ret::Ok(Tag::List(List::List(list)), n)
-                }
-                Err(ListRec::Compound) => {
-                    let len = s.1 as usize;
-                    if len > n.len() {
-                        return Ret::Err(Error, n);
-                    }
-                    let mut list = Vec::with_capacity(len);
-                    for _ in 0..len {
-                        let mut compound = Vec::new();
-                        loop {
-                            let ty = match TagType::read(&mut n) {
-                                Ok(x) => x,
-                                Err(e) => return Ret::Err(e, n),
-                            };
-                            if let TagType::End = ty {
-                                compound.shrink_to_fit();
-                                break;
-                            }
-                            let k = match StringTag::read(&mut n) {
-                                Ok(x) => x.0,
-                                Err(e) => return Ret::Err(e, n),
-                            };
-                            let v = match yield Step::T(ty, n) {
-                                Ret::Ok(x, y) => {
-                                    n = y;
-                                    x
-                                }
-                                Ret::Err(e, n) => return Ret::Err(e, n),
-                            };
-                            compound.push((k, v));
-                        }
-                        list.push(Compound::from(compound));
-                    }
-                    Ret::Ok(Tag::List(List::Compound(list)), n)
-                }
-            },
-        }
-    };
-
-    let mut depth = Vec::new();
-    let mut current = f(init);
-    let mut ret = Ret::Err(Error, &[]);
-
+fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, Error> {
+    let mut depth = Vec::<Entry>::new();
+    let mut names = Vec::<Name>::new();
     loop {
-        match Pin::new(&mut current).resume(ret) {
-            CoroutineState::Yielded(arg) => {
-                if depth.len() == max_depth {
-                    match arg {
-                        Step::T(_, n) => return Ret::Err(Error, n),
-                        Step::L(_, n) => return Ret::Err(Error, n),
+        if max_depth == depth.len() {
+            return Err(Error);
+        }
+        match next {
+            Entry::Compound(mut compound) => {
+                let ty = TagType::read(buf)?;
+                if let TagType::End = ty {
+                    next = match depth.pop() {
+                        Some(Entry::Compound(mut c)) => {
+                            let k = match names.pop() {
+                                Some(x) => x,
+                                None => return Err(Error),
+                            };
+                            c.push(k, Tag::Compound(compound));
+                            Entry::Compound(c)
+                        }
+                        Some(Entry::ListCompound(mut l, len)) => {
+                            l.push(compound);
+                            Entry::ListCompound(l, len)
+                        }
+                        Some(Entry::ListList(_, _)) => return Err(Error),
+                        None => return Ok(Tag::Compound(compound)),
+                    };
+                } else {
+                    let name = Name::read(buf)?;
+                    match ty.tag_no_rec(buf)? {
+                        Ok(t) => {
+                            compound.push(name, t);
+                            next = Entry::Compound(compound);
+                        }
+                        Err(TagRec::Compound) => {
+                            names.push(name);
+                            depth.push(Entry::Compound(compound));
+                            next = Entry::Compound(Compound::new());
+                        }
+                        Err(TagRec::List) => {
+                            let l = ListInfo::read(buf)?;
+                            match l.list_no_rec(buf)? {
+                                Ok(x) => {
+                                    compound.push(name, Tag::List(x));
+                                    next = Entry::Compound(compound);
+                                }
+                                Err(e) => {
+                                    names.push(name);
+                                    depth.push(Entry::Compound(compound));
+                                    next = match e {
+                                        ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
+                                        ListRec::List => Entry::ListList(Vec::new(), l.1),
+                                    };
+                                }
+                            }
+                        }
+                    };
+                }
+            }
+            Entry::ListCompound(compounds, len) => {
+                if len == 0 {
+                    next = match depth.pop() {
+                        Some(Entry::Compound(mut x)) => {
+                            let k = match names.pop() {
+                                Some(x) => x,
+                                None => return Err(Error),
+                            };
+                            x.push(k, Tag::List(ListTag::Compound(compounds)));
+                            Entry::Compound(x)
+                        }
+                        Some(Entry::ListList(mut lists, len)) => {
+                            lists.push(ListTag::Compound(compounds));
+                            Entry::ListList(lists, len)
+                        }
+                        Some(Entry::ListCompound(_, _)) => return Err(Error),
+                        None => return Ok(Tag::List(ListTag::Compound(compounds))),
+                    };
+                } else {
+                    depth.push(Entry::ListCompound(compounds, len - 1));
+                    next = Entry::Compound(Compound::new());
+                }
+            }
+            Entry::ListList(mut lists, len) => {
+                if len == 0 {
+                    next = match depth.pop() {
+                        Some(Entry::Compound(mut x)) => {
+                            let k = match names.pop() {
+                                Some(x) => x,
+                                None => return Err(Error),
+                            };
+                            x.push(k, Tag::List(ListTag::List(lists)));
+                            Entry::Compound(x)
+                        }
+                        Some(Entry::ListList(mut x, len)) => {
+                            x.push(ListTag::List(lists));
+                            Entry::ListList(x, len)
+                        }
+                        Some(Entry::ListCompound(_, _)) => return Err(Error),
+                        None => return Ok(Tag::List(ListTag::List(lists))),
+                    };
+                } else {
+                    let l = ListInfo::read(buf)?;
+                    match l.list_no_rec(buf)? {
+                        Ok(x) => {
+                            lists.push(x);
+                            next = Entry::ListList(lists, len - 1);
+                        }
+                        Err(e) => {
+                            depth.push(Entry::ListList(lists, len - 1));
+                            next = match e {
+                                ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
+                                ListRec::List => Entry::ListList(Vec::new(), l.1),
+                            };
+                        }
                     }
                 }
-                depth.push(current);
-                current = f(arg);
-                ret = Ret::Err(Error, &[]);
             }
-            CoroutineState::Complete(real_res) => match depth.pop() {
-                None => return real_res,
-                Some(top) => {
-                    current = top;
-                    ret = real_res;
-                }
-            },
         }
     }
 }
@@ -316,7 +293,7 @@ pub enum Tag {
     ByteArray(Vec<i8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
-    List(List),
+    List(ListTag),
     Compound(Compound),
 }
 
@@ -507,9 +484,9 @@ impl From<Box<str>> for Tag {
     }
 }
 
-impl From<List> for Tag {
+impl From<ListTag> for Tag {
     #[inline]
-    fn from(value: List) -> Self {
+    fn from(value: ListTag) -> Self {
         Self::List(value)
     }
 }

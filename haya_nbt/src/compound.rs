@@ -1,22 +1,106 @@
-use crate::{RefStringTag, StringTag, Tag, TagType};
+use crate::string::DecodeMutf8;
+use crate::{RefStringTag, Tag, TagType};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::vec::Vec;
+use haya_mutf8::{Mutf8, as_mutf8_ascii, decode_mutf8_len};
+use haya_str::HayaStr;
 use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct Compound(Vec<(Box<str>, Tag)>);
+pub struct Compound(Vec<(Name, Tag)>);
 
-impl AsRef<[(Box<str>, Tag)]> for Compound {
+#[derive(Clone)]
+pub enum Name {
+    Thin(HayaStr),
+    Heap(Box<str>),
+}
+
+enum CowVec {
+    Thin(HayaStr),
+    Heap(Vec<u8>),
+}
+
+impl Read<'_> for Name {
+    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+        let len = u16::read(buf)? as usize;
+        let data = match buf.split_at_checked(len) {
+            Some((x, y)) => {
+                *buf = y;
+                x
+            }
+            None => return Err(Error),
+        };
+        if let Some(x) = as_mutf8_ascii(data) {
+            Ok(Self::new(x))
+        } else {
+            let len = decode_mutf8_len(data)?;
+            let mut ptr = if len <= haya_str::MAX {
+                CowVec::Thin(HayaStr::new())
+            } else {
+                CowVec::Heap(Vec::with_capacity(len))
+            };
+            unsafe {
+                mser::write_unchecked(
+                    match &mut ptr {
+                        CowVec::Thin(s) => s.as_mut_ptr(),
+                        CowVec::Heap(x) => x.as_mut_ptr(),
+                    },
+                    &(DecodeMutf8(Mutf8::new_unchecked(data), len)),
+                );
+                match ptr {
+                    CowVec::Thin(mut s) => {
+                        s.set_len(len);
+                        Ok(Self::Thin(s))
+                    }
+                    CowVec::Heap(mut x) => {
+                        x.set_len(len);
+                        Ok(Self::Heap(String::from_utf8_unchecked(x).into_boxed_str()))
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl AsRef<str> for Name {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Thin(x) => x,
+            Self::Heap(x) => x,
+        }
+    }
+}
+
+impl core::ops::Deref for Name {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+impl Name {
+    pub fn new(s: &str) -> Self {
+        match HayaStr::copy_from(s) {
+            Ok(x) => Self::Thin(x),
+            Err(_) => Self::Heap(s.to_owned().into_boxed_str()),
+        }
+    }
+}
+
+impl AsRef<[(Name, Tag)]> for Compound {
     #[inline]
-    fn as_ref(&self) -> &[(Box<str>, Tag)] {
+    fn as_ref(&self) -> &[(Name, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(Box<str>, Tag)]> for Compound {
+impl AsMut<[(Name, Tag)]> for Compound {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(Box<str>, Tag)] {
+    fn as_mut(&mut self) -> &mut [(Name, Tag)] {
         self.0.as_mut_slice()
     }
 }
@@ -79,13 +163,13 @@ impl Write for Compound {
 }
 
 #[derive(Clone)]
-pub struct CompoundNamed(pub Box<str>, pub Compound);
+pub struct CompoundNamed(pub Name, pub Compound);
 
 impl Read<'_> for CompoundNamed {
     #[inline]
     fn read(n: &mut &[u8]) -> Result<Self, Error> {
         if matches!(TagType::read(n)?, TagType::Compound) {
-            Ok(Self(StringTag::read(n)?.0, Compound::read(n)?))
+            Ok(Self(Name::read(n)?, Compound::read(n)?))
         } else {
             Err(Error)
         }
@@ -108,7 +192,7 @@ impl Write for CompoundNamed {
     }
 }
 
-impl<K: Into<Box<str>>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<Name>, V> FromIterator<(K, V)> for Compound
 where
     Tag: From<V>,
 {
@@ -153,12 +237,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (Box<str>, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (Name, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (Box<str>, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (Name, Tag)> {
         self.0.iter_mut()
     }
 
@@ -196,7 +280,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: Box<str>, v: Tag) {
+    pub fn push(&mut self, k: Name, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -234,7 +318,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(Box<str>, Tag)> {
+    pub fn into_inner(self) -> Vec<(Name, Tag)> {
         self.0
     }
 }
@@ -250,9 +334,9 @@ impl Read<'_> for Compound {
     }
 }
 
-impl From<Vec<(Box<str>, Tag)>> for Compound {
+impl From<Vec<(Name, Tag)>> for Compound {
     #[inline]
-    fn from(value: Vec<(Box<str>, Tag)>) -> Self {
+    fn from(value: Vec<(Name, Tag)>) -> Self {
         Self(value)
     }
 }

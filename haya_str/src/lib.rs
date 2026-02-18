@@ -3,7 +3,7 @@
 use core::mem::transmute;
 use core::ptr::copy_nonoverlapping;
 
-const MAX: usize = 31;
+pub const MAX: usize = 31;
 
 #[derive(Clone, Copy)]
 pub struct HayaStr {
@@ -125,10 +125,7 @@ impl core::hash::Hash for HayaStr {
 
 impl Default for HayaStr {
     fn default() -> Self {
-        Self {
-            len: Len::N0,
-            data: [0; MAX],
-        }
+        Self::new()
     }
 }
 
@@ -181,7 +178,25 @@ impl HayaStr {
         self.len = Len::N0;
     }
 
-    pub const fn new(s: &str) -> Result<Self, OutOfBoundsError> {
+    pub const fn new() -> Self {
+        Self {
+            len: Len::N0,
+            data: [0; MAX],
+        }
+    }
+
+    /// # Safety
+    ///
+    /// `new_len` must be less than or equal to [MAX].
+    ///
+    /// [`MAX`]: crate::MAX
+    pub const unsafe fn set_len(&mut self, new_len: usize) {
+        unsafe {
+            self.len = transmute::<u8, Len>(new_len as u8);
+        }
+    }
+
+    pub const fn copy_from(s: &str) -> Result<Self, OutOfBoundsError> {
         if s.len() > MAX {
             Err(OutOfBoundsError)
         } else {

@@ -1,31 +1,31 @@
 use crate::{Error, Read, UnsafeWriter, Write};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_mutf8::{
-    Mutf8, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len, mutf8_is_ascii,
-    mutf8_is_utf8,
+    Mutf8, as_mutf8_ascii, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len,
 };
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 #[must_use]
-pub struct StringTagRaw<'a>(&'a [u8]);
+pub struct StringTagRaw<'a>(&'a str);
 
 impl<'a> StringTagRaw<'a> {
     pub const fn new(n: &'a [u8]) -> Option<Self> {
-        if mutf8_is_utf8(n) {
-            Some(Self(n))
+        if let Some(s) = as_mutf8_ascii(n) {
+            Some(Self(s))
         } else {
             None
         }
     }
 
-    pub const fn new_unchecked(n: &'a [u8]) -> Self {
-        debug_assert!(mutf8_is_utf8(n));
+    pub const fn new_unchecked(n: &'a str) -> Self {
+        debug_assert!(as_mutf8_ascii(n.as_bytes()).is_some());
         Self(n)
     }
 
-    pub const fn inner(&self) -> &'a [u8] {
+    pub const fn inner(&self) -> &'a str {
         self.0
     }
 }
@@ -56,8 +56,8 @@ impl<'a> Read<'a> for StringTagRaw<'a> {
             }
             None => return Err(Error),
         };
-        if mutf8_is_ascii(data) {
-            Ok(Self(data))
+        if let Some(x) = as_mutf8_ascii(data) {
+            Ok(Self(x))
         } else {
             Err(Error)
         }
@@ -73,8 +73,8 @@ impl<'a> Write for RefStringTag<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            if mutf8_is_ascii(self.0.as_bytes()) {
-                StringTagRaw(self.0.as_bytes()).write(w);
+            if let Some(x) = StringTagRaw::new(self.0.as_bytes()) {
+                x.write(w);
             } else {
                 (encode_mutf8_len(self.0) as u16).write(w);
                 encode_mutf8(self.0, w);
@@ -84,8 +84,8 @@ impl<'a> Write for RefStringTag<'a> {
 
     #[inline]
     fn len_s(&self) -> usize {
-        if mutf8_is_ascii(self.0.as_bytes()) {
-            StringTagRaw(self.0.as_bytes()).len_s()
+        if let Some(x) = StringTagRaw::new(self.0.as_bytes()) {
+            x.len_s()
         } else {
             encode_mutf8_len(self.0) + 2
         }
@@ -94,11 +94,7 @@ impl<'a> Write for RefStringTag<'a> {
 
 impl<'a> Read<'a> for RefStringTag<'a> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        unsafe {
-            Ok(Self(core::str::from_utf8_unchecked(
-                StringTagRaw::read(buf)?.0,
-            )))
-        }
+        Ok(Self(StringTagRaw::read(buf)?.0))
     }
 }
 
@@ -117,8 +113,8 @@ impl Read<'_> for StringTag {
             }
             None => return Err(Error),
         };
-        if mutf8_is_ascii(data) {
-            unsafe { Ok(Self(Box::from(core::str::from_utf8_unchecked(data)))) }
+        if let Some(x) = as_mutf8_ascii(data) {
+            Ok(Self(x.to_owned().into_boxed_str()))
         } else {
             let len = decode_mutf8_len(data)?;
             let mut x = Vec::with_capacity(len);

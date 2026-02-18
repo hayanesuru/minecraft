@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone)]
-pub enum List {
+pub enum ListTag {
     None,
     Byte(Vec<i8>),
     Short(Vec<i16>),
@@ -16,7 +16,7 @@ pub enum List {
     ByteArray(Vec<Vec<i8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
-    List(Vec<List>),
+    List(Vec<ListTag>),
     Compound(Vec<Compound>),
 }
 
@@ -30,7 +30,7 @@ pub(crate) enum ListPrimitive {
     Double(Vec<f64>),
 }
 
-impl From<ListPrimitive> for List {
+impl From<ListPrimitive> for ListTag {
     fn from(value: ListPrimitive) -> Self {
         match value {
             ListPrimitive::Byte(x) => Self::Byte(x),
@@ -67,7 +67,7 @@ impl Write for ListInfo {
     }
 }
 
-impl From<Vec<u8>> for List {
+impl From<Vec<u8>> for ListTag {
     #[inline]
     fn from(value: Vec<u8>) -> Self {
         let mut me = core::mem::ManuallyDrop::new(value);
@@ -77,91 +77,91 @@ impl From<Vec<u8>> for List {
     }
 }
 
-impl From<Vec<i8>> for List {
+impl From<Vec<i8>> for ListTag {
     #[inline]
     fn from(value: Vec<i8>) -> Self {
         Self::Byte(value)
     }
 }
 
-impl From<Vec<i16>> for List {
+impl From<Vec<i16>> for ListTag {
     #[inline]
     fn from(value: Vec<i16>) -> Self {
         Self::Short(value)
     }
 }
 
-impl From<Vec<i32>> for List {
+impl From<Vec<i32>> for ListTag {
     #[inline]
     fn from(value: Vec<i32>) -> Self {
         Self::Int(value)
     }
 }
 
-impl From<Vec<i64>> for List {
+impl From<Vec<i64>> for ListTag {
     #[inline]
     fn from(value: Vec<i64>) -> Self {
         Self::Long(value)
     }
 }
 
-impl From<Vec<f32>> for List {
+impl From<Vec<f32>> for ListTag {
     #[inline]
     fn from(value: Vec<f32>) -> Self {
         Self::Float(value)
     }
 }
 
-impl From<Vec<f64>> for List {
+impl From<Vec<f64>> for ListTag {
     #[inline]
     fn from(value: Vec<f64>) -> Self {
         Self::Double(value)
     }
 }
 
-impl From<Vec<Box<str>>> for List {
+impl From<Vec<Box<str>>> for ListTag {
     #[inline]
     fn from(value: Vec<Box<str>>) -> Self {
         Self::String(value)
     }
 }
 
-impl From<Vec<Vec<i8>>> for List {
+impl From<Vec<Vec<i8>>> for ListTag {
     #[inline]
     fn from(value: Vec<Vec<i8>>) -> Self {
         Self::ByteArray(value)
     }
 }
 
-impl From<Vec<Vec<i32>>> for List {
+impl From<Vec<Vec<i32>>> for ListTag {
     #[inline]
     fn from(value: Vec<Vec<i32>>) -> Self {
         Self::IntArray(value)
     }
 }
 
-impl From<Vec<Vec<i64>>> for List {
+impl From<Vec<Vec<i64>>> for ListTag {
     #[inline]
     fn from(value: Vec<Vec<i64>>) -> Self {
         Self::LongArray(value)
     }
 }
 
-impl From<Vec<List>> for List {
+impl From<Vec<ListTag>> for ListTag {
     #[inline]
-    fn from(value: Vec<List>) -> Self {
+    fn from(value: Vec<ListTag>) -> Self {
         Self::List(value)
     }
 }
 
-impl From<Vec<Compound>> for List {
+impl From<Vec<Compound>> for ListTag {
     #[inline]
     fn from(value: Vec<Compound>) -> Self {
         Self::Compound(value)
     }
 }
 
-impl List {
+impl ListTag {
     pub fn list_info(&self) -> ListInfo {
         match self {
             Self::None => ListInfo(TagType::End, 0),
@@ -181,7 +181,7 @@ impl List {
     }
 }
 
-impl Write for List {
+impl Write for ListTag {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
             self.list_info().write(w);
@@ -262,14 +262,14 @@ pub(crate) enum ListRec {
 }
 
 impl ListInfo {
-    pub(crate) fn list_no_rec(self, n: &mut &[u8]) -> Result<Result<List, ListRec>, Error> {
+    pub(crate) fn list_no_rec(self, n: &mut &[u8]) -> Result<Result<ListTag, ListRec>, Error> {
         let len = self.1 as usize;
         match self.0 {
-            TagType::End => Ok(Ok(List::None)),
+            TagType::End => Ok(Ok(ListTag::None)),
             TagType::Byte => match n.split_at_checked(len) {
                 Some((x, y)) => {
                     *n = y;
-                    Ok(Ok(List::Byte(Vec::from(
+                    Ok(Ok(ListTag::Byte(Vec::from(
                         crate::byte_array::u8_to_i8_slice(x),
                     ))))
                 }
@@ -278,66 +278,36 @@ impl ListInfo {
             TagType::Short => match n.split_at_checked(len * 2) {
                 Some((slice, y)) => unsafe {
                     *n = y;
-                    Ok(Ok(List::Short(short_list(len, slice))))
+                    Ok(Ok(ListTag::Short(short_list(len, slice))))
                 },
                 None => Err(Error),
             },
             TagType::Int => match n.split_at_checked(len * 4) {
                 Some((slice, y)) => unsafe {
                     *n = y;
-                    Ok(Ok(List::Int(int_list(len, slice))))
+                    Ok(Ok(ListTag::Int(int_list(len, slice))))
                 },
                 None => Err(Error),
             },
             TagType::Long => match n.split_at_checked(len * 8) {
-                Some((slice, y)) => {
+                Some((slice, y)) => unsafe {
                     *n = y;
-                    let mut v = Vec::with_capacity(len);
-                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
-                    for index in 0..len {
-                        unsafe {
-                            *s.get_unchecked_mut(index) = i64::from_be_bytes(
-                                *slice.as_ptr().add(index * 8).cast::<[u8; 8]>(),
-                            );
-                        }
-                    }
-                    unsafe { v.set_len(len) }
-                    Ok(Ok(List::Long(v)))
-                }
+                    Ok(Ok(ListTag::Long(long_list(len, slice))))
+                },
                 None => Err(Error),
             },
             TagType::Float => match n.split_at_checked(len * 4) {
-                Some((slice, y)) => {
+                Some((slice, y)) => unsafe {
                     *n = y;
-                    let mut v = Vec::with_capacity(len);
-                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
-                    for index in 0..len {
-                        unsafe {
-                            *s.get_unchecked_mut(index) = f32::from_be_bytes(
-                                *slice.as_ptr().add(index * 4).cast::<[u8; 4]>(),
-                            );
-                        }
-                    }
-                    unsafe { v.set_len(len) }
-                    Ok(Ok(List::Float(v)))
-                }
+                    Ok(Ok(ListTag::Float(f32_list(len, slice))))
+                },
                 None => Err(Error),
             },
             TagType::Double => match n.split_at_checked(len * 8) {
-                Some((slice, y)) => {
+                Some((slice, y)) => unsafe {
                     *n = y;
-                    let mut v = Vec::with_capacity(len);
-                    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
-                    for index in 0..len {
-                        unsafe {
-                            *s.get_unchecked_mut(index) = f64::from_be_bytes(
-                                *slice.as_ptr().add(index * 8).cast::<[u8; 8]>(),
-                            );
-                        }
-                    }
-                    unsafe { v.set_len(len) }
-                    Ok(Ok(List::Double(v)))
-                }
+                    Ok(Ok(ListTag::Double(f64_list(len, slice))))
+                },
                 None => Err(Error),
             },
             TagType::ByteArray => {
@@ -348,7 +318,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(ByteArray::read(n)?.0);
                 }
-                Ok(Ok(List::ByteArray(list)))
+                Ok(Ok(ListTag::ByteArray(list)))
             }
             TagType::String => {
                 if len * 2 > n.len() {
@@ -358,7 +328,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(StringTag::read(n)?.0);
                 }
-                Ok(Ok(List::String(list)))
+                Ok(Ok(ListTag::String(list)))
             }
             TagType::List => Ok(Err(ListRec::List)),
             TagType::Compound => Ok(Err(ListRec::Compound)),
@@ -370,7 +340,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(IntArray::read(n)?.0);
                 }
-                Ok(Ok(List::IntArray(list)))
+                Ok(Ok(ListTag::IntArray(list)))
             }
             TagType::LongArray => {
                 if len * 4 > n.len() {
@@ -380,10 +350,25 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(LongArray::read(n)?.0);
                 }
-                Ok(Ok(List::LongArray(list)))
+                Ok(Ok(ListTag::LongArray(list)))
             }
         }
     }
+}
+
+pub(crate) unsafe fn long_list(len: usize, slice: &[u8]) -> Vec<i64> {
+    debug_assert_eq!(len * 8, slice.len());
+
+    let mut v = Vec::with_capacity(len);
+    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    for index in 0..len {
+        unsafe {
+            *s.get_unchecked_mut(index) =
+                i64::from_be_bytes(*slice.as_ptr().add(index * 8).cast::<[u8; 8]>());
+        }
+    }
+    unsafe { v.set_len(len) }
+    v
 }
 
 pub(crate) unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
@@ -410,6 +395,36 @@ pub(crate) unsafe fn short_list(len: usize, slice: &[u8]) -> Vec<i16> {
         unsafe {
             *s.get_unchecked_mut(index) =
                 i16::from_be_bytes(*slice.as_ptr().add(index * 2).cast::<[u8; 2]>());
+        }
+    }
+    unsafe { v.set_len(len) }
+    v
+}
+
+pub(crate) unsafe fn f32_list(len: usize, slice: &[u8]) -> Vec<f32> {
+    debug_assert_eq!(len * 4, slice.len());
+
+    let mut v = Vec::with_capacity(len);
+    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    for index in 0..len {
+        unsafe {
+            *s.get_unchecked_mut(index) =
+                f32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
+        }
+    }
+    unsafe { v.set_len(len) }
+    v
+}
+
+pub(crate) unsafe fn f64_list(len: usize, slice: &[u8]) -> Vec<f64> {
+    debug_assert_eq!(len * 8, slice.len());
+
+    let mut v = Vec::with_capacity(len);
+    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    for index in 0..len {
+        unsafe {
+            *s.get_unchecked_mut(index) =
+                f64::from_be_bytes(*slice.as_ptr().add(index * 8).cast::<[u8; 8]>());
         }
     }
     unsafe { v.set_len(len) }

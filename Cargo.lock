@@ -40,6 +40,7 @@ name = "haya_nbt"
 version = "0.1.0"
 dependencies = [
  "haya_mutf8",
+ "haya_str",
  "itoa",
  "mser",
  "ryu",

@@ -10,6 +10,7 @@ edition.workspace = true
 [dependencies]
 mser = { workspace = true }
 haya_mutf8 = { workspace = true }
+haya_str = { workspace = true }
 
 unicode_names2 = "2"
 itoa = "1"

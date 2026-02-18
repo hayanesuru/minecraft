@@ -1,5 +1,6 @@
+use crate::compound::Name;
 use crate::list::ListPrimitive;
-use crate::{Compound, Error, List, Read as _, Tag, TagArray, TagPrimitive};
+use crate::{Compound, Error, ListTag, Read as _, Tag, TagArray, TagPrimitive};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -156,7 +157,7 @@ impl TBuf {
 unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
     enum Bl {
         C(Compound),
-        L(List),
+        L(ListTag),
     }
 
     let mut tmp = TBuf(Vec::new());
@@ -224,19 +225,19 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
             match &mut bl {
                 Bl::C(x) => x.shrink_to_fit(),
                 Bl::L(x) => match x {
-                    List::List(x) => x.shrink_to_fit(),
-                    List::Compound(x) => x.shrink_to_fit(),
-                    List::String(x) => x.shrink_to_fit(),
-                    List::Int(x) => x.shrink_to_fit(),
-                    List::Double(x) => x.shrink_to_fit(),
-                    List::Byte(x) => x.shrink_to_fit(),
-                    List::Short(x) => x.shrink_to_fit(),
-                    List::Long(x) => x.shrink_to_fit(),
-                    List::Float(x) => x.shrink_to_fit(),
-                    List::ByteArray(x) => x.shrink_to_fit(),
-                    List::IntArray(x) => x.shrink_to_fit(),
-                    List::LongArray(x) => x.shrink_to_fit(),
-                    List::None => (),
+                    ListTag::List(x) => x.shrink_to_fit(),
+                    ListTag::Compound(x) => x.shrink_to_fit(),
+                    ListTag::String(x) => x.shrink_to_fit(),
+                    ListTag::Int(x) => x.shrink_to_fit(),
+                    ListTag::Double(x) => x.shrink_to_fit(),
+                    ListTag::Byte(x) => x.shrink_to_fit(),
+                    ListTag::Short(x) => x.shrink_to_fit(),
+                    ListTag::Long(x) => x.shrink_to_fit(),
+                    ListTag::Float(x) => x.shrink_to_fit(),
+                    ListTag::ByteArray(x) => x.shrink_to_fit(),
+                    ListTag::IntArray(x) => x.shrink_to_fit(),
+                    ListTag::LongArray(x) => x.shrink_to_fit(),
+                    ListTag::None => (),
                 },
             }
             match (blocks.last_mut(), bl) {
@@ -246,7 +247,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                         let new_len = rest.len() - len;
                         c.push(
                             unsafe {
-                                Box::from(from_utf8_unchecked(
+                                Name::new(from_utf8_unchecked(
                                     rest.get_unchecked(rest.len() - len..rest.len()),
                                 ))
                             },
@@ -261,10 +262,10 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     _ => return Err(Error),
                 },
                 (Some(Bl::L(l)), Bl::C(x)) => {
-                    if let List::None = l {
-                        *l = List::Compound(Vec::new())
+                    if let ListTag::None = l {
+                        *l = ListTag::Compound(Vec::new())
                     }
-                    if let List::Compound(l) = l {
+                    if let ListTag::Compound(l) = l {
                         l.push(x);
                         continue;
                     } else {
@@ -272,10 +273,10 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     }
                 }
                 (Some(Bl::L(l)), Bl::L(x)) => {
-                    if let List::None = l {
-                        *l = List::List(Vec::new())
+                    if let ListTag::None = l {
+                        *l = ListTag::List(Vec::new())
                     }
-                    if let List::List(l) = l {
+                    if let ListTag::List(l) = l {
                         l.push(x);
                         continue;
                     } else {
@@ -334,7 +335,7 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                             Err(_) => {
                                 names.extend(kl);
                                 blocks.push(Bl::C(c));
-                                blocks.push(Bl::L(List::None));
+                                blocks.push(Bl::L(ListTag::None));
                                 on_start = true;
                                 continue;
                             }
@@ -360,13 +361,13 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                     },
                 };
                 unsafe {
-                    c.push(Box::from(from_utf8_unchecked(k)), t);
+                    c.push(Name::new(from_utf8_unchecked(k)), t);
                 }
             }
             Bl::L(mut l) => match peek(n)? {
                 (b'{', rest) => {
-                    if let List::None = &l {
-                        l = List::Compound(Vec::new());
+                    if let ListTag::None = &l {
+                        l = ListTag::Compound(Vec::new());
                     }
                     blocks.push(Bl::L(l));
                     blocks.push(Bl::C(Compound::new()));
@@ -379,29 +380,29 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                         Ok(arr) => {
                             match arr {
                                 TagArray::Byte(b) => {
-                                    if let List::None = &l {
-                                        l = List::ByteArray(Vec::new());
+                                    if let ListTag::None = &l {
+                                        l = ListTag::ByteArray(Vec::new());
                                     }
                                     match &mut l {
-                                        List::ByteArray(x) => x.push(b),
+                                        ListTag::ByteArray(x) => x.push(b),
                                         _ => return Err(Error),
                                     }
                                 }
                                 TagArray::Int(b) => {
-                                    if let List::None = &l {
-                                        l = List::IntArray(Vec::new());
+                                    if let ListTag::None = &l {
+                                        l = ListTag::IntArray(Vec::new());
                                     }
                                     match &mut l {
-                                        List::IntArray(x) => x.push(b),
+                                        ListTag::IntArray(x) => x.push(b),
                                         _ => return Err(Error),
                                     }
                                 }
                                 TagArray::Long(b) => {
-                                    if let List::None = &l {
-                                        l = List::LongArray(Vec::new());
+                                    if let ListTag::None = &l {
+                                        l = ListTag::LongArray(Vec::new());
                                     }
                                     match &mut l {
-                                        List::LongArray(x) => x.push(b),
+                                        ListTag::LongArray(x) => x.push(b),
                                         _ => return Err(Error),
                                     }
                                 }
@@ -410,14 +411,14 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                         }
                         Err(_) => {
                             match &l {
-                                List::None => {
-                                    l = List::List(Vec::new());
+                                ListTag::None => {
+                                    l = ListTag::List(Vec::new());
                                 }
-                                List::List(_) => (),
+                                ListTag::List(_) => (),
                                 _ => return Err(Error),
                             }
                             blocks.push(Bl::L(l));
-                            blocks.push(Bl::L(List::None));
+                            blocks.push(Bl::L(ListTag::None));
                             on_start = true;
                         }
                     }
@@ -445,11 +446,11 @@ unsafe fn decode(n: &mut &[u8], max_depth: usize) -> Result<Compound, Error> {
                         }
                     };
                     let l = match tag {
-                        Ok(x) => List::from(dec_list_primitive(n, &mut tmp, x)?),
+                        Ok(x) => ListTag::from(dec_list_primitive(n, &mut tmp, x)?),
                         Err(e) => {
                             let mut list = vec![e];
                             dec_list_string(n, &mut tmp, &mut list)?;
-                            List::String(list)
+                            ListTag::String(list)
                         }
                     };
                     blocks.push(Bl::L(l));
@@ -1079,7 +1080,7 @@ const DELIMITER: &[u8] = b", ";
 fn encode(buf: &mut Vec<u8>, n: &Compound) {
     #[derive(Clone, Copy)]
     enum Bl<'a> {
-        C(&'a [(Box<str>, Tag)]),
+        C(&'a [(Name, Tag)]),
         None,
         Byte(&'a [i8]),
         Short(&'a [i16]),
@@ -1091,25 +1092,25 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
         ByteArray(&'a [Vec<i8>]),
         IntArray(&'a [Vec<i32>]),
         LongArray(&'a [Vec<i64>]),
-        List(&'a [List]),
+        List(&'a [ListTag]),
         Compound(&'a [Compound]),
     }
-    impl<'a> From<&'a List> for Bl<'a> {
-        fn from(value: &'a List) -> Self {
+    impl<'a> From<&'a ListTag> for Bl<'a> {
+        fn from(value: &'a ListTag) -> Self {
             match value {
-                List::None => Self::None,
-                List::Byte(items) => Self::Byte(items),
-                List::Short(items) => Self::Short(items),
-                List::Int(items) => Self::Int(items),
-                List::Long(items) => Self::Long(items),
-                List::Float(items) => Self::Float(items),
-                List::Double(items) => Self::Double(items),
-                List::String(box_strs) => Self::String(box_strs),
-                List::ByteArray(items) => Self::ByteArray(items),
-                List::IntArray(items) => Self::IntArray(items),
-                List::LongArray(items) => Self::LongArray(items),
-                List::List(lists) => Self::List(lists),
-                List::Compound(compounds) => Self::Compound(compounds),
+                ListTag::None => Self::None,
+                ListTag::Byte(items) => Self::Byte(items),
+                ListTag::Short(items) => Self::Short(items),
+                ListTag::Int(items) => Self::Int(items),
+                ListTag::Long(items) => Self::Long(items),
+                ListTag::Float(items) => Self::Float(items),
+                ListTag::Double(items) => Self::Double(items),
+                ListTag::String(box_strs) => Self::String(box_strs),
+                ListTag::ByteArray(items) => Self::ByteArray(items),
+                ListTag::IntArray(items) => Self::IntArray(items),
+                ListTag::LongArray(items) => Self::LongArray(items),
+                ListTag::List(lists) => Self::List(lists),
+                ListTag::Compound(compounds) => Self::Compound(compounds),
             }
         }
     }

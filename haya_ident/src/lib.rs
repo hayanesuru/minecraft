@@ -129,7 +129,7 @@ impl Identifier {
                 let path = path.to_owned().into_boxed_str();
                 Self(Inner::Full { namespace, path })
             }
-            None => match HayaStr::new(path) {
+            None => match HayaStr::copy_from(path) {
                 Ok(path) => Self(Inner::Thin { path }),
                 Err(_) => Self(Inner::Heap {
                     path: path.to_owned().into_boxed_str(),

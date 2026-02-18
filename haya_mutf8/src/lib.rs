@@ -23,26 +23,15 @@ const CHAR_WIDTH: &[u8; 256] = &[
 ];
 
 #[must_use]
-pub const fn mutf8_is_ascii(bytes: &[u8]) -> bool {
-    !has_zero_nonascii(bytes)
-}
-
-#[must_use]
-pub const fn mutf8_is_utf8(bytes: &[u8]) -> bool {
-    let mut index = 0;
-    while index < bytes.len() {
-        let byte = bytes[index];
-        let w = unsafe { *CHAR_WIDTH.as_ptr().add(byte as usize) };
-        if w == 0 {
-            return false;
-        }
-        index += w as usize;
+pub const fn as_mutf8_ascii(bytes: &[u8]) -> Option<&str> {
+    if !contains_zero_or_nonascii(bytes) {
+        unsafe { Some(core::str::from_utf8_unchecked(bytes)) }
+    } else {
+        None
     }
-
-    true
 }
 
-const fn has_zero_nonascii(bytes: &[u8]) -> bool {
+const fn contains_zero_or_nonascii(bytes: &[u8]) -> bool {
     let mut i = 0;
     let mut flag = false;
     while i < bytes.len() {
