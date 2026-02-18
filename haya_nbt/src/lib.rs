@@ -131,17 +131,17 @@ enum Entry {
 }
 
 fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, Error> {
-    let mut depth = Vec::<Entry>::new();
+    let mut blocks = Vec::<Entry>::new();
     let mut names = Vec::<Name>::new();
     loop {
-        if max_depth == depth.len() {
+        if max_depth == blocks.len() {
             return Err(Error);
         }
         match next {
             Entry::Compound(mut compound) => {
                 let ty = TagType::read(buf)?;
                 if let TagType::End = ty {
-                    next = match depth.pop() {
+                    next = match blocks.pop() {
                         Some(Entry::Compound(mut c)) => {
                             let k = match names.pop() {
                                 Some(x) => x,
@@ -166,7 +166,7 @@ fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, E
                         }
                         Err(TagRec::Compound) => {
                             names.push(name);
-                            depth.push(Entry::Compound(compound));
+                            blocks.push(Entry::Compound(compound));
                             next = Entry::Compound(Compound::new());
                         }
                         Err(TagRec::List) => {
@@ -178,7 +178,7 @@ fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, E
                                 }
                                 Err(e) => {
                                     names.push(name);
-                                    depth.push(Entry::Compound(compound));
+                                    blocks.push(Entry::Compound(compound));
                                     next = match e {
                                         ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
                                         ListRec::List => Entry::ListList(Vec::new(), l.1),
@@ -191,7 +191,7 @@ fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, E
             }
             Entry::ListCompound(compounds, len) => {
                 if len == 0 {
-                    next = match depth.pop() {
+                    next = match blocks.pop() {
                         Some(Entry::Compound(mut x)) => {
                             let k = match names.pop() {
                                 Some(x) => x,
@@ -208,13 +208,13 @@ fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, E
                         None => return Ok(Tag::List(ListTag::Compound(compounds))),
                     };
                 } else {
-                    depth.push(Entry::ListCompound(compounds, len - 1));
+                    blocks.push(Entry::ListCompound(compounds, len - 1));
                     next = Entry::Compound(Compound::new());
                 }
             }
             Entry::ListList(mut lists, len) => {
                 if len == 0 {
-                    next = match depth.pop() {
+                    next = match blocks.pop() {
                         Some(Entry::Compound(mut x)) => {
                             let k = match names.pop() {
                                 Some(x) => x,
@@ -238,7 +238,7 @@ fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, E
                             next = Entry::ListList(lists, len - 1);
                         }
                         Err(e) => {
-                            depth.push(Entry::ListList(lists, len - 1));
+                            blocks.push(Entry::ListList(lists, len - 1));
                             next = match e {
                                 ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
                                 ListRec::List => Entry::ListList(Vec::new(), l.1),
