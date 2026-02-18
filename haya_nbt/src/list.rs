@@ -341,12 +341,11 @@ impl ListInfo {
 pub(crate) unsafe fn long_list(len: usize, slice: &[u8]) -> Vec<i64> {
     debug_assert_eq!(len * 8, slice.len());
 
-    let mut v = Vec::with_capacity(len);
-    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    let mut v = Vec::<i64>::with_capacity(len);
+    let s = v.as_mut_ptr();
     for index in 0..len {
         unsafe {
-            *s.get_unchecked_mut(index) =
-                i64::from_be_bytes(*slice.as_ptr().add(index * 8).cast::<[u8; 8]>());
+            *s.add(index) = i64::from_be_bytes(*slice.as_ptr().add(index * 8).cast::<[u8; 8]>());
         }
     }
     unsafe { v.set_len(len) }
@@ -356,12 +355,11 @@ pub(crate) unsafe fn long_list(len: usize, slice: &[u8]) -> Vec<i64> {
 pub(crate) unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
     debug_assert_eq!(len * 4, slice.len());
 
-    let mut v = Vec::with_capacity(len);
-    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    let mut v = Vec::<i32>::with_capacity(len);
+    let s = v.as_mut_ptr();
     for index in 0..len {
         unsafe {
-            *s.get_unchecked_mut(index) =
-                i32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
+            *s.add(index) = i32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
         }
     }
     unsafe { v.set_len(len) }
@@ -371,12 +369,11 @@ pub(crate) unsafe fn int_list(len: usize, slice: &[u8]) -> Vec<i32> {
 pub(crate) unsafe fn short_list(len: usize, slice: &[u8]) -> Vec<i16> {
     debug_assert_eq!(len * 2, slice.len());
 
-    let mut v = Vec::with_capacity(len);
-    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    let mut v = Vec::<i16>::with_capacity(len);
+    let s = v.as_mut_ptr();
     for index in 0..len {
         unsafe {
-            *s.get_unchecked_mut(index) =
-                i16::from_be_bytes(*slice.as_ptr().add(index * 2).cast::<[u8; 2]>());
+            *s.add(index) = i16::from_be_bytes(*slice.as_ptr().add(index * 2).cast::<[u8; 2]>());
         }
     }
     unsafe { v.set_len(len) }
@@ -386,12 +383,11 @@ pub(crate) unsafe fn short_list(len: usize, slice: &[u8]) -> Vec<i16> {
 pub(crate) unsafe fn f32_list(len: usize, slice: &[u8]) -> Vec<f32> {
     debug_assert_eq!(len * 4, slice.len());
 
-    let mut v = Vec::with_capacity(len);
-    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    let mut v = Vec::<f32>::with_capacity(len);
+    let s = v.as_mut_ptr();
     for index in 0..len {
         unsafe {
-            *s.get_unchecked_mut(index) =
-                f32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
+            *s.add(index) = f32::from_be_bytes(*slice.as_ptr().add(index * 4).cast::<[u8; 4]>());
         }
     }
     unsafe { v.set_len(len) }
@@ -401,12 +397,11 @@ pub(crate) unsafe fn f32_list(len: usize, slice: &[u8]) -> Vec<f32> {
 pub(crate) unsafe fn f64_list(len: usize, slice: &[u8]) -> Vec<f64> {
     debug_assert_eq!(len * 8, slice.len());
 
-    let mut v = Vec::with_capacity(len);
-    let s = unsafe { v.spare_capacity_mut().assume_init_mut() };
+    let mut v = Vec::<f64>::with_capacity(len);
+    let s = v.as_mut_ptr();
     for index in 0..len {
         unsafe {
-            *s.get_unchecked_mut(index) =
-                f64::from_be_bytes(*slice.as_ptr().add(index * 8).cast::<[u8; 8]>());
+            *s.add(index) = f64::from_be_bytes(*slice.as_ptr().add(index * 8).cast::<[u8; 8]>());
         }
     }
     unsafe { v.set_len(len) }
