@@ -39,11 +39,11 @@ pub enum TagType {
     LongArray,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[repr(transparent)]
 pub struct Compound(Vec<(Name, Tag)>);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Name {
     Thin(HayaStr),
     Heap(Box<str>),
@@ -52,7 +52,7 @@ pub enum Name {
 #[derive(Clone, Copy)]
 pub struct ListInfo(pub TagType, pub u32);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ListTag {
     None,
     Byte(Vec<i8>),
@@ -309,7 +309,7 @@ impl Write for TagType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Tag {
     Byte(i8),
     Short(i16),

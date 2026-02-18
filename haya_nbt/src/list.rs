@@ -193,7 +193,7 @@ impl Write for ListTag {
                 Self::ByteArray(x) => {
                     x.iter().for_each(|y| {
                         (y.len() as u32).write(w);
-                        y.iter().for_each(|z| z.write(w));
+                        crate::byte_array::i8_to_u8_slice(y).write(w);
                     });
                 }
                 Self::IntArray(x) => {
