@@ -41,48 +41,6 @@ macro_rules! non_zero {
     };
 }
 
-pub struct Write2<'a, A: ?Sized, B: ?Sized> {
-    pub a: &'a A,
-    pub b: &'a B,
-}
-
-impl<A: Write + ?Sized, B: Write + ?Sized> Write for Write2<'_, A, B> {
-    #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            self.a.write(w);
-            self.b.write(w);
-        }
-    }
-
-    #[inline]
-    fn len_s(&self) -> usize {
-        self.a.len_s() + self.b.len_s()
-    }
-}
-
-pub struct Write3<'a, A: ?Sized, B: ?Sized, C: ?Sized> {
-    pub a: &'a A,
-    pub b: &'a B,
-    pub c: &'a C,
-}
-
-impl<A: Write + ?Sized, B: Write + ?Sized, C: Write + ?Sized> Write for Write3<'_, A, B, C> {
-    #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            self.a.write(w);
-            self.b.write(w);
-            self.c.write(w);
-        }
-    }
-
-    #[inline]
-    fn len_s(&self) -> usize {
-        self.a.len_s() + self.b.len_s() + self.c.len_s()
-    }
-}
-
 impl Write for bool {
     #[inline(always)]
     unsafe fn write(&self, w: &mut UnsafeWriter) {

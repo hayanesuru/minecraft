@@ -191,6 +191,7 @@ impl HayaStr {
     ///
     /// [`MAX`]: crate::MAX
     pub const unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(new_len <= MAX);
         unsafe {
             self.len = transmute::<u8, Len>(new_len as u8);
         }

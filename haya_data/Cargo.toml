@@ -18,7 +18,6 @@ default = []
 mser = { workspace = true, default-features = false }
 
 [build-dependencies]
-mser = { workspace = true, default-features = false }
 itoa = "1"
 ryu = "1"
 nested = "0.1"

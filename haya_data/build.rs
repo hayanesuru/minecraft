@@ -1,11 +1,13 @@
 use core::iter::repeat_n;
 use core::num::NonZeroUsize;
-use mser::*;
 use nested::ZString;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::env::var_os;
 use std::path::PathBuf;
+
+const V21MAX: usize = 0x1FFFFF;
+const V7MAX: usize = 0x7F;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[must_use]
@@ -326,6 +328,7 @@ fn fluid_state(
     let (_, size, _) = head(iter.next(), "block_to_fluid_state");
 
     let mut out = Vec::<u32>::new();
+    assert_eq!(size, bl_props.len());
     for (bound, prop) in read_rl(size, &mut iter).zip(bl_props.iter().copied()) {
         let bounds = &*arr[bound as usize];
         let len = bs_size[prop as usize].get();
@@ -367,11 +370,7 @@ fn block_tags(w: &mut String, data: &str) {
         *w += "(self) -> bool {\n";
         if list.split_ascii_whitespace().next().is_some() {
             *w += "matches!(self as raw_block,\n";
-            list_match_or(
-                w,
-                list.split_ascii_whitespace()
-                    .map(|x| parse_hex::<u32>(x.as_bytes()).0),
-            );
+            list_match_or(w, hex_line(list));
             *w += "\n)";
         } else {
             *w += "false";
@@ -401,11 +400,7 @@ fn item_tags(w: &mut String, data: &str) {
         *w += "(self) -> bool {\n";
         if list.split_ascii_whitespace().next().is_some() {
             *w += "matches!(self as raw_item,\n";
-            list_match_or(
-                w,
-                list.split_ascii_whitespace()
-                    .map(|x| parse_hex::<u32>(x.as_bytes()).0),
-            );
+            list_match_or(w, hex_line(list));
             *w += "\n)";
         } else {
             *w += "false";
@@ -435,11 +430,7 @@ fn entity_tags(w: &mut String, data: &str) {
         *w += "(self) -> bool {\n";
         if list.split_ascii_whitespace().next().is_some() {
             *w += "matches!(self as raw_entity_type,\n";
-            list_match_or(
-                w,
-                list.split_ascii_whitespace()
-                    .map(|x| parse_hex::<u32>(x.as_bytes()).0),
-            );
+            list_match_or(w, hex_line(list));
             *w += "\n)";
         } else {
             *w += "false";
@@ -469,11 +460,7 @@ fn game_event_tags(w: &mut String, data: &str) {
         *w += "(self) -> bool {\n";
         if list.split_ascii_whitespace().next().is_some() {
             *w += "matches!(self as raw_game_event,\n";
-            list_match_or(
-                w,
-                list.split_ascii_whitespace()
-                    .map(|x| parse_hex::<u32>(x.as_bytes()).0),
-            );
+            list_match_or(w, hex_line(list));
             *w += "\n)";
         } else {
             *w += "false";
@@ -523,6 +510,7 @@ fn block_state(
     }
 
     let (name_kv, size_kv, repr_kv) = head(iter.next(), "block_state_property");
+    assert!(Repr::U8 == repr_kv);
 
     let kv = (0..size_kv)
         .map(|_| {
@@ -1353,6 +1341,7 @@ fn block_state(
     list_ty(w, "BLOCK_STATE_BOUNDS_INDEX", Repr::U16, bs_size);
 
     let mut out = Vec::with_capacity(bs_size);
+    assert_eq!(size, bl_props.len());
     for (bounds, prop) in read_rl(size, &mut iter).zip(bl_props.iter().copied()) {
         let bounds = &*prop_bounds[bounds as usize];
         let len = bs_prop_size[prop as usize].get();
@@ -1532,7 +1521,7 @@ fn struct_head(w: &mut String, repr: Repr, name: &str) {
     *w += ");\n";
 }
 
-fn hex_line(x: &str) -> impl Iterator<Item = u32> + '_ {
+fn hex_line(x: &str) -> impl Iterator<Item = u32> + Clone + '_ {
     x.split_ascii_whitespace()
         .map(|n| u32::from_str_radix(n, 16).expect("parse hex"))
 }
@@ -1846,4 +1835,23 @@ fn parse_u32(n: &str) -> u32 {
 
 fn parse_u64(n: &str) -> u64 {
     u64::from_str_radix(n.trim_ascii(), 16).expect("parse hex")
+}
+
+pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+    const M: u64 = 0xc6a4a7935bd1e995;
+    const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
+    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut i = 0;
+    while i + 8 <= n.len() {
+        h ^= u64::from_le_bytes(unsafe { *(n.as_ptr().add(i) as *const [u8; 8]) }).wrapping_mul(M);
+        i += 8;
+    }
+    while i < n.len() {
+        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
+        i += 1;
+    }
+    let h = (h as u128).wrapping_mul(N);
+    let h = h ^ (h >> 64);
+    let h = h.wrapping_mul(N);
+    [(h >> 64) as u64, h as u64]
 }
