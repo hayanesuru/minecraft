@@ -257,35 +257,35 @@ impl ListInfo {
                 }
                 None => Err(Error),
             },
-            TagType::Short => match n.split_at_checked(len * 2) {
+            TagType::Short => match n.split_at_checked(len.checked_mul(2).ok_or(Error)?) {
                 Some((slice, y)) => unsafe {
                     *n = y;
                     Ok(Ok(ListTag::Short(short_list(len, slice))))
                 },
                 None => Err(Error),
             },
-            TagType::Int => match n.split_at_checked(len * 4) {
+            TagType::Int => match n.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
                 Some((slice, y)) => unsafe {
                     *n = y;
                     Ok(Ok(ListTag::Int(int_list(len, slice))))
                 },
                 None => Err(Error),
             },
-            TagType::Long => match n.split_at_checked(len * 8) {
+            TagType::Long => match n.split_at_checked(len.checked_mul(8).ok_or(Error)?) {
                 Some((slice, y)) => unsafe {
                     *n = y;
                     Ok(Ok(ListTag::Long(long_list(len, slice))))
                 },
                 None => Err(Error),
             },
-            TagType::Float => match n.split_at_checked(len * 4) {
+            TagType::Float => match n.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
                 Some((slice, y)) => unsafe {
                     *n = y;
                     Ok(Ok(ListTag::Float(f32_list(len, slice))))
                 },
                 None => Err(Error),
             },
-            TagType::Double => match n.split_at_checked(len * 8) {
+            TagType::Double => match n.split_at_checked(len.checked_mul(8).ok_or(Error)?) {
                 Some((slice, y)) => unsafe {
                     *n = y;
                     Ok(Ok(ListTag::Double(f64_list(len, slice))))
@@ -293,7 +293,7 @@ impl ListInfo {
                 None => Err(Error),
             },
             TagType::ByteArray => {
-                if len * 4 > n.len() {
+                if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
                 let mut list = Vec::with_capacity(len);
@@ -303,7 +303,7 @@ impl ListInfo {
                 Ok(Ok(ListTag::ByteArray(list)))
             }
             TagType::String => {
-                if len * 2 > n.len() {
+                if len.checked_mul(2).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
                 let mut list = Vec::with_capacity(len);
@@ -315,7 +315,7 @@ impl ListInfo {
             TagType::List => Ok(Err(ListRec::List)),
             TagType::Compound => Ok(Err(ListRec::Compound)),
             TagType::IntArray => {
-                if len * 4 > n.len() {
+                if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
                 let mut list = Vec::with_capacity(len);
@@ -325,7 +325,7 @@ impl ListInfo {
                 Ok(Ok(ListTag::IntArray(list)))
             }
             TagType::LongArray => {
-                if len * 4 > n.len() {
+                if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
                 let mut list = Vec::with_capacity(len);

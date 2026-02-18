@@ -7,7 +7,7 @@ pub(crate) struct IntArray(pub Vec<i32>);
 impl<'a> Read<'a> for IntArray {
     fn read(buf: &mut &'a [u8]) -> Result<Self, mser::Error> {
         let len = u32::read(buf)? as usize;
-        let data = match buf.split_at_checked(len * 4) {
+        let data = match buf.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
             Some((x, y)) => {
                 *buf = y;
                 x

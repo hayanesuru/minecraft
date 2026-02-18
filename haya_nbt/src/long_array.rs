@@ -7,7 +7,7 @@ pub(crate) struct LongArray(pub Vec<i64>);
 impl<'a> Read<'a> for LongArray {
     fn read(buf: &mut &'a [u8]) -> Result<Self, mser::Error> {
         let len = u32::read(buf)? as usize;
-        let data = match buf.split_at_checked(len * 8) {
+        let data = match buf.split_at_checked(len.checked_mul(8).ok_or(Error)?) {
             Some((x, y)) => {
                 *buf = y;
                 x

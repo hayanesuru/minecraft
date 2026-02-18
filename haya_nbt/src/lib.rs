@@ -99,7 +99,7 @@ impl TagType {
                 let ListInfo(tag, len) = ListInfo::read(buf)?;
                 let len = len as usize;
                 match tag {
-                    TagType::Int => match buf.split_at_checked(len * 4) {
+                    TagType::Int => match buf.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
                         Some((slice, y)) => unsafe {
                             *buf = y;
                             Ok(list::int_list(len, slice))
