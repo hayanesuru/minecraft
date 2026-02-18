@@ -1,22 +1,11 @@
 use crate::string::DecodeMutf8;
-use crate::{RefStringTag, Tag, TagType};
+use crate::{Compound, Name, RefStringTag, Tag, TagType};
 use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use haya_mutf8::{Mutf8, as_mutf8_ascii, decode_mutf8_len};
 use haya_str::HayaStr;
 use mser::{Error, Read, UnsafeWriter, Write};
-
-#[derive(Clone)]
-#[repr(transparent)]
-pub struct Compound(Vec<(Name, Tag)>);
-
-#[derive(Clone)]
-pub enum Name {
-    Thin(HayaStr),
-    Heap(Box<str>),
-}
 
 enum CowVec {
     Thin(HayaStr),
@@ -159,36 +148,6 @@ impl Write for Compound {
             };
         }
         w
-    }
-}
-
-#[derive(Clone)]
-pub struct CompoundNamed(pub Name, pub Compound);
-
-impl Read<'_> for CompoundNamed {
-    #[inline]
-    fn read(n: &mut &[u8]) -> Result<Self, Error> {
-        if matches!(TagType::read(n)?, TagType::Compound) {
-            Ok(Self(Name::read(n)?, Compound::read(n)?))
-        } else {
-            Err(Error)
-        }
-    }
-}
-
-impl Write for CompoundNamed {
-    #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe {
-            TagType::Compound.write(w);
-            RefStringTag(&self.0).write(w);
-            self.1.write(w);
-        }
-    }
-
-    #[inline]
-    fn len_s(&self) -> usize {
-        1 + Write::len_s(&RefStringTag(&self.0)) + Write::len_s(&self.1)
     }
 }
 

@@ -1,6 +1,5 @@
-use crate::compound::Name;
 use crate::list::ListPrimitive;
-use crate::{Compound, Error, ListTag, Read as _, Tag, TagArray, TagPrimitive};
+use crate::{Compound, Error, ListTag, Name, Read as _, Tag, TagArray, TagPrimitive};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -13,16 +12,16 @@ const LONG_ARRAY_PREFIX: &[u8; 3] = b"[L;";
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct StringifyCompound(pub Compound);
+pub struct CompoundStringify(pub Compound);
 
-impl From<Compound> for StringifyCompound {
+impl From<Compound> for CompoundStringify {
     #[inline]
     fn from(value: Compound) -> Self {
         Self(value)
     }
 }
 
-impl StringifyCompound {
+impl CompoundStringify {
     #[inline]
     pub fn decode(n: &str) -> Result<Self, Error> {
         unsafe { decode(&mut n.as_bytes(), 512).map(Self) }

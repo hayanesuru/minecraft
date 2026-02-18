@@ -1837,7 +1837,7 @@ fn parse_u64(n: &str) -> u64 {
     u64::from_str_radix(n.trim_ascii(), 16).expect("parse hex")
 }
 
-pub const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
     const M: u64 = 0xc6a4a7935bd1e995;
     const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
     let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));

@@ -11,16 +11,14 @@ mod string;
 mod stringify;
 
 use self::byte_array::ByteArray;
-pub use self::compound::{Compound, CompoundNamed};
 use self::int_array::IntArray;
 use self::list::ListRec;
-pub use self::list::{ListInfo, ListTag};
 use self::long_array::LongArray;
 pub use self::string::{RefStringTag, StringTag, StringTagRaw};
-pub use self::stringify::StringifyCompound;
-use crate::compound::Name;
+pub use self::stringify::CompoundStringify;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use haya_str::HayaStr;
 use mser::{Error, Read, UnsafeWriter, Write};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -39,6 +37,36 @@ pub enum TagType {
     Compound,
     IntArray,
     LongArray,
+}
+
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct Compound(Vec<(Name, Tag)>);
+
+#[derive(Clone)]
+pub enum Name {
+    Thin(HayaStr),
+    Heap(Box<str>),
+}
+
+#[derive(Clone, Copy)]
+pub struct ListInfo(pub TagType, pub u32);
+
+#[derive(Clone)]
+pub enum ListTag {
+    None,
+    Byte(Vec<i8>),
+    Short(Vec<i16>),
+    Int(Vec<i32>),
+    Long(Vec<i64>),
+    Float(Vec<f32>),
+    Double(Vec<f64>),
+    String(Vec<Box<str>>),
+    ByteArray(Vec<Vec<i8>>),
+    IntArray(Vec<Vec<i32>>),
+    LongArray(Vec<Vec<i64>>),
+    List(Vec<ListTag>),
+    Compound(Vec<Compound>),
 }
 
 impl TagType {
@@ -515,5 +543,35 @@ impl From<Vec<i64>> for Tag {
 impl Read<'_> for Tag {
     fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
         TagType::read(buf)?.tag(buf)
+    }
+}
+
+#[derive(Clone)]
+pub struct CompoundNamed(pub Name, pub Compound);
+
+impl Read<'_> for CompoundNamed {
+    #[inline]
+    fn read(n: &mut &[u8]) -> Result<Self, Error> {
+        if matches!(TagType::read(n)?, TagType::Compound) {
+            Ok(Self(Name::read(n)?, Compound::read(n)?))
+        } else {
+            Err(Error)
+        }
+    }
+}
+
+impl Write for CompoundNamed {
+    #[inline]
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            TagType::Compound.write(w);
+            RefStringTag(&self.0).write(w);
+            self.1.write(w);
+        }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        1 + Write::len_s(&RefStringTag(&self.0)) + Write::len_s(&self.1)
     }
 }

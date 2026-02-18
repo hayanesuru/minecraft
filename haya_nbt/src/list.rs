@@ -1,24 +1,9 @@
-use crate::{ByteArray, Compound, IntArray, LongArray, RefStringTag, StringTag, TagType};
+use crate::{
+    ByteArray, Compound, IntArray, ListInfo, ListTag, LongArray, RefStringTag, StringTag, TagType,
+};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, UnsafeWriter, Write};
-
-#[derive(Clone)]
-pub enum ListTag {
-    None,
-    Byte(Vec<i8>),
-    Short(Vec<i16>),
-    Int(Vec<i32>),
-    Long(Vec<i64>),
-    Float(Vec<f32>),
-    Double(Vec<f64>),
-    String(Vec<Box<str>>),
-    ByteArray(Vec<Vec<i8>>),
-    IntArray(Vec<Vec<i32>>),
-    LongArray(Vec<Vec<i64>>),
-    List(Vec<ListTag>),
-    Compound(Vec<Compound>),
-}
 
 #[derive(Clone)]
 pub(crate) enum ListPrimitive {
@@ -42,9 +27,6 @@ impl From<ListPrimitive> for ListTag {
         }
     }
 }
-
-#[derive(Clone, Copy)]
-pub struct ListInfo(pub TagType, pub u32);
 
 impl<'a> Read<'a> for ListInfo {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
