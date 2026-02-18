@@ -34,6 +34,7 @@ pub struct Entity {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[must_use]
 pub struct Dense {
     index: u32,
 }
@@ -140,11 +141,15 @@ impl SparseSet {
         }
         let dense_index = dense.index;
         *dense = Dense::NONE;
-        let last_sparse = unsafe { self.entities.get_unchecked(self.entities.len() - 1).index };
-        let _ = self.entities.swap_remove(dense_index as usize);
-        if !self.entities.is_empty() {
+
+        let last_index = self.entities.len() - 1;
+        let _removed = self.entities.swap_remove(dense_index as usize);
+        debug_assert_eq!(_removed, entity);
+
+        if last_index != dense_index as usize {
             unsafe {
-                *self.sparse.get_unchecked_mut(last_sparse as usize) = Dense { index: dense_index };
+                let move_sparse = self.entities.get_unchecked(dense_index as usize).index;
+                *self.sparse.get_unchecked_mut(move_sparse as usize) = Dense { index: dense_index };
             }
         }
         Dense { index: dense_index }
@@ -315,5 +320,35 @@ impl<'a, T> ExactSizeIterator for IterMut<'a, T> {
     #[inline]
     fn len(&self) -> usize {
         self.comp.len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sparse() {
+        let mut a = EntityAllocator {
+            next: 0,
+            free: VecDeque::new(),
+        };
+        let mut s = SparseSet::new();
+        let e1 = a.alloc();
+        let e2 = a.alloc();
+        let d1 = s.insert(e1);
+        let d2 = s.insert(e2);
+
+        assert!(!d2.is_none());
+        assert!(!d1.is_none());
+        assert_eq!(s.get(e2), s.remove(e2));
+        assert_eq!(s.get(e1), s.remove(e1));
+
+        assert!(s.remove(e1).is_none());
+        assert!(s.remove(e2).is_none());
+        a.dealloc(e1);
+        a.dealloc(e2);
+        assert_eq!(a.alloc().index, 0);
+        assert!(s.is_empty());
     }
 }
