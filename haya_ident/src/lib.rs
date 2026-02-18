@@ -23,18 +23,18 @@ fn split_once(n: &[u8]) -> Option<(&[u8], &[u8])> {
     Some((&n[..index], &n[index + 1..]))
 }
 
-pub fn parse_ident(ident: &[u8]) -> Option<(Option<&str>, &str)> {
+pub fn parse_ident(ident: &[u8]) -> Option<Ident<'_>> {
     if !ident.is_ascii() {
         return None;
     }
     parse_ident_ascii(ident)
 }
 
-fn parse_ident_ascii(ident: &[u8]) -> Option<(Option<&str>, &str)> {
+fn parse_ident_ascii(ident: &[u8]) -> Option<Ident<'_>> {
     match ident.strip_prefix(b"minecraft:") {
         Some(path) => unsafe {
             if path.iter().copied().all(is_valid_path) {
-                Some((None, from_utf8_unchecked(path)))
+                Some(Ident::new_unchecked(None, from_utf8_unchecked(path)))
             } else {
                 None
             }
@@ -44,7 +44,7 @@ fn parse_ident_ascii(ident: &[u8]) -> Option<(Option<&str>, &str)> {
                 if ns.iter().copied().all(is_valid_namespace)
                     && path.iter().copied().all(is_valid_path)
                 {
-                    Some((
+                    Some(Ident::new_unchecked(
                         if !ns.is_empty() {
                             Some(from_utf8_unchecked(ns))
                         } else {
@@ -58,7 +58,7 @@ fn parse_ident_ascii(ident: &[u8]) -> Option<(Option<&str>, &str)> {
             },
             None => unsafe {
                 if ident.iter().copied().all(is_valid_path) {
-                    Some((None, from_utf8_unchecked(ident)))
+                    Some(Ident::new_unchecked(None, from_utf8_unchecked(ident)))
                 } else {
                     None
                 }
@@ -74,11 +74,18 @@ pub struct Ident<'a> {
 }
 
 impl<'a> Ident<'a> {
-    pub fn namespace(&self) -> Option<&str> {
+    /// # Safety
+    ///
+    /// The namespace and path must be valid.
+    pub const unsafe fn new_unchecked(namespace: Option<&'a str>, path: &'a str) -> Self {
+        Self { namespace, path }
+    }
+
+    pub const fn namespace(&self) -> Option<&str> {
         self.namespace
     }
 
-    pub fn path(&self) -> &str {
+    pub const fn path(&self) -> &str {
         self.path
     }
 }
@@ -87,7 +94,7 @@ impl<'a> Read<'a> for Ident<'a> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let identifier = ByteArray::<32767>::read(buf)?.0;
         match parse_ident(identifier) {
-            Some((namespace, path)) => Ok(Self { namespace, path }),
+            Some(Ident { namespace, path }) => Ok(Self { namespace, path }),
             None => Err(Error),
         }
     }
@@ -160,4 +167,62 @@ enum Inner {
     Thin { path: HayaStr },
     Heap { path: Box<str> },
     Full { namespace: Box<str>, path: Box<str> },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloc::vec::Vec;
+    use mser::write_unchecked;
+
+    #[track_caller]
+    fn test_write_read(n: Ident, expected: &str) {
+        let len = n.len_s();
+        let mut v = Vec::with_capacity(len);
+        unsafe {
+            write_unchecked(v.as_mut_ptr(), &n);
+            v.set_len(len);
+        }
+        let r = Ident::read(&mut &v[..]).unwrap();
+        assert_eq!(r, n);
+
+        let mut b = &v[..];
+
+        let len = V21::read(&mut b).unwrap().0 as usize;
+        assert_eq!(len, b.len());
+        assert_eq!(b, expected.as_bytes());
+    }
+
+    #[track_caller]
+    fn test_parse(n: &str, expected: &str) {
+        test_write_read(parse_ident(n.as_bytes()).unwrap(), expected);
+    }
+
+    fn test_parse_f(n: &str) {
+        assert_eq!(parse_ident(n.as_bytes()), None);
+    }
+
+    #[test]
+    fn test_ident() {
+        unsafe {
+            test_write_read(Ident::new_unchecked(None, "diamond"), "minecraft:diamond");
+            test_write_read(Ident::new_unchecked(Some("foo"), "bar.baz"), "foo:bar.baz");
+            test_write_read(
+                Ident::new_unchecked(Some("minecraftwiki"), "commands/minecraft_wiki"),
+                "minecraftwiki:commands/minecraft_wiki",
+            );
+
+            test_parse("bar:code", "bar:code");
+            test_parse("minecraft:zombie", "minecraft:zombie");
+            test_parse("diamond", "minecraft:diamond");
+            test_parse(":dirt", "minecraft:dirt");
+            test_parse("minecraft:", "minecraft:");
+            test_parse(":", "minecraft:");
+            test_parse("", "minecraft:");
+            test_parse_f("foo/bar:coal");
+            test_parse("minecraft/villager", "minecraft:minecraft/villager");
+            test_parse_f("mymap:schrödingers_var");
+            test_parse_f("custom_pack:Capital");
+        }
+    }
 }

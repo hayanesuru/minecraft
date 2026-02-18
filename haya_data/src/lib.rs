@@ -602,7 +602,7 @@ const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]

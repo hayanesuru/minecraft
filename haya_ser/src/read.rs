@@ -104,6 +104,20 @@ impl<'a> Read<'a> for i64 {
     }
 }
 
+impl<'a> Read<'a> for u128 {
+    #[inline]
+    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
+        Ok(u128::from_be_bytes(*<&[u8; 16]>::read(buf)?))
+    }
+}
+
+impl<'a> Read<'a> for i128 {
+    #[inline]
+    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
+        Ok(i128::from_be_bytes(*<&[u8; 16]>::read(buf)?))
+    }
+}
+
 impl<'a> Read<'a> for f32 {
     #[inline]
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
@@ -146,7 +160,7 @@ impl<'a> Read<'a> for bool {
 impl<'a> Read<'a> for uuid::Uuid {
     #[inline]
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
-        Ok(Self::from_bytes(*<&[u8; 16]>::read(buf)?))
+        Ok(Self::from_u128(u128::read(buf)?))
     }
 }
 

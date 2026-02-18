@@ -20,6 +20,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "haya_ecs"
+version = "0.1.0"
+
+[[package]]
 name = "haya_ident"
 version = "0.1.0"
 dependencies = [
@@ -61,6 +65,10 @@ dependencies = [
 
 [[package]]
 name = "haya_str"
+version = "0.1.0"
+
+[[package]]
+name = "haya_text"
 version = "0.1.0"
 
 [[package]]
