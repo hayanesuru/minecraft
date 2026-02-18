@@ -7,11 +7,24 @@ use alloc::vec::Vec;
 
 #[derive(Debug, Clone)]
 pub struct EntityAllocator {
-    pub next: u32,
-    pub free: VecDeque<Entity>,
+    next: u32,
+    free: VecDeque<Entity>,
+}
+
+impl Default for EntityAllocator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EntityAllocator {
+    pub const fn new() -> Self {
+        Self {
+            next: 0,
+            free: VecDeque::new(),
+        }
+    }
+
     pub fn alloc(&mut self) -> Entity {
         if let Some(entity) = self.free.pop_front() {
             entity
@@ -180,7 +193,7 @@ impl SparseSet {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Component<T>(pub Vec<T>);
+pub struct Component<T>(Vec<T>);
 
 impl<T> Component<T> {
     #[inline]
@@ -194,13 +207,13 @@ impl<T> Component<T> {
             self.0.push(value);
             None
         } else {
-            unsafe { Some(core::mem::replace(self.0.get_unchecked_mut(dense), value)) }
+            Some(core::mem::replace(&mut self.0[dense], value))
         }
     }
 
     #[inline]
-    pub fn remove(&mut self, dense: usize) {
-        self.0.swap_remove(dense);
+    pub fn remove(&mut self, dense: usize) -> T {
+        self.0.swap_remove(dense)
     }
 
     #[inline]
@@ -209,23 +222,13 @@ impl<T> Component<T> {
     }
 
     #[inline]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.0.len()
     }
 
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
-    }
-
-    #[inline]
-    pub fn components(&self) -> &[T] {
-        &self.0
-    }
-
-    #[inline]
-    pub fn components_mut(&mut self) -> &mut [T] {
-        &mut self.0
     }
 
     #[inline]
@@ -236,6 +239,16 @@ impl<T> Component<T> {
     #[inline]
     pub fn get_mut(&mut self, dense: usize) -> Option<&mut T> {
         self.0.get_mut(dense)
+    }
+
+    #[inline]
+    pub const fn capacity(&self) -> usize {
+        self.0.capacity()
+    }
+
+    #[inline]
+    pub fn reserve(&mut self, additional: usize) {
+        self.0.reserve(additional)
     }
 
     #[inline]
@@ -252,6 +265,18 @@ impl<T> Component<T> {
             comp: self.0.iter_mut(),
             sparse: sparse.entities().iter(),
         }
+    }
+}
+
+impl<T> AsRef<[T]> for Component<T> {
+    fn as_ref(&self) -> &[T] {
+        &self.0
+    }
+}
+
+impl<T> AsMut<[T]> for Component<T> {
+    fn as_mut(&mut self) -> &mut [T] {
+        &mut self.0
     }
 }
 
