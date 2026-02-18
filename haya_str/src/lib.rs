@@ -188,6 +188,7 @@ impl HayaStr {
     /// # Safety
     ///
     /// `new_len` must be less than or equal to [MAX].
+    /// `self[0..new_len]` must be initialized and is valid UTF-8.
     ///
     /// [`MAX`]: crate::MAX
     pub const unsafe fn set_len(&mut self, new_len: usize) {
