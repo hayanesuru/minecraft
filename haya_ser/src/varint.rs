@@ -31,7 +31,7 @@ impl<'a> Read<'a> for V21 {
                 break 'd;
             }
             a = u8::read(buf)?;
-            p |= (a as u32) << 14;
+            p |= ((a & 0x7F) as u32) << 14;
             if a & 0x80 == 0 {
                 break 'd;
             }
@@ -333,38 +333,68 @@ impl<'a> Read<'a> for V64 {
         Ok(Self(p))
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_varint() {
-    let mut r = 0xE3D172B05F73CBC3u64;
-    let mut buf = [0u8; 10];
-
-    for _ in 0..1000 {
-        r = r.wrapping_add(0xa0761d6478bd642f);
-        let x = (r ^ 0xe7037ed1a0b428db) as u128;
-        let t = (r as u128).wrapping_mul(x);
-        let x = (t.wrapping_shr(64) ^ t) as u64;
-        unsafe {
-            let y = V64(x);
-            let sz = y.len_s();
-            crate::write_unchecked(buf.as_mut_ptr(), &y);
-            let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
-            assert_eq!(V64::read(&mut sl).unwrap(), y);
-            assert!(sl.is_empty());
-
-            let y = V32(x as u32);
-            crate::write_unchecked(buf.as_mut_ptr(), &y);
-            let sz = y.len_s();
-            let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
-            assert_eq!(V32::read(&mut sl).unwrap(), y);
-            assert!(sl.is_empty());
-
-            let y = V21(x as u32 & 0x1FFFFF);
-            crate::write_unchecked(buf.as_mut_ptr(), &y);
-            let sz = y.len_s();
-            let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
-            assert_eq!(V21::read(&mut sl).unwrap(), y);
-            assert!(sl.is_empty());
+    #[test]
+    fn test_write() {
+        let mut r = 0xE3D172B05F73CBC3u64;
+        let mut buf = [0u8; 10];
+        let mut arr = [0; 200];
+        for i in &mut arr {
+            r = r.wrapping_add(0xa0761d6478bd642f);
+            let x = (r ^ 0xe7037ed1a0b428db) as u128;
+            let t = (r as u128).wrapping_mul(x);
+            let x = (t.wrapping_shr(64) ^ t) as u64;
+            *i = x;
         }
+        arr[0] = u64::MAX;
+        arr[1] = u32::MAX as u64;
+        arr[2] = V21MAX as u64;
+
+        for x in arr {
+            unsafe {
+                let y = V64(x);
+                let sz = y.len_s();
+                crate::write_unchecked(buf.as_mut_ptr(), &y);
+                let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+                assert_eq!(V64::read(&mut sl).unwrap(), y);
+                assert!(sl.is_empty());
+
+                let y = V32(x as u32);
+                crate::write_unchecked(buf.as_mut_ptr(), &y);
+                let sz = y.len_s();
+                let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+                assert_eq!(V32::read(&mut sl).unwrap(), y);
+                assert!(sl.is_empty());
+
+                let y = V21(x as u32 & 0x1FFFFF);
+                crate::write_unchecked(buf.as_mut_ptr(), &y);
+                let sz = y.len_s();
+                let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+                assert_eq!(V21::read(&mut sl).unwrap(), y);
+                assert!(sl.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn test_v21() {
+        let val = V21(V21MAX as u32);
+        let [a, b, c] = val.to_array();
+        let a5 = [a, b, c | 0x80, 0x80, 0];
+        let a4 = [a, b, c | 0x80, 0];
+        assert_eq!(V21::read(&mut &a5[..]).unwrap(), val);
+        assert_eq!(V21::read(&mut &a4[..]).unwrap(), val);
+        assert_eq!(V21::read(&mut &[a, b, c][..]).unwrap(), val);
+
+        let val = V21(0x1fff);
+        let [a, b, c] = val.to_array();
+        let a5 = [a, b | 0x80, c | 0x80, 0x80, 0];
+        let a4 = [a, b | 0x80, c | 0x80, 0];
+        assert_eq!(V21::read(&mut &a5[..]).unwrap(), val);
+        assert_eq!(V21::read(&mut &a4[..]).unwrap(), val);
+        assert_eq!(V21::read(&mut &[a, b, c][..]).unwrap(), val);
     }
 }
