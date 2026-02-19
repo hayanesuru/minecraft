@@ -29,8 +29,6 @@ jobs:
         with:
           toolchain: nightly
           components: clippy, miri, rustfmt
-      - name: Build
-        run: cargo build --verbose
       - name: Clippy
         run: cargo clippy --verbose --tests
       - name: Miri Setup
