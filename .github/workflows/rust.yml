@@ -7,6 +7,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-D warnings"
 
 permissions:
   checks: write
@@ -28,9 +29,15 @@ jobs:
         with:
           toolchain: nightly
           components: clippy, miri, rustfmt
+      - name: Build
+        run: cargo build --verbose
       - name: Clippy
-        uses: auguwu/clippy-action@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo clippy --verbose --tests
+      - name: Miri Setup
+        run: cargo miri setup
+      - name: Miri Test
+        run: cargo miri test
+      - name: Rustfmt
+        run: cargo fmt --all -- --check
       - name: Spell Check Repo
         uses: crate-ci/typos@master
