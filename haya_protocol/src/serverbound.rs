@@ -77,6 +77,6 @@ packets! {
     pong = common::Pong,
     resource_pack = common::ResourcePack,
     select_known_packs = configuration::SelectKnownPacks<'_>,
-    custom_click_action = configuration::CustomClickAction<'_>,
+    custom_click_action = common::CustomClickAction<'_>,
     accept_code_of_conduct = configuration::AcceptCodeOfConduct,
 }

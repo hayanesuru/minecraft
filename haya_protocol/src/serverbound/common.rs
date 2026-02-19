@@ -1,5 +1,6 @@
 use crate::{ClientInformation, Rest};
 use haya_ident::Ident;
+use haya_nbt::Tag;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -44,4 +45,10 @@ impl ResourcePackAction {
     pub const fn is_terminal(&self) -> bool {
         !matches!(self, Self::Accepted | Self::Downloaded)
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomClickAction<'a> {
+    pub id: Ident<'a>,
+    pub payload: Option<Tag>,
 }
