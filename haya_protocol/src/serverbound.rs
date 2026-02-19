@@ -1,4 +1,6 @@
-use minecraft_data::{serverbound__handshake, serverbound__login, serverbound__status};
+use minecraft_data::{
+    serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__status,
+};
 
 pub mod common;
 pub mod configuration;
@@ -62,4 +64,19 @@ packets! {
     custom_query_answer = login::CustomQueryAnswer<'_>,
     login_acknowledged = login::LoginAcknowledged,
     cookie_response = cookie::CookieResponse<'_>,
+}
+packets! {
+    serverbound__configuration,
+    ConfigurationHandler,
+    handle,
+    client_information = common::ConfigurationClientInformation<'_>,
+    cookie_response = cookie::ConfigurationCookieResponse<'_>,
+    custom_payload = common::CustomPayload<'_>,
+    finish_configuration = configuration::FinishConfiguration,
+    keep_alive = common::KeepAlive,
+    pong = common::Pong,
+    resource_pack = common::ResourcePack,
+    select_known_packs = configuration::SelectKnownPacks<'_>,
+    custom_click_action = configuration::CustomClickAction<'_>,
+    accept_code_of_conduct = configuration::AcceptCodeOfConduct,
 }

@@ -93,7 +93,7 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
 #[derive(Clone, Debug)]
 pub enum List<'a, T: 'a, const MAX: usize = { usize::MAX }> {
     Borrowed(&'a [T]),
-    Ref(Box<[T]>),
+    Owned(Box<[T]>),
 }
 
 impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
@@ -101,7 +101,7 @@ impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
         unsafe {
             let x = match self {
                 Self::Borrowed(x) => x,
-                Self::Ref(x) => &x[..],
+                Self::Owned(x) => &x[..],
             };
             V21(x.len() as u32).write(w);
             for y in x {
@@ -113,7 +113,7 @@ impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
     fn len_s(&self) -> usize {
         let x = match self {
             Self::Borrowed(x) => x,
-            Self::Ref(x) => &x[..],
+            Self::Owned(x) => &x[..],
         };
         let mut len = V21(x.len() as u32).len_s();
         for y in x {
@@ -123,7 +123,7 @@ impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
     }
 }
 
-impl<'a, T: Read<'a> + 'a, const MAX: usize> Read<'a> for List<'a, T, MAX> {
+impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for List<'a, T, MAX> {
     fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX {
@@ -133,7 +133,7 @@ impl<'a, T: Read<'a> + 'a, const MAX: usize> Read<'a> for List<'a, T, MAX> {
         for _ in 0..len {
             vec.push(T::read(buf)?);
         }
-        Ok(List::Ref(vec.into_boxed_slice()))
+        Ok(Self::Owned(vec.into_boxed_slice()))
     }
 }
 
