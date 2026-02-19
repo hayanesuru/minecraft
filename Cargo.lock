@@ -85,7 +85,7 @@ checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
 name = "minecraft_data"
-version = "2.2.0+1.21.11"
+version = "3.0.0+1.21.11"
 dependencies = [
  "itoa",
  "mser",
@@ -95,14 +95,14 @@ dependencies = [
 
 [[package]]
 name = "mser"
-version = "2.2.0"
+version = "3.0.0"
 dependencies = [
  "uuid",
 ]
 
 [[package]]
 name = "mser_macro"
-version = "2.2.0"
+version = "3.0.0"
 dependencies = [
  "itoa",
  "proc-macro2",
