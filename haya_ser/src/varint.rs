@@ -1,6 +1,5 @@
 use super::{Read, UnsafeWriter, Write};
 use crate::{Error, cold_path};
-use core::slice::from_raw_parts;
 
 pub const V21MAX: usize = 0x1FFFFF;
 pub const V7MAX: usize = 0x7F;
@@ -20,31 +19,35 @@ impl V21 {
 
 impl<'a> Read<'a> for V21 {
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        let a = u8::read(buf)?;
-        if (a & 0x80) == 0 {
-            return Ok(Self(a as u32));
-        }
-        let b = u8::read(buf)?;
-        if (b & 0x80) == 0 {
-            return Ok(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
-        }
-        let c = u8::read(buf)?;
-        let p = (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14);
-        if (c & 0x80) == 0 {
-            return Ok(Self(p));
-        }
-        let d = u8::read(buf)?;
-        if d == 0x00 {
+        let mut a = u8::read(buf)?;
+        let mut p = (a & 0x7F) as u32;
+        'd: {
+            if a & 0x80 == 0 {
+                break 'd;
+            }
+            a = u8::read(buf)?;
+            p |= ((a & 0x7F) as u32) << 7;
+            if a & 0x80 == 0 {
+                break 'd;
+            }
+            a = u8::read(buf)?;
+            p |= (a as u32) << 14;
+            if a & 0x80 == 0 {
+                break 'd;
+            }
+            a = u8::read(buf)?;
+            if a == 0x00 {
+                cold_path();
+                break 'd;
+            }
+            let e = u8::read(buf)?;
+            if a == 0x80 && e == 0x00 {
+                break 'd;
+            }
             cold_path();
-            return Ok(Self(p));
-        }
-        let e = u8::read(buf)?;
-        if d == 0x80 && e == 0x00 {
-            Ok(Self(p))
-        } else {
-            cold_path();
-            Err(Error)
-        }
+            return Err(Error);
+        };
+        Ok(Self(p))
     }
 }
 
@@ -144,43 +147,30 @@ impl Write for V32 {
 
 impl<'a> Read<'a> for V32 {
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        let a = u8::read(buf)?;
-        if (a & 0x80) == 0 {
-            return Ok(Self(a as u32));
-        }
-        let b = u8::read(buf)?;
-        if (b & 0x80) == 0 {
-            return Ok(Self((a & 0x7F) as u32 | ((b as u32) << 7)));
-        }
-        let c = u8::read(buf)?;
-        if (c & 0x80) == 0 {
-            return Ok(Self(
-                (a & 0x7F) as u32 | (((b & 0x7F) as u32) << 7) | ((c as u32) << 14),
-            ));
-        }
-
-        let d = u8::read(buf)?;
-        if (d & 0x80) == 0 {
-            return Ok(Self(
-                (a & 0x7F) as u32
-                    | (((b & 0x7F) as u32) << 7)
-                    | (((c & 0x7F) as u32) << 14)
-                    | ((d as u32) << 21),
-            ));
-        }
-
-        let e = u8::read(buf)?;
-        if (e & 0xF0) == 0 {
-            return Ok(Self(
-                (a & 0x7F) as u32
-                    | (((b & 0x7F) as u32) << 7)
-                    | (((c & 0x7F) as u32) << 14)
-                    | (((d & 0x7F) as u32) << 21)
-                    | ((e as u32) << 28),
-            ));
-        }
-        cold_path();
-        Err(Error)
+        let mut a = u8::read(buf)?;
+        let mut shl = 7;
+        let mut p = (a & 0x7F) as u32;
+        'd: {
+            if a & 0x80 == 0 {
+                break 'd;
+            }
+            for _ in 0..3 {
+                a = u8::read(buf)?;
+                p |= ((a & 0x7F) as u32) << shl;
+                shl += 7;
+                if a & 0x80 == 0 {
+                    break 'd;
+                }
+            }
+            a = u8::read(buf)?;
+            p |= ((a & 0x0F) as u32) << shl;
+            if a & 0xF0 == 0 {
+                break 'd;
+            }
+            cold_path();
+            return Err(Error);
+        };
+        Ok(Self(p))
     }
 }
 
@@ -231,63 +221,45 @@ impl Write for V64 {
                 w.write(&[n as u8 | 0x80, (n >> 7) as u8]);
             } else if n & 0xFFFFFFFFFFE00000 == 0 {
                 w.write(&[n as u8 | 0x80, (n >> 7) as u8 | 0x80, (n >> 14) as u8]);
-            } else if n & 0xFFFFFFFFF0000000 == 0 {
-                w.write(&[
-                    n as u8 | 0x80,
-                    (n >> 7) as u8 | 0x80,
-                    (n >> 14) as u8 | 0x80,
-                    (n >> 21) as u8,
-                ]);
-            } else if n & 0xFFFFFFF800000000 == 0 {
-                w.write(&[
-                    n as u8 | 0x80,
-                    (n >> 7) as u8 | 0x80,
-                    (n >> 14) as u8 | 0x80,
-                    (n >> 21) as u8 | 0x80,
-                    (n >> 28) as u8,
-                ]);
-            } else if n & 0xFFFFFC0000000000 == 0 {
-                w.write(&[
-                    n as u8 | 0x80,
-                    (n >> 7) as u8 | 0x80,
-                    (n >> 14) as u8 | 0x80,
-                    (n >> 21) as u8 | 0x80,
-                    (n >> 28) as u8 | 0x80,
-                    (n >> 35) as u8,
-                ]);
-            } else if n & 0xFFFE000000000000 == 0 {
-                w.write(&[
-                    n as u8 | 0x80,
-                    (n >> 7) as u8 | 0x80,
-                    (n >> 14) as u8 | 0x80,
-                    (n >> 21) as u8 | 0x80,
-                    (n >> 28) as u8 | 0x80,
-                    (n >> 35) as u8 | 0x80,
-                    (n >> 42) as u8,
-                ]);
-            } else if n & 0xFF00000000000000 == 0 {
-                w.write(&[
-                    n as u8 | 0x80,
-                    (n >> 7) as u8 | 0x80,
-                    (n >> 14) as u8 | 0x80,
-                    (n >> 21) as u8 | 0x80,
-                    (n >> 28) as u8 | 0x80,
-                    (n >> 35) as u8 | 0x80,
-                    (n >> 42) as u8 | 0x80,
-                    (n >> 49) as u8,
-                ]);
             } else {
+                let b = if n & 0xFFFFFFFFF0000000 == 0 {
+                    (n >> 21) as u8
+                } else {
+                    (n >> 21) as u8 | 0x80
+                };
                 w.write(&[
                     n as u8 | 0x80,
                     (n >> 7) as u8 | 0x80,
                     (n >> 14) as u8 | 0x80,
-                    (n >> 21) as u8 | 0x80,
-                    (n >> 28) as u8 | 0x80,
-                    (n >> 35) as u8 | 0x80,
-                    (n >> 42) as u8 | 0x80,
-                    (n >> 49) as u8 | 0x80,
-                    (n >> 56) as u8,
+                    b,
                 ]);
+                if n & 0xFFFFFFFFF0000000 == 0 {
+                } else if n & 0xFFFFFFF800000000 == 0 {
+                    w.write_byte((n >> 28) as u8);
+                } else if n & 0xFFFFFC0000000000 == 0 {
+                    w.write(&[(n >> 28) as u8 | 0x80, (n >> 35) as u8]);
+                } else if n & 0xFFFE000000000000 == 0 {
+                    w.write(&[
+                        (n >> 28) as u8 | 0x80,
+                        (n >> 35) as u8 | 0x80,
+                        (n >> 42) as u8,
+                    ]);
+                } else if n & 0xFF00000000000000 == 0 {
+                    w.write(&[
+                        (n >> 28) as u8 | 0x80,
+                        (n >> 35) as u8 | 0x80,
+                        (n >> 42) as u8 | 0x80,
+                        (n >> 49) as u8,
+                    ]);
+                } else {
+                    w.write(&[
+                        (n >> 28) as u8 | 0x80,
+                        (n >> 35) as u8 | 0x80,
+                        (n >> 42) as u8 | 0x80,
+                        (n >> 49) as u8 | 0x80,
+                        (n >> 56) as u8,
+                    ]);
+                }
             }
         }
     }
@@ -320,102 +292,45 @@ impl Write for V64 {
 
 impl<'a> Read<'a> for V64 {
     fn read(buf: &mut &[u8]) -> Result<Self, Error> {
-        unsafe {
-            let a = u8::read(buf)?;
-            if (a & 0x80) == 0 {
+        let mut a = u8::read(buf)?;
+        let mut shl = 7;
+        let mut p = (a & 0x7F) as u64;
+        'd: {
+            if a & 0x80 == 0 {
                 return Ok(Self(a as u64));
             }
-
-            let b = u8::read(buf)?;
-            if (b & 0x80) == 0 {
-                return Ok(Self((a & 0x7F) as u64 | ((b as u64) << 7)));
+            a = u8::read(buf)?;
+            p |= ((a & 0x7F) as u64) << shl;
+            shl += 7;
+            if a & 0x80 == 0 {
+                break 'd;
             }
-
             if buf.len() >= 8 {
-                let y = u64::from_le_bytes(*buf.as_ptr().cast::<[u8; 8]>());
+                let y = unsafe { u64::from_le_bytes(*buf.as_ptr().cast::<[u8; 8]>()) };
                 if y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080 {
-                    *buf = from_raw_parts(buf.as_ptr().add(8), buf.len() - 8);
-                    return Ok(Self(
-                        ((a & 0x7F) as u64)
-                            | (((b & 0x7F) as u64) << 7)
-                            | ((y & 0x0000_0000_0000_007F) << 14)
-                            | ((y & 0x0000_0000_0000_7F00) << 13)
-                            | ((y & 0x0000_0000_007F_0000) << 12)
-                            | ((y & 0x0000_0000_7F00_0000) << 11)
-                            | ((y & 0x0000_007F_0000_0000) << 10)
-                            | ((y & 0x0000_7F00_0000_0000) << 9)
-                            | ((y & 0x007F_0000_0000_0000) << 8)
-                            | ((y & 0x0100_0000_0000_0000) << 7),
-                    ));
+                    *buf = unsafe { buf.get_unchecked(8..) };
+                    p |= ((y & 0x0000_0000_0000_007F) << 14)
+                        | ((y & 0x0000_0000_0000_7F00) << 13)
+                        | ((y & 0x0000_0000_007F_0000) << 12)
+                        | ((y & 0x0000_0000_7F00_0000) << 11)
+                        | ((y & 0x0000_007F_0000_0000) << 10)
+                        | ((y & 0x0000_7F00_0000_0000) << 9)
+                        | ((y & 0x007F_0000_0000_0000) << 8)
+                        | ((y & 0x0100_0000_0000_0000) << 7);
+                    break 'd;
                 }
             }
-
-            let c = u8::read(buf)?;
-            if (c & 0x80) == 0 {
-                return Ok(Self(
-                    (a & 0x7F) as u64 | (((b & 0x7F) as u64) << 7) | ((c as u64) << 14),
-                ));
+            for _ in 0..7 {
+                a = u8::read(buf)?;
+                p |= ((a & 0x7F) as u64) << shl;
+                shl += 7;
+                if a & 0x80 == 0 {
+                    break 'd;
+                }
             }
-
-            let d = u8::read(buf)?;
-            if (d & 0x80) == 0 {
-                return Ok(Self(
-                    (a & 0x7F) as u64
-                        | (((b & 0x7F) as u64) << 7)
-                        | (((c & 0x7F) as u64) << 14)
-                        | ((d as u64) << 21),
-                ));
-            }
-            let four = (a & 0x7F) as u64
-                | (((b & 0x7F) as u64) << 7)
-                | (((c & 0x7F) as u64) << 14)
-                | (((d & 0x7F) as u64) << 21);
-
-            let e = u8::read(buf)?;
-            if (e & 0x80) == 0 {
-                return Ok(Self(four | ((e as u64) << 28)));
-            }
-
-            let f = u8::read(buf)?;
-            if (f & 0x80) == 0 {
-                return Ok(Self(
-                    four | (((e & 0x7F) as u64) << 28) | ((f as u64) << 35),
-                ));
-            }
-
-            let g = u8::read(buf)?;
-            if (g & 0x80) == 0 {
-                return Ok(Self(
-                    four | (((e & 0x7F) as u64) << 28)
-                        | (((f & 0x7F) as u64) << 35)
-                        | ((g as u64) << 42),
-                ));
-            }
-
-            let h = u8::read(buf)?;
-            if (h & 0x80) == 0 {
-                return Ok(Self(
-                    four | (((e & 0x7F) as u64) << 28)
-                        | (((f & 0x7F) as u64) << 35)
-                        | (((g & 0x7F) as u64) << 42)
-                        | ((h as u64) << 49),
-                ));
-            }
-
-            let i = u8::read(buf)?;
-            if (i & 0x80) == 0 {
-                return Ok(Self(
-                    four | (((e & 0x7F) as u64) << 28)
-                        | (((f & 0x7F) as u64) << 35)
-                        | (((g & 0x7F) as u64) << 42)
-                        | (((h & 0x7F) as u64) << 49)
-                        | ((i as u64) << 56),
-                ));
-            }
+            return Err(Error);
         }
-
-        cold_path();
-        Err(Error)
+        Ok(Self(p))
     }
 }
 
