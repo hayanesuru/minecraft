@@ -4,12 +4,8 @@
 mod deserialize;
 mod serialize;
 
-// #[cfg(feature = "nbt")]
-// use alloc::string::String;
 use proc_macro::TokenStream;
 use syn::{DeriveInput, parse_macro_input};
-
-extern crate alloc;
 
 const V21MAX: usize = 0x1FFFFF;
 const V7MAX: usize = 0x7F;
@@ -17,32 +13,6 @@ const V7MAX: usize = 0x7F;
 mod kw {
     syn::custom_keyword!(varint);
 }
-
-// #[cfg(feature = "nbt")]
-// #[proc_macro]
-// pub fn compound(token: proc_macro::TokenStream) -> proc_macro::TokenStream {
-//     let mut data = alloc::format!("{{{token}}}");
-//     let output = mser::nbt::StringifyCompound::decode(&data)
-//         .expect("Invalid SNBT compound")
-//         .0;
-//     data.clear();
-
-//     let mut data = data.into_bytes();
-//     mser::write_exact(&mut data, &output);
-//     let mut i = itoa::Buffer::new();
-//     let mut o = String::new();
-//     o += "&[";
-//     for &x in &data {
-//         o += i.format(x);
-//         o += ", ";
-//     }
-//     if !data.is_empty() {
-//         o.pop();
-//         o.pop();
-//     }
-//     o += "]";
-//     core::str::FromStr::from_str(&o).unwrap()
-// }
 
 fn crate_name(input: &DeriveInput) -> Result<syn::Path, syn::Error> {
     let mut find = None;
