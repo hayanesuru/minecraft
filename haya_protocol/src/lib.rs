@@ -247,6 +247,7 @@ impl<L: Write, R: Write> Write for Either<L, R> {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum KnownLinkType {
     ReportBug,
     CommunityGuidelines,
@@ -292,6 +293,7 @@ pub struct ClientInformation<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum ChatVisibility {
     Full,
     System,
@@ -310,6 +312,7 @@ impl ChatVisibility {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum HumanoidArm {
     Left,
     Right,
@@ -333,6 +336,7 @@ impl HumanoidArm {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum ParticleStatus {
     All,
     Decreased,

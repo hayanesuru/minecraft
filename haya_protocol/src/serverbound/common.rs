@@ -30,6 +30,7 @@ pub struct ResourcePack {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum ResourcePackAction {
     SuccessfullyLoaded,
     Declined,

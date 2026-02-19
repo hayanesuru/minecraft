@@ -14,7 +14,7 @@ mod kw {
     syn::custom_keyword!(varint);
 }
 
-fn crate_name(input: &DeriveInput) -> Result<syn::Path, syn::Error> {
+fn crate_name(input: &DeriveInput) -> Result<(Option<&syn::Attribute>, syn::Path), syn::Error> {
     let mut find = None;
     for attr in input.attrs.iter() {
         if attr.path().is_ident("mser") {
@@ -25,13 +25,16 @@ fn crate_name(input: &DeriveInput) -> Result<syn::Path, syn::Error> {
         }
     }
 
-    Ok(syn::Ident::new("mser", proc_macro2::Span::call_site()).into())
+    Ok((
+        find,
+        syn::Ident::new("mser", proc_macro2::Span::call_site()).into(),
+    ))
 }
 
 #[proc_macro_derive(Serialize, attributes(mser))]
 pub fn serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
-    let cratename = match crate_name(&input) {
+    let (_attr, cratename) = match crate_name(&input) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();
@@ -52,7 +55,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Deserialize, attributes(mser))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
-    let cratename = match crate_name(&input) {
+    let (_attr, cratename) = match crate_name(&input) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();

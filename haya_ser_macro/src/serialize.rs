@@ -107,16 +107,8 @@ pub fn serialize_enum(
                 Ok(())
             })?;
         }
-        if attr.path().is_ident("mser") {
-            attr.parse_nested_meta(|meta| {
-                let lookahead = meta.input.lookahead1();
-                if lookahead.peek(kw::varint) {
-                    varint = true;
-                }
-                Ok(())
-            })?;
-        }
     }
+
     let repr =
         repr.ok_or_else(|| syn::Error::new_spanned(&input, "expected `#[repr(...)]` attribute"))?;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
