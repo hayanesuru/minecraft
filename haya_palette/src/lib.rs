@@ -339,7 +339,7 @@ impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B
                     (*val).write(w);
                 }
 
-                // Number of longs in data array.
+                // Number of longs in data array
                 V32(data_len(L, bits_per_entry as usize) as u32).write(w);
                 // Data array
                 debug_assert!(self.half().is_multiple_of(8));
@@ -387,7 +387,7 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
                 // Bits per entry
                 w.write_byte(B);
 
-                // Number of longs in data array.
+                // Number of longs in data array
                 V32(data_len(L, B as usize) as u32).write(w);
                 // Data array
                 let vals_per_u64 = 64 / B * B;
@@ -427,7 +427,7 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
                     val.write(w);
                 }
 
-                // Number of longs in data array.
+                // Number of longs in data array
                 V32(data_len(L, bits_per_entry as usize) as u32).write(w);
                 // Data array
                 let vals_per_u64 = 64 / bits_per_entry * bits_per_entry;
@@ -469,12 +469,14 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
             2 + val.len_s()
         } else {
             let bits_per_entry = (u8::BITS - (self.len as u8 - 1).leading_zeros()) as usize;
-            let mut len = 1;
+            let mut len = V32(bits_per_entry as u32).len_s();
 
             let all = data_len(L, bits_per_entry);
 
             len += 1;
-            len += self.len;
+            for b in self.palette() {
+                len += b.len_s();
+            }
             len += V32(all as u32).len_s();
             len += all * 8;
             len
@@ -497,7 +499,6 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
 {
     pub fn shrink_to_fit(&mut self) {
         if self.len == 1 {
-            let val = unsafe { self.palette().get_unchecked(0) };
             return;
         }
 
