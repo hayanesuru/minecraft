@@ -228,10 +228,10 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
                     None => handle_alloc_error(layout),
                 },
             );
-
-            if core::ptr::eq(indirect.as_ptr(), NonNull::dangling().as_ptr()) {
-                return;
-            }
+            debug_assert!(!core::ptr::eq(
+                indirect.as_ptr(),
+                NonNull::dangling().as_ptr()
+            ));
             for index in 0..L {
                 let val = *self.palette.get_unchecked(
                     ((*indirect.as_ptr().add(index / 2) >> (index % 2 * 4)) & 0b1111) as usize,
@@ -269,6 +269,7 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
         for (i, x) in self.palette().iter().enumerate() {
             if *x == val {
                 palette_idx = Some(i);
+                break;
             }
         }
 
