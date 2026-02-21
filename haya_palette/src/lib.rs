@@ -232,11 +232,11 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
                 indirect.as_ptr(),
                 NonNull::dangling().as_ptr()
             ));
-            for index in 0..L {
-                let val = *self.palette.get_unchecked(
-                    ((*indirect.as_ptr().add(index / 2) >> (index % 2 * 4)) & 0b1111) as usize,
+            for i in 0..L {
+                let old = *self.palette.get_unchecked(
+                    ((*indirect.as_ptr().add(i / 2) >> (i % 2 * 4)) & 0b1111) as usize,
                 );
-                self.ptr.as_ptr().cast::<T>().add(index).write(val);
+                self.ptr.as_ptr().cast::<T>().add(i).write(old);
             }
             self.ptr.as_ptr().cast::<T>().add(index).write(val);
 
@@ -303,14 +303,14 @@ impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B
                 // Number of longs in data array
                 V32(data_len(L, B as usize) as u32).write(w);
                 // Data array
-                let vals_per_u64 = 64 / B * B;
+                let bits_per_u64 = 64 / B * B;
                 let mut n = 0_u64;
                 let mut m = 0;
                 for &x in self.direct() {
                     let x = x.id() as u64;
                     n |= x << m;
                     m += B;
-                    if m == vals_per_u64 {
+                    if m == bits_per_u64 {
                         m = 0;
                         n.write(w);
                         n = 0;
@@ -412,14 +412,14 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
                 // Number of longs in data array
                 V32(data_len(L, B as usize) as u32).write(w);
                 // Data array
-                let vals_per_u64 = 64 / B * B;
+                let bits_per_u64 = 64 / B * B;
                 let mut n = 0_u64;
                 let mut m = 0;
                 for &x in self.direct() {
                     let x = x as u64;
                     n |= x << m;
                     m += B;
-                    if m == vals_per_u64 {
+                    if m == bits_per_u64 {
                         m = 0;
                         n.write(w);
                         n = 0;
@@ -508,11 +508,11 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
 
 #[inline]
 const fn data_len(vals_count: usize, bits_per_val: usize) -> usize {
-    let vals_per_u64 = 64 / bits_per_val;
-    if vals_count.is_multiple_of(vals_per_u64) {
-        vals_count / vals_per_u64
+    let div = 64 / bits_per_val;
+    if vals_count.is_multiple_of(div) {
+        vals_count / div
     } else {
-        vals_count / vals_per_u64 + 1
+        vals_count / div + 1
     }
 }
 
