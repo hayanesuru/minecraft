@@ -8,5 +8,5 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
-libm = "0"
+libm = "0.2"
 mser = { workspace = true }
