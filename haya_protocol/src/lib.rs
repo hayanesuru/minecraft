@@ -97,10 +97,7 @@ pub struct Map<'a, K: 'a, V: 'a, const MAX: usize = { usize::MAX }>(pub List<'a,
 impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V, MAX> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            let x = match &self.0 {
-                List::Borrowed(x) => x,
-                List::Owned(x) => &x[..],
-            };
+            let x = self.0.as_slice();
             V21(x.len() as u32).write(w);
             for y in x {
                 y.0.write(w);
@@ -110,10 +107,7 @@ impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V,
     }
 
     fn len_s(&self) -> usize {
-        let x = match &self.0 {
-            List::Borrowed(x) => x,
-            List::Owned(x) => &x[..],
-        };
+        let x = self.0.as_slice();
         let mut len = V21(x.len() as u32).len_s();
         for y in x {
             len += y.0.len_s();
@@ -145,13 +139,19 @@ pub enum List<'a, T: 'a, const MAX: usize = { usize::MAX }> {
     Owned(Box<[T]>),
 }
 
+impl<'a, T: 'a, const MAX: usize> List<'a, T, MAX> {
+    pub fn as_slice(&self) -> &[T] {
+        match self {
+            Self::Borrowed(x) => x,
+            Self::Owned(x) => &x[..],
+        }
+    }
+}
+
 impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
         unsafe {
-            let x = match self {
-                Self::Borrowed(x) => x,
-                Self::Owned(x) => &x[..],
-            };
+            let x = self.as_slice();
             V21(x.len() as u32).write(w);
             for y in x {
                 y.write(w);
@@ -160,10 +160,7 @@ impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
     }
 
     fn len_s(&self) -> usize {
-        let x = match self {
-            Self::Borrowed(x) => x,
-            Self::Owned(x) => &x[..],
-        };
+        let x = self.as_slice();
         let mut len = V21(x.len() as u32).len_s();
         for y in x {
             len += y.len_s();
@@ -428,6 +425,7 @@ impl Difficulty {
         }
     }
 }
+
 pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
     let mut start = 0;
     let mut cur = 0;
