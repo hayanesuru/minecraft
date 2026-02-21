@@ -16,6 +16,7 @@ mser = { workspace = true }
 mser_macro = { workspace = true }
 haya_nbt = { workspace = true }
 haya_ident = { workspace = true }
+haya_math = { workspace = true }
 
 uuid = { workspace = true }
 

@@ -3,6 +3,7 @@ use minecraft_data::{clientbound__configuration, clientbound__login, clientbound
 pub mod common;
 pub mod configuration;
 pub mod cookie;
+pub mod game;
 pub mod login;
 pub mod ping;
 pub mod status;
@@ -42,14 +43,14 @@ macro_rules! packets {
 packets! {
     clientbound__status,
     StatusHandler,
-    handle,
+    handle_status,
     status_response = status::StatusResponse<'_>,
     pong_response = ping::PongResponse,
 }
 packets! {
     clientbound__login,
     LoginHandler,
-    handle,
+    handle_login,
     login_disconnect = login::LoginDisconnect<'_>,
     hello = login::Hello<'_>,
     login_finished = login::LoginFinished<'_>,
@@ -60,7 +61,7 @@ packets! {
 packets! {
     clientbound__configuration,
     ConfigurationHandler,
-    handle,
+    handle_configuration,
     cookie_request = cookie::ConfigurationCookieRequest<'_>,
     custom_payload = common::CustomPayload<'_>,
     disconnect = common::Disconnect,
@@ -82,3 +83,21 @@ packets! {
     show_dialog = common::ShowDialog,
     code_of_conduct = configuration::CodeOfConduct<'_>,
 }
+// packets! {
+//     minecraft_data::clientbound__play,
+//     GameHandler,
+//     handle_game,
+//     bundle_delimiter = game::BundleDelimiter,
+//     add_entity = game::AddEntity,
+//     animate = game::Animate,
+//     award_stats = game::AwardStats<'_>,
+//     block_changed_ack = game::BlockChangedAck,
+//     block_destruction = game::BlockDestruction,
+//     block_entity_data = game::BlockEntityData,
+//     block_event = game::BlockEvent,
+//     block_update = game::BlockUpdate,
+//     boss_event = game::BossEvent,
+//     change_difficulty = game::ChangeDifficulty,
+//     chunk_batch_finished = game::ChunkBatchFinished,
+//     chunk_batch_start = game::ChunkBatchStart,
+// }

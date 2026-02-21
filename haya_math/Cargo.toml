@@ -1,5 +1,5 @@
 [package]
-name = "haya_nbt"
+name = "haya_math"
 version = "0.1.0"
 authors.workspace = true
 readme.workspace = true
@@ -8,10 +8,5 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
+libm = "0"
 mser = { workspace = true }
-haya_mutf8 = { workspace = true }
-haya_str = { workspace = true }
-
-unicode_names2 = { version = "2", features = ["no_std"] }
-itoa = "1"
-ryu = "1"

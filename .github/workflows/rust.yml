@@ -28,7 +28,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
-          components: clippy, miri, rustfmt
+          components: clippy, miri, rustfmt, rust-src
       - name: Clippy
         run: cargo clippy --verbose --tests
       - name: Miri Setup

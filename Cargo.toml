@@ -1,5 +1,5 @@
 [workspace]
-members = ["haya_data", "haya_ecs", "haya_ident", "haya_mutf8", "haya_nbt", "haya_protocol", "haya_ser", "haya_ser_macro", "haya_str", "haya_text"]
+members = ["haya_data", "haya_ecs", "haya_ident", "haya_math", "haya_mutf8", "haya_nbt", "haya_palette", "haya_protocol", "haya_ser", "haya_ser_macro", "haya_str", "haya_text"]
 resolver = "3"
 
 [workspace.package]
@@ -19,6 +19,7 @@ haya_ident = { path = "haya_ident", version = "0.1" }
 haya_mutf8 = { path = "haya_mutf8", version = "0.1" }
 haya_ecs = { path = "haya_ecs", version = "0.1" }
 haya_text = { path = "haya_text", version = "0.1" }
+haya_math = { path = "haya_math", version = "0.1" }
 
 uuid = { version = "1", default-features = false }
 

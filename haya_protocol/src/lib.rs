@@ -12,6 +12,7 @@ pub mod clientbound;
 pub mod item;
 pub mod profile;
 pub mod serverbound;
+pub mod stat;
 pub mod types;
 
 #[macro_use]
@@ -87,6 +88,54 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
         } else {
             Err(Error)
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Map<'a, K: 'a, V: 'a, const MAX: usize = { usize::MAX }>(pub List<'a, (K, V), MAX>);
+
+impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V, MAX> {
+    unsafe fn write(&self, w: &mut UnsafeWriter) {
+        unsafe {
+            let x = match &self.0 {
+                List::Borrowed(x) => x,
+                List::Owned(x) => &x[..],
+            };
+            V21(x.len() as u32).write(w);
+            for y in x {
+                y.0.write(w);
+                y.1.write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let x = match &self.0 {
+            List::Borrowed(x) => x,
+            List::Owned(x) => &x[..],
+        };
+        let mut len = V21(x.len() as u32).len_s();
+        for y in x {
+            len += y.0.len_s();
+            len += y.1.len_s();
+        }
+        len
+    }
+}
+
+impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, MAX> {
+    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+        let len = V21::read(buf)?.0 as usize;
+        if len > MAX {
+            return Err(Error);
+        }
+        let mut vec = Vec::with_capacity(usize::min(len, 65536));
+        for _ in 0..len {
+            let k = K::read(buf)?;
+            let v = V::read(buf)?;
+            vec.push((k, v));
+        }
+        Ok(Self(List::Owned(vec.into_boxed_slice())))
     }
 }
 
@@ -178,18 +227,6 @@ pub struct Dialog(pub Tag);
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RegistryKey<'a> {
     pub identifier: Ident<'a>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct TagNetworkEntry<'a> {
-    pub registry: RegistryKey<'a>,
-    pub tags: List<'a, NetworkPayload<'a>>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct NetworkPayload<'a> {
-    pub key: Ident<'a>,
-    pub ids: List<'a, V32>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -353,6 +390,44 @@ impl ParticleStatus {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum Difficulty {
+    Peaceful,
+    Easy,
+    Normal,
+    Hard,
+}
+
+impl Difficulty {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Peaceful => "peaceful",
+            Self::Easy => "easy",
+            Self::Normal => "normal",
+            Self::Hard => "hard",
+        }
+    }
+
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::Peaceful => "options.difficulty.peaceful",
+            Self::Easy => "options.difficulty.easy",
+            Self::Normal => "options.difficulty.normal",
+            Self::Hard => "options.difficulty.hard",
+        }
+    }
+
+    pub const fn parse(n: &[u8]) -> Option<Self> {
+        match n {
+            b"peaceful" => Some(Self::Peaceful),
+            b"easy" => Some(Self::Easy),
+            b"normal" => Some(Self::Normal),
+            b"hard" => Some(Self::Hard),
+            _ => None,
+        }
+    }
+}
 pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
     let mut start = 0;
     let mut cur = 0;
