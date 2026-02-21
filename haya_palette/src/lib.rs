@@ -32,11 +32,11 @@ impl<'a> Read<'a> for Biome {
 
 impl Write for Biome {
     unsafe fn write(&self, w: &mut UnsafeWriter) {
-        unsafe { w.write_byte(*self as u8) }
+        unsafe { V21(*self as u32).write(w) }
     }
 
     fn len_s(&self) -> usize {
-        1
+        V21(*self as u32).len_s()
     }
 }
 
@@ -464,7 +464,7 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
             len
         } else if self.len == 1 {
             let val = unsafe { *self.palette().get_unchecked(0) };
-            2 + V21(val as u32).len_s()
+            2 + val.len_s()
         } else {
             let bits_per_entry = (u8::BITS - (self.len as u8 - 1).leading_zeros()) as usize;
             let mut len = 1;
