@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use alloc::alloc::{alloc, alloc_zeroed, dealloc};
+use alloc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error};
 use core::alloc::Layout;
 use core::array::from_fn;
 use core::mem::{align_of, size_of};
@@ -62,7 +62,7 @@ impl<T: Copy, const P: usize, const B: u8, const L: usize> PalettedContainer<T, 
 
     #[inline]
     pub fn palette(&self) -> &[T] {
-        unsafe { from_raw_parts(self.palette.as_ptr().cast(), self.len) }
+        unsafe { from_raw_parts(self.palette.as_ptr(), self.len) }
     }
 
     #[inline]
@@ -113,7 +113,10 @@ impl<T: Copy, const P: usize, const B: u8, const L: usize> Clone for PalettedCon
             };
 
             let ptr = alloc(layout);
-            let mut ptr = NonNull::new_unchecked(ptr);
+            let mut ptr = match NonNull::new(ptr) {
+                Some(x) => x,
+                None => handle_alloc_error(layout),
+            };
             core::ptr::copy_nonoverlapping(self.ptr.as_ref(), ptr.as_mut(), size);
             Self {
                 palette: self.palette,
@@ -184,8 +187,10 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
             let size = size_of::<u8>() * Self::HALF;
             let align = align_of::<u8>();
             let layout = Layout::from_size_align_unchecked(size, align);
-            self.ptr = NonNull::new_unchecked(alloc_zeroed(layout));
-
+            self.ptr = match NonNull::new(alloc_zeroed(layout)) {
+                Some(x) => x,
+                None => handle_alloc_error(layout),
+            };
             *self.palette.get_unchecked_mut(1) = val;
             let n = 1 << (index % 2 * 4);
             *self.ptr.as_ptr().add(index / 2) = n;
@@ -199,7 +204,10 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
             let size = size_of::<u8>() * Self::HALF;
             let align = align_of::<u8>();
             let layout = Layout::from_size_align_unchecked(size, align);
-            self.ptr = NonNull::new_unchecked(alloc(layout));
+            self.ptr = match NonNull::new(alloc(layout)) {
+                Some(x) => x,
+                None => handle_alloc_error(layout),
+            };
         }
     }
 
@@ -212,7 +220,13 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
             let size = size_of::<T>() * L;
             let align = align_of::<T>();
             let layout = Layout::from_size_align_unchecked(size, align);
-            let indirect = core::mem::replace(&mut self.ptr, NonNull::new_unchecked(alloc(layout)));
+            let indirect = core::mem::replace(
+                &mut self.ptr,
+                match NonNull::new(alloc(layout)) {
+                    Some(x) => x,
+                    None => handle_alloc_error(layout),
+                },
+            );
 
             if core::ptr::eq(indirect.as_ptr(), NonNull::dangling().as_ptr()) {
                 return;
