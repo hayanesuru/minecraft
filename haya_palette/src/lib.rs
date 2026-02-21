@@ -528,7 +528,7 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
             }
             let palette = unsafe {
                 let mut arr = from_fn::<_, P, _>(|i| (*count.get_unchecked(i), i as u8));
-                arr.sort_unstable_by_key(|(x, _)| *x);
+                arr.sort_unstable_by(|(x, _), (y, _)| x.cmp(y).reverse());
                 from_fn::<_, P, _>(|i| *pal.get_unchecked(arr.get_unchecked(i).1 as usize))
             };
             let prev = core::mem::replace(
