@@ -328,25 +328,47 @@ impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B
                 // Number of longs
                 w.write_byte(0);
             } else {
-                let bits_per_entry = 4_u8;
-
+                let bits_per_entry = u8::BITS - (self.len as u8 - 1).leading_zeros();
                 // Bits per entry
-                w.write_byte(bits_per_entry);
-
+                w.write_byte(bits_per_entry as u8);
                 // Palette len
                 w.write_byte(self.len as u8);
                 // Palette
                 for val in self.palette() {
-                    (*val).write(w);
+                    val.write(w);
                 }
-
                 // Number of longs in data array
                 V32(data_len(L, bits_per_entry as usize) as u32).write(w);
                 // Data array
                 debug_assert!(self.half().is_multiple_of(8));
-                for x in 0..self.half() / 8 {
-                    let x = *self.ptr.as_ptr().add(x * 8).cast::<[u8; 8]>();
-                    w.write(&u64::from_le_bytes(x).to_be_bytes());
+                if bits_per_entry == 4 {
+                    for x in 0..self.half() / 8 {
+                        let x = *self.ptr.as_ptr().add(x * 8).cast::<[u8; 8]>();
+                        w.write(&u64::from_le_bytes(x).to_be_bytes());
+                    }
+                    return;
+                }
+                let bits_per_u64 = 64 / bits_per_entry * bits_per_entry;
+                let mut n = 0_u64;
+                let mut m = 0;
+                for &x in from_raw_parts(self.indirect(), self.half()) {
+                    n |= ((x & 0b1111) as u64) << m;
+                    m += bits_per_entry;
+                    if m == bits_per_u64 {
+                        m = 0;
+                        n.write(w);
+                        n = 0;
+                    }
+                    n |= ((x >> 4) as u64) << m;
+                    m += bits_per_entry;
+                    if m == bits_per_u64 {
+                        m = 0;
+                        n.write(w);
+                        n = 0;
+                    }
+                }
+                if m > 0 {
+                    n.write(w);
                 }
             }
         }
@@ -364,15 +386,14 @@ impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B
             let val = unsafe { *self.palette().get_unchecked(0) };
             2 + val.len_s()
         } else {
-            debug_assert!(u8::BITS - (self.len as u8 - 1).leading_zeros() <= 4);
-            let bits_per_entry = 4_usize;
+            let bits_per_entry = (u8::BITS - (self.len as u8 - 1).leading_zeros()) as usize;
             let mut len = 1;
 
             let all = data_len(L, bits_per_entry);
 
             len += 1;
-            for val in self.palette() {
-                len += (*val).len_s();
+            for pal in self.palette() {
+                len += pal.len_s();
             }
             len += V32(all as u32).len_s();
             len += all * 8;
@@ -419,7 +440,7 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
                 let bits_per_entry = u8::BITS - (self.len as u8 - 1).leading_zeros();
 
                 // Bits per entry
-                V32(bits_per_entry).write(w);
+                w.write_byte(bits_per_entry as u8);
 
                 // Palette len
                 w.write_byte(self.len as u8);
@@ -431,20 +452,20 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
                 // Number of longs in data array
                 V32(data_len(L, bits_per_entry as usize) as u32).write(w);
                 // Data array
-                let vals_per_u64 = 64 / bits_per_entry * bits_per_entry;
+                let bits_per_u64 = 64 / bits_per_entry * bits_per_entry;
                 let mut n = 0_u64;
                 let mut m = 0;
                 for &x in from_raw_parts(self.indirect(), self.half()) {
                     n |= ((x & 0b1111) as u64) << m;
                     m += bits_per_entry;
-                    if m == vals_per_u64 {
+                    if m == bits_per_u64 {
                         m = 0;
                         n.write(w);
                         n = 0;
                     }
                     n |= ((x >> 4) as u64) << m;
                     m += bits_per_entry;
-                    if m == vals_per_u64 {
+                    if m == bits_per_u64 {
                         m = 0;
                         n.write(w);
                         n = 0;
@@ -470,13 +491,13 @@ impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Bi
             2 + val.len_s()
         } else {
             let bits_per_entry = (u8::BITS - (self.len as u8 - 1).leading_zeros()) as usize;
-            let mut len = V32(bits_per_entry as u32).len_s();
+            let mut len = 1;
 
             let all = data_len(L, bits_per_entry);
 
             len += 1;
-            for b in self.palette() {
-                len += b.len_s();
+            for pal in self.palette() {
+                len += pal.len_s();
             }
             len += V32(all as u32).len_s();
             len += all * 8;
@@ -504,7 +525,7 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
         }
 
         if self.len == 0 {
-            let mut pal = unsafe { core::mem::zeroed::<[T; P]>() };
+            let mut pal: [T; P] = from_fn(|_| T::default());
             let mut count = [0_usize; P];
             let mut len = 0;
             for x in self.direct() {
