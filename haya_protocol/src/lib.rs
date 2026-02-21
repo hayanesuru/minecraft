@@ -389,6 +389,7 @@ impl ParticleStatus {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum Difficulty {
     Peaceful,
     Easy,
