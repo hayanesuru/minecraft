@@ -123,24 +123,16 @@ pub enum BossEventOperation {
 impl BossEventOperation {
     pub const fn to_type(&self) -> BossEventOperationType {
         match self {
-            Self::Add {
-                name: _,
-                progress: _,
-                color: _,
-                overlay: _,
-                flags: _,
-            } => BossEventOperationType::Add,
+            Self::Add { .. } => BossEventOperationType::Add,
             Self::Remove {} => BossEventOperationType::Remove,
-            Self::UpdateProgress { progress: _ } => BossEventOperationType::UpdateProgress,
-            Self::UpdateName { name: _ } => BossEventOperationType::UpdateName,
-            Self::UpdateStyle {
-                color: _,
-                overlay: _,
-            } => BossEventOperationType::UpdateStyle,
-            Self::UpdateProperties { flags: _ } => BossEventOperationType::UpdateProperties,
+            Self::UpdateProgress { .. } => BossEventOperationType::UpdateProgress,
+            Self::UpdateName { .. } => BossEventOperationType::UpdateName,
+            Self::UpdateStyle { .. } => BossEventOperationType::UpdateStyle,
+            Self::UpdateProperties { .. } => BossEventOperationType::UpdateProperties,
         }
     }
 }
+
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
@@ -178,7 +170,7 @@ pub enum BossEventOverlay {
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct BossEventFlags(u8);
+pub struct BossEventFlags(pub u8);
 
 impl BossEventFlags {
     pub const DARKEN_SCREEN: u8 = 1;
