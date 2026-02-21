@@ -78,8 +78,8 @@ pub struct BlockEntityData {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BlockEvent {
     pub pos: BlockPosPacked,
-    pub parm_a: u8,
-    pub parm_b: u8,
+    pub param_a: u8,
+    pub param_b: u8,
     pub block_type: block,
 }
 
