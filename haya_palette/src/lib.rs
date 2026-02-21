@@ -52,7 +52,8 @@ impl<T: Copy, const P: usize, const B: u8, const L: usize> PalettedContainer<T, 
         assert!(P <= 16);
         assert!(B > 0);
         assert!(L > 0);
-        if L & 1 == 0 { L / 2 } else { L / 2 + 1 }
+        assert!(L & 1 == 0);
+        L / 2
     };
 
     #[inline]
@@ -558,7 +559,7 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
                 self.grow();
                 let ptr = prev.ptr.cast::<T>();
 
-                for index in 0..self.half() - 1 {
+                for index in 0..self.half() {
                     let val1 = ptr.add(index * 2).as_ref();
                     let val2 = ptr.add(index * 2 + 1).as_ref();
 
@@ -578,30 +579,6 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
                     }
                     self.ptr.add(index).write(((p2 as u8) << 4) | (p1 as u8));
                 }
-                let index = self.half() - 1;
-                let mut p1 = 0;
-                let mut p2 = 0;
-
-                let val1 = ptr.add(index * 2).as_ref();
-                for (i, x) in self.palette().iter().enumerate() {
-                    if x == val1 {
-                        p1 = i;
-                        break;
-                    }
-                }
-
-                if L - 1 == index * 2 + 1 {
-                    let val2 = ptr.add(index * 2 + 1).as_ref();
-                    for (i, x) in self.palette().iter().enumerate() {
-                        if x == val2 {
-                            p2 = i;
-                            break;
-                        }
-                    }
-                }
-
-                let n = self.ptr.as_ptr().add(index);
-                *n = ((p2 as u8) << 4) | (p1 as u8);
             }
             return;
         }
