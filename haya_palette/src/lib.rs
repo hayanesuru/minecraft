@@ -342,6 +342,7 @@ impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B
                 // Number of longs in data array.
                 V32(data_len(L, bits_per_entry as usize) as u32).write(w);
                 // Data array
+                debug_assert!(self.half().is_multiple_of(8));
                 for x in 0..self.half() / 8 {
                     let x = *self.ptr.as_ptr().add(x * 8).cast::<[u8; 8]>();
                     w.write(&u64::from_le_bytes(x).to_be_bytes());
@@ -494,10 +495,9 @@ const fn data_len(vals_count: usize, bits_per_val: usize) -> usize {
 impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
     PalettedContainer<T, P, B, L>
 {
-    pub fn shrink_to_fit(&mut self, mut f: impl FnMut(&T, usize)) {
+    pub fn shrink_to_fit(&mut self) {
         if self.len == 1 {
             let val = unsafe { self.palette().get_unchecked(0) };
-            f(val, L);
             return;
         }
 
@@ -506,19 +506,13 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
             let mut count = [0_usize; P];
             let mut len = 0;
             for x in self.direct() {
-                let pos = unsafe {
-                    pal.get_unchecked(0..if len == P + 1 { P } else { len })
-                        .iter()
-                        .position(|p| p == x)
-                };
+                let pos = unsafe { pal.get_unchecked(0..len).iter().position(|p| p == x) };
                 match pos {
                     Some(x) => unsafe { *count.get_unchecked_mut(x) += 1 },
                     None => unsafe {
-                        if len == P + 1 {
-                            f(x, 1);
-                        } else if len == P {
+                        if len == P {
                             len += 1;
-                            f(x, 1);
+                            break;
                         } else {
                             *count.get_unchecked_mut(len) = 1;
                             *pal.get_unchecked_mut(len) = *x;
@@ -528,13 +522,6 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
                 }
             }
             if len == P + 1 {
-                for index in 0..P {
-                    unsafe {
-                        let pal = pal.get_unchecked(index);
-                        let count = *count.get_unchecked(index);
-                        f(pal, count);
-                    }
-                }
                 return;
             }
             let palette = unsafe {
@@ -609,8 +596,6 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
             }
             unsafe {
                 *arr2.get_unchecked_mut(ele as usize) = len as u8;
-                let x = self.palette.get_unchecked(ele as usize);
-                f(x, count);
             }
             len += 1;
         }
