@@ -1,15 +1,15 @@
 #![no_std]
 
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_ident::Ident;
 use haya_nbt::Tag;
-use mser::{Error, Read, UnsafeWriter, V21, V32, Write};
+use mser::{Error, Read, Reader, V21, V32, Write, Writer};
 
 // pub mod chat;
 pub mod clientbound;
 // pub mod dialog;
 pub mod item;
+// pub mod json;
 pub mod profile;
 pub mod serverbound;
 pub mod stat;
@@ -28,7 +28,7 @@ pub enum ClientIntent {
 }
 
 impl Write for ClientIntent {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write_byte(*self as u8);
         }
@@ -40,7 +40,7 @@ impl Write for ClientIntent {
 }
 
 impl<'a> Read<'a> for ClientIntent {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         match V32::read(buf)?.0 {
             1 => Ok(Self::Status),
             2 => Ok(Self::Login),
@@ -54,7 +54,7 @@ impl<'a> Read<'a> for ClientIntent {
 pub struct Utf8<'a, const MAX: usize = 32767>(pub &'a str);
 
 impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             V21(self.0.len() as u32).write(w);
             w.write(self.0.as_bytes());
@@ -67,18 +67,12 @@ impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
 }
 
 impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX * 3 {
             return Err(Error);
         }
-        let bytes = match buf.split_at_checked(len) {
-            Some((x, y)) => {
-                *buf = y;
-                x
-            }
-            None => return Err(Error),
-        };
+        let bytes = buf.read_slice(len)?;
         let s = match core::str::from_utf8(bytes) {
             Ok(x) => x,
             Err(_) => return Err(Error),
@@ -95,7 +89,7 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
 pub struct Map<'a, K: 'a, V: 'a, const MAX: usize = { usize::MAX }>(pub List<'a, (K, V), MAX>);
 
 impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V, MAX> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let x = self.0.as_slice();
             V21(x.len() as u32).write(w);
@@ -118,7 +112,7 @@ impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V,
 }
 
 impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, MAX> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX {
             return Err(Error);
@@ -129,27 +123,27 @@ impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, 
             let v = V::read(buf)?;
             vec.push((k, v));
         }
-        Ok(Self(List::Owned(vec.into_boxed_slice())))
+        Ok(Self(List::Owned(vec)))
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum List<'a, T: 'a, const MAX: usize = { usize::MAX }> {
     Borrowed(&'a [T]),
-    Owned(Box<[T]>),
+    Owned(Vec<T>),
 }
 
 impl<'a, T: 'a, const MAX: usize> List<'a, T, MAX> {
     pub fn as_slice(&self) -> &[T] {
         match self {
             Self::Borrowed(x) => x,
-            Self::Owned(x) => &x[..],
+            Self::Owned(x) => x.as_ref(),
         }
     }
 }
 
 impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let x = self.as_slice();
             V21(x.len() as u32).write(w);
@@ -170,7 +164,7 @@ impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
 }
 
 impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for List<'a, T, MAX> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX {
             return Err(Error);
@@ -179,7 +173,7 @@ impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for List<'a, T, MAX> {
         for _ in 0..len {
             vec.push(T::read(buf)?);
         }
-        Ok(Self::Owned(vec.into_boxed_slice()))
+        Ok(Self::Owned(vec))
     }
 }
 
@@ -187,23 +181,17 @@ impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for List<'a, T, MAX> {
 pub struct Rest<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
 
 impl<'a, const MAX: usize> Read<'a> for Rest<'a, MAX> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = buf.len();
         if len > MAX {
             return Err(Error);
         }
-        match buf.split_at_checked(len) {
-            Some((x, y)) => {
-                *buf = y;
-                Ok(Self(x))
-            }
-            None => Err(Error),
-        }
+        Ok(Self(buf.read_slice(len)?))
     }
 }
 
 impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { w.write(self.0) }
     }
 
@@ -246,7 +234,7 @@ pub enum Either<L, R> {
 }
 
 impl<'a, L: Read<'a>, R: Read<'a>> Read<'a> for Either<L, R> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         if bool::read(buf)? {
             Ok(Self::Left(L::read(buf)?))
         } else {
@@ -256,7 +244,7 @@ impl<'a, L: Read<'a>, R: Read<'a>> Read<'a> for Either<L, R> {
 }
 
 impl<L: Write, R: Write> Write for Either<L, R> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {
                 Self::Left(l) => {
@@ -427,61 +415,42 @@ impl Difficulty {
     }
 }
 
-pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
-    let mut start = 0;
-    let mut cur = 0;
-    let n = s.as_bytes();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    while let Some(&byte) = n.get(cur) {
-        let esc = mser::json_char_width_escaped(byte);
-        if esc <= 4 {
-            cur += esc as usize;
-            continue;
-        }
-        w.extend(unsafe { n.get_unchecked(start..cur) });
-        if esc == 0xff {
-            let (d1, d2) = mser::u8_to_hex(byte);
-            w.extend(&[b'\\', b'u', b'0', b'0', d1, d2]);
-        } else {
-            w.extend(&[b'\\', esc]);
-        }
-        cur += 1;
-        start = cur;
+    #[test]
+    fn test_write() {
+        use crate::clientbound::login::LoginFinished;
+        use crate::profile::GameProfileRef;
+        use crate::types::Id as _;
+        use minecraft_data::clientbound__login;
+        use uuid::Uuid;
+
+        let packet: LoginFinished = LoginFinished {
+            game_profile: GameProfileRef {
+                id: Uuid::nil(),
+                name: Utf8("abc"),
+                peoperties: List::Borrowed(&[]),
+            },
+        };
+
+        let id = LoginFinished::ID;
+        let len1 = id.len_s();
+        let len2 = packet.len_s() + len1;
+        let data = unsafe {
+            let mut data = alloc::vec::Vec::with_capacity(len2);
+            mser::write_unchecked(data.as_mut_ptr(), &id);
+            mser::write_unchecked(data.as_mut_ptr().add(len1), &packet);
+            data.set_len(len2);
+            data.into_boxed_slice()
+        };
+        let mut data = Reader::new(&data);
+        let id = V32::read(&mut data).unwrap().0;
+        assert_eq!(clientbound__login::new(id as _).unwrap(), LoginFinished::ID);
+        assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
+        assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");
+        assert_eq!(V32::read(&mut data).unwrap().0, 0);
+        assert!(data.is_empty());
     }
-    w.extend(unsafe { n.get_unchecked(start..) });
-}
-
-#[test]
-fn test_write() {
-    use crate::clientbound::login::LoginFinished;
-    use crate::profile::GameProfileRef;
-    use crate::types::Id as _;
-    use minecraft_data::clientbound__login;
-    use uuid::Uuid;
-
-    let packet: LoginFinished = LoginFinished {
-        game_profile: GameProfileRef {
-            id: Uuid::nil(),
-            name: Utf8("abc"),
-            peoperties: List::Borrowed(&[]),
-        },
-    };
-
-    let id = LoginFinished::ID;
-    let len1 = id.len_s();
-    let len2 = packet.len_s() + len1;
-    let data = unsafe {
-        let mut data = alloc::vec::Vec::with_capacity(len2);
-        mser::write_unchecked(data.as_mut_ptr(), &id);
-        mser::write_unchecked(data.as_mut_ptr().add(len1), &packet);
-        data.set_len(len2);
-        data.into_boxed_slice()
-    };
-    let mut data = &data[..];
-    let id = V32::read(&mut data).unwrap().0;
-    assert_eq!(clientbound__login::new(id as _).unwrap(), LoginFinished::ID);
-    assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
-    assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");
-    assert_eq!(V32::read(&mut data).unwrap().0, 0);
-    assert!(data.is_empty());
 }

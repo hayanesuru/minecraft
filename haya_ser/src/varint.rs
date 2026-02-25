@@ -1,5 +1,5 @@
-use super::{Read, UnsafeWriter, Write};
-use crate::{Error, cold_path};
+use super::{Read, Write, Writer};
+use crate::{Error, Reader, cold_path};
 
 pub const V21MAX: usize = 0x1FFFFF;
 pub const V7MAX: usize = 0x7F;
@@ -18,7 +18,7 @@ impl V21 {
 }
 
 impl<'a> Read<'a> for V21 {
-    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let mut a = u8::read(buf)?;
         let mut p = (a & 0x7F) as u32;
         'd: {
@@ -53,7 +53,7 @@ impl<'a> Read<'a> for V21 {
 
 impl Write for V21 {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let n = self.0;
             if n & 0xFFFFFF80 == 0 {
@@ -100,7 +100,7 @@ impl V32 {
 
 impl Write for V32 {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let n = self.0;
             if n & 0xFFFFFF80 == 0 {
@@ -146,7 +146,7 @@ impl Write for V32 {
 }
 
 impl<'a> Read<'a> for V32 {
-    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let mut a = u8::read(buf)?;
         let mut shl = 7;
         let mut p = (a & 0x7F) as u32;
@@ -199,7 +199,7 @@ impl V64 {
 }
 
 impl Write for V64 {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let n = self.0;
             if n & 0xFFFFFFFFFFFFFF80 == 0 {
@@ -291,7 +291,7 @@ impl Write for V64 {
 }
 
 impl<'a> Read<'a> for V64 {
-    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let mut a = u8::read(buf)?;
         let mut shl = 7;
         let mut p = (a & 0x7F) as u64;
@@ -305,10 +305,12 @@ impl<'a> Read<'a> for V64 {
             if a & 0x80 == 0 {
                 break 'd;
             }
-            if buf.len() >= 8 {
-                let y = unsafe { u64::from_le_bytes(*buf.as_ptr().cast::<[u8; 8]>()) };
+            if let Ok(y) = buf.peek_array::<8>() {
+                let y = u64::from_le_bytes(y);
                 if y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080 {
-                    *buf = unsafe { buf.get_unchecked(8..) };
+                    unsafe {
+                        buf.advance(8);
+                    }
                     p |= ((y & 0x0000_0000_0000_007F) << 14)
                         | ((y & 0x0000_0000_0000_7F00) << 13)
                         | ((y & 0x0000_0000_007F_0000) << 12)
@@ -358,21 +360,21 @@ mod tests {
                 let y = V64(x);
                 let sz = y.len_s();
                 crate::write_unchecked(buf.as_mut_ptr(), &y);
-                let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+                let mut sl = Reader::new(core::slice::from_raw_parts(buf.as_ptr(), sz));
                 assert_eq!(V64::read(&mut sl).unwrap(), y);
                 assert!(sl.is_empty());
 
                 let y = V32(x as u32);
                 crate::write_unchecked(buf.as_mut_ptr(), &y);
                 let sz = y.len_s();
-                let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+                let mut sl = Reader::new(core::slice::from_raw_parts(buf.as_ptr(), sz));
                 assert_eq!(V32::read(&mut sl).unwrap(), y);
                 assert!(sl.is_empty());
 
                 let y = V21(x as u32 & 0x1FFFFF);
                 crate::write_unchecked(buf.as_mut_ptr(), &y);
                 let sz = y.len_s();
-                let mut sl = core::slice::from_raw_parts(buf.as_ptr(), sz);
+                let mut sl = Reader::new(core::slice::from_raw_parts(buf.as_ptr(), sz));
                 assert_eq!(V21::read(&mut sl).unwrap(), y);
                 assert!(sl.is_empty());
             }
@@ -385,16 +387,16 @@ mod tests {
         let [a, b, c] = val.to_array();
         let a5 = [a, b, c | 0x80, 0x80, 0];
         let a4 = [a, b, c | 0x80, 0];
-        assert_eq!(V21::read(&mut &a5[..]).unwrap(), val);
-        assert_eq!(V21::read(&mut &a4[..]).unwrap(), val);
-        assert_eq!(V21::read(&mut &[a, b, c][..]).unwrap(), val);
+        assert_eq!(V21::read(&mut Reader::new(&a5)).unwrap(), val);
+        assert_eq!(V21::read(&mut Reader::new(&a4)).unwrap(), val);
+        assert_eq!(V21::read(&mut Reader::new(&[a, b, c])).unwrap(), val);
 
         let val = V21(0x1fff);
         let [a, b, c] = val.to_array();
         let a5 = [a, b | 0x80, c | 0x80, 0x80, 0];
         let a4 = [a, b | 0x80, c | 0x80, 0];
-        assert_eq!(V21::read(&mut &a5[..]).unwrap(), val);
-        assert_eq!(V21::read(&mut &a4[..]).unwrap(), val);
-        assert_eq!(V21::read(&mut &[a, b, c][..]).unwrap(), val);
+        assert_eq!(V21::read(&mut Reader::new(&a5)).unwrap(), val);
+        assert_eq!(V21::read(&mut Reader::new(&a4)).unwrap(), val);
+        assert_eq!(V21::read(&mut Reader::new(&[a, b, c])).unwrap(), val);
     }
 }

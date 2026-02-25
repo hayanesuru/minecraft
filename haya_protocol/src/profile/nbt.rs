@@ -1,9 +1,9 @@
 use super::*;
 use crate::nbt::{End, Kv, MapCodec, MapReader, TagType};
-use mser::{Error, UnsafeWriter, Write};
+use mser::{Error, Write, Writer};
 
 impl MapCodec for GameProfile {
-    fn read_kv(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read_kv(buf: &mut Reader) -> Result<Self, Error> {
         let ResolvableProfile {
             name,
             id,
@@ -24,7 +24,7 @@ impl MapCodec for GameProfile {
         }
     }
 
-    unsafe fn write_kv(&self, w: &mut UnsafeWriter) {
+    unsafe fn write_kv(&self, w: &mut Writer) {
         unsafe {
             Kv(NAME, &self.name).write(w);
             Kv(ID, self.id).write(w);
@@ -85,7 +85,7 @@ impl MapReader for ResolvableProfile {
 }
 
 impl MapCodec for ResolvableProfile {
-    fn read_kv(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read_kv(buf: &mut Reader) -> Result<Self, Error> {
         Self {
             name: None,
             id: None,
@@ -100,7 +100,7 @@ impl MapCodec for ResolvableProfile {
         .read_map(buf)
     }
 
-    unsafe fn write_kv(&self, w: &mut UnsafeWriter) {
+    unsafe fn write_kv(&self, w: &mut Writer) {
         unsafe {
             if let Some(ref name) = self.name {
                 Kv(NAME, name).write(w);
@@ -147,7 +147,7 @@ impl MapCodec for PropertyMap {
         todo!()
     }
 
-    unsafe fn write_kv(&self, w: &mut mser::UnsafeWriter) {
+    unsafe fn write_kv(&self, w: &mut mser::Writer) {
         unsafe {
             for p in &self.0 {
                 Kv(PROPERTY_NAME, &p.name).write(w);

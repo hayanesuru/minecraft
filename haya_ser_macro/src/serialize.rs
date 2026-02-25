@@ -36,7 +36,7 @@ pub fn serialize_struct(
         #[automatically_derived]
         impl #impl_generics ::#cratename::Write for #name #ty_generics #where_clause {
             #[inline]
-            unsafe fn write(&self, __w: &mut ::#cratename::UnsafeWriter) {
+            unsafe fn write(&self, __w: &mut ::#cratename::Writer) {
                 unsafe {
                     #(#write)*
                 }
@@ -117,7 +117,7 @@ pub fn serialize_enum(
         #[automatically_derived]
         impl #impl_generics ::#cratename::Write for #name #ty_generics #where_clause {
             #[inline]
-            unsafe fn write(&self, w: &mut ::#cratename::UnsafeWriter) {
+            unsafe fn write(&self, w: &mut ::#cratename::Writer) {
                 unsafe {
                     ::#cratename::Write::write(&(#repr), w);
                 }

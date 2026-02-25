@@ -21,7 +21,7 @@ macro_rules! packets {
         )+
 
         pub trait $handler {
-            fn $handle(&mut self, mut packet: &[u8]) -> Result<(), mser::Error> {
+            fn $handle(&mut self, mut packet: mser::Reader<'_>) -> Result<(), mser::Error> {
                 match <$m as mser::Read>::read(&mut packet)? {
                     $(
                         <$m>::$variant => {

@@ -6,7 +6,7 @@ use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use core::str::from_utf8_unchecked;
 use haya_str::HayaStr;
-use mser::{ByteArray, Error, Read, UnsafeWriter, V21, Write};
+use mser::{ByteArray, Error, Read, Reader, V21, Write, Writer};
 
 pub const MINECRAFT: &str = "minecraft";
 
@@ -91,7 +91,7 @@ impl<'a> Ident<'a> {
 }
 
 impl<'a> Read<'a> for Ident<'a> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let identifier = ByteArray::<32767>::read(buf)?.0;
         match parse_ident(identifier) {
             Some(Ident { namespace, path }) => Ok(Self { namespace, path }),
@@ -101,7 +101,7 @@ impl<'a> Read<'a> for Ident<'a> {
 }
 
 impl Write for Ident<'_> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let namespace = match self.namespace {
                 Some(x) => x,
@@ -183,14 +183,16 @@ mod tests {
             write_unchecked(v.as_mut_ptr(), &n);
             v.set_len(len);
         }
-        let r = Ident::read(&mut &v[..]).unwrap();
+        let mut reader = Reader::new(&v);
+        let r = Ident::read(&mut reader).unwrap();
         assert_eq!(r, n);
-
-        let mut b = &v[..];
-
-        let len = V21::read(&mut b).unwrap().0 as usize;
-        assert_eq!(len, b.len());
-        assert_eq!(b, expected.as_bytes());
+        let mut reader = Reader::new(&v);
+        let len = V21::read(&mut reader).unwrap().0 as usize;
+        assert_eq!(len, reader.len());
+        assert_eq!(
+            reader.read_slice(reader.len()).unwrap(),
+            expected.as_bytes()
+        );
     }
 
     #[track_caller]

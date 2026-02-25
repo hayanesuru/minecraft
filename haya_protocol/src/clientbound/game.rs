@@ -3,7 +3,7 @@ use crate::{Component, Difficulty, Map};
 use haya_math::{BlockPosPacked, ByteAngle, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
-use mser::{Error, Read, UnsafeWriter, V32, Write};
+use mser::{Error, Read, Reader, V32, Write, Writer};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -179,7 +179,7 @@ impl BossEventFlags {
 }
 
 impl<'a> Read<'a> for BossEventOperation {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(match BossEventOperationType::read(buf)? {
             BossEventOperationType::Add => Self::Add {
                 name: Component::read(buf)?,
@@ -207,7 +207,7 @@ impl<'a> Read<'a> for BossEventOperation {
 }
 
 impl Write for BossEventOperation {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.to_type().write(w);
             match self {

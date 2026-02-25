@@ -9,7 +9,7 @@ use core::mem::{align_of, size_of};
 use core::ptr::NonNull;
 use core::slice::from_raw_parts;
 use minecraft_data::block_state;
-use mser::{Error, Read, UnsafeWriter, V21, V32, Write};
+use mser::{Error, Read, Reader, V21, V32, Write, Writer};
 
 #[derive(Clone, Default, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -20,7 +20,7 @@ pub enum Biome {
 }
 
 impl<'a> Read<'a> for Biome {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let n = V21::read(buf)?.0;
         match n {
             0 => Ok(Biome::TheVoid),
@@ -31,7 +31,7 @@ impl<'a> Read<'a> for Biome {
 }
 
 impl Write for Biome {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { V21(*self as u32).write(w) }
     }
 
@@ -294,7 +294,7 @@ impl<T: Copy + Default + Eq, const P: usize, const B: u8, const L: usize>
 }
 
 impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B, L> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             if self.len == 0 {
                 // Bits per entry
@@ -403,7 +403,7 @@ impl<const B: u8, const L: usize> Write for PalettedContainer<block_state, 16, B
 }
 
 impl<const P: usize, const B: u8, const L: usize> Write for PalettedContainer<Biome, P, B, L> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             if self.len == 0 {
                 // Bits per entry

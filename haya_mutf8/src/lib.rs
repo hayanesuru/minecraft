@@ -1,6 +1,6 @@
 #![no_std]
 
-use mser::{Error, UnsafeWriter};
+use mser::{Error, Writer};
 
 const CHAR_WIDTH: &[u8; 256] = &[
     // 1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
@@ -75,7 +75,7 @@ impl<'a> Mutf8<'a> {
     }
 }
 
-pub fn encode_mutf8(s: &str, w: &mut UnsafeWriter) {
+pub fn encode_mutf8(s: &str, w: &mut Writer) {
     let mut index = 0;
     let mut start = 0;
     let bytes = s.as_bytes();
@@ -190,7 +190,7 @@ pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
 
 /// # Safety
 /// `w` is valid for write
-pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut UnsafeWriter) -> Result<(), Error> {
+pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut Writer) -> Result<(), Error> {
     let mut index = 0;
     let mut start = 0;
 

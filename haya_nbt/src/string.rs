@@ -1,10 +1,11 @@
-use crate::{Error, Read, UnsafeWriter, Write};
+use crate::{Error, Read, Write, Writer};
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_mutf8::{
     Mutf8, as_mutf8_ascii, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len,
 };
+use mser::Reader;
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -32,7 +33,7 @@ impl<'a> StringTagRaw<'a> {
 
 impl<'a> Write for StringTagRaw<'a> {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             (self.0.len() as u16).write(w);
             w.write(self.0.as_ref());
@@ -47,15 +48,9 @@ impl<'a> Write for StringTagRaw<'a> {
 
 impl<'a> Read<'a> for StringTagRaw<'a> {
     #[inline]
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = u16::read(buf)?;
-        let data = match buf.split_at_checked(len as usize) {
-            Some((x, y)) => {
-                *buf = y;
-                x
-            }
-            None => return Err(Error),
-        };
+        let data = buf.read_slice(len as usize)?;
         if let Some(x) = as_mutf8_ascii(data) {
             Ok(Self(x))
         } else {
@@ -71,7 +66,7 @@ pub struct RefStringTag<'a>(pub &'a str);
 
 impl<'a> Write for RefStringTag<'a> {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             if let Some(x) = StringTagRaw::new(self.0.as_bytes()) {
                 x.write(w);
@@ -93,7 +88,7 @@ impl<'a> Write for RefStringTag<'a> {
 }
 
 impl<'a> Read<'a> for RefStringTag<'a> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(Self(StringTagRaw::read(buf)?.0))
     }
 }
@@ -102,17 +97,11 @@ impl<'a> Read<'a> for RefStringTag<'a> {
 #[repr(transparent)]
 pub struct StringTag(pub Box<str>);
 
-impl Read<'_> for StringTag {
+impl<'a> Read<'a> for StringTag {
     #[inline]
-    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = u16::read(buf)? as usize;
-        let data = match buf.split_at_checked(len) {
-            Some((x, y)) => {
-                *buf = y;
-                x
-            }
-            None => return Err(Error),
-        };
+        let data = buf.read_slice(len)?;
         if let Some(x) = as_mutf8_ascii(data) {
             Ok(Self(x.to_owned().into_boxed_str()))
         } else {
@@ -135,7 +124,7 @@ impl Read<'_> for StringTag {
 pub(crate) struct DecodeMutf8<'a>(pub Mutf8<'a>, pub usize);
 
 impl Write for DecodeMutf8<'_> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { decode_mutf8(self.0, w).unwrap_unchecked() }
     }
 
@@ -146,7 +135,7 @@ impl Write for DecodeMutf8<'_> {
 
 impl Write for StringTag {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { RefStringTag(&self.0).write(w) }
     }
 

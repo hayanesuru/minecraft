@@ -168,7 +168,7 @@ fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) ->
         }
         *w += "\n}\n";
         *w += "#[inline]\n";
-        *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
+        *w += "unsafe fn write(&self, w: &mut ::mser::Writer) {\n";
         if size <= V7MAX {
             *w += "unsafe { w.write_byte(*self as u8); }";
         } else if size <= V21MAX {
@@ -181,7 +181,7 @@ fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) ->
         *w += &name;
         *w += " {\n";
         *w += "#[inline]\n";
-        *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
+        *w += "fn read(n: &mut ::mser::Reader) -> ::core::result::Result<Self, ::mser::Error> {\n";
         if size <= V21MAX {
             *w += "let x = <::mser::V21 as ::mser::Read>::read(n)?.0;\n";
         } else {
@@ -1128,7 +1128,7 @@ fn block_state(
     }
     *w += "\n}\n";
     *w += "#[inline]\n";
-    *w += "unsafe fn write(&self, w: &mut ::mser::UnsafeWriter) {\n";
+    *w += "unsafe fn write(&self, w: &mut ::mser::Writer) {\n";
     if bs_size <= V7MAX {
         *w += "unsafe { w.write_byte(self.0 as u8); }";
     } else if bs_size <= V21MAX {
@@ -1142,7 +1142,7 @@ fn block_state(
     *w += bs_name;
     *w += " {\n";
     *w += "#[inline]\n";
-    *w += "fn read(n: &mut &[u8]) -> ::core::result::Result<Self, ::mser::Error> {\n";
+    *w += "fn read(n: &mut ::mser::Reader) -> ::core::result::Result<Self, ::mser::Error> {\n";
     *w += "let x = <";
     if bs_size <= V21MAX {
         *w += "::mser::V21 as ::mser::Read>::read(n)?.0";

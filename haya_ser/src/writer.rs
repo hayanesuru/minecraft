@@ -1,6 +1,6 @@
-pub struct UnsafeWriter(pub(crate) *mut u8);
+pub struct Writer(pub(crate) *mut u8);
 
-impl UnsafeWriter {
+impl Writer {
     /// # Safety
     ///
     /// must be valid for write.

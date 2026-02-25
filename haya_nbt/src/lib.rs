@@ -8,18 +8,18 @@ mod int_array;
 mod list;
 mod long_array;
 mod string;
-mod stringify;
+//mod stringify;
 
 use self::byte_array::ByteArray;
 use self::int_array::IntArray;
 use self::list::ListRec;
 use self::long_array::LongArray;
 pub use self::string::{RefStringTag, StringTag, StringTagRaw};
-pub use self::stringify::CompoundStringify;
+// pub use self::stringify::CompoundStringify;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_str::HayaStr;
-use mser::{Error, Read, UnsafeWriter, Write};
+use mser::{Error, Read, Reader, Write, Writer};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -70,7 +70,7 @@ pub enum ListTag {
 }
 
 impl TagType {
-    pub fn bool(self, buf: &mut &[u8]) -> Result<bool, Error> {
+    pub fn bool(self, buf: &mut Reader) -> Result<bool, Error> {
         match self {
             Self::Byte => Ok(i8::read(buf)? != 0),
             Self::Short => Ok(i16::read(buf)? != 0),
@@ -82,7 +82,7 @@ impl TagType {
         }
     }
 
-    pub fn string(self, buf: &mut &[u8]) -> Result<Box<str>, Error> {
+    pub fn string(self, buf: &mut Reader) -> Result<Box<str>, Error> {
         match self {
             Self::String => match StringTag::read(buf) {
                 Ok(x) => Ok(x.0),
@@ -92,19 +92,18 @@ impl TagType {
         }
     }
 
-    pub fn int_list(self, buf: &mut &[u8]) -> Result<Vec<i32>, Error> {
+    pub fn int_list(self, buf: &mut Reader) -> Result<Vec<i32>, Error> {
         match self {
             Self::IntArray => Ok(IntArray::read(buf)?.0),
             Self::List => {
                 let ListInfo(tag, len) = ListInfo::read(buf)?;
                 let len = len as usize;
                 match tag {
-                    TagType::Int => match buf.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
-                        Some((slice, y)) => unsafe {
-                            *buf = y;
-                            Ok(list::int_list(len, slice))
-                        },
-                        None => Err(Error),
+                    TagType::Int => unsafe {
+                        Ok(list::int_list(
+                            len,
+                            buf.read_slice(len.checked_mul(4).ok_or(Error)?)?,
+                        ))
                     },
                     _ => Err(Error),
                 }
@@ -113,7 +112,7 @@ impl TagType {
         }
     }
 
-    fn tag_no_rec(self, n: &mut &[u8]) -> Result<Result<Tag, TagRec>, Error> {
+    fn tag_no_rec(self, n: &mut Reader) -> Result<Result<Tag, TagRec>, Error> {
         Ok(Ok(match self {
             Self::Byte => Tag::from(i8::read(n)?),
             Self::Short => Tag::from(i16::read(n)?),
@@ -133,7 +132,7 @@ impl TagType {
 }
 
 impl TagType {
-    pub fn tag(self, n: &mut &[u8]) -> Result<Tag, Error> {
+    pub fn tag(self, n: &mut Reader) -> Result<Tag, Error> {
         let t = match self.tag_no_rec(n)? {
             Ok(x) => return Ok(x),
             Err(TagRec::List) => {
@@ -158,7 +157,7 @@ enum Entry {
     ListList(Vec<ListTag>, u32),
 }
 
-fn read_tag(buf: &mut &[u8], mut next: Entry, max_depth: usize) -> Result<Tag, Error> {
+fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, Error> {
     let mut blocks = Vec::<Entry>::new();
     let mut names = Vec::<Name>::new();
     loop {
@@ -287,7 +286,7 @@ enum TagRec {
 
 impl Read<'_> for TagType {
     #[inline]
-    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let t = u8::read(buf)?;
         if t <= 12 {
             unsafe { Ok(core::mem::transmute::<u8, Self>(t)) }
@@ -299,7 +298,7 @@ impl Read<'_> for TagType {
 
 impl Write for TagType {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { w.write_byte(*self as u8) }
     }
 
@@ -326,6 +325,7 @@ pub enum Tag {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub(crate) enum TagPrimitive {
     Byte(i8),
     Short(i16),
@@ -349,6 +349,7 @@ impl From<TagPrimitive> for Tag {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub(crate) enum TagArray {
     Byte(Vec<i8>),
     Int(Vec<i32>),
@@ -356,7 +357,7 @@ pub(crate) enum TagArray {
 }
 
 impl Write for Tag {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.id().write(w);
             match self {
@@ -540,8 +541,8 @@ impl From<Vec<i64>> for Tag {
     }
 }
 
-impl Read<'_> for Tag {
-    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+impl<'a> Read<'a> for Tag {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         TagType::read(buf)?.tag(buf)
     }
 }
@@ -551,7 +552,7 @@ pub struct CompoundNamed(pub Name, pub Compound);
 
 impl Read<'_> for CompoundNamed {
     #[inline]
-    fn read(n: &mut &[u8]) -> Result<Self, Error> {
+    fn read(n: &mut Reader) -> Result<Self, Error> {
         if matches!(TagType::read(n)?, TagType::Compound) {
             Ok(Self(Name::read(n)?, Compound::read(n)?))
         } else {
@@ -562,7 +563,7 @@ impl Read<'_> for CompoundNamed {
 
 impl Write for CompoundNamed {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             TagType::Compound.write(w);
             RefStringTag(&self.0).write(w);

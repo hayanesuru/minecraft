@@ -3,14 +3,16 @@
 mod hex;
 mod json;
 mod read;
+mod reader;
 mod varint;
 mod write;
 mod writer;
 
 pub use self::hex::{hex_to_u8, u8_to_hex};
 pub use self::json::json_char_width_escaped;
+pub use self::reader::Reader;
 pub use self::varint::{V7MAX, V21, V21MAX, V32, V64};
-pub use self::writer::UnsafeWriter;
+pub use self::writer::Writer;
 
 pub trait Write {
     /// # Safety
@@ -18,7 +20,7 @@ pub trait Write {
     /// Must write [`len_s`] bytes exactly.
     ///
     /// [`len_s`]: Write::len_s
-    unsafe fn write(&self, w: &mut UnsafeWriter);
+    unsafe fn write(&self, w: &mut Writer);
 
     fn len_s(&self) -> usize;
 }
@@ -27,7 +29,7 @@ pub trait Write {
 pub struct Error;
 
 pub trait Read<'a>: Sized {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error>;
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error>;
 }
 
 /// # Safety
@@ -38,7 +40,7 @@ pub trait Read<'a>: Sized {
 #[inline]
 pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
     unsafe {
-        let mut w = UnsafeWriter(ptr);
+        let mut w = Writer(ptr);
         Write::write(x, &mut w);
         debug_assert_eq!(w.0, ptr.add(x.len_s()))
     }
@@ -51,7 +53,7 @@ pub const fn cold_path() {}
 pub struct ByteArray<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
 
 impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             V21(self.0.len() as u32).write(w);
             w.write(self.0);
@@ -64,17 +66,11 @@ impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
 }
 
 impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
         if len > MAX {
             return Err(Error);
         }
-        match buf.split_at_checked(len) {
-            Some((x, y)) => {
-                *buf = y;
-                Ok(Self(x))
-            }
-            None => Err(Error),
-        }
+        Ok(Self(buf.read_slice(len)?))
     }
 }

@@ -1,6 +1,6 @@
 use super::*;
 use crate::nbt::{End, Kv, ListInfo, MapCodec, MapReader, RefStringTag, StringTag, TagType};
-use mser::{Error, Read, UnsafeWriter, Write};
+use mser::{Error, Read, Write, Writer};
 
 const STRING: TagType = TagType::String;
 const LIST: TagType = TagType::List;
@@ -40,12 +40,7 @@ fn mutf8(n: &[u8]) -> StringTagRaw<'_> {
     StringTagRaw::new_unchecked(n)
 }
 
-unsafe fn write_rec(
-    content: &Content,
-    style: &Style,
-    children: &[Component],
-    w: &mut UnsafeWriter,
-) {
+unsafe fn write_rec(content: &Content, style: &Style, children: &[Component], w: &mut Writer) {
     unsafe {
         Kv(TYPE, mutf8(content_type(content))).write(w);
     }
@@ -253,7 +248,7 @@ fn write_rec_len(content: &Content, style: &Style, children: &[Component]) -> us
 }
 
 impl Write for Component {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let Self {
                 content,
@@ -674,7 +669,7 @@ impl MapReader<Component> for Reader {
 }
 
 impl MapCodec for Component {
-    fn read_kv(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read_kv(buf: &mut Reader) -> Result<Self, Error> {
         Reader {
             content: None,
             style: Style::new(),
@@ -684,7 +679,7 @@ impl MapCodec for Component {
         .read_map(buf)
     }
 
-    unsafe fn write_kv(&self, w: &mut UnsafeWriter) {
+    unsafe fn write_kv(&self, w: &mut Writer) {
         unsafe {
             write_rec(&self.content, &self.style, &self.children, w);
         }
@@ -696,7 +691,7 @@ impl MapCodec for Component {
 }
 
 impl<'a> Read<'a> for Component {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let ty = TagType::read(buf)?;
         Self::read_ty(buf, ty)
     }

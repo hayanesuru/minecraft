@@ -1,19 +1,13 @@
 use alloc::vec::Vec;
-use mser::{Error, Read};
+use mser::{Error, Read, Reader};
 
 #[derive(Clone)]
 pub(crate) struct IntArray(pub Vec<i32>);
 
 impl<'a> Read<'a> for IntArray {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, mser::Error> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = u32::read(buf)? as usize;
-        let data = match buf.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
-            Some((x, y)) => {
-                *buf = y;
-                x
-            }
-            None => return Err(Error),
-        };
+        let data = buf.read_slice(len.checked_mul(4).ok_or(Error)?)?;
         let mut vec = Vec::with_capacity(len);
         unsafe { copy_swap(len, data.as_ptr(), vec.as_mut_ptr()) }
         unsafe { vec.set_len(len) }

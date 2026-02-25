@@ -1,6 +1,6 @@
 #![no_std]
 
-use mser::{Error, Read, UnsafeWriter, V32, Write};
+use mser::{Error, Read, Reader, V32, Write, Writer};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3 {
@@ -11,7 +11,7 @@ pub struct Vec3 {
 
 impl Write for Vec3 {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.x.write(w);
             self.y.write(w);
@@ -27,7 +27,7 @@ impl Write for Vec3 {
 
 impl<'a> Read<'a> for Vec3 {
     #[inline]
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         Ok(Self {
             x: f64::read(buf)?,
             y: f64::read(buf)?,
@@ -62,7 +62,7 @@ pub enum LpVec3 {
 }
 
 impl<'a> Read<'a> for LpVec3 {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let a = u8::read(buf)?;
         if a == 0 {
             Ok(Self::Zero)
@@ -80,7 +80,7 @@ impl<'a> Read<'a> for LpVec3 {
 }
 
 impl Write for LpVec3 {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         match *self {
             Self::Zero => unsafe {
                 w.write_byte(0);
@@ -215,14 +215,14 @@ impl ByteAngle {
 
 impl<'a> Read<'a> for ByteAngle {
     #[inline]
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         Ok(Self(u8::read(buf)?))
     }
 }
 
 impl Write for ByteAngle {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { w.write_byte(self.0) }
     }
 
@@ -243,7 +243,7 @@ pub struct BlockPos {
 pub struct BlockPosPacked(pub i64);
 
 impl Write for BlockPosPacked {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe { self.0.write(w) }
     }
 
@@ -253,7 +253,7 @@ impl Write for BlockPosPacked {
 }
 
 impl<'a> Read<'a> for BlockPosPacked {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         Ok(Self(i64::read(buf)?))
     }
 }

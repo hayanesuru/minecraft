@@ -29,7 +29,7 @@ pub fn deserialize_struct(
         #[automatically_derived]
         impl <'__a #impl_generics ::#cratename::Read<'__a> for #name #tok {
             #[inline]
-            fn read(r: &mut &'__a [u8]) -> ::core::result::Result<Self, ::mser::Error> {
+            fn read(r: &mut ::#cratename::Reader<'__a>) -> ::core::result::Result<Self, ::mser::Error> {
                 ::core::result::Result::Ok(Self {
                     #(#read)*
                 })
@@ -243,7 +243,7 @@ pub fn deserialize_enum(
         #[automatically_derived]
         impl <'__a #impl_generics ::#cratename::Read<'__a> for #name #tok {
             #[inline]
-            fn read(r: &mut &'__a [u8]) -> ::core::result::Result<Self, ::mser::Error> {
+            fn read(r: &mut ::#cratename::Reader<'__a>) -> ::core::result::Result<Self, ::mser::Error> {
                 #read
             }
         }

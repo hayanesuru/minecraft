@@ -1,4 +1,4 @@
-use crate::{UnsafeWriter, Write};
+use crate::{Write, Writer};
 use core::num::{
     NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroU8, NonZeroU16, NonZeroU32,
     NonZeroU64, NonZeroU128,
@@ -9,7 +9,7 @@ macro_rules! primitive {
     ($type:ty) => {
         impl Write for $type {
             #[inline(always)]
-            unsafe fn write(&self, w: &mut UnsafeWriter) {
+            unsafe fn write(&self, w: &mut Writer) {
                 unsafe {
                     w.write(&self.to_be_bytes());
                 }
@@ -27,7 +27,7 @@ macro_rules! non_zero {
     ($type:ty) => {
         impl Write for $type {
             #[inline(always)]
-            unsafe fn write(&self, w: &mut UnsafeWriter) {
+            unsafe fn write(&self, w: &mut Writer) {
                 unsafe {
                     w.write(&self.get().to_be_bytes());
                 }
@@ -43,7 +43,7 @@ macro_rules! non_zero {
 
 impl Write for bool {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write_byte(*self as u8);
         }
@@ -57,7 +57,7 @@ impl Write for bool {
 
 impl Write for NonZeroI8 {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write_byte(self.get() as u8);
         }
@@ -71,7 +71,7 @@ impl Write for NonZeroI8 {
 
 impl Write for NonZeroU8 {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write_byte(self.get());
         }
@@ -85,7 +85,7 @@ impl Write for NonZeroU8 {
 
 impl Write for u8 {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write_byte(*self);
         }
@@ -99,7 +99,7 @@ impl Write for u8 {
 
 impl Write for i8 {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write_byte(*self as u8);
         }
@@ -132,7 +132,7 @@ non_zero!(NonZeroU128);
 
 impl Write for str {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write(self.as_bytes());
         }
@@ -146,7 +146,7 @@ impl Write for str {
 
 impl Write for [u8] {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write(self);
         }
@@ -160,7 +160,7 @@ impl Write for [u8] {
 
 impl Write for &str {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write(self.as_bytes());
         }
@@ -174,7 +174,7 @@ impl Write for &str {
 
 impl Write for uuid::Uuid {
     #[inline(always)]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.as_u128().write(w);
         }
@@ -188,7 +188,7 @@ impl Write for uuid::Uuid {
 
 impl Write for &[u8] {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             w.write(self);
         }
@@ -202,7 +202,7 @@ impl Write for &[u8] {
 
 impl<T: Write + ?Sized> Write for NonNull<T> {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.as_ref().write(w);
         }
@@ -216,7 +216,7 @@ impl<T: Write + ?Sized> Write for NonNull<T> {
 
 impl<T: Write> Write for Option<T> {
     #[inline]
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self.as_ref() {
                 Some(x) => {

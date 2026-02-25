@@ -5,23 +5,17 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use haya_mutf8::{Mutf8, as_mutf8_ascii, decode_mutf8_len};
 use haya_str::HayaStr;
-use mser::{Error, Read, UnsafeWriter, Write};
+use mser::{Error, Read, Reader, Write, Writer};
 
 enum CowVec {
     Thin(HayaStr),
     Heap(Vec<u8>),
 }
 
-impl Read<'_> for Name {
-    fn read(buf: &mut &'_ [u8]) -> Result<Self, Error> {
+impl<'a> Read<'a> for Name {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = u16::read(buf)? as usize;
-        let data = match buf.split_at_checked(len) {
-            Some((x, y)) => {
-                *buf = y;
-                x
-            }
-            None => return Err(Error),
-        };
+        let data = buf.read_slice(len)?;
         if let Some(x) = as_mutf8_ascii(data) {
             Ok(Self::new(x))
         } else {
@@ -95,7 +89,7 @@ impl AsMut<[(Name, Tag)]> for Compound {
 }
 
 impl Write for Compound {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             for (name, tag) in &self.0 {
                 tag.id().write(w);
@@ -284,7 +278,7 @@ impl Compound {
 
 impl Read<'_> for Compound {
     #[inline]
-    fn read(buf: &mut &[u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         match TagType::Compound.tag(buf) {
             Ok(Tag::Compound(x)) => Ok(x),
             Ok(_) => Err(Error),

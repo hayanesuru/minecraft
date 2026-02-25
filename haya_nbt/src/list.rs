@@ -3,9 +3,10 @@ use crate::{
 };
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Error, Read, UnsafeWriter, Write};
+use mser::{Error, Read, Reader, Write, Writer};
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub(crate) enum ListPrimitive {
     Byte(Vec<i8>),
     Short(Vec<i16>),
@@ -29,7 +30,7 @@ impl From<ListPrimitive> for ListTag {
 }
 
 impl<'a> Read<'a> for ListInfo {
-    fn read(buf: &mut &'a [u8]) -> Result<Self, Error> {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
         let t = TagType::read(buf)?;
         let l = u32::read(buf)?;
         Ok(Self(t, l))
@@ -37,7 +38,7 @@ impl<'a> Read<'a> for ListInfo {
 }
 
 impl Write for ListInfo {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.0.write(w);
             self.1.write(w);
@@ -164,7 +165,7 @@ impl ListTag {
 }
 
 impl Write for ListTag {
-    unsafe fn write(&self, w: &mut UnsafeWriter) {
+    unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.list_info().write(w);
             match self {
@@ -244,53 +245,42 @@ pub(crate) enum ListRec {
 }
 
 impl ListInfo {
-    pub(crate) fn list_no_rec(self, n: &mut &[u8]) -> Result<Result<ListTag, ListRec>, Error> {
+    pub(crate) fn list_no_rec(self, n: &mut Reader) -> Result<Result<ListTag, ListRec>, Error> {
         let len = self.1 as usize;
         match self.0 {
             TagType::End => Ok(Ok(ListTag::None)),
-            TagType::Byte => match n.split_at_checked(len) {
-                Some((x, y)) => {
-                    *n = y;
-                    Ok(Ok(ListTag::Byte(Vec::from(
-                        crate::byte_array::u8_to_i8_slice(x),
-                    ))))
-                }
-                None => Err(Error),
+            TagType::Byte => Ok(Ok(ListTag::Byte(Vec::from(
+                crate::byte_array::u8_to_i8_slice(n.read_slice(len)?),
+            )))),
+            TagType::Short => unsafe {
+                Ok(Ok(ListTag::Short(short_list(
+                    len,
+                    n.read_slice(len.checked_mul(2).ok_or(Error)?)?,
+                ))))
             },
-            TagType::Short => match n.split_at_checked(len.checked_mul(2).ok_or(Error)?) {
-                Some((slice, y)) => unsafe {
-                    *n = y;
-                    Ok(Ok(ListTag::Short(short_list(len, slice))))
-                },
-                None => Err(Error),
+            TagType::Int => unsafe {
+                Ok(Ok(ListTag::Int(int_list(
+                    len,
+                    n.read_slice(len.checked_mul(4).ok_or(Error)?)?,
+                ))))
             },
-            TagType::Int => match n.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
-                Some((slice, y)) => unsafe {
-                    *n = y;
-                    Ok(Ok(ListTag::Int(int_list(len, slice))))
-                },
-                None => Err(Error),
+            TagType::Long => unsafe {
+                Ok(Ok(ListTag::Long(long_list(
+                    len,
+                    n.read_slice(len.checked_mul(8).ok_or(Error)?)?,
+                ))))
             },
-            TagType::Long => match n.split_at_checked(len.checked_mul(8).ok_or(Error)?) {
-                Some((slice, y)) => unsafe {
-                    *n = y;
-                    Ok(Ok(ListTag::Long(long_list(len, slice))))
-                },
-                None => Err(Error),
+            TagType::Float => unsafe {
+                Ok(Ok(ListTag::Float(f32_list(
+                    len,
+                    n.read_slice(len.checked_mul(4).ok_or(Error)?)?,
+                ))))
             },
-            TagType::Float => match n.split_at_checked(len.checked_mul(4).ok_or(Error)?) {
-                Some((slice, y)) => unsafe {
-                    *n = y;
-                    Ok(Ok(ListTag::Float(f32_list(len, slice))))
-                },
-                None => Err(Error),
-            },
-            TagType::Double => match n.split_at_checked(len.checked_mul(8).ok_or(Error)?) {
-                Some((slice, y)) => unsafe {
-                    *n = y;
-                    Ok(Ok(ListTag::Double(f64_list(len, slice))))
-                },
-                None => Err(Error),
+            TagType::Double => unsafe {
+                Ok(Ok(ListTag::Double(f64_list(
+                    len,
+                    n.read_slice(len.checked_mul(8).ok_or(Error)?)?,
+                ))))
             },
             TagType::ByteArray => {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
