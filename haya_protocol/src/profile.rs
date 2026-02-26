@@ -16,7 +16,7 @@ use uuid::Uuid;
 pub struct GameProfileRef<'a> {
     pub id: Uuid,
     pub name: Utf8<'a, 16>,
-    pub peoperties: List<'a, PropertyRef<'a>, 16>,
+    pub properties: List<'a, PropertyRef<'a>, 16>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

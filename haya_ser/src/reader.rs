@@ -9,7 +9,7 @@ impl<'a> Reader<'a> {
         Self { buf }
     }
 
-    pub fn read(&mut self) -> Result<u8, Error> {
+    pub fn read_byte(&mut self) -> Result<u8, Error> {
         match self.buf {
             [a, rest @ ..] => {
                 self.buf = rest;
@@ -60,6 +60,8 @@ impl<'a> Reader<'a> {
     }
 
     /// # Safety
+    ///
+    /// `len` must not out of bounds.
     pub unsafe fn advance(&mut self, len: usize) {
         self.buf = unsafe { self.buf.get_unchecked(len..) };
     }

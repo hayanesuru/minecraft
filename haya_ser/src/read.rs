@@ -3,14 +3,14 @@ use crate::{Error, Read, Reader};
 impl<'a> Read<'a> for u8 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        buf.read()
+        buf.read_byte()
     }
 }
 
 impl<'a> Read<'a> for i8 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(buf.read()? as i8)
+        Ok(buf.read_byte()? as i8)
     }
 }
 
@@ -87,7 +87,7 @@ impl<'a> Read<'a> for f64 {
 impl<'a> Read<'a> for bool {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(buf.read()? == 1)
+        Ok(buf.read_byte()? == 1)
     }
 }
 

@@ -431,7 +431,7 @@ mod tests {
             game_profile: GameProfileRef {
                 id: Uuid::nil(),
                 name: Utf8("abc"),
-                peoperties: List::Borrowed(&[]),
+                properties: List::Borrowed(&[]),
             },
         };
 

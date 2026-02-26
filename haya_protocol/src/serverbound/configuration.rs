@@ -3,7 +3,7 @@ use crate::{KnownPack, List};
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FinishConfiguration {}
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SelectKnownPacks<'a> {
     pub known_packs: List<'a, KnownPack<'a>, 64>,
 }
