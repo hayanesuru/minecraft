@@ -1,5 +1,10 @@
 #![no_std]
 
+extern crate alloc;
+
+pub mod json;
+pub mod profile;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TextColorRgb {
     pub red: u8,

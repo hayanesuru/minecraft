@@ -34,6 +34,7 @@ haya_mutf8 = { path = "haya_mutf8", version = "0.1" }
 haya_ecs = { path = "haya_ecs", version = "0.1" }
 haya_text = { path = "haya_text", version = "0.1" }
 haya_math = { path = "haya_math", version = "0.1" }
+haya_brigadier = { path = "haya_brigadier", version = "0.1" }
 
 uuid = { version = "1", default-features = false }
 

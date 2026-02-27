@@ -5,11 +5,8 @@ use haya_ident::Ident;
 use haya_nbt::Tag;
 use mser::{Error, Read, Reader, V21, V32, Write, Writer};
 
-// pub mod chat;
 pub mod clientbound;
-// pub mod dialog;
 pub mod item;
-// pub mod json;
 pub mod profile;
 pub mod serverbound;
 pub mod stat;
