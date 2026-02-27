@@ -100,4 +100,7 @@ packets! {
 //     change_difficulty = game::ChangeDifficulty,
 //     chunk_batch_finished = game::ChunkBatchFinished,
 //     chunk_batch_start = game::ChunkBatchStart,
+//     chunks_biomes = game::ChunkBiomes<'_>,
+//     clear_titles = game::ClearTitles,
+//     command_suggestions = game::CommandSuggestions<'_>,
 // }

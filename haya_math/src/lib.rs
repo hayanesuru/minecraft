@@ -243,10 +243,12 @@ pub struct BlockPos {
 pub struct BlockPosPacked(pub i64);
 
 impl Write for BlockPosPacked {
+    #[inline]
     unsafe fn write(&self, w: &mut Writer) {
         unsafe { self.0.write(w) }
     }
 
+    #[inline]
     fn len_s(&self) -> usize {
         self.0.len_s()
     }
@@ -277,5 +279,36 @@ impl BlockPos {
         let y = (self.y & 0xFFF) as i64;
         let z = (self.z & 0x3FF_FFFF) as i64;
         BlockPosPacked((x << 38) | (z << 12) | y)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(align(8))]
+pub struct ChunkPos {
+    pub x: i32,
+    pub z: i32,
+}
+
+impl Write for ChunkPos {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.x.write(w);
+            self.z.write(w);
+        }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        self.x.len_s() + self.z.len_s()
+    }
+}
+
+impl<'a> Read<'a> for ChunkPos {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            x: i32::read(buf)?,
+            z: i32::read(buf)?,
+        })
     }
 }

@@ -1,9 +1,9 @@
 use crate::stat::Stat;
-use crate::{Component, Difficulty, Map};
-use haya_math::{BlockPosPacked, ByteAngle, LpVec3, Vec3};
+use crate::{Component, Difficulty, List, Map, Utf8};
+use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
-use mser::{Error, Read, Reader, V32, Write, Writer};
+use mser::{ByteArray, Error, Read, Reader, V32, Write, Writer};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -275,3 +275,33 @@ pub struct ChunkBatchFinished {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChunkBatchStart {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChunkBiomes<'a> {
+    pub data: List<'a, ChunkBiomeData<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChunkBiomeData<'a> {
+    pub pos: ChunkPos,
+    pub data: ByteArray<'a, 2097152>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ClearTitles {
+    pub reset_times: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CommandSuggestions<'a> {
+    pub id: V32,
+    pub start: V32,
+    pub length: V32,
+    pub suggestions: List<'a, SuggestionEntry<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SuggestionEntry<'a> {
+    pub text: Utf8<'a>,
+    pub tooltip: Option<Component>,
+}
