@@ -14,7 +14,7 @@ use self::byte_array::ByteArray;
 use self::int_array::IntArray;
 use self::list::ListRec;
 use self::long_array::LongArray;
-pub use self::string::{RefStringTag, StringTag, StringTagRaw};
+pub use self::string::{RawStringTag, RefStringTag, StringTag};
 // pub use self::stringify::CompoundStringify;
 use alloc::boxed::Box;
 use alloc::vec::Vec;

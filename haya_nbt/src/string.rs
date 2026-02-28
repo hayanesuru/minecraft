@@ -10,9 +10,9 @@ use mser::Reader;
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 #[must_use]
-pub struct StringTagRaw<'a>(&'a str);
+pub struct RawStringTag<'a>(&'a str);
 
-impl<'a> StringTagRaw<'a> {
+impl<'a> RawStringTag<'a> {
     pub const fn new(n: &'a [u8]) -> Option<Self> {
         if let Some(s) = as_mutf8_ascii(n) {
             Some(Self(s))
@@ -31,7 +31,7 @@ impl<'a> StringTagRaw<'a> {
     }
 }
 
-impl<'a> Write for StringTagRaw<'a> {
+impl<'a> Write for RawStringTag<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
@@ -46,7 +46,7 @@ impl<'a> Write for StringTagRaw<'a> {
     }
 }
 
-impl<'a> Read<'a> for StringTagRaw<'a> {
+impl<'a> Read<'a> for RawStringTag<'a> {
     #[inline]
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = u16::read(buf)?;
@@ -68,7 +68,7 @@ impl<'a> Write for RefStringTag<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
-            if let Some(x) = StringTagRaw::new(self.0.as_bytes()) {
+            if let Some(x) = RawStringTag::new(self.0.as_bytes()) {
                 x.write(w);
             } else {
                 (encode_mutf8_len(self.0) as u16).write(w);
@@ -79,7 +79,7 @@ impl<'a> Write for RefStringTag<'a> {
 
     #[inline]
     fn len_s(&self) -> usize {
-        if let Some(x) = StringTagRaw::new(self.0.as_bytes()) {
+        if let Some(x) = RawStringTag::new(self.0.as_bytes()) {
             x.len_s()
         } else {
             encode_mutf8_len(self.0) + 2
@@ -89,7 +89,7 @@ impl<'a> Write for RefStringTag<'a> {
 
 impl<'a> Read<'a> for RefStringTag<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        Ok(Self(StringTagRaw::read(buf)?.0))
+        Ok(Self(RawStringTag::read(buf)?.0))
     }
 }
 
@@ -149,7 +149,7 @@ impl Write for Name {
     #[inline]
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
-            if let Some(x) = StringTagRaw::new(self.as_bytes()) {
+            if let Some(x) = RawStringTag::new(self.as_bytes()) {
                 x.write(w);
             } else {
                 (encode_mutf8_len(self) as u16).write(w);
@@ -160,7 +160,7 @@ impl Write for Name {
 
     #[inline]
     fn len_s(&self) -> usize {
-        if let Some(x) = StringTagRaw::new(self.as_bytes()) {
+        if let Some(x) = RawStringTag::new(self.as_bytes()) {
             x.len_s()
         } else {
             encode_mutf8_len(self) + 2
