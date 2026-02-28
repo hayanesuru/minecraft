@@ -22,6 +22,10 @@ dependencies = [
 [[package]]
 name = "haya_brigadier"
 version = "0.1.0"
+dependencies = [
+ "minecraft_data",
+ "mser",
+]
 
 [[package]]
 name = "haya_ecs"
