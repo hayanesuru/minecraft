@@ -181,28 +181,187 @@ impl Write for CommandArgumentType<'_> {
         unsafe {
             self.id().write(w);
             match self {
-                Self::Float { min, max } => {}
-                Self::Double { min, max } => {}
-                Self::Integer { min, max } => {}
-                Self::Long { min, max } => {}
-                Self::String { ty } => {}
+                Self::Float { min, max } => {
+                    let mut flags = 0u8;
+                    if *min == f32::MIN {
+                        flags |= NUMBER_FLAG_MIN;
+                    }
+                    if *max == f32::MAX {
+                        flags |= NUMBER_FLAG_MAX;
+                    }
+                    flags.write(w);
+                    if *min != f32::MIN {
+                        min.write(w);
+                    }
+                    if *max != f32::MAX {
+                        max.write(w);
+                    }
+                }
+                Self::Double { min, max } => {
+                    let mut flags = 0u8;
+                    if *min == f64::MIN {
+                        flags |= NUMBER_FLAG_MIN;
+                    }
+                    if *max == f64::MAX {
+                        flags |= NUMBER_FLAG_MAX;
+                    }
+                    flags.write(w);
+                    if *min != f64::MIN {
+                        min.write(w);
+                    }
+                    if *max != f64::MAX {
+                        max.write(w);
+                    }
+                }
+                Self::Integer { min, max } => {
+                    let mut flags = 0u8;
+                    if *min == i32::MIN {
+                        flags |= NUMBER_FLAG_MIN;
+                    }
+                    if *max == i32::MAX {
+                        flags |= NUMBER_FLAG_MAX;
+                    }
+                    flags.write(w);
+                    if *min != i32::MIN {
+                        min.write(w);
+                    }
+                    if *max != i32::MAX {
+                        max.write(w);
+                    }
+                }
+                Self::Long { min, max } => {
+                    let mut flags = 0u8;
+                    if *min == i64::MIN {
+                        flags |= NUMBER_FLAG_MIN;
+                    }
+                    if *max == i64::MAX {
+                        flags |= NUMBER_FLAG_MAX;
+                    }
+                    flags.write(w);
+                    if *min != i64::MIN {
+                        min.write(w);
+                    }
+                    if *max != i64::MAX {
+                        max.write(w);
+                    }
+                }
+                Self::String { ty } => {
+                    ty.write(w);
+                }
                 Self::Entity {
                     single,
                     players_only,
-                } => {}
-                Self::ScoreHolder { multiple } => {}
-                Self::Time { min } => {}
-                Self::ResourceOrTag { registry_key } => {}
-                Self::ResourceOrTagKey { registry_key } => {}
-                Self::Resource { registry_key } => {}
-                Self::ResourceKey { registry_key } => {}
-                Self::ResourceSelector { registry_key } => {}
+                } => {
+                    let mut flags = 0u8;
+                    if *single {
+                        flags |= FLAG_SINGLE;
+                    }
+                    if *players_only {
+                        flags |= FLAG_PLAYERS_ONLY;
+                    }
+                    flags.write(w);
+                }
+                Self::ScoreHolder { multiple } => {
+                    let mut flags = 0u8;
+                    if *multiple {
+                        flags |= FLAG_MULTIPLE;
+                    }
+                    flags.write(w);
+                }
+                Self::Time { min } => {
+                    min.write(w);
+                }
+                Self::ResourceOrTag { registry_key } => {
+                    registry_key.write(w);
+                }
+                Self::ResourceOrTagKey { registry_key } => {
+                    registry_key.write(w);
+                }
+                Self::Resource { registry_key } => {
+                    registry_key.write(w);
+                }
+                Self::ResourceKey { registry_key } => {
+                    registry_key.write(w);
+                }
+                Self::ResourceSelector { registry_key } => {
+                    registry_key.write(w);
+                }
                 _ => {}
             }
         }
     }
     fn len_s(&self) -> usize {
-        self.id().len_s()
+        let mut w = self.id().len_s();
+        match self {
+            Self::Float { min, max } => {
+                w += 1;
+                if *min != f32::MIN {
+                    w += min.len_s();
+                }
+                if *max != f32::MAX {
+                    w += max.len_s();
+                }
+            }
+            Self::Double { min, max } => {
+                w += 1;
+                if *min != f64::MIN {
+                    w += min.len_s();
+                }
+                if *max != f64::MAX {
+                    w += max.len_s();
+                }
+            }
+            Self::Integer { min, max } => {
+                w += 1;
+                if *min != i32::MIN {
+                    w += min.len_s();
+                }
+                if *max != i32::MAX {
+                    w += max.len_s();
+                }
+            }
+            Self::Long { min, max } => {
+                w += 1;
+                if *min != i64::MIN {
+                    w += min.len_s();
+                }
+                if *max != i64::MAX {
+                    w += max.len_s();
+                }
+            }
+            Self::String { ty } => {
+                w += ty.len_s();
+            }
+            Self::Entity {
+                single: _,
+                players_only: _,
+            } => {
+                w += 1;
+            }
+            Self::ScoreHolder { multiple: _ } => {
+                w += 1;
+            }
+            Self::Time { min } => {
+                w += min.len_s();
+            }
+            Self::ResourceOrTag { registry_key } => {
+                w += registry_key.len_s();
+            }
+            Self::ResourceOrTagKey { registry_key } => {
+                w += registry_key.len_s();
+            }
+            Self::Resource { registry_key } => {
+                w += registry_key.len_s();
+            }
+            Self::ResourceKey { registry_key } => {
+                w += registry_key.len_s();
+            }
+            Self::ResourceSelector { registry_key } => {
+                w += registry_key.len_s();
+            }
+            _ => {}
+        }
+        w
     }
 }
 
