@@ -1,9 +1,9 @@
 use crate::stat::Stat;
-use crate::{Component, Difficulty, List, Map, Utf8};
+use crate::{Component, Difficulty, List, Map};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
-use mser::{ByteArray, Error, Read, Reader, V32, Write, Writer};
+use mser::{ByteArray, Error, Read, Reader, Utf8, V32, Write, Writer};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]

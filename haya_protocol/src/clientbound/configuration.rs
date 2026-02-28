@@ -1,6 +1,7 @@
-use crate::{KnownPack, List, RegistryKey, Utf8};
+use crate::{KnownPack, List, RegistryKey};
 use haya_ident::Ident;
 use haya_nbt::Tag;
+use mser::Utf8;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FinishConfiguration {}

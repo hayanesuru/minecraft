@@ -10,3 +10,4 @@ edition.workspace = true
 [dependencies]
 mser = { workspace = true }
 minecraft_data = { workspace = true }
+haya_ident = { workspace = true }

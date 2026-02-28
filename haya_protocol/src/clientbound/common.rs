@@ -1,6 +1,6 @@
-use crate::{Component, Dialog, List, Map, RegistryKey, Rest, ServerLinkUntrustedEntry, Utf8};
+use crate::{Component, Dialog, List, Map, RegistryKey, Rest, ServerLinkUntrustedEntry};
 use haya_ident::Ident;
-use mser::{ByteArray, V32};
+use mser::{ByteArray, Utf8, V32};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]

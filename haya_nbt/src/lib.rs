@@ -566,13 +566,13 @@ impl Write for CompoundNamed {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             TagType::Compound.write(w);
-            RefStringTag(&self.0).write(w);
+            self.0.write(w);
             self.1.write(w);
         }
     }
 
     #[inline]
     fn len_s(&self) -> usize {
-        1 + Write::len_s(&RefStringTag(&self.0)) + Write::len_s(&self.1)
+        1 + Write::len_s(&self.0) + Write::len_s(&self.1)
     }
 }

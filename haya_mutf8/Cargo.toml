@@ -9,4 +9,3 @@ edition.workspace = true
 
 [dependencies]
 mser = { workspace = true }
-haya_str = { workspace = true }

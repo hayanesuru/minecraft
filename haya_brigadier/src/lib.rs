@@ -1,7 +1,7 @@
 #![no_std]
 
 use minecraft_data::command_argument_type;
-use mser::{V21, Write, Writer};
+use mser::{Utf8, V21, Write, Writer};
 
 #[derive(Clone, Copy)]
 pub enum CommandNode<'a> {
@@ -11,14 +11,16 @@ pub enum CommandNode<'a> {
     Literal {
         children: &'a [u32],
         redirect: Option<u32>,
-        name: &'a str,
+        name: Utf8<'a>,
         executable: bool,
+        restricted: bool,
     },
     Argument {
         children: &'a [u32],
         redirect: Option<u32>,
-        name: &'a str,
+        name: Utf8<'a>,
         executable: bool,
+        restricted: bool,
         arg_type: command_argument_type,
         arg_prop: &'a [u8],
         suggestions: Option<Suggestions>,
@@ -28,6 +30,8 @@ pub enum CommandNode<'a> {
 #[derive(Copy, Clone)]
 pub enum Suggestions {
     AskServer,
+    AvailableSounds,
+    SummonableEntities,
 }
 
 impl Write for Suggestions {
@@ -38,6 +42,12 @@ impl Write for Suggestions {
                 Self::AskServer => {
                     w.write(b"\x20minecraft:ask_server");
                 }
+                Self::AvailableSounds => {
+                    w.write(b"\x26minecraft:available_sounds");
+                }
+                Self::SummonableEntities => {
+                    w.write(b"\x29minecraft:summonable_entities");
+                }
             }
         }
     }
@@ -46,6 +56,8 @@ impl Write for Suggestions {
     fn len_s(&self) -> usize {
         match self {
             Self::AskServer => 21,
+            Self::AvailableSounds => 27,
+            Self::SummonableEntities => 30,
         }
     }
 }
@@ -56,49 +68,40 @@ const FLAG_ARGUMENT: u8 = 0x02;
 const FLAG_EXECUTABLE: u8 = 0x04;
 const FLAG_REDIRECT: u8 = 0x08;
 const FLAG_SUGGESTION: u8 = 0x10;
+const FLAG_RESTRICTED: u8 = 0x20;
 
 impl Write for CommandNode<'_> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
-            match *self {
-                Self::Root { children } => {
-                    w.write_byte(FLAG_ROOT);
-                    V21(children.len() as u32).write(w);
-                    for &child in children {
-                        V21(child).write(w);
-                    }
-                }
+            let (flags, children, redirect) = match *self {
+                Self::Root { children } => (FLAG_ROOT, children, None),
                 Self::Literal {
                     children,
                     redirect,
-                    name,
+                    name: _,
                     executable,
+                    restricted,
                 } => {
                     let mut flags = FLAG_LITERAL;
                     if executable {
-                        flags |= 0x04;
+                        flags |= FLAG_EXECUTABLE;
                     }
                     if redirect.is_some() {
-                        flags |= 0x08;
+                        flags |= FLAG_REDIRECT;
                     }
-                    w.write_byte(flags);
-                    V21(children.len() as u32).write(w);
-                    for &child in children {
-                        V21(child).write(w);
+                    if restricted {
+                        flags |= FLAG_RESTRICTED;
                     }
-                    if let Some(r) = redirect {
-                        V21(r).write(w);
-                    }
-                    V21(name.len() as u32).write(w);
-                    w.write(name.as_bytes());
+                    (flags, children, redirect)
                 }
                 Self::Argument {
                     children,
                     redirect,
-                    name,
+                    name: _,
                     executable,
-                    arg_type,
-                    arg_prop,
+                    restricted,
+                    arg_type: _,
+                    arg_prop: _,
                     suggestions,
                 } => {
                     let mut flags = FLAG_ARGUMENT;
@@ -108,68 +111,73 @@ impl Write for CommandNode<'_> {
                     if redirect.is_some() {
                         flags |= FLAG_REDIRECT;
                     }
+                    if restricted {
+                        flags |= FLAG_RESTRICTED;
+                    }
                     if suggestions.is_some() {
                         flags |= FLAG_SUGGESTION;
                     }
-                    w.write_byte(flags);
-                    V21(children.len() as u32).write(w);
-                    for &child in children {
-                        V21(child).write(w);
-                    }
-                    if let Some(r) = redirect {
-                        V21(r).write(w);
-                    }
-                    V21(name.len() as u32).write(w);
-                    w.write(name.as_bytes());
+                    (flags, children, redirect)
+                }
+            };
+            w.write_byte(flags);
+            V21(children.len() as u32).write(w);
+            for &child in children {
+                V21(child).write(w);
+            }
+            if let Some(r) = redirect {
+                V21(r).write(w);
+            }
+            match *self {
+                Self::Root { .. } => (),
+                Self::Literal { name, .. } => {
+                    name.write(w);
+                }
+                Self::Argument {
+                    name,
+                    arg_type,
+                    arg_prop,
+                    suggestions,
+                    ..
+                } => {
+                    name.write(w);
                     arg_type.write(w);
                     w.write(arg_prop);
                     if let Some(s) = suggestions {
                         s.write(w);
                     }
                 }
-            }
+            };
         }
     }
 
     fn len_s(&self) -> usize {
-        match self {
-            Self::Root { children } => {
-                1 + V21(children.len() as u32).len_s()
-                    + children.iter().map(|&x| V21(x).len_s()).sum::<usize>()
-            }
+        let (children, redirect) = match *self {
+            Self::Root { children } => (children, None),
             Self::Literal {
-                children,
-                redirect,
-                name,
-                executable: _,
-            } => {
-                let mut l = 1
-                    + V21(children.len() as u32).len_s()
-                    + children.iter().map(|&x| V21(x).len_s()).sum::<usize>();
-                if let Some(r) = redirect {
-                    l += V21(*r).len_s();
-                }
-                l += V21(name.len() as u32).len_s();
-                l += name.len();
-                l
-            }
+                children, redirect, ..
+            } => (children, redirect),
             Self::Argument {
-                children,
-                redirect,
+                children, redirect, ..
+            } => (children, redirect),
+        };
+        let mut l = 1
+            + V21(children.len() as u32).len_s()
+            + children.iter().map(|&x| V21(x).len_s()).sum::<usize>();
+        if let Some(r) = redirect {
+            l += V21(r).len_s();
+        }
+        match self {
+            Self::Root { .. } => l,
+            Self::Literal { name, .. } => l + name.len_s(),
+            Self::Argument {
                 name,
-                executable: _,
                 arg_type,
                 arg_prop,
                 suggestions,
+                ..
             } => {
-                let mut l = 1
-                    + V21(children.len() as u32).len_s()
-                    + children.iter().map(|&x| V21(x).len_s()).sum::<usize>();
-                if let Some(r) = redirect {
-                    l += V21(*r).len_s();
-                }
-                l += V21(name.len() as u32).len_s();
-                l += name.len();
+                l += name.len_s();
                 l += arg_type.len_s();
                 l += arg_prop.len_s();
                 if let Some(s) = suggestions {

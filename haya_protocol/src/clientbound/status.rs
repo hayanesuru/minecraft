@@ -1,4 +1,4 @@
-use crate::Utf8;
+use mser::Utf8;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StatusResponse<'a> {

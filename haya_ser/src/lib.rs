@@ -74,3 +74,41 @@ impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
         Ok(Self(buf.read_slice(len)?))
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct Utf8<'a, const MAX: usize = 32767>(pub &'a str);
+
+impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            V21(self.0.len() as u32).write(w);
+            w.write(self.0.as_bytes());
+        }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        V21(self.0.len() as u32).len_s() + self.0.len()
+    }
+}
+
+impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
+    #[inline]
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let len = V21::read(buf)?.0 as usize;
+        if len > MAX * 3 {
+            return Err(Error);
+        }
+        let bytes = buf.read_slice(len)?;
+        let s = match core::str::from_utf8(bytes) {
+            Ok(x) => x,
+            Err(_) => return Err(Error),
+        };
+        if s.chars().map(|x| x.len_utf16()).sum::<usize>() <= MAX {
+            Ok(Utf8(s))
+        } else {
+            Err(Error)
+        }
+    }
+}

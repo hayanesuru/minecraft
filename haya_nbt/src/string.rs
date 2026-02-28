@@ -1,4 +1,4 @@
-use crate::{Error, Read, Write, Writer};
+use crate::{Error, Name, Read, Write, Writer};
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -142,5 +142,28 @@ impl Write for StringTag {
     #[inline]
     fn len_s(&self) -> usize {
         RefStringTag(&self.0).len_s()
+    }
+}
+
+impl Write for Name {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            if let Some(x) = StringTagRaw::new(self.as_bytes()) {
+                x.write(w);
+            } else {
+                (encode_mutf8_len(self) as u16).write(w);
+                encode_mutf8(self, w);
+            }
+        }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        if let Some(x) = StringTagRaw::new(self.as_bytes()) {
+            x.len_s()
+        } else {
+            encode_mutf8_len(self) + 2
+        }
     }
 }

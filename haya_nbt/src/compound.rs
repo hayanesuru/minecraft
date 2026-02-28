@@ -93,7 +93,7 @@ impl Write for Compound {
         unsafe {
             for (name, tag) in &self.0 {
                 tag.id().write(w);
-                RefStringTag(name).write(w);
+                name.write(w);
                 match tag {
                     Tag::Byte(x) => x.write(w),
                     Tag::Short(x) => x.write(w),
@@ -125,7 +125,7 @@ impl Write for Compound {
     fn len_s(&self) -> usize {
         let mut w = 1 + self.0.len();
         for (name, tag) in &self.0 {
-            w += RefStringTag(name).len_s();
+            w += name.len_s();
             w += match tag {
                 Tag::Byte(_) => 1,
                 Tag::Short(_) => 2,

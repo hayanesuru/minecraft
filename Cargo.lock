@@ -23,6 +23,7 @@ dependencies = [
 name = "haya_brigadier"
 version = "0.1.0"
 dependencies = [
+ "haya_ident",
  "minecraft_data",
  "mser",
 ]
@@ -51,7 +52,6 @@ dependencies = [
 name = "haya_mutf8"
 version = "0.1.0"
 dependencies = [
- "haya_str",
  "mser",
 ]
 
