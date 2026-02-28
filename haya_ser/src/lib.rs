@@ -78,6 +78,10 @@ impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
 #[derive(Clone, Copy, Debug)]
 pub struct Utf8<'a, const MAX: usize = 32767>(pub &'a str);
 
+impl<'a, const MAX: usize> Utf8<'a, MAX> {
+    const MAX_BYTES: usize = MAX.checked_mul(3).unwrap();
+}
+
 impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
     #[inline]
     unsafe fn write(&self, w: &mut Writer) {
@@ -97,7 +101,7 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
     #[inline]
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
-        if len > MAX * 3 {
+        if len > Self::MAX_BYTES {
             return Err(Error);
         }
         let bytes = buf.read_slice(len)?;

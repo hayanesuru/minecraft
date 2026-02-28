@@ -1,5 +1,5 @@
-use crate::{KnownPack, List, RegistryKey};
-use haya_ident::Ident;
+use crate::{KnownPack, List};
+use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
 use mser::Utf8;
 
@@ -8,7 +8,7 @@ pub struct FinishConfiguration {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RegistryData<'a> {
-    pub registry: RegistryKey<'a>,
+    pub registry: ResourceKey<'a>,
     pub entries: List<'a, RegistryEntry<'a>>,
 }
 

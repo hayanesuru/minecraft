@@ -26,6 +26,7 @@ dependencies = [
  "haya_ident",
  "minecraft_data",
  "mser",
+ "mser_macro",
 ]
 
 [[package]]

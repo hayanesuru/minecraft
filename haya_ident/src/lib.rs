@@ -73,6 +73,27 @@ pub struct Ident<'a> {
     path: &'a str,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ResourceKey<'a> {
+    pub identifier: Ident<'a>,
+}
+
+impl Write for ResourceKey<'_> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.identifier.write(w) }
+    }
+    fn len_s(&self) -> usize {
+        self.identifier.len_s()
+    }
+}
+
+impl<'a> Read<'a> for ResourceKey<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            identifier: Ident::read(buf)?,
+        })
+    }
+}
 impl<'a> Ident<'a> {
     /// # Safety
     ///

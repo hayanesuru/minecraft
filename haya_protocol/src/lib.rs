@@ -1,7 +1,6 @@
 #![no_std]
 
 use alloc::vec::Vec;
-use haya_ident::Ident;
 use haya_nbt::Tag;
 use mser::{Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
@@ -38,7 +37,7 @@ impl Write for ClientIntent {
 
 impl<'a> Read<'a> for ClientIntent {
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        match V32::read(buf)?.0 {
+        match V21::read(buf)?.0 {
             1 => Ok(Self::Status),
             2 => Ok(Self::Login),
             3 => Ok(Self::Transfer),
@@ -170,11 +169,6 @@ pub struct Component(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Dialog(pub Tag);
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RegistryKey<'a> {
-    pub identifier: Ident<'a>,
-}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct KnownPack<'a> {

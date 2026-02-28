@@ -154,45 +154,7 @@ fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) ->
         }
 
         *w += "}\n";
-        *w += "impl ::mser::Write for ";
-        *w += &name;
-        *w += " {\n";
-        *w += "#[inline]\n";
-        *w += "fn len_s(&self) -> usize {\n";
-        if size <= V7MAX {
-            *w += "1usize";
-        } else if size <= V21MAX {
-            *w += "::mser::V21(*self as u32).len_s()";
-        } else {
-            *w += "::mser::V32(*self as u32).len_s()";
-        }
-        *w += "\n}\n";
-        *w += "#[inline]\n";
-        *w += "unsafe fn write(&self, w: &mut ::mser::Writer) {\n";
-        if size <= V7MAX {
-            *w += "unsafe { w.write_byte(*self as u8); }";
-        } else if size <= V21MAX {
-            *w += "unsafe { ::mser::Write::write(&::mser::V21(*self as u32), w); }";
-        } else {
-            *w += "unsafe { ::mser::Write::write(&::mser::V32(*self as u32), w); }";
-        }
-        *w += "\n}\n}\n";
-        *w += "impl ::mser::Read<'_> for ";
-        *w += &name;
-        *w += " {\n";
-        *w += "#[inline]\n";
-        *w += "fn read(n: &mut ::mser::Reader) -> ::core::result::Result<Self, ::mser::Error> {\n";
-        if size <= V21MAX {
-            *w += "let x = <::mser::V21 as ::mser::Read>::read(n)?.0;\n";
-        } else {
-            *w += "let x = <::mser::V32 as ::mser::Read>::read(n)?.0;\n";
-        }
-        *w += "match Self::new(x as ";
-        *w += repr.to_int();
-        *w += ") {\n";
-        *w += "::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
-        *w += "::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
-        *w += "}\n}\n}\n";
+        impl_codec(w, &name, size, repr);
         impl_name(w, gen_hash, repr, &zhash, &name);
         impl_common(w, &name, repr, size, 0);
     }
@@ -1113,50 +1075,7 @@ fn block_state(
 
     struct_head(w, bs_repr, bs_name);
     impl_common(w, bs_name, bs_repr, bs_size, 0);
-
-    *w += "impl ::mser::Write for ";
-    *w += bs_name;
-    *w += " {\n";
-    *w += "#[inline]\n";
-    *w += "fn len_s(&self) -> usize {\n";
-    if bs_size <= V7MAX {
-        *w += "1usize";
-    } else if bs_size <= V21MAX {
-        *w += "::mser::V21(self.0 as u32).len_s()";
-    } else {
-        *w += "::mser::V32(self.0 as u32).len_s()";
-    }
-    *w += "\n}\n";
-    *w += "#[inline]\n";
-    *w += "unsafe fn write(&self, w: &mut ::mser::Writer) {\n";
-    if bs_size <= V7MAX {
-        *w += "unsafe { w.write_byte(self.0 as u8); }";
-    } else if bs_size <= V21MAX {
-        *w += "unsafe { ::mser::Write::write(&::mser::V21(self.0 as u32), w); }";
-    } else {
-        *w += "unsafe { ::mser::Write::write(&::mser::V32(self.0 as u32), w); }";
-    }
-    *w += "\n}\n}\n";
-
-    *w += "impl ::mser::Read<'_> for ";
-    *w += bs_name;
-    *w += " {\n";
-    *w += "#[inline]\n";
-    *w += "fn read(n: &mut ::mser::Reader) -> ::core::result::Result<Self, ::mser::Error> {\n";
-    *w += "let x = <";
-    if bs_size <= V21MAX {
-        *w += "::mser::V21 as ::mser::Read>::read(n)?.0";
-    } else {
-        *w += "::mser::V32 as ::mser::Read>::read(n)?.0";
-    }
-    *w += " as ";
-    *w += bs_repr.to_int();
-    *w += ";\n";
-    *w += "match Self::new(x) {\n";
-    *w += "::core::option::Option::Some(x) => ::core::result::Result::Ok(x),\n";
-    *w += "::core::option::Option::None => ::core::result::Result::Err(::mser::Error),\n";
-    *w += "}\n}\n}\n";
-
+    impl_codec_struct(w, bs_name, bs_size, bs_repr);
     list_ty(
         w,
         "BLOCK_STATE_TO_BLOCK",
@@ -1854,4 +1773,110 @@ const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
     let h = h ^ (h >> 64);
     let h = h.wrapping_mul(N);
     [(h >> 64) as u64, h as u64]
+}
+
+fn impl_codec_struct(w: &mut String, name: &str, size: usize, repr: Repr) {
+    *w += "impl ::mser::Write for ";
+    *w += name;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn len_s(&self) -> usize {\n";
+    if size <= V7MAX {
+        *w += "1usize";
+    } else if size <= V21MAX {
+        *w += "::mser::V21(self.0 as u32).len_s()";
+    } else {
+        *w += "::mser::V32(self.0 as u32).len_s()";
+    }
+    *w += "\n}\n";
+    *w += "#[inline]\n";
+    *w += "unsafe fn write(&self, w: &mut ::mser::Writer) {\n";
+    if size <= V7MAX {
+        *w += "unsafe { w.write_byte(self.0 as u8); }";
+    } else if size <= V21MAX {
+        *w += "unsafe { ::mser::Write::write(&::mser::V21(self.0 as u32), w); }";
+    } else {
+        *w += "unsafe { ::mser::Write::write(&::mser::V32(self.0 as u32), w); }";
+    }
+    *w += "\n}\n}\n";
+
+    *w += "impl ::mser::Read<'_> for ";
+    *w += name;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn read(n: &mut ::mser::Reader<'_>) -> ::core::result::Result<Self, ::mser::Error> {\n";
+    *w += "let __x = <";
+    if size <= V21MAX {
+        *w += "::mser::V21 as ::mser::Read>::read(n)?.0";
+    } else {
+        *w += "::mser::V32 as ::mser::Read>::read(n)?.0";
+    }
+    *w += ";\n";
+    if size == 1 {
+        *w += "if __x == 0 {\n";
+    } else {
+        *w += "if __x <= ";
+        *w += itoa::Buffer::new().format(size - 1);
+        *w += " {\n";
+    }
+    *w += "::core::result::Result::Ok(Self(__x as ";
+    *w += repr.to_int();
+    *w += "))\n";
+    *w += "} else {\n";
+    *w += "::core::result::Result::Err(::mser::Error)\n";
+    *w += "}\n}\n}\n";
+}
+
+fn impl_codec(w: &mut String, name: &str, size: usize, repr: Repr) {
+    *w += "impl ::mser::Write for ";
+    *w += name;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn len_s(&self) -> usize {\n";
+    if size <= V7MAX {
+        *w += "1usize";
+    } else if size <= V21MAX {
+        *w += "::mser::V21(*self as u32).len_s()";
+    } else {
+        *w += "::mser::V32(*self as u32).len_s()";
+    }
+    *w += "\n}\n";
+    *w += "#[inline]\n";
+    *w += "unsafe fn write(&self, w: &mut ::mser::Writer) {\n";
+    if size <= V7MAX {
+        *w += "unsafe { w.write_byte(*self as u8); }";
+    } else if size <= V21MAX {
+        *w += "unsafe { ::mser::Write::write(&::mser::V21(*self as u32), w); }";
+    } else {
+        *w += "unsafe { ::mser::Write::write(&::mser::V32(*self as u32), w); }";
+    }
+    *w += "\n}\n}\n";
+
+    *w += "impl ::mser::Read<'_> for ";
+    *w += name;
+    *w += " {\n";
+    *w += "#[inline]\n";
+    *w += "fn read(n: &mut ::mser::Reader<'_>) -> ::core::result::Result<Self, ::mser::Error> {\n";
+    *w += "let __x = <";
+    if size <= V21MAX {
+        *w += "::mser::V21 as ::mser::Read>::read(n)?.0";
+    } else {
+        *w += "::mser::V32 as ::mser::Read>::read(n)?.0";
+    }
+    *w += ";\n";
+    if size == 1 {
+        *w += "if __x == 0 {\n";
+    } else {
+        *w += "if __x <= ";
+        *w += itoa::Buffer::new().format(size - 1);
+        *w += " {\n";
+    }
+    *w += "unsafe { ::core::result::Result::Ok(::core::mem::transmute::<";
+    *w += repr.to_int();
+    *w += ", Self>(__x as ";
+    *w += repr.to_int();
+    *w += ")) }\n";
+    *w += "} else {\n";
+    *w += "::core::result::Result::Err(::mser::Error)\n";
+    *w += "}\n}\n}\n";
 }

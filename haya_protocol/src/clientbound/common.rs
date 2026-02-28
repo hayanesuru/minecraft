@@ -1,5 +1,5 @@
-use crate::{Component, Dialog, List, Map, RegistryKey, Rest, ServerLinkUntrustedEntry};
-use haya_ident::Ident;
+use crate::{Component, Dialog, List, Map, Rest, ServerLinkUntrustedEntry};
+use haya_ident::{Ident, ResourceKey};
 use mser::{ByteArray, Utf8, V32};
 use uuid::Uuid;
 
@@ -55,7 +55,7 @@ pub struct Transfer<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateTags<'a> {
-    pub tags: Map<'a, RegistryKey<'a>, Map<'a, Ident<'a>, List<'a, V32>>>,
+    pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, List<'a, V32>>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
