@@ -1,10 +1,11 @@
 #![no_std]
 
-use haya_ident::ResourceKey;
+use haya_ident::{Ident, ResourceKey};
 use minecraft_data::command_argument_type;
 use mser::{Error, Read, Reader, Utf8, V21, Write, Writer};
 use mser_macro::{Deserialize, Serialize};
 
+const MASK_NODE: u8 = 0x03;
 const FLAG_ROOT: u8 = 0x00;
 const FLAG_LITERAL: u8 = 0x01;
 const FLAG_ARGUMENT: u8 = 0x02;
@@ -542,6 +543,22 @@ impl Write for Suggestions {
     }
 }
 
+impl<'a> Read<'a> for Suggestions {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let ident = Ident::read(buf)?;
+        if ident.namespace().is_none() {
+            match ident.path() {
+                "ask_server" => Ok(Self::AskServer),
+                "available_sounds" => Ok(Self::AvailableSounds),
+                "summonable_entities" => Ok(Self::SummonableEntities),
+                _ => Ok(Self::AskServer),
+            }
+        } else {
+            Ok(Self::AskServer)
+        }
+    }
+}
+
 impl Write for CommandNode<'_> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
@@ -653,5 +670,19 @@ impl Write for CommandNode<'_> {
                 l
             }
         }
+    }
+}
+
+impl<'a> Read<'a> for CommandNode<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = u8::read(buf)?;
+        match flags & MASK_NODE {
+            FLAG_ROOT => {}
+            FLAG_LITERAL => {}
+            FLAG_ARGUMENT => {}
+            _ => return Err(Error),
+        }
+
+        todo!()
     }
 }
