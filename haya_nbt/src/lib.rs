@@ -162,7 +162,7 @@ fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, 
     let mut names = Vec::<Name>::with_capacity(4);
     loop {
         next = match next {
-            Entry::Compound(mut compound) => {
+            Entry::Compound(mut compound) => 'a: {
                 let ty = TagType::read(buf)?;
                 if let TagType::End = ty {
                     match blocks.pop() {
@@ -172,48 +172,47 @@ fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, 
                                 None => return Err(Error),
                             };
                             c.push(k, Tag::Compound(compound));
-                            Entry::Compound(c)
+                            break 'a Entry::Compound(c);
                         }
                         Some(Entry::ListCompound(mut l, len)) => {
                             l.push(compound);
-                            Entry::ListCompound(l, len)
+                            break 'a Entry::ListCompound(l, len);
                         }
                         Some(Entry::ListList(_, _)) => return Err(Error),
                         None => return Ok(Tag::Compound(compound)),
                     }
-                } else {
-                    let name = Name::read(buf)?;
-                    match ty.tag_no_rec(buf)? {
-                        Ok(t) => {
-                            compound.push(name, t);
-                            Entry::Compound(compound)
-                        }
-                        Err(TagRec::Compound) => {
-                            names.push(name);
-                            blocks.push(Entry::Compound(compound));
-                            Entry::Compound(Compound::new())
-                        }
-                        Err(TagRec::List) => {
-                            let l = ListInfo::read(buf)?;
-                            match l.list_no_rec(buf)? {
-                                Ok(x) => {
-                                    compound.push(name, Tag::List(x));
-                                    Entry::Compound(compound)
-                                }
-                                Err(e) => {
-                                    names.push(name);
-                                    blocks.push(Entry::Compound(compound));
-                                    match e {
-                                        ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
-                                        ListRec::List => Entry::ListList(Vec::new(), l.1),
-                                    }
+                }
+                let name = Name::read(buf)?;
+                match ty.tag_no_rec(buf)? {
+                    Ok(t) => {
+                        compound.push(name, t);
+                        Entry::Compound(compound)
+                    }
+                    Err(TagRec::Compound) => {
+                        names.push(name);
+                        blocks.push(Entry::Compound(compound));
+                        Entry::Compound(Compound::new())
+                    }
+                    Err(TagRec::List) => {
+                        let l = ListInfo::read(buf)?;
+                        match l.list_no_rec(buf)? {
+                            Ok(x) => {
+                                compound.push(name, Tag::List(x));
+                                Entry::Compound(compound)
+                            }
+                            Err(e) => {
+                                names.push(name);
+                                blocks.push(Entry::Compound(compound));
+                                match e {
+                                    ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
+                                    ListRec::List => Entry::ListList(Vec::new(), l.1),
                                 }
                             }
                         }
                     }
                 }
             }
-            Entry::ListCompound(compounds, len) => {
+            Entry::ListCompound(compounds, len) => 'a: {
                 if len == 0 {
                     match blocks.pop() {
                         Some(Entry::Compound(mut x)) => {
@@ -222,21 +221,20 @@ fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, 
                                 None => return Err(Error),
                             };
                             x.push(k, Tag::List(ListTag::Compound(compounds)));
-                            Entry::Compound(x)
+                            break 'a Entry::Compound(x);
                         }
                         Some(Entry::ListList(mut lists, len)) => {
                             lists.push(ListTag::Compound(compounds));
-                            Entry::ListList(lists, len)
+                            break 'a Entry::ListList(lists, len);
                         }
                         Some(Entry::ListCompound(_, _)) => return Err(Error),
                         None => return Ok(Tag::List(ListTag::Compound(compounds))),
                     }
-                } else {
-                    blocks.push(Entry::ListCompound(compounds, len - 1));
-                    Entry::Compound(Compound::new())
                 }
+                blocks.push(Entry::ListCompound(compounds, len - 1));
+                Entry::Compound(Compound::new())
             }
-            Entry::ListList(mut lists, len) => {
+            Entry::ListList(mut lists, len) => 'a: {
                 if len == 0 {
                     match blocks.pop() {
                         Some(Entry::Compound(mut x)) => {
@@ -245,28 +243,27 @@ fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, 
                                 None => return Err(Error),
                             };
                             x.push(k, Tag::List(ListTag::List(lists)));
-                            Entry::Compound(x)
+                            break 'a Entry::Compound(x);
                         }
                         Some(Entry::ListList(mut x, len)) => {
                             x.push(ListTag::List(lists));
-                            Entry::ListList(x, len)
+                            break 'a Entry::ListList(x, len);
                         }
                         Some(Entry::ListCompound(_, _)) => return Err(Error),
                         None => return Ok(Tag::List(ListTag::List(lists))),
                     }
-                } else {
-                    let l = ListInfo::read(buf)?;
-                    match l.list_no_rec(buf)? {
-                        Ok(x) => {
-                            lists.push(x);
-                            Entry::ListList(lists, len - 1)
-                        }
-                        Err(e) => {
-                            blocks.push(Entry::ListList(lists, len - 1));
-                            match e {
-                                ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
-                                ListRec::List => Entry::ListList(Vec::new(), l.1),
-                            }
+                }
+                let l = ListInfo::read(buf)?;
+                match l.list_no_rec(buf)? {
+                    Ok(x) => {
+                        lists.push(x);
+                        Entry::ListList(lists, len - 1)
+                    }
+                    Err(e) => {
+                        blocks.push(Entry::ListList(lists, len - 1));
+                        match e {
+                            ListRec::Compound => Entry::ListCompound(Vec::new(), l.1),
+                            ListRec::List => Entry::ListList(Vec::new(), l.1),
                         }
                     }
                 }
