@@ -225,15 +225,15 @@ pub struct ContainerId(pub V32);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::clientbound::login::LoginFinished;
+    use crate::profile::GameProfileRef;
+    use crate::types::Id as _;
+    use haya_collection::List;
+    use minecraft_data::clientbound__login;
+    use uuid::Uuid;
 
     #[test]
     fn test_write() {
-        use crate::clientbound::login::LoginFinished;
-        use crate::profile::GameProfileRef;
-        use crate::types::Id as _;
-        use minecraft_data::clientbound__login;
-        use uuid::Uuid;
-
         let packet: LoginFinished = LoginFinished {
             game_profile: GameProfileRef {
                 id: Uuid::nil(),
