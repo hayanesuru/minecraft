@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 use haya_nbt::Tag;
-use mser::{Error, Read, Reader, Utf8, V21, Write, Writer};
+use mser::{Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 pub mod clientbound;
 pub mod command;
@@ -371,6 +371,9 @@ impl Difficulty {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct ContainerId(pub V32);
 
 #[cfg(test)]
 mod tests {

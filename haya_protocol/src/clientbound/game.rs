@@ -1,6 +1,6 @@
 use crate::command::CommandNode;
 use crate::stat::Stat;
-use crate::{Component, Difficulty, List, Map};
+use crate::{Component, ContainerId, Difficulty, List, Map};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
@@ -311,4 +311,9 @@ pub struct SuggestionEntry<'a> {
 pub struct Commands<'a> {
     pub entries: List<'a, CommandNode<'a>>,
     pub root_index: V21,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerClose {
+    pub container_id: ContainerId,
 }

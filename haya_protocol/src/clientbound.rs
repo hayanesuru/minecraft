@@ -103,4 +103,6 @@ packets! {
 //     chunks_biomes = game::ChunkBiomes<'_>,
 //     clear_titles = game::ClearTitles,
 //     command_suggestions = game::CommandSuggestions<'_>,
+//     commands = game::Commands<'_>,
+//     container_close = game::ContainerClose,
 // }
