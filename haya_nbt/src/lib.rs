@@ -157,11 +157,15 @@ enum Entry {
     ListList(Vec<ListTag>, u32),
 }
 
-fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, Error> {
+fn read_tag(buf: &mut Reader, next: Entry, max_depth: usize) -> Result<Tag, Error> {
     let mut blocks = Vec::<Entry>::with_capacity(4);
     let mut names = Vec::<Name>::with_capacity(4);
+    blocks.push(next);
     loop {
-        next = match next {
+        blocks.reserve(1);
+        names.reserve(1);
+        let next = unsafe { blocks.pop().unwrap_unchecked() };
+        let next = match next {
             Entry::Compound(mut compound) => 'a: {
                 let ty = TagType::read(buf)?;
                 if let TagType::End = ty {
@@ -269,11 +273,10 @@ fn read_tag(buf: &mut Reader, mut next: Entry, max_depth: usize) -> Result<Tag, 
                 }
             }
         };
+        blocks.push(next);
         if max_depth == blocks.len() {
             return Err(Error);
         }
-        blocks.reserve(1);
-        names.reserve(1);
     }
 }
 
