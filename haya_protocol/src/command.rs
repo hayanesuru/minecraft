@@ -1,5 +1,4 @@
-#![no_std]
-
+use crate::List;
 use haya_ident::{Ident, ResourceKey};
 use minecraft_data::command_argument_type;
 use mser::{Error, Read, Reader, Utf8, V21, Write, Writer};
@@ -23,18 +22,19 @@ const NUMBER_FLAG_MAX: u8 = 2;
 #[derive(Clone, Debug)]
 pub enum CommandNode<'a> {
     Root {
-        children: &'a [u32],
+        children: List<'a, V21>,
+        redirect: Option<V21>,
     },
     Literal {
-        children: &'a [u32],
-        redirect: Option<u32>,
+        children: List<'a, V21>,
+        redirect: Option<V21>,
         name: Utf8<'a>,
         executable: bool,
         restricted: bool,
     },
     Argument {
-        children: &'a [u32],
-        redirect: Option<u32>,
+        children: List<'a, V21>,
+        redirect: Option<V21>,
         name: Utf8<'a>,
         executable: bool,
         restricted: bool,
@@ -563,7 +563,13 @@ impl Write for CommandNode<'_> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let (flags, children, redirect) = match self {
-                Self::Root { children } => (FLAG_ROOT, *children, None),
+                Self::Root { children, redirect } => {
+                    let mut flags = FLAG_ROOT;
+                    if redirect.is_some() {
+                        flags |= FLAG_REDIRECT;
+                    }
+                    (flags, children, *redirect)
+                }
                 Self::Literal {
                     children,
                     redirect,
@@ -581,7 +587,7 @@ impl Write for CommandNode<'_> {
                     if *restricted {
                         flags |= FLAG_RESTRICTED;
                     }
-                    (flags, *children, *redirect)
+                    (flags, children, *redirect)
                 }
                 Self::Argument {
                     children,
@@ -605,16 +611,13 @@ impl Write for CommandNode<'_> {
                     if suggestions.is_some() {
                         flags |= FLAG_SUGGESTION;
                     }
-                    (flags, *children, *redirect)
+                    (flags, children, *redirect)
                 }
             };
             w.write_byte(flags);
-            V21(children.len() as u32).write(w);
-            for &child in children {
-                V21(child).write(w);
-            }
+            children.write(w);
             if let Some(r) = redirect {
-                V21(r).write(w);
+                r.write(w);
             }
             match self {
                 Self::Root { .. } => (),
@@ -639,19 +642,17 @@ impl Write for CommandNode<'_> {
 
     fn len_s(&self) -> usize {
         let (children, redirect) = match self {
-            Self::Root { children } => (*children, None),
+            Self::Root { children, redirect } => (children, *redirect),
             Self::Literal {
                 children, redirect, ..
-            } => (*children, *redirect),
+            } => (children, *redirect),
             Self::Argument {
                 children, redirect, ..
-            } => (*children, *redirect),
+            } => (children, *redirect),
         };
-        let mut l = 1
-            + V21(children.len() as u32).len_s()
-            + children.iter().map(|&x| V21(x).len_s()).sum::<usize>();
+        let mut l = 1 + children.len_s();
         if let Some(r) = redirect {
-            l += V21(r).len_s();
+            l += r.len_s();
         }
         match self {
             Self::Root { .. } => l,
@@ -676,13 +677,34 @@ impl Write for CommandNode<'_> {
 impl<'a> Read<'a> for CommandNode<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let flags = u8::read(buf)?;
-        match flags & MASK_NODE {
-            FLAG_ROOT => {}
-            FLAG_LITERAL => {}
-            FLAG_ARGUMENT => {}
-            _ => return Err(Error),
-        }
-
-        todo!()
+        let children = List::<'a, V21>::read(buf)?;
+        let redirect = if (flags & FLAG_REDIRECT) != 0 {
+            Some(V21::read(buf)?)
+        } else {
+            None
+        };
+        Ok(match flags & MASK_NODE {
+            FLAG_LITERAL => Self::Literal {
+                children,
+                redirect,
+                name: Utf8::read(buf)?,
+                executable: (flags & FLAG_EXECUTABLE) != 0,
+                restricted: (flags & FLAG_RESTRICTED) != 0,
+            },
+            FLAG_ARGUMENT => Self::Argument {
+                children,
+                redirect,
+                name: Utf8::read(buf)?,
+                executable: (flags & FLAG_EXECUTABLE) != 0,
+                restricted: (flags & FLAG_RESTRICTED) != 0,
+                arg_type: CommandArgumentType::read(buf)?,
+                suggestions: if (flags & FLAG_SUGGESTION) != 0 {
+                    Some(Suggestions::read(buf)?)
+                } else {
+                    None
+                },
+            },
+            _ => Self::Root { children, redirect },
+        })
     }
 }

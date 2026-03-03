@@ -1,9 +1,10 @@
+use crate::command::CommandNode;
 use crate::stat::Stat;
 use crate::{Component, Difficulty, List, Map};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
-use mser::{ByteArray, Error, Read, Reader, Utf8, V32, Write, Writer};
+use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -304,4 +305,10 @@ pub struct CommandSuggestions<'a> {
 pub struct SuggestionEntry<'a> {
     pub text: Utf8<'a>,
     pub tooltip: Option<Component>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Commands<'a> {
+    pub entries: List<'a, CommandNode<'a>>,
+    pub root_index: V21,
 }

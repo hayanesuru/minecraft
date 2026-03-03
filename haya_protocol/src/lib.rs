@@ -5,6 +5,7 @@ use haya_nbt::Tag;
 use mser::{Error, Read, Reader, Utf8, V21, Write, Writer};
 
 pub mod clientbound;
+pub mod command;
 pub mod item;
 pub mod profile;
 pub mod serverbound;
