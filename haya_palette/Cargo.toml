@@ -8,5 +8,5 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
-minecraft_data.workspace = true
-mser.workspace = true
+mser = { workspace = true }
+minecraft_data = { workspace = true }
