@@ -1,4 +1,5 @@
-use crate::{KnownPack, List};
+use crate::KnownPack;
+use haya_collection::List;
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
 use mser::Utf8;

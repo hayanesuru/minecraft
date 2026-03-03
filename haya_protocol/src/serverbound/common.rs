@@ -1,6 +1,7 @@
-use crate::{ClientInformation, Rest};
+use crate::ClientInformation;
 use haya_ident::Ident;
 use haya_nbt::Tag;
+use mser::Rest;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -20,6 +20,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "haya_collection"
+version = "0.1.0"
+dependencies = [
+ "mser",
+]
+
+[[package]]
 name = "haya_ecs"
 version = "0.1.0"
 
@@ -70,6 +77,7 @@ dependencies = [
 name = "haya_protocol"
 version = "0.1.0-rc.0+1.21.11"
 dependencies = [
+ "haya_collection",
  "haya_ident",
  "haya_math",
  "haya_nbt",

@@ -1,4 +1,5 @@
-use crate::{List, Utf8};
+use crate::Utf8;
+use haya_collection::List;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]

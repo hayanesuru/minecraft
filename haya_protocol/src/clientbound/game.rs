@@ -1,6 +1,7 @@
 use crate::command::CommandNode;
 use crate::stat::Stat;
-use crate::{Component, ContainerId, Difficulty, List, Map};
+use crate::{Component, ContainerId, Difficulty};
+use haya_collection::{List, Map};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};

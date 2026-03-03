@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "haya_collection",
     "haya_data",
     "haya_ecs",
     "haya_ident",
@@ -33,8 +34,14 @@ haya_mutf8 = { path = "haya_mutf8", version = "0.1" }
 haya_ecs = { path = "haya_ecs", version = "0.1" }
 haya_text = { path = "haya_text", version = "0.1" }
 haya_math = { path = "haya_math", version = "0.1" }
+haya_collection = { path = "haya_collection", version = "0.1" }
 
 uuid = { version = "1", default-features = false }
 
 [profile.dev.package."minecraft_data"]
 incremental = false
+
+[profile.dev.package."mser_macro"]
+incremental = false
+opt-level = 3
+strip = true

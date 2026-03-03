@@ -1,4 +1,5 @@
-use crate::{KnownPack, List};
+use crate::KnownPack;
+use haya_collection::List;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FinishConfiguration {}

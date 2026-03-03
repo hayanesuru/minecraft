@@ -63,18 +63,6 @@ pub const fn encode_mutf8_len(bytes: &str) -> usize {
     l + index
 }
 
-#[derive(Clone, Copy)]
-pub struct Mutf8<'a>(&'a [u8]);
-
-impl<'a> Mutf8<'a> {
-    /// # Safety
-    ///
-    /// `n` must be valid mutf-8.
-    pub const fn new_unchecked(n: &'a [u8]) -> Self {
-        Self(n)
-    }
-}
-
 pub fn encode_mutf8(s: &str, w: &mut Writer) {
     let mut index = 0;
     let mut start = 0;
@@ -190,7 +178,7 @@ pub fn decode_mutf8_len(mut bytes: &[u8]) -> Result<usize, Error> {
 
 /// # Safety
 /// `w` is valid for write
-pub unsafe fn decode_mutf8(Mutf8(bytes): Mutf8, w: &mut Writer) -> Result<(), Error> {
+pub unsafe fn decode_mutf8(bytes: &[u8], w: &mut Writer) -> Result<(), Error> {
     let mut index = 0;
     let mut start = 0;
 

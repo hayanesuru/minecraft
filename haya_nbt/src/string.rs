@@ -2,9 +2,7 @@ use crate::{Error, Name, Read, Write, Writer};
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use haya_mutf8::{
-    Mutf8, as_mutf8_ascii, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len,
-};
+use haya_mutf8::{as_mutf8_ascii, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len};
 use mser::Reader;
 
 #[derive(Clone, Copy)]
@@ -108,10 +106,7 @@ impl<'a> Read<'a> for StringTag {
             let len = decode_mutf8_len(data)?;
             let mut x = Vec::with_capacity(len);
             unsafe {
-                mser::write_unchecked(
-                    x.as_mut_ptr(),
-                    &(DecodeMutf8(Mutf8::new_unchecked(data), len)),
-                );
+                mser::write_unchecked(x.as_mut_ptr(), &(DecodeMutf8(data, len)));
                 x.set_len(len);
                 Ok(Self(
                     alloc::string::String::from_utf8_unchecked(x).into_boxed_str(),
@@ -121,7 +116,7 @@ impl<'a> Read<'a> for StringTag {
     }
 }
 
-pub(crate) struct DecodeMutf8<'a>(pub Mutf8<'a>, pub usize);
+pub(crate) struct DecodeMutf8<'a>(pub &'a [u8], pub usize);
 
 impl Write for DecodeMutf8<'_> {
     unsafe fn write(&self, w: &mut Writer) {

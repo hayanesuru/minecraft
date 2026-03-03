@@ -49,7 +49,7 @@ pub unsafe fn write_unchecked(ptr: *mut u8, x: &(impl Write + ?Sized)) {
 #[cold]
 pub const fn cold_path() {}
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ByteArray<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
 
 impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
@@ -75,7 +75,7 @@ impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Utf8<'a, const MAX: usize = 32767>(pub &'a str);
 
 impl<'a, const MAX: usize> Utf8<'a, MAX> {
@@ -114,5 +114,68 @@ impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
         } else {
             Err(Error)
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<'a, L: Read<'a>, R: Read<'a>> Read<'a> for Either<L, R> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        if bool::read(buf)? {
+            Ok(Self::Left(L::read(buf)?))
+        } else {
+            Ok(Self::Right(R::read(buf)?))
+        }
+    }
+}
+
+impl<L: Write, R: Write> Write for Either<L, R> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                Self::Left(l) => {
+                    true.write(w);
+                    l.write(w);
+                }
+                Self::Right(r) => {
+                    false.write(w);
+                    r.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Left(l) => true.len_s() + l.len_s(),
+            Self::Right(r) => false.len_s() + r.len_s(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Rest<'a, const MAX: usize = { usize::MAX }>(pub &'a [u8]);
+
+impl<'a, const MAX: usize> Read<'a> for Rest<'a, MAX> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let len = buf.len();
+        if len > MAX {
+            return Err(Error);
+        }
+        Ok(Self(buf.read_slice(len)?))
+    }
+}
+
+impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { w.write(self.0) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len()
     }
 }

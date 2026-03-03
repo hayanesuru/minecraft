@@ -42,59 +42,60 @@ impl Repr {
     }
 }
 
-fn read(buf: &mut String, path: PathBuf) -> std::io::Result<usize> {
-    match buf.chars().next_back() {
-        Some('\n') => (),
-        Some(_) => buf.push('\n'),
+fn read(buf: &mut Vec<u8>, path: PathBuf) -> usize {
+    match buf.last().copied() {
+        Some(b'\n') => (),
+        Some(_) => buf.push(b'\n'),
         _ => (),
     }
-    let mut file = std::fs::File::open(path)?;
+    let mut file = std::fs::File::open(path).unwrap();
     let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
-    buf.try_reserve_exact(size)?;
-    std::io::Read::read_to_end(&mut file, unsafe { buf.as_mut_vec() })
+    buf.try_reserve_exact(size).unwrap();
+    std::io::Read::read_to_end(&mut file, buf).unwrap()
 }
 
-fn main() -> std::io::Result<()> {
+fn main() {
     let out = PathBuf::from(var_os("OUT_DIR").unwrap());
     let path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("generated");
     let mut w = String::with_capacity(0x80000);
-    let mut data = String::with_capacity(0x40000);
+    let mut data = Vec::with_capacity(0x40000);
     let mut gen_hash = GenerateHash::new();
 
-    read(&mut data, path.join("version.txt"))?;
-    version(&mut w, &data);
+    read(&mut data, path.join("version.txt"));
+    version(&mut w, core::str::from_utf8(&data).unwrap());
     data.clear();
 
-    let reg = read(&mut data, path.join("registries.txt"))?;
+    let reg = read(&mut data, path.join("registries.txt"));
     let reg = 0..reg;
 
-    let flu = read(&mut data, path.join("fluid_state.txt"))?;
+    let flu = read(&mut data, path.join("fluid_state.txt"));
     let flu = reg.end..reg.end + flu;
 
-    let blo = read(&mut data, path.join("block_state.txt"))?;
+    let blo = read(&mut data, path.join("block_state.txt"));
     let blo = flu.end..flu.end + blo;
 
-    let ite = read(&mut data, path.join("item.txt"))?;
+    let ite = read(&mut data, path.join("item.txt"));
     let ite = blo.end..blo.end + ite;
 
-    let ent = read(&mut data, path.join("entity.txt"))?;
+    let ent = read(&mut data, path.join("entity.txt"));
     let ent = ite.end..ite.end + ent;
 
-    let pac = read(&mut data, path.join("packet.txt"))?;
+    let pac = read(&mut data, path.join("packet.txt"));
     let pac = ent.end..ent.end + pac;
 
-    let blt = read(&mut data, path.join("block_tags.txt"))?;
+    let blt = read(&mut data, path.join("block_tags.txt"));
     let blt = pac.end..pac.end + blt;
 
-    let itt = read(&mut data, path.join("item_tags.txt"))?;
+    let itt = read(&mut data, path.join("item_tags.txt"));
     let itt = blt.end..blt.end + itt;
 
-    let ett = read(&mut data, path.join("entity_tags.txt"))?;
+    let ett = read(&mut data, path.join("entity_tags.txt"));
     let ett = itt.end..itt.end + ett;
 
-    let gat = read(&mut data, path.join("game_event_tags.txt"))?;
+    let gat = read(&mut data, path.join("game_event_tags.txt"));
     let gat = ett.end..ett.end + gat;
 
+    let data = core::str::from_utf8(&data).unwrap();
     let block_names = registries(&mut w, &data[reg], &mut gen_hash);
     registries(&mut w, &data[pac], &mut gen_hash);
 
@@ -109,8 +110,7 @@ fn main() -> std::io::Result<()> {
     entity_tags(&mut w, &data[ett]);
     game_event_tags(&mut w, &data[gat]);
 
-    std::fs::write(out.join("data.rs"), w)?;
-    Ok(())
+    std::fs::write(out.join("data.rs"), w).unwrap();
 }
 
 fn version(w: &mut String, data: &str) {

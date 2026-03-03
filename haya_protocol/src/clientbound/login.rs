@@ -1,7 +1,7 @@
+use crate::ComponentJson;
 use crate::profile::GameProfileRef;
-use crate::{ComponentJson, Rest};
 use haya_ident::Ident;
-use mser::{ByteArray, Utf8, V32};
+use mser::{ByteArray, Rest, Utf8, V32};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {

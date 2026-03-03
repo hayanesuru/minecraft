@@ -3,7 +3,7 @@ use crate::{Compound, Name, RefStringTag, Tag, TagType};
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec::Vec;
-use haya_mutf8::{Mutf8, as_mutf8_ascii, decode_mutf8_len};
+use haya_mutf8::{as_mutf8_ascii, decode_mutf8_len};
 use haya_str::HayaStr;
 use mser::{Error, Read, Reader, Write, Writer};
 
@@ -31,7 +31,7 @@ impl<'a> Read<'a> for Name {
                         CowVec::Thin(s) => s.as_mut_ptr(),
                         CowVec::Heap(x) => x.as_mut_ptr(),
                     },
-                    &(DecodeMutf8(Mutf8::new_unchecked(data), len)),
+                    &(DecodeMutf8(data, len)),
                 );
                 match ptr {
                     CowVec::Thin(mut s) => {
