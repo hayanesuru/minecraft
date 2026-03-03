@@ -1,7 +1,6 @@
 #![no_std]
 
 mod hex;
-mod json;
 mod read;
 mod reader;
 mod varint;
@@ -9,10 +8,18 @@ mod write;
 mod writer;
 
 pub use self::hex::{hex_to_u8, u8_to_hex};
-pub use self::json::json_char_width_escaped;
-pub use self::reader::Reader;
 pub use self::varint::{V7MAX, V21, V21MAX, V32, V64};
-pub use self::writer::Writer;
+use core::marker::PhantomData;
+
+#[derive(Debug)]
+pub struct Reader<'a> {
+    pub(crate) ptr: *const u8,
+    pub(crate) end: *const u8,
+    pub(crate) marker: PhantomData<&'a [u8]>,
+}
+
+#[derive(Debug)]
+pub struct Writer(pub(crate) *mut u8);
 
 pub trait Write {
     /// # Safety

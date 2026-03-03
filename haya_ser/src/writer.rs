@@ -1,10 +1,10 @@
-pub struct Writer(pub(crate) *mut u8);
+use crate::Writer;
 
 impl Writer {
     /// # Safety
     ///
     /// must be valid for write.
-    #[inline(always)]
+    #[inline]
     pub unsafe fn write_byte(&mut self, byte: u8) {
         unsafe {
             self.0.write(byte);
@@ -15,7 +15,7 @@ impl Writer {
     /// # Safety
     ///
     /// must be valid for write.
-    #[inline(always)]
+    #[inline]
     pub unsafe fn write(&mut self, slice: &[u8]) {
         unsafe {
             core::ptr::copy_nonoverlapping(slice.as_ptr(), self.0, slice.len());
@@ -23,7 +23,7 @@ impl Writer {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn ptr(&mut self) -> *mut u8 {
         self.0
     }
