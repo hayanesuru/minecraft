@@ -286,7 +286,7 @@ impl ListInfo {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
-                let mut list = Vec::with_capacity(len);
+                let mut list = Vec::with_capacity(len.max(65536));
                 for _ in 0..len {
                     list.push(ByteArray::read(n)?.0);
                 }
@@ -296,7 +296,7 @@ impl ListInfo {
                 if len.checked_mul(2).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
-                let mut list = Vec::with_capacity(len);
+                let mut list = Vec::with_capacity(len.max(65536));
                 for _ in 0..len {
                     list.push(StringTag::read(n)?.0);
                 }
@@ -308,7 +308,7 @@ impl ListInfo {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
-                let mut list = Vec::with_capacity(len);
+                let mut list = Vec::with_capacity(len.max(65536));
                 for _ in 0..len {
                     list.push(IntArray::read(n)?.0);
                 }
@@ -318,7 +318,7 @@ impl ListInfo {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
                 }
-                let mut list = Vec::with_capacity(len);
+                let mut list = Vec::with_capacity(len.max(65536));
                 for _ in 0..len {
                     list.push(LongArray::read(n)?.0);
                 }
