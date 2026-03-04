@@ -13,7 +13,8 @@ pub struct HayaStr {
 
 #[derive(Clone, Copy)]
 #[repr(u8)]
-pub enum Len {
+#[allow(dead_code)]
+enum Len {
     N0,
     N1,
     N2,

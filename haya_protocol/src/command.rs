@@ -106,6 +106,7 @@ pub enum CommandArgumentType<'a> {
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[repr(u8)]
+#[mser(varint)]
 pub enum StringType {
     SingleWord,
     QuotablePhrase,
