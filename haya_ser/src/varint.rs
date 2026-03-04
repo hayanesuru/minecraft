@@ -320,6 +320,7 @@ impl<'a> Read<'a> for V64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::V21MAX;
 
     #[test]
     fn test_write() {
