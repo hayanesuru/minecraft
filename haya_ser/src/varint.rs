@@ -1,13 +1,4 @@
-use super::{Read, Write, Writer};
-use crate::{Error, Reader, cold_path};
-
-pub const V21MAX: usize = 0x1FFFFF;
-pub const V7MAX: usize = 0x7F;
-
-#[repr(transparent)]
-#[must_use]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct V21(pub u32);
+use crate::{Error, Read, Reader, V21, V32, V64, Write, Writer, cold_path};
 
 impl V21 {
     #[inline]
@@ -78,11 +69,6 @@ impl Write for V21 {
         }
     }
 }
-
-#[repr(transparent)]
-#[must_use]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct V32(pub u32);
 
 impl V32 {
     #[inline]
@@ -173,11 +159,6 @@ impl<'a> Read<'a> for V32 {
         Ok(Self(p))
     }
 }
-
-#[repr(transparent)]
-#[must_use]
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct V64(pub u64);
 
 impl V64 {
     #[inline]
@@ -335,6 +316,7 @@ impl<'a> Read<'a> for V64 {
         Ok(Self(p))
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

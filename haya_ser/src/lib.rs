@@ -1,14 +1,11 @@
 #![no_std]
 
-mod hex;
 mod read;
 mod reader;
 mod varint;
 mod write;
 mod writer;
 
-pub use self::hex::{hex_to_u8, u8_to_hex};
-pub use self::varint::{V7MAX, V21, V21MAX, V32, V64};
 use core::marker::PhantomData;
 
 #[derive(Debug)]
@@ -32,12 +29,30 @@ pub trait Write {
     fn len_s(&self) -> usize;
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Error;
 
 pub trait Read<'a>: Sized {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error>;
 }
+
+pub const V21MAX: usize = 0x1FFFFF;
+pub const V7MAX: usize = 0x7F;
+
+#[repr(transparent)]
+#[must_use]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct V21(pub u32);
+
+#[repr(transparent)]
+#[must_use]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct V32(pub u32);
+
+#[repr(transparent)]
+#[must_use]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct V64(pub u64);
 
 /// # Safety
 ///
