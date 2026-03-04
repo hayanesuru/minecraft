@@ -222,6 +222,19 @@ impl Difficulty {
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct ContainerId(pub V32);
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct Registry(pub V32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum Rarity {
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
