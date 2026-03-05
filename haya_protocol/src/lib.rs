@@ -7,6 +7,7 @@ use haya_nbt::Tag;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 pub mod advancement;
+pub mod attribute;
 pub mod clientbound;
 pub mod command;
 pub mod item;
@@ -290,6 +291,23 @@ impl Write for HolderSet<'_> {
             }
         }
     }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum EquipmentSlotGroup {
+    Any,
+    Mainhand,
+    Offhand,
+    Hand,
+    Feet,
+    Legs,
+    Chest,
+    Head,
+    Armor,
+    Body,
+    Saddle,
 }
 
 #[cfg(test)]

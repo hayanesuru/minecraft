@@ -29,13 +29,13 @@ pub struct ItemLore<'a>(pub List<'a, Component, 256>);
 pub struct ItemEnchantments<'a>(pub Map<'a, Holder, V32>);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct CanPlaceOn<'a> {
+pub struct AdventureModePredicate<'a> {
     pub predicates: List<'a, BlockPredicate<'a>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct CanBreak<'a> {
-    pub predicates: List<'a, BlockPredicate<'a>>,
+pub struct ItemAttributeModifiers {
+    
 }
 
 #[derive(Clone)]
@@ -54,8 +54,8 @@ pub enum TypedDataComponentType<'a> {
     Lore(ItemLore<'a>),
     Rarity(Rarity),
     Enchantments(ItemEnchantments<'a>),
-    CanPlaceOn(CanPlaceOn<'a>),
-    CanBreak(CanBreak<'a>),
+    CanPlaceOn(AdventureModePredicate<'a>),
+    CanBreak(AdventureModePredicate<'a>),
     AttributeModifiers,
     CustomModelData,
     TooltipDisplay,
@@ -185,7 +185,7 @@ impl TypedDataComponentType<'_> {
             Self::Rarity(..) => rarity,
             Self::Enchantments(..) => enchantments,
             Self::CanPlaceOn(..) => can_place_on,
-            Self::CanBreak => can_break,
+            Self::CanBreak(..) => can_break,
             Self::AttributeModifiers => attribute_modifiers,
             Self::CustomModelData => custom_model_data,
             Self::TooltipDisplay => tooltip_display,
