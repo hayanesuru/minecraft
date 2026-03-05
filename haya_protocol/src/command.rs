@@ -38,13 +38,13 @@ pub enum CommandNode<'a> {
         name: Utf8<'a>,
         executable: bool,
         restricted: bool,
-        arg_type: CommandArgumentType<'a>,
+        arg_type: CommandArgument<'a>,
         suggestions: Option<Suggestions>,
     },
 }
 
 #[derive(Clone, Debug)]
-pub enum CommandArgumentType<'a> {
+pub enum CommandArgument<'a> {
     Bool,
     Float { min: f32, max: f32 },
     Double { min: f64, max: f64 },
@@ -113,7 +113,7 @@ pub enum StringType {
     GreedyPhrase,
 }
 
-impl<'a> CommandArgumentType<'a> {
+impl<'a> CommandArgument<'a> {
     pub const fn id(&self) -> command_argument_type {
         use command_argument_type::*;
         match self {
@@ -178,7 +178,7 @@ impl<'a> CommandArgumentType<'a> {
     }
 }
 
-impl Write for CommandArgumentType<'_> {
+impl Write for CommandArgument<'_> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.id().write(w);
@@ -367,7 +367,7 @@ impl Write for CommandArgumentType<'_> {
     }
 }
 
-impl<'a> Read<'a> for CommandArgumentType<'a> {
+impl<'a> Read<'a> for CommandArgument<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         use command_argument_type::*;
 
@@ -698,7 +698,7 @@ impl<'a> Read<'a> for CommandNode<'a> {
                 name: Utf8::read(buf)?,
                 executable: (flags & FLAG_EXECUTABLE) != 0,
                 restricted: (flags & FLAG_RESTRICTED) != 0,
-                arg_type: CommandArgumentType::read(buf)?,
+                arg_type: CommandArgument::read(buf)?,
                 suggestions: if (flags & FLAG_SUGGESTION) != 0 {
                     Some(Suggestions::read(buf)?)
                 } else {
