@@ -1,4 +1,5 @@
-use crate::{Component, Holder, HolderSet, Rarity};
+use crate::advancement::BlockPredicate;
+use crate::{Component, Holder, Rarity};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
@@ -29,7 +30,12 @@ pub struct ItemEnchantments<'a>(pub Map<'a, Holder, V32>);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CanPlaceOn<'a> {
-    pub predicates: Option<HolderSet<'a>>,
+    pub predicates: List<'a, BlockPredicate<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CanBreak<'a> {
+    pub predicates: List<'a, BlockPredicate<'a>>,
 }
 
 #[derive(Clone)]
@@ -49,7 +55,7 @@ pub enum TypedDataComponentType<'a> {
     Rarity(Rarity),
     Enchantments(ItemEnchantments<'a>),
     CanPlaceOn(CanPlaceOn<'a>),
-    CanBreak,
+    CanBreak(CanBreak<'a>),
     AttributeModifiers,
     CustomModelData,
     TooltipDisplay,
