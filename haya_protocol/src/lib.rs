@@ -1,8 +1,12 @@
 #![no_std]
 
+use alloc::vec::Vec;
+use haya_collection::List;
+use haya_ident::Ident;
 use haya_nbt::Tag;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
+pub mod advancement;
 pub mod clientbound;
 pub mod command;
 pub mod item;
@@ -223,7 +227,7 @@ impl Difficulty {
 pub struct ContainerId(pub V32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Registry(pub V32);
+pub struct Holder(pub V32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
@@ -233,6 +237,59 @@ pub enum Rarity {
     Uncommon,
     Rare,
     Epic,
+}
+
+#[derive(Clone)]
+pub enum HolderSet<'a> {
+    Named(Ident<'a>),
+    Direct(List<'a, Holder>),
+}
+
+impl<'a> Read<'a> for HolderSet<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let len = V32::read(buf)?.0;
+        if len == 0 {
+            let name = Ident::read(buf)?;
+            Ok(Self::Named(name))
+        } else {
+            let len = (len - 1) as usize;
+            let mut vec = Vec::with_capacity(usize::min(len, 65536));
+            for _ in 0..len {
+                vec.push(Holder::read(buf)?);
+            }
+            Ok(Self::Direct(List::Owned(vec)))
+        }
+    }
+}
+
+impl Write for HolderSet<'_> {
+    unsafe fn write(&self, w: &mut Writer) {
+        match self {
+            Self::Named(name) => unsafe {
+                V32(0).write(w);
+                name.write(w);
+            },
+            Self::Direct(direct) => unsafe {
+                V32((direct.len() + 1) as u32).write(w);
+                for holder in direct.as_slice() {
+                    holder.write(w);
+                }
+            },
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Named(name) => V32(0).len_s() + name.len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32((direct.len() + 1) as u32).len_s();
+                for x in direct.as_slice() {
+                    len += x.len_s();
+                }
+                len
+            }
+        }
+    }
 }
 
 #[cfg(test)]

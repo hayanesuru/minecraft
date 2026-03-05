@@ -1,4 +1,4 @@
-use crate::{Component, Rarity, Registry};
+use crate::{Component, Holder, HolderSet, Rarity};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
@@ -25,7 +25,12 @@ pub struct CustomData(pub Tag);
 pub struct ItemLore<'a>(pub List<'a, Component, 256>);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemEnchantments<'a>(pub Map<'a, Registry, V32>);
+pub struct ItemEnchantments<'a>(pub Map<'a, Holder, V32>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CanPlaceOn<'a> {
+    pub predicates: Option<HolderSet<'a>>,
+}
 
 #[derive(Clone)]
 pub enum DataComponentType<'a> {
@@ -37,7 +42,7 @@ pub enum DataComponentType<'a> {
     UseEffects(UseEffects),
     CustomName(Component),
     MinimumAttackCharge(f32),
-    DamageType(Either<Registry, ResourceKey<'a>>),
+    DamageType(Either<Holder, ResourceKey<'a>>),
     ItemName(Component),
     ItemModel(Ident<'a>),
     Lore(ItemLore<'a>),
