@@ -124,7 +124,7 @@ pub enum TypedDataComponentType<'a> {
     TooltipDisplay(TooltipDisplay<'a>),
     RepairCost(u32),
     CreativeSlotLock,
-    EnchantmentGlintOverride,
+    EnchantmentGlintOverride(bool),
     IntangibleProjectile,
     Food,
     Consumable,
@@ -234,6 +234,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             tooltip_display => Self::TooltipDisplay(TooltipDisplay::read(buf)?),
             repair_cost => Self::RepairCost(V32::read(buf)?.0),
             creative_slot_lock => Self::CreativeSlotLock,
+            enchantment_glint_override => Self::EnchantmentGlintOverride(bool::read(buf)?),
             _ => todo!(),
         })
     }
@@ -265,6 +266,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::TooltipDisplay(x) => x.write(w),
                 Self::RepairCost(x) => V32(*x).write(w),
                 Self::CreativeSlotLock => (),
+                Self::EnchantmentGlintOverride(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -294,6 +296,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::TooltipDisplay(x) => x.len_s(),
                 Self::RepairCost(x) => V32(*x).len_s(),
                 Self::CreativeSlotLock => 0,
+                Self::EnchantmentGlintOverride(x) => x.len_s(),
                 _ => todo!(),
             }
     }
