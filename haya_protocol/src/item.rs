@@ -39,7 +39,7 @@ impl<'a> Write for ItemStack<'a> {
 #[derive(Clone)]
 pub struct OptionalItemStack<'a> {
     pub id: item,
-    pub count: u32,
+    pub count: u32, //todo
     pub patch_add: List<'a, TypedDataComponentType<'a>>,
     pub patch_remove: List<'a, data_component_type>,
 }
@@ -133,7 +133,7 @@ impl<'a> Write for OptionalItemStack<'a> {
 pub struct UseEffects {
     pub can_sprint: bool,
     pub interact_vibrations: bool,
-    pub speed_multiplier: f32,
+    pub speed_multiplier: f32, //todo
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -280,13 +280,13 @@ pub struct DamageResistant<'a> {
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
-    MaxStackSize(u32),
-    MaxDamage(u32),
-    Damage(u32),
+    MaxStackSize(u32), //todo
+    MaxDamage(u32),    //todo
+    Damage(u32),       //todo
     Unbreakable,
     UseEffects(UseEffects),
     CustomName(Component),
-    MinimumAttackCharge(f32),
+    MinimumAttackCharge(f32), //todo
     DamageType(Either<DamageType, ResourceKey<'a>>),
     ItemName(Component),
     ItemModel(Ident<'a>),
