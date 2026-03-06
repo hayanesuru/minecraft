@@ -1,5 +1,6 @@
 use crate::advancement::BlockPredicate;
 use crate::attribute::AttributeModifier;
+use crate::food::FoodProperties;
 use crate::{Component, EquipmentSlotGroup, Holder, Rarity};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
@@ -126,7 +127,7 @@ pub enum TypedDataComponentType<'a> {
     CreativeSlotLock,
     EnchantmentGlintOverride(bool),
     IntangibleProjectile,
-    Food,
+    Food(FoodProperties),
     Consumable,
     UseRemainder,
     UseCooldown,
@@ -235,6 +236,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             repair_cost => Self::RepairCost(V32::read(buf)?.0),
             creative_slot_lock => Self::CreativeSlotLock,
             enchantment_glint_override => Self::EnchantmentGlintOverride(bool::read(buf)?),
+            food => Self::Food(FoodProperties::read(buf)?),
             _ => todo!(),
         })
     }
@@ -267,6 +269,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::RepairCost(x) => V32(*x).write(w),
                 Self::CreativeSlotLock => (),
                 Self::EnchantmentGlintOverride(x) => x.write(w),
+                Self::Food(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -297,6 +300,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::RepairCost(x) => V32(*x).len_s(),
                 Self::CreativeSlotLock => 0,
                 Self::EnchantmentGlintOverride(x) => x.len_s(),
+                Self::Food(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -328,9 +332,9 @@ impl TypedDataComponentType<'_> {
             Self::TooltipDisplay(..) => tooltip_display,
             Self::RepairCost(..) => repair_cost,
             Self::CreativeSlotLock => creative_slot_lock,
-            Self::EnchantmentGlintOverride => enchantment_glint_override,
+            Self::EnchantmentGlintOverride(..) => enchantment_glint_override,
             Self::IntangibleProjectile => intangible_projectile,
-            Self::Food => food,
+            Self::Food(..) => food,
             Self::Consumable => consumable,
             Self::UseRemainder => use_remainder,
             Self::UseCooldown => use_cooldown,

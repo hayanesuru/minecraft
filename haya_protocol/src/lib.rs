@@ -10,6 +10,7 @@ pub mod advancement;
 pub mod attribute;
 pub mod clientbound;
 pub mod command;
+pub mod food;
 pub mod item;
 pub mod profile;
 pub mod serverbound;
