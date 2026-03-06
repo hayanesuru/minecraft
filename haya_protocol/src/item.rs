@@ -122,7 +122,7 @@ pub enum TypedDataComponentType<'a> {
     AttributeModifiers(ItemAttributeModifiers<'a>),
     CustomModelData(CustomModelData<'a>),
     TooltipDisplay(TooltipDisplay<'a>),
-    RepairCost,
+    RepairCost(u32),
     CreativeSlotLock,
     EnchantmentGlintOverride,
     IntangibleProjectile,
@@ -222,6 +222,14 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             custom_name => Self::CustomName(Component::read(buf)?),
             minimum_attack_charge => Self::MinimumAttackCharge(f32::read(buf)?),
             damage_type => Self::DamageType(Either::read(buf)?),
+            item_name => Self::ItemName(Component::read(buf)?),
+            item_model => Self::ItemModel(Ident::read(buf)?),
+            lore => Self::Lore(ItemLore::read(buf)?),
+            rarity => Self::Rarity(Rarity::read(buf)?),
+            enchantments => Self::Enchantments(ItemEnchantments::read(buf)?),
+            can_place_on => Self::CanPlaceOn(AdventureModePredicate::read(buf)?),
+            can_break => Self::CanBreak(AdventureModePredicate::read(buf)?),
+            attribute_modifiers => Self::AttributeModifiers(ItemAttributeModifiers::read(buf)?),
             _ => todo!(),
         })
     }
@@ -241,6 +249,14 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CustomName(x) => x.write(w),
                 Self::MinimumAttackCharge(x) => x.write(w),
                 Self::DamageType(x) => x.write(w),
+                Self::ItemName(x) => x.write(w),
+                Self::ItemModel(x) => x.write(w),
+                Self::Lore(x) => x.write(w),
+                Self::Rarity(x) => x.write(w),
+                Self::Enchantments(x) => x.write(w),
+                Self::CanPlaceOn(x) => x.write(w),
+                Self::CanBreak(x) => x.write(w),
+                Self::AttributeModifiers(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -258,10 +274,19 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CustomName(x) => x.len_s(),
                 Self::MinimumAttackCharge(x) => x.len_s(),
                 Self::DamageType(x) => x.len_s(),
+                Self::ItemName(x) => x.len_s(),
+                Self::ItemModel(x) => x.len_s(),
+                Self::Lore(x) => x.len_s(),
+                Self::Rarity(x) => x.len_s(),
+                Self::Enchantments(x) => x.len_s(),
+                Self::CanPlaceOn(x) => x.len_s(),
+                Self::CanBreak(x) => x.len_s(),
+                Self::AttributeModifiers(x) => x.len_s(),
                 _ => todo!(),
             }
     }
 }
+
 impl TypedDataComponentType<'_> {
     pub const fn id(&self) -> data_component_type {
         use data_component_type::*;
@@ -285,8 +310,8 @@ impl TypedDataComponentType<'_> {
             Self::CanBreak(..) => can_break,
             Self::AttributeModifiers(..) => attribute_modifiers,
             Self::CustomModelData(..) => custom_model_data,
-            Self::TooltipDisplay => tooltip_display,
-            Self::RepairCost => repair_cost,
+            Self::TooltipDisplay(..) => tooltip_display,
+            Self::RepairCost(..) => repair_cost,
             Self::CreativeSlotLock => creative_slot_lock,
             Self::EnchantmentGlintOverride => enchantment_glint_override,
             Self::IntangibleProjectile => intangible_projectile,
