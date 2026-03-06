@@ -1,7 +1,8 @@
 use crate::advancement::BlockPredicate;
 use crate::attribute::AttributeModifier;
 use crate::food::FoodProperties;
-use crate::{Component, EquipmentSlotGroup, Holder, Rarity};
+use crate::sound::SoundEvent;
+use crate::{Component, DamageType, Enchntment, EquipmentSlotGroup, Holder, Rarity};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
@@ -28,7 +29,7 @@ pub struct CustomData(pub Tag);
 pub struct ItemLore<'a>(pub List<'a, Component, 256>);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemEnchantments<'a>(pub Map<'a, Holder, V32>);
+pub struct ItemEnchantments<'a>(pub Map<'a, Enchntment, V32>);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AdventureModePredicate<'a> {
@@ -102,6 +103,50 @@ pub struct TooltipDisplay<'a> {
     pub hidden_components: List<'a, TypedDataComponentType<'a>>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Consumable<'a> {
+    pub consume_seconds: f32,
+    pub animation: ItemUseAnimation,
+    pub sound: Holder<SoundEvent<'a>>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[mser(varint)]
+#[repr(u8)]
+pub enum ItemUseAnimation {
+    None,
+    Eat,
+    Drink,
+    Block,
+    Bow,
+    Trident,
+    Crossbow,
+    Spyglass,
+    TootHorn,
+    Brush,
+    Bundle,
+    Spear,
+}
+
+impl ItemUseAnimation {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Eat => "eat",
+            Self::Drink => "drink",
+            Self::Block => "block",
+            Self::Bow => "bow",
+            Self::Trident => "trident",
+            Self::Crossbow => "crossbow",
+            Self::Spyglass => "spyglass",
+            Self::TootHorn => "toot_horn",
+            Self::Brush => "brush",
+            Self::Bundle => "bundle",
+            Self::Spear => "spear",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -112,7 +157,7 @@ pub enum TypedDataComponentType<'a> {
     UseEffects(UseEffects),
     CustomName(Component),
     MinimumAttackCharge(f32),
-    DamageType(Either<Holder, ResourceKey<'a>>),
+    DamageType(Either<DamageType, ResourceKey<'a>>),
     ItemName(Component),
     ItemModel(Ident<'a>),
     Lore(ItemLore<'a>),
@@ -128,7 +173,7 @@ pub enum TypedDataComponentType<'a> {
     EnchantmentGlintOverride(bool),
     IntangibleProjectile,
     Food(FoodProperties),
-    Consumable,
+    Consumable(Consumable<'a>),
     UseRemainder,
     UseCooldown,
     DamageResistant,
@@ -237,6 +282,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             creative_slot_lock => Self::CreativeSlotLock,
             enchantment_glint_override => Self::EnchantmentGlintOverride(bool::read(buf)?),
             food => Self::Food(FoodProperties::read(buf)?),
+            consumable => Self::Consumable(Consumable::read(buf)?),
             _ => todo!(),
         })
     }
@@ -270,6 +316,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CreativeSlotLock => (),
                 Self::EnchantmentGlintOverride(x) => x.write(w),
                 Self::Food(x) => x.write(w),
+                Self::Consumable(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -301,6 +348,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CreativeSlotLock => 0,
                 Self::EnchantmentGlintOverride(x) => x.len_s(),
                 Self::Food(x) => x.len_s(),
+                Self::Consumable(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -335,7 +383,7 @@ impl TypedDataComponentType<'_> {
             Self::EnchantmentGlintOverride(..) => enchantment_glint_override,
             Self::IntangibleProjectile => intangible_projectile,
             Self::Food(..) => food,
-            Self::Consumable => consumable,
+            Self::Consumable(..) => consumable,
             Self::UseRemainder => use_remainder,
             Self::UseCooldown => use_cooldown,
             Self::DamageResistant => damage_resistant,

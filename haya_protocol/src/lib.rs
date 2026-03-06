@@ -14,6 +14,7 @@ pub mod food;
 pub mod item;
 pub mod profile;
 pub mod serverbound;
+pub mod sound;
 pub mod stat;
 pub mod types;
 
@@ -229,7 +230,10 @@ impl Difficulty {
 pub struct ContainerId(pub V32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Holder(pub V32);
+pub struct Enchntment(pub V32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct DamageType(pub V32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
@@ -253,12 +257,12 @@ impl Rarity {
 }
 
 #[derive(Clone)]
-pub enum HolderSet<'a> {
+pub enum HolderSet<'a, T> {
     Named(Ident<'a>),
-    Direct(List<'a, Holder>),
+    Direct(List<'a, T>),
 }
 
-impl<'a> Read<'a> for HolderSet<'a> {
+impl<'a, T: Read<'a>> Read<'a> for HolderSet<'a, T> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V32::read(buf)?.0;
         if len == 0 {
@@ -268,14 +272,14 @@ impl<'a> Read<'a> for HolderSet<'a> {
             let len = (len - 1) as usize;
             let mut vec = Vec::with_capacity(usize::min(len, 65536));
             for _ in 0..len {
-                vec.push(Holder::read(buf)?);
+                vec.push(T::read(buf)?);
             }
             Ok(Self::Direct(List::Owned(vec)))
         }
     }
 }
 
-impl Write for HolderSet<'_> {
+impl<T: Write> Write for HolderSet<'_, T> {
     unsafe fn write(&self, w: &mut Writer) {
         match self {
             Self::Named(name) => unsafe {
@@ -299,6 +303,50 @@ impl Write for HolderSet<'_> {
                 for x in direct.as_slice() {
                     len += x.len_s();
                 }
+                len
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum Holder<T> {
+    Reference(u32),
+    Direct(T),
+}
+
+impl<'a, T: Read<'a>> Read<'a> for Holder<T> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let id = V32::read(buf)?.0;
+        if id == 0 {
+            Ok(Self::Direct(T::read(buf)?))
+        } else {
+            Ok(Self::Reference(id - 1))
+        }
+    }
+}
+
+impl<T: Write> Write for Holder<T> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                Self::Reference(id) => {
+                    V32(*id + 1).write(w);
+                }
+                Self::Direct(direct) => {
+                    V32(0).write(w);
+                    direct.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Reference(id) => V32(*id + 1).len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32(0).len_s();
+                len += direct.len_s();
                 len
             }
         }
