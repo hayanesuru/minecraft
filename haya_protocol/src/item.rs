@@ -5,7 +5,7 @@ use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
 use minecraft_data::{attribute, data_component_type, item};
-use mser::{Either, Error, Read, Reader, V21, V32, Write, Writer};
+use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 #[derive(Clone)]
 pub struct ItemStack {
@@ -52,6 +52,14 @@ pub enum ItemAttributeModifiersDisplay {
     Default,
     Hidden,
     Override(Component),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomModelData<'a> {
+    pub floats: List<'a, f32>,
+    pub flags: List<'a, bool>,
+    pub strings: List<'a, Utf8<'a>>,
+    pub colors: List<'a, u32>,
 }
 
 impl<'a> Read<'a> for ItemAttributeModifiersDisplay {
@@ -106,7 +114,7 @@ pub enum TypedDataComponentType<'a> {
     CanPlaceOn(AdventureModePredicate<'a>),
     CanBreak(AdventureModePredicate<'a>),
     AttributeModifiers(ItemAttributeModifiers<'a>),
-    CustomModelData,
+    CustomModelData(CustomModelData<'a>),
     TooltipDisplay,
     RepairCost,
     CreativeSlotLock,
@@ -197,9 +205,19 @@ pub enum TypedDataComponentType<'a> {
 
 impl<'a> Read<'a> for TypedDataComponentType<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let ty = data_component_type::read(buf)?;
-
-        todo!("{}", ty)
+        use data_component_type::*;
+        Ok(match data_component_type::read(buf)? {
+            custom_data => Self::CustomData(CustomData::read(buf)?),
+            max_stack_size => Self::MaxStackSize(V32::read(buf)?.0),
+            max_damage => Self::MaxDamage(V32::read(buf)?.0),
+            damage => Self::Damage(V32::read(buf)?.0),
+            unbreakable => Self::Unbreakable,
+            use_effects => Self::UseEffects(UseEffects::read(buf)?),
+            custom_name => Self::CustomName(Component::read(buf)?),
+            minimum_attack_charge => Self::MinimumAttackCharge(f32::read(buf)?),
+            damage_type => Self::DamageType(Either::read(buf)?),
+            _ => todo!(),
+        })
     }
 }
 
@@ -207,11 +225,35 @@ impl<'a> Write for TypedDataComponentType<'a> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             self.id().write(w);
+            match self {
+                Self::CustomData(x) => x.write(w),
+                Self::MaxStackSize(x) => V32(*x).write(w),
+                Self::MaxDamage(x) => V32(*x).write(w),
+                Self::Damage(x) => V32(*x).write(w),
+                Self::Unbreakable => (),
+                Self::UseEffects(x) => x.write(w),
+                Self::CustomName(x) => x.write(w),
+                Self::MinimumAttackCharge(x) => x.write(w),
+                Self::DamageType(x) => x.write(w),
+                _ => todo!(),
+            }
         }
     }
 
     fn len_s(&self) -> usize {
         self.id().len_s()
+            + match self {
+                Self::CustomData(x) => x.len_s(),
+                Self::MaxStackSize(x) => V32(*x).len_s(),
+                Self::MaxDamage(x) => V32(*x).len_s(),
+                Self::Damage(x) => V32(*x).len_s(),
+                Self::Unbreakable => 0,
+                Self::UseEffects(x) => x.len_s(),
+                Self::CustomName(x) => x.len_s(),
+                Self::MinimumAttackCharge(x) => x.len_s(),
+                Self::DamageType(x) => x.len_s(),
+                _ => todo!(),
+            }
     }
 }
 impl TypedDataComponentType<'_> {
@@ -236,7 +278,7 @@ impl TypedDataComponentType<'_> {
             Self::CanPlaceOn(..) => can_place_on,
             Self::CanBreak(..) => can_break,
             Self::AttributeModifiers(..) => attribute_modifiers,
-            Self::CustomModelData => custom_model_data,
+            Self::CustomModelData(..) => custom_model_data,
             Self::TooltipDisplay => tooltip_display,
             Self::RepairCost => repair_cost,
             Self::CreativeSlotLock => creative_slot_lock,
