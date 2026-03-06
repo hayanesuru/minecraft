@@ -230,6 +230,10 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             can_place_on => Self::CanPlaceOn(AdventureModePredicate::read(buf)?),
             can_break => Self::CanBreak(AdventureModePredicate::read(buf)?),
             attribute_modifiers => Self::AttributeModifiers(ItemAttributeModifiers::read(buf)?),
+            custom_model_data => Self::CustomModelData(CustomModelData::read(buf)?),
+            tooltip_display => Self::TooltipDisplay(TooltipDisplay::read(buf)?),
+            repair_cost => Self::RepairCost(V32::read(buf)?.0),
+            creative_slot_lock => Self::CreativeSlotLock,
             _ => todo!(),
         })
     }
@@ -257,6 +261,10 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CanPlaceOn(x) => x.write(w),
                 Self::CanBreak(x) => x.write(w),
                 Self::AttributeModifiers(x) => x.write(w),
+                Self::CustomModelData(x) => x.write(w),
+                Self::TooltipDisplay(x) => x.write(w),
+                Self::RepairCost(x) => V32(*x).write(w),
+                Self::CreativeSlotLock => (),
                 _ => todo!(),
             }
         }
@@ -282,6 +290,10 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CanPlaceOn(x) => x.len_s(),
                 Self::CanBreak(x) => x.len_s(),
                 Self::AttributeModifiers(x) => x.len_s(),
+                Self::CustomModelData(x) => x.len_s(),
+                Self::TooltipDisplay(x) => x.len_s(),
+                Self::RepairCost(x) => V32(*x).len_s(),
+                Self::CreativeSlotLock => 0,
                 _ => todo!(),
             }
     }
