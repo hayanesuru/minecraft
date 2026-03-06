@@ -5,7 +5,7 @@ use crate::sound::SoundEvent;
 use crate::{Component, DamageType, Enchntment, EquipmentSlotGroup, Holder, Rarity};
 use alloc::vec::Vec;
 use haya_collection::{List, Map};
-use haya_ident::{Ident, ResourceKey};
+use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
 use minecraft_data::{attribute, data_component_type, item};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -266,6 +266,17 @@ pub struct UseRemainder<'a> {
     pub convert_into: OptionalItemStack<'a>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UseCooldown<'a> {
+    pub seconds: f32,
+    pub cooldown_group: Option<Ident<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DamageResistant<'a> {
+    pub types: TagKey<'a>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -294,8 +305,8 @@ pub enum TypedDataComponentType<'a> {
     Food(FoodProperties),
     Consumable(Consumable<'a>),
     UseRemainder(UseRemainder<'a>),
-    UseCooldown,
-    DamageResistant,
+    UseCooldown(UseCooldown<'a>),
+    DamageResistant(DamageResistant<'a>),
     Tool,
     Weapon,
     AttackRange,
@@ -403,6 +414,8 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             food => Self::Food(FoodProperties::read(buf)?),
             consumable => Self::Consumable(Consumable::read(buf)?),
             use_remainder => Self::UseRemainder(UseRemainder::read(buf)?),
+            use_cooldown => Self::UseCooldown(UseCooldown::read(buf)?),
+            damage_resistant => Self::DamageResistant(DamageResistant::read(buf)?),
             _ => todo!(),
         })
     }
@@ -438,6 +451,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Food(x) => x.write(w),
                 Self::Consumable(x) => x.write(w),
                 Self::UseRemainder(x) => x.write(w),
+                Self::UseCooldown(x) => x.write(w),
+                Self::DamageResistant(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -471,6 +486,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Food(x) => x.len_s(),
                 Self::Consumable(x) => x.len_s(),
                 Self::UseRemainder(x) => x.len_s(),
+                Self::UseCooldown(x) => x.len_s(),
+                Self::DamageResistant(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -507,8 +524,8 @@ impl TypedDataComponentType<'_> {
             Self::Food(..) => food,
             Self::Consumable(..) => consumable,
             Self::UseRemainder(..) => use_remainder,
-            Self::UseCooldown => use_cooldown,
-            Self::DamageResistant => damage_resistant,
+            Self::UseCooldown(..) => use_cooldown,
+            Self::DamageResistant(..) => damage_resistant,
             Self::Tool => tool,
             Self::Weapon => weapon,
             Self::AttackRange => attack_range,
