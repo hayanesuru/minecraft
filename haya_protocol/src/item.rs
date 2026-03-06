@@ -76,9 +76,9 @@ impl Write for ItemAttributeModifiersDisplay {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {
-                ItemAttributeModifiersDisplay::Default => w.write_byte(0),
-                ItemAttributeModifiersDisplay::Hidden => w.write_byte(1),
-                ItemAttributeModifiersDisplay::Override(component) => {
+                Self::Default => w.write_byte(0),
+                Self::Hidden => w.write_byte(1),
+                Self::Override(component) => {
                     w.write_byte(2);
                     component.write(w);
                 }
@@ -88,11 +88,17 @@ impl Write for ItemAttributeModifiersDisplay {
 
     fn len_s(&self) -> usize {
         match self {
-            ItemAttributeModifiersDisplay::Default => 1,
-            ItemAttributeModifiersDisplay::Hidden => 1,
-            ItemAttributeModifiersDisplay::Override(component) => 1 + component.len_s(),
+            Self::Default => 1,
+            Self::Hidden => 1,
+            Self::Override(component) => 1 + component.len_s(),
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TooltipDisplay<'a> {
+    pub hide_tooltip: bool,
+    pub hidden_components: List<'a, TypedDataComponentType<'a>>,
 }
 
 #[derive(Clone)]
@@ -115,7 +121,7 @@ pub enum TypedDataComponentType<'a> {
     CanBreak(AdventureModePredicate<'a>),
     AttributeModifiers(ItemAttributeModifiers<'a>),
     CustomModelData(CustomModelData<'a>),
-    TooltipDisplay,
+    TooltipDisplay(TooltipDisplay<'a>),
     RepairCost,
     CreativeSlotLock,
     EnchantmentGlintOverride,
