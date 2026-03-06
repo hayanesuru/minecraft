@@ -263,7 +263,7 @@ impl ItemUseAnimation {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UseRemainder<'a> {
-    pub convert_into: OptionalItemStack,
+    pub convert_into: OptionalItemStack<'a>,
 }
 
 #[derive(Clone)]
@@ -402,6 +402,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             enchantment_glint_override => Self::EnchantmentGlintOverride(bool::read(buf)?),
             food => Self::Food(FoodProperties::read(buf)?),
             consumable => Self::Consumable(Consumable::read(buf)?),
+            use_remainder => Self::UseRemainder(UseRemainder::read(buf)?),
             _ => todo!(),
         })
     }
@@ -436,6 +437,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::EnchantmentGlintOverride(x) => x.write(w),
                 Self::Food(x) => x.write(w),
                 Self::Consumable(x) => x.write(w),
+                Self::UseRemainder(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -468,6 +470,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::EnchantmentGlintOverride(x) => x.len_s(),
                 Self::Food(x) => x.len_s(),
                 Self::Consumable(x) => x.len_s(),
+                Self::UseRemainder(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -503,7 +506,7 @@ impl TypedDataComponentType<'_> {
             Self::IntangibleProjectile => intangible_projectile,
             Self::Food(..) => food,
             Self::Consumable(..) => consumable,
-            Self::UseRemainder => use_remainder,
+            Self::UseRemainder(..) => use_remainder,
             Self::UseCooldown => use_cooldown,
             Self::DamageResistant => damage_resistant,
             Self::Tool => tool,
