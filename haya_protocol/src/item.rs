@@ -3,6 +3,7 @@ use crate::attribute::AttributeModifier;
 use crate::food::FoodProperties;
 use crate::sound::SoundEvent;
 use crate::{Component, DamageType, Enchntment, EquipmentSlotGroup, Holder, Rarity};
+use alloc::vec::Vec;
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
@@ -10,9 +11,122 @@ use minecraft_data::{attribute, data_component_type, item};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 #[derive(Clone)]
-pub struct ItemStack {
+pub struct ItemStack<'a>(OptionalItemStack<'a>);
+
+impl<'a> Read<'a> for ItemStack<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let item_stack = OptionalItemStack::read(buf)?;
+        if item_stack.count == 0 || item_stack.id == item::air {
+            Err(Error)
+        } else {
+            Ok(Self(item_stack))
+        }
+    }
+}
+
+impl<'a> Write for ItemStack<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.0.write();
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len_s()
+    }
+}
+
+#[derive(Clone)]
+pub struct OptionalItemStack<'a> {
     pub id: item,
     pub count: u32,
+    pub patch_add: List<'a, TypedDataComponentType<'a>>,
+    pub patch_remove: List<'a, data_component_type>,
+}
+
+impl<'a> Read<'a> for OptionalItemStack<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let count = V32::read(buf)?.0;
+        if count as i32 <= 0 {
+            Ok(Self {
+                id: item::air,
+                count: 0,
+                patch_add: List::Borrowed(&[]),
+                patch_remove: List::Borrowed(&[]),
+            })
+        } else {
+            let id = item::read(buf)?;
+            let positive = V32::read(buf)?.0 as usize;
+            let negative = V32::read(buf)?.0 as usize;
+            if positive == 0 && negative == 0 {
+                Ok(Self {
+                    id,
+                    count,
+                    patch_add: List::Borrowed(&[]),
+                    patch_remove: List::Borrowed(&[]),
+                })
+            } else {
+                let mut patch_add = Vec::with_capacity(usize::min(positive, 65536));
+                for _ in 0..positive {
+                    patch_add.push(TypedDataComponentType::read(buf)?);
+                }
+                let mut patch_remove = Vec::with_capacity(usize::min(negative, 65536));
+                for _ in 0..negative {
+                    patch_remove.push(data_component_type::read(buf)?);
+                }
+                Ok(Self {
+                    id,
+                    count,
+                    patch_add: List::Owned(patch_add),
+                    patch_remove: List::Owned(patch_remove),
+                })
+            }
+        }
+    }
+}
+
+impl<'a> Write for OptionalItemStack<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            if self.count == 0 || self.id == item::air {
+                V32(0).write(w);
+            } else {
+                V32(self.count).write(w);
+                self.id.write(w);
+                V21(self.patch_add.len() as u32).write(w);
+                V21(self.patch_remove.len() as u32).write(w);
+                if !self.patch_add.is_empty() || !self.patch_remove.is_empty() {
+                    for x in self.patch_add.as_slice() {
+                        x.write(w);
+                    }
+                    for x in self.patch_remove.as_slice() {
+                        x.write(w);
+                    }
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        if self.count == 0 || self.id == item::air {
+            V32(0).len_s()
+        } else {
+            let mut w = 0;
+            w += V32(self.count).len_s();
+            w += self.id.len_s();
+            w += V21(self.patch_add.len() as u32).len_s();
+            w += V21(self.patch_remove.len() as u32).len_s();
+            if !self.patch_add.is_empty() || !self.patch_remove.is_empty() {
+                for x in self.patch_add.as_slice() {
+                    w += x.len_s();
+                }
+                for x in self.patch_remove.as_slice() {
+                    w += x.len_s();
+                }
+            }
+            w
+        }
+    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -147,6 +261,11 @@ impl ItemUseAnimation {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UseRemainder<'a> {
+    pub convert_into: OptionalItemStack,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -174,7 +293,7 @@ pub enum TypedDataComponentType<'a> {
     IntangibleProjectile,
     Food(FoodProperties),
     Consumable(Consumable<'a>),
-    UseRemainder,
+    UseRemainder(UseRemainder<'a>),
     UseCooldown,
     DamageResistant,
     Tool,
