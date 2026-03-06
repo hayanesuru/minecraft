@@ -1,10 +1,11 @@
 use crate::advancement::BlockPredicate;
-use crate::{Component, Holder, Rarity};
+use crate::attribute::AttributeModifier;
+use crate::{Component, EquipmentSlotGroup, Holder, Rarity};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_nbt::Tag;
-use minecraft_data::{data_component_type, item};
-use mser::{Either, Error, Read, Reader, V32, Write, Writer};
+use minecraft_data::{attribute, data_component_type, item};
+use mser::{Either, Error, Read, Reader, V21, V32, Write, Writer};
 
 #[derive(Clone)]
 pub struct ItemStack {
@@ -34,8 +35,56 @@ pub struct AdventureModePredicate<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemAttributeModifiers {
-    
+pub struct ItemAttributeModifiers<'a> {
+    pub modifiers: List<'a, ItemAttributeModifiersEntry<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ItemAttributeModifiersEntry<'a> {
+    pub attribute: attribute,
+    pub modifier: AttributeModifier<'a>,
+    pub slot: EquipmentSlotGroup,
+    pub display: ItemAttributeModifiersDisplay,
+}
+
+#[derive(Clone)]
+pub enum ItemAttributeModifiersDisplay {
+    Default,
+    Hidden,
+    Override(Component),
+}
+
+impl<'a> Read<'a> for ItemAttributeModifiersDisplay {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(match V21::read(buf)?.0 {
+            1 => Self::Hidden,
+            2 => Self::Override(Component::read(buf)?),
+            _ => Self::Default,
+        })
+    }
+}
+
+impl Write for ItemAttributeModifiersDisplay {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                ItemAttributeModifiersDisplay::Default => w.write_byte(0),
+                ItemAttributeModifiersDisplay::Hidden => w.write_byte(1),
+                ItemAttributeModifiersDisplay::Override(component) => {
+                    w.write_byte(2);
+                    component.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            ItemAttributeModifiersDisplay::Default => 1,
+            ItemAttributeModifiersDisplay::Hidden => 1,
+            ItemAttributeModifiersDisplay::Override(component) => 1 + component.len_s(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -56,7 +105,7 @@ pub enum TypedDataComponentType<'a> {
     Enchantments(ItemEnchantments<'a>),
     CanPlaceOn(AdventureModePredicate<'a>),
     CanBreak(AdventureModePredicate<'a>),
-    AttributeModifiers,
+    AttributeModifiers(ItemAttributeModifiers<'a>),
     CustomModelData,
     TooltipDisplay,
     RepairCost,
@@ -186,7 +235,7 @@ impl TypedDataComponentType<'_> {
             Self::Enchantments(..) => enchantments,
             Self::CanPlaceOn(..) => can_place_on,
             Self::CanBreak(..) => can_break,
-            Self::AttributeModifiers => attribute_modifiers,
+            Self::AttributeModifiers(..) => attribute_modifiers,
             Self::CustomModelData => custom_model_data,
             Self::TooltipDisplay => tooltip_display,
             Self::RepairCost => repair_cost,

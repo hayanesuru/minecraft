@@ -240,6 +240,17 @@ pub enum Rarity {
     Epic,
 }
 
+impl Rarity {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Common => "common",
+            Self::Uncommon => "uncommon",
+            Self::Rare => "rare",
+            Self::Epic => "epic",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum HolderSet<'a> {
     Named(Ident<'a>),
@@ -308,6 +319,24 @@ pub enum EquipmentSlotGroup {
     Armor,
     Body,
     Saddle,
+}
+
+impl EquipmentSlotGroup {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Any => "any",
+            Self::Mainhand => "mainhand",
+            Self::Offhand => "offhand",
+            Self::Hand => "hand",
+            Self::Feet => "feet",
+            Self::Legs => "legs",
+            Self::Chest => "chest",
+            Self::Head => "head",
+            Self::Armor => "armor",
+            Self::Body => "body",
+            Self::Saddle => "saddle",
+        }
+    }
 }
 
 #[cfg(test)]
