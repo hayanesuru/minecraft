@@ -27,7 +27,7 @@ impl<'a> Read<'a> for ItemStack<'a> {
 impl<'a> Write for ItemStack<'a> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
-            self.0.write();
+            self.0.write(w);
         }
     }
 
