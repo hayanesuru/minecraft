@@ -2,12 +2,12 @@ use crate::advancement::BlockPredicate;
 use crate::attribute::AttributeModifier;
 use crate::food::FoodProperties;
 use crate::sound::SoundEvent;
-use crate::{Component, DamageType, Enchntment, EquipmentSlotGroup, Holder, Rarity};
+use crate::{Component, DamageType, Enchntment, EquipmentSlotGroup, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
-use minecraft_data::{attribute, data_component_type, item};
+use minecraft_data::{attribute, block, data_component_type, item, sound_event};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 #[derive(Clone)]
@@ -39,7 +39,7 @@ impl<'a> Write for ItemStack<'a> {
 #[derive(Clone)]
 pub struct OptionalItemStack<'a> {
     pub id: item,
-    pub count: u32, //todo
+    pub count: u32,
     pub patch_add: List<'a, TypedDataComponentType<'a>>,
     pub patch_remove: List<'a, data_component_type>,
 }
@@ -133,7 +133,7 @@ impl<'a> Write for OptionalItemStack<'a> {
 pub struct UseEffects {
     pub can_sprint: bool,
     pub interact_vibrations: bool,
-    pub speed_multiplier: f32, //todo
+    pub speed_multiplier: f32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -221,7 +221,7 @@ pub struct TooltipDisplay<'a> {
 pub struct Consumable<'a> {
     pub consume_seconds: f32,
     pub animation: ItemUseAnimation,
-    pub sound: Holder<SoundEvent<'a>>,
+    pub sound: Holder<SoundEvent<'a>, sound_event>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -277,16 +277,31 @@ pub struct DamageResistant<'a> {
     pub types: TagKey<'a>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ToolRule<'a> {
+    pub blocks: HolderSet<'a, block>,
+    pub speed: Option<f32>,
+    pub correct_for_drops: Option<bool>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Tool<'a> {
+    pub rules: List<'a, ToolRule<'a>>,
+    pub default_mining_speed: f32,
+    pub damage_per_block: V32,
+    pub can_destroy_blocks_in_creative: bool,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
-    MaxStackSize(u32), //todo
-    MaxDamage(u32),    //todo
-    Damage(u32),       //todo
+    MaxStackSize(u32),
+    MaxDamage(u32),
+    Damage(u32),
     Unbreakable,
     UseEffects(UseEffects),
     CustomName(Component),
-    MinimumAttackCharge(f32), //todo
+    MinimumAttackCharge(f32),
     DamageType(Either<DamageType, ResourceKey<'a>>),
     ItemName(Component),
     ItemModel(Ident<'a>),
@@ -307,7 +322,7 @@ pub enum TypedDataComponentType<'a> {
     UseRemainder(UseRemainder<'a>),
     UseCooldown(UseCooldown<'a>),
     DamageResistant(DamageResistant<'a>),
-    Tool,
+    Tool(Tool<'a>),
     Weapon,
     AttackRange,
     Enchantable,
@@ -416,6 +431,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             use_remainder => Self::UseRemainder(UseRemainder::read(buf)?),
             use_cooldown => Self::UseCooldown(UseCooldown::read(buf)?),
             damage_resistant => Self::DamageResistant(DamageResistant::read(buf)?),
+            tool => Self::Tool(Tool::read(buf)?),
             _ => todo!(),
         })
     }
@@ -453,6 +469,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::UseRemainder(x) => x.write(w),
                 Self::UseCooldown(x) => x.write(w),
                 Self::DamageResistant(x) => x.write(w),
+                Self::Tool(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -488,6 +505,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::UseRemainder(x) => x.len_s(),
                 Self::UseCooldown(x) => x.len_s(),
                 Self::DamageResistant(x) => x.len_s(),
+                Self::Tool(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -526,7 +544,7 @@ impl TypedDataComponentType<'_> {
             Self::UseRemainder(..) => use_remainder,
             Self::UseCooldown(..) => use_cooldown,
             Self::DamageResistant(..) => damage_resistant,
-            Self::Tool => tool,
+            Self::Tool(..) => tool,
             Self::Weapon => weapon,
             Self::AttackRange => attack_range,
             Self::Enchantable => enchantable,

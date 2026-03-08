@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use haya_collection::List;
 use haya_ident::Ident;
 use haya_nbt::Tag;
+use minecraft_data::sound_event;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 pub mod advancement;
@@ -310,28 +311,35 @@ impl<T: Write> Write for HolderSet<'_, T> {
 }
 
 #[derive(Clone)]
-pub enum Holder<T> {
-    Reference(u32),
+pub enum Holder<T, R> {
+    Reference(R),
     Direct(T),
 }
 
-impl<'a, T: Read<'a>> Read<'a> for Holder<T> {
+impl<'a, T: Read<'a>> Read<'a> for Holder<T, sound_event> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let id = V32::read(buf)?.0;
         if id == 0 {
             Ok(Self::Direct(T::read(buf)?))
         } else {
-            Ok(Self::Reference(id - 1))
+            let id = id - 1;
+            match match TryFrom::try_from(id) {
+                Ok(x) => sound_event::new(x),
+                Err(_) => None,
+            } {
+                Some(x) => Ok(Self::Reference(x)),
+                None => Err(Error),
+            }
         }
     }
 }
 
-impl<T: Write> Write for Holder<T> {
+impl<T: Write> Write for Holder<T, sound_event> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {
                 Self::Reference(id) => {
-                    V32(*id + 1).write(w);
+                    V32((id.id() as u32) + 1).write(w);
                 }
                 Self::Direct(direct) => {
                     V32(0).write(w);
@@ -343,7 +351,7 @@ impl<T: Write> Write for Holder<T> {
 
     fn len_s(&self) -> usize {
         match self {
-            Self::Reference(id) => V32(*id + 1).len_s(),
+            Self::Reference(id) => V32((id.id() as u32) + 1).len_s(),
             Self::Direct(direct) => {
                 let mut len = V32(0).len_s();
                 len += direct.len_s();
