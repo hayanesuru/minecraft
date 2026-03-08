@@ -292,6 +292,12 @@ pub struct Tool<'a> {
     pub can_destroy_blocks_in_creative: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Weapon {
+    item_damage_per_attack: V32,
+    disable_blocking_for_seconds: f32,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
