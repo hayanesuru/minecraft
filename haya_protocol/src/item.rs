@@ -298,6 +298,16 @@ pub struct Weapon {
     disable_blocking_for_seconds: f32,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AttackRange {
+    pub min_range: f32,
+    pub max_range: f32,
+    pub min_creative_range: f32,
+    pub max_creative_range: f32,
+    pub hitbox_margin: f32,
+    pub mob_factor: f32,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -329,8 +339,8 @@ pub enum TypedDataComponentType<'a> {
     UseCooldown(UseCooldown<'a>),
     DamageResistant(DamageResistant<'a>),
     Tool(Tool<'a>),
-    Weapon,
-    AttackRange,
+    Weapon(Weapon),
+    AttackRange(AttackRange),
     Enchantable,
     Equippable,
     Repairable,
@@ -438,6 +448,8 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             use_cooldown => Self::UseCooldown(UseCooldown::read(buf)?),
             damage_resistant => Self::DamageResistant(DamageResistant::read(buf)?),
             tool => Self::Tool(Tool::read(buf)?),
+            weapon => Self::Weapon(Weapon::read(buf)?),
+            attack_range => Self::AttackRange(AttackRange::read(buf)?),
             _ => todo!(),
         })
     }
@@ -476,6 +488,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::UseCooldown(x) => x.write(w),
                 Self::DamageResistant(x) => x.write(w),
                 Self::Tool(x) => x.write(w),
+                Self::Weapon(x) => x.write(w),
+                Self::AttackRange(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -512,6 +526,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::UseCooldown(x) => x.len_s(),
                 Self::DamageResistant(x) => x.len_s(),
                 Self::Tool(x) => x.len_s(),
+                Self::Weapon(x) => x.len_s(),
+                Self::AttackRange(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -551,8 +567,8 @@ impl TypedDataComponentType<'_> {
             Self::UseCooldown(..) => use_cooldown,
             Self::DamageResistant(..) => damage_resistant,
             Self::Tool(..) => tool,
-            Self::Weapon => weapon,
-            Self::AttackRange => attack_range,
+            Self::Weapon(..) => weapon,
+            Self::AttackRange(..) => attack_range,
             Self::Enchantable => enchantable,
             Self::Equippable => equippable,
             Self::Repairable => repairable,
