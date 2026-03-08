@@ -94,6 +94,7 @@ impl<'a> Read<'a> for ResourceKey<'a> {
         })
     }
 }
+
 impl<'a> Ident<'a> {
     /// # Safety
     ///
@@ -188,6 +189,28 @@ enum Inner {
     Thin { path: HayaStr },
     Heap { path: Box<str> },
     Full { namespace: Box<str>, path: Box<str> },
+}
+
+#[derive(Clone, Debug)]
+pub struct TagKey<'a> {
+    pub location: Ident<'a>,
+}
+
+impl Write for TagKey<'_> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.location.write(w) }
+    }
+    fn len_s(&self) -> usize {
+        self.location.len_s()
+    }
+}
+
+impl<'a> Read<'a> for TagKey<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            location: Ident::read(buf)?,
+        })
+    }
 }
 
 #[cfg(test)]

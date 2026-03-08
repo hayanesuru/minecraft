@@ -1,13 +1,21 @@
 #![no_std]
 
+use alloc::vec::Vec;
+use haya_collection::List;
+use haya_ident::Ident;
 use haya_nbt::Tag;
+use minecraft_data::sound_event;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
+pub mod advancement;
+pub mod attribute;
 pub mod clientbound;
 pub mod command;
+pub mod food;
 pub mod item;
 pub mod profile;
 pub mod serverbound;
+pub mod sound;
 pub mod stat;
 pub mod types;
 
@@ -221,6 +229,172 @@ impl Difficulty {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct ContainerId(pub V32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct Enchntment(pub V32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct DamageType(pub V32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum Rarity {
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
+}
+
+impl Rarity {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Common => "common",
+            Self::Uncommon => "uncommon",
+            Self::Rare => "rare",
+            Self::Epic => "epic",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum HolderSet<'a, T> {
+    Named(Ident<'a>),
+    Direct(List<'a, T>),
+}
+
+impl<'a, T: Read<'a>> Read<'a> for HolderSet<'a, T> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let len = V32::read(buf)?.0;
+        if len == 0 {
+            let name = Ident::read(buf)?;
+            Ok(Self::Named(name))
+        } else {
+            let len = (len - 1) as usize;
+            let mut vec = Vec::with_capacity(usize::min(len, 65536));
+            for _ in 0..len {
+                vec.push(T::read(buf)?);
+            }
+            Ok(Self::Direct(List::Owned(vec)))
+        }
+    }
+}
+
+impl<T: Write> Write for HolderSet<'_, T> {
+    unsafe fn write(&self, w: &mut Writer) {
+        match self {
+            Self::Named(name) => unsafe {
+                V32(0).write(w);
+                name.write(w);
+            },
+            Self::Direct(direct) => unsafe {
+                V32((direct.len() + 1) as u32).write(w);
+                for holder in direct.as_slice() {
+                    holder.write(w);
+                }
+            },
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Named(name) => V32(0).len_s() + name.len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32((direct.len() + 1) as u32).len_s();
+                for x in direct.as_slice() {
+                    len += x.len_s();
+                }
+                len
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum Holder<T, R> {
+    Reference(R),
+    Direct(T),
+}
+
+impl<'a, T: Read<'a>> Read<'a> for Holder<T, sound_event> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let id = V32::read(buf)?.0;
+        if id == 0 {
+            Ok(Self::Direct(T::read(buf)?))
+        } else {
+            let id = id - 1;
+            match match TryFrom::try_from(id) {
+                Ok(x) => sound_event::new(x),
+                Err(_) => None,
+            } {
+                Some(x) => Ok(Self::Reference(x)),
+                None => Err(Error),
+            }
+        }
+    }
+}
+
+impl<T: Write> Write for Holder<T, sound_event> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                Self::Reference(id) => {
+                    V32((id.id() as u32) + 1).write(w);
+                }
+                Self::Direct(direct) => {
+                    V32(0).write(w);
+                    direct.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Reference(id) => V32((id.id() as u32) + 1).len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32(0).len_s();
+                len += direct.len_s();
+                len
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum EquipmentSlotGroup {
+    Any,
+    Mainhand,
+    Offhand,
+    Hand,
+    Feet,
+    Legs,
+    Chest,
+    Head,
+    Armor,
+    Body,
+    Saddle,
+}
+
+impl EquipmentSlotGroup {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Any => "any",
+            Self::Mainhand => "mainhand",
+            Self::Offhand => "offhand",
+            Self::Hand => "hand",
+            Self::Feet => "feet",
+            Self::Legs => "legs",
+            Self::Chest => "chest",
+            Self::Head => "head",
+            Self::Armor => "armor",
+            Self::Body => "body",
+            Self::Saddle => "saddle",
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
