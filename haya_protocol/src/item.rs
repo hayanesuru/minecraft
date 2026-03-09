@@ -330,6 +330,11 @@ pub struct Equippable<'a> {
     pub shearing_sound: Holder<SoundEvent<'a>, sound_event>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Repairable<'a> {
+    pub items: HolderSet<'a, item>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -363,11 +368,11 @@ pub enum TypedDataComponentType<'a> {
     Tool(Tool<'a>),
     Weapon(Weapon),
     AttackRange(AttackRange),
-    Enchantable,
-    Equippable,
-    Repairable,
+    Enchantable(Enchantable),
+    Equippable(Equippable<'a>),
+    Repairable(Repairable<'a>),
     Glider,
-    TooltipStyle,
+    TooltipStyle(Ident<'a>),
     DeathProtection,
     BlocksAttacks,
     PiercingWeapon,
@@ -472,6 +477,11 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             tool => Self::Tool(Tool::read(buf)?),
             weapon => Self::Weapon(Weapon::read(buf)?),
             attack_range => Self::AttackRange(AttackRange::read(buf)?),
+            enchantable => Self::Enchantable(Enchantable::read(buf)?),
+            equippable => Self::Equippable(Equippable::read(buf)?),
+            repairable => Self::Repairable(Repairable::read(buf)?),
+            glider => Self::Glider,
+            tooltip_style => Self::TooltipStyle(Ident::read(buf)?),
             _ => todo!(),
         })
     }
@@ -512,6 +522,11 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Tool(x) => x.write(w),
                 Self::Weapon(x) => x.write(w),
                 Self::AttackRange(x) => x.write(w),
+                Self::Enchantable(x) => x.write(w),
+                Self::Equippable(x) => x.write(w),
+                Self::Repairable(x) => x.write(w),
+                Self::Glider => (),
+                Self::TooltipStyle(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -550,6 +565,11 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Tool(x) => x.len_s(),
                 Self::Weapon(x) => x.len_s(),
                 Self::AttackRange(x) => x.len_s(),
+                Self::Enchantable(x) => x.len_s(),
+                Self::Equippable(x) => x.len_s(),
+                Self::Repairable(x) => x.len_s(),
+                Self::Glider => 0,
+                Self::TooltipStyle(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -591,11 +611,11 @@ impl TypedDataComponentType<'_> {
             Self::Tool(..) => tool,
             Self::Weapon(..) => weapon,
             Self::AttackRange(..) => attack_range,
-            Self::Enchantable => enchantable,
-            Self::Equippable => equippable,
-            Self::Repairable => repairable,
+            Self::Enchantable(..) => enchantable,
+            Self::Equippable(..) => equippable,
+            Self::Repairable(..) => repairable,
             Self::Glider => glider,
-            Self::TooltipStyle => tooltip_style,
+            Self::TooltipStyle(..) => tooltip_style,
             Self::DeathProtection => death_protection,
             Self::BlocksAttacks => blocks_attacks,
             Self::PiercingWeapon => piercing_weapon,
