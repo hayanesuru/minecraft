@@ -2,12 +2,14 @@ use crate::advancement::BlockPredicate;
 use crate::attribute::AttributeModifier;
 use crate::food::FoodProperties;
 use crate::sound::SoundEvent;
-use crate::{Component, DamageType, Enchntment, EquipmentSlotGroup, Holder, HolderSet, Rarity};
+use crate::{
+    Component, DamageType, Enchntment, EquipmentSlot, EquipmentSlotGroup, Holder, HolderSet, Rarity,
+};
 use alloc::vec::Vec;
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
-use minecraft_data::{attribute, block, data_component_type, item, sound_event};
+use minecraft_data::{attribute, block, data_component_type, entity_type, item, sound_event};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 #[derive(Clone)]
@@ -311,6 +313,21 @@ pub struct AttackRange {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Enchantable {
     pub value: V32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Equippable<'a> {
+    pub slot: EquipmentSlot,
+    pub equip_sound: Holder<SoundEvent<'a>, sound_event>,
+    pub asset_id: Option<Ident<'a>>,
+    pub camera_overlay: Option<Ident<'a>>,
+    pub allowed_entities: Option<HolderSet<'a, entity_type>>,
+    pub dispensable: bool,
+    pub swappable: bool,
+    pub damage_on_hurt: bool,
+    pub equip_on_interact: bool,
+    pub can_be_sheared: bool,
+    pub shearing_sound: Holder<SoundEvent<'a>, sound_event>,
 }
 
 #[derive(Clone)]

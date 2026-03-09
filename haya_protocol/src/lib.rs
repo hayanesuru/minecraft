@@ -399,6 +399,35 @@ impl EquipmentSlotGroup {
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
+pub enum EquipmentSlot {
+    Mainhand,
+    Feet,
+    Legs,
+    Chest,
+    Head,
+    Offhand,
+    Body,
+    Saddle,
+}
+
+impl EquipmentSlot {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Mainhand => "mainhand",
+            Self::Feet => "feet",
+            Self::Legs => "legs",
+            Self::Chest => "chest",
+            Self::Head => "head",
+            Self::Offhand => "offhand",
+            Self::Body => "body",
+            Self::Saddle => "saddle",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
 pub enum DyeColor {
     White,
     Orange,
