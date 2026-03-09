@@ -308,6 +308,11 @@ pub struct AttackRange {
     pub mob_factor: f32,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Enchantable {
+    pub value: V32,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
