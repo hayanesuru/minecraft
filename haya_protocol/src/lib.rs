@@ -229,13 +229,13 @@ impl Difficulty {
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct ContainerId(pub V32);
+pub struct ContainerId(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Enchntment(pub V32);
+pub struct Enchntment(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct DamageType(pub V32);
+pub struct DamageType(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
