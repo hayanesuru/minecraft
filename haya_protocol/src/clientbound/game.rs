@@ -13,7 +13,8 @@ pub struct BundleDelimiter {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AddEntity {
-    pub id: V32,
+    #[mser(varint)]
+    pub id: u32,
     pub uuid: Uuid,
     pub r#type: entity_type,
     pub pos: Vec3,
@@ -21,12 +22,14 @@ pub struct AddEntity {
     pub x_rot: ByteAngle,
     pub y_rot: ByteAngle,
     pub y_head_rot: ByteAngle,
-    pub data: V32,
+    #[mser(varint)]
+    pub data: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Animate {
-    pub id: V32,
+    #[mser(varint)]
+    pub id: u32,
     pub action: u8,
 }
 
@@ -60,12 +63,14 @@ pub struct AwardStats<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BlockChangedAck {
-    pub sequence: V32,
+    #[mser(varint)]
+    pub sequence: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BlockDestruction {
-    pub id: V32,
+    #[mser(varint)]
+    pub id: u32,
     pub pos: BlockPosPacked,
     pub progress: u8,
 }
@@ -272,7 +277,8 @@ pub struct ChangeDifficulty {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChunkBatchFinished {
-    pub batch_size: V32,
+    #[mser(varint)]
+    pub batch_size: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -296,9 +302,12 @@ pub struct ClearTitles {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommandSuggestions<'a> {
-    pub id: V32,
-    pub start: V32,
-    pub length: V32,
+    #[mser(varint)]
+    pub id: u32,
+    #[mser(varint)]
+    pub start: u32,
+    #[mser(varint)]
+    pub length: u32,
     pub suggestions: List<'a, SuggestionEntry<'a>>,
 }
 

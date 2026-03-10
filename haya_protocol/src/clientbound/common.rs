@@ -51,7 +51,8 @@ pub struct StoreCookie<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Transfer<'a> {
     pub host: Utf8<'a>,
-    pub port: V32,
+    #[mser(varint)]
+    pub port: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

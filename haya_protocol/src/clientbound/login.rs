@@ -1,7 +1,7 @@
 use crate::ComponentJson;
 use crate::profile::GameProfileRef;
 use haya_ident::Ident;
-use mser::{ByteArray, Rest, Utf8, V32};
+use mser::{ByteArray, Rest, Utf8};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {
@@ -23,12 +23,14 @@ pub struct LoginFinished<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginCompression {
-    pub compression_threshold: V32,
+    #[mser(varint)]
+    pub compression_threshold: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CustomQuery<'a> {
-    pub transaction_id: V32,
+    #[mser(varint)]
+    pub transaction_id: u32,
     pub id: Ident<'a>,
     pub payload: Rest<'a, 1048576>,
 }

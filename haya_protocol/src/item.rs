@@ -290,14 +290,16 @@ pub struct ToolRule<'a> {
 pub struct Tool<'a> {
     pub rules: List<'a, ToolRule<'a>>,
     pub default_mining_speed: f32,
-    pub damage_per_block: V32,
+    #[mser(varint)]
+    pub damage_per_block: u32,
     pub can_destroy_blocks_in_creative: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Weapon {
-    item_damage_per_attack: V32,
-    disable_blocking_for_seconds: f32,
+    #[mser(varint)]
+    pub item_damage_per_attack: u32,
+    pub disable_blocking_for_seconds: f32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -312,7 +314,8 @@ pub struct AttackRange {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Enchantable {
-    pub value: V32,
+    #[mser(varint)]
+    pub value: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -333,6 +336,19 @@ pub struct Equippable<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Repairable<'a> {
     pub items: HolderSet<'a, item>,
+}
+
+pub struct DeathProtection<'a> {
+    pub death_effects: List<'a, ConsumeEffect>,
+}
+
+#[derive(Clone)]
+pub enum ConsumeEffect {
+    Apply {},
+    Remove {},
+    Clear {},
+    TeleportRandomly {},
+    PlaySound {},
 }
 
 #[derive(Clone)]
