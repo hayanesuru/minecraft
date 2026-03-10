@@ -72,3 +72,15 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
         Err(err) => err.to_compile_error().into(),
     }
 }
+
+fn has_varint_attr(field: &syn::Field) -> bool {
+    field.attrs.iter().any(|attr| {
+        if !attr.path().is_ident("mser") {
+            return false;
+        }
+        attr.meta
+            .require_list()
+            .and_then(|list| list.parse_args::<kw::varint>())
+            .is_ok()
+    })
+}

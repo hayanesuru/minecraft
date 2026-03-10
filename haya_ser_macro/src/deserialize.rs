@@ -1,4 +1,4 @@
-use crate::{V7MAX, V21MAX, kw};
+use crate::{V7MAX, V21MAX, has_varint_attr, kw};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt, quote};
 
@@ -23,8 +23,25 @@ pub fn deserialize_struct(
         _ => unreachable!(),
     };
     let read = fields
-        .members()
-        .map(|field| quote!(#field: ::#cratename::Read::read(r)?,));
+        .iter()
+        .enumerate()
+        .map(|(idx, field)| match field.ident.clone() {
+            Some(ident) => (field, syn::Member::Named(ident)),
+            None => (
+                field,
+                syn::Member::Unnamed(syn::Index {
+                    index: idx as u32,
+                    span: proc_macro2::Span::call_site(),
+                }),
+            ),
+        })
+        .map(|(field, member)| {
+            if has_varint_attr(field) {
+                quote!(#member: ::#cratename::V32::read(r)?.0,)
+            } else {
+                quote!(#member: ::#cratename::Read::read(r)?,)
+            }
+        });
     Ok(quote! {
         #[automatically_derived]
         impl <'__a #impl_generics ::#cratename::Read<'__a> for #name #tok {

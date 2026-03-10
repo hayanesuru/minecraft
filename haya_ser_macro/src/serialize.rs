@@ -1,4 +1,4 @@
-use crate::{V7MAX, V21MAX, kw};
+use crate::{V7MAX, V21MAX, has_varint_attr, kw};
 use quote::quote;
 
 pub fn serialize_struct(
@@ -14,21 +14,43 @@ pub fn serialize_struct(
     let write = fields
         .iter()
         .enumerate()
-        .map(|(idx, field)| match &field.ident {
-            Some(ident) => quote!(::#cratename::Write::write(&self.#ident, __w);),
-            None => {
-                let l = proc_macro2::Literal::usize_unsuffixed(idx);
-                quote!(::#cratename::Write::write(&self.#l, __w);)
+        .map(|(idx, field)| match field.ident.clone() {
+            Some(ident) => (field, syn::Member::Named(ident)),
+            None => (
+                field,
+                syn::Member::Unnamed(syn::Index {
+                    index: idx as u32,
+                    span: proc_macro2::Span::call_site(),
+                }),
+            ),
+        })
+        .map(|(field, member)| {
+            let varint = has_varint_attr(field);
+            if varint {
+                quote!(::#cratename::Write::write(&::#cratename::V32(self.#member), __w);)
+            } else {
+                quote!(::#cratename::Write::write(&self.#member, __w);)
             }
         });
     let len_s = fields
         .iter()
         .enumerate()
-        .map(|(idx, field)| match &field.ident {
-            Some(ident) => quote!(::#cratename::Write::len_s(&self.#ident)),
-            None => {
-                let l = proc_macro2::Literal::usize_unsuffixed(idx);
-                quote!(::#cratename::Write::len_s(&self.#l))
+        .map(|(idx, field)| match field.ident.clone() {
+            Some(ident) => (field, syn::Member::Named(ident)),
+            None => (
+                field,
+                syn::Member::Unnamed(syn::Index {
+                    index: idx as u32,
+                    span: proc_macro2::Span::call_site(),
+                }),
+            ),
+        })
+        .map(|(field, member)| {
+            let varint = has_varint_attr(field);
+            if varint {
+                quote!(::#cratename::Write::len_s(&::#cratename::V32(self.#member)))
+            } else {
+                quote!(::#cratename::Write::len_s(&self.#member))
             }
         });
 
