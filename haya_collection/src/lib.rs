@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, Reader, V21, Write, Writer};
 
@@ -140,5 +141,24 @@ impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, 
             vec.push((k, v));
         }
         Ok(Self(List::Owned(vec)))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct BoxCodec<T>(pub Box<T>);
+
+impl<T: Write> Write for BoxCodec<T> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.0.as_ref().write(w) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.as_ref().len_s()
+    }
+}
+
+impl<'a, T: Read<'a>> Read<'a> for BoxCodec<T> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self(Box::new(T::read(buf)?)))
     }
 }
