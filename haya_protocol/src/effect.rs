@@ -1,14 +1,14 @@
-use haya_collection::BoxCodec;
+use haya_collection::Cow;
 use minecraft_data::mob_effect;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct MobEffect {
+pub struct MobEffect<'a> {
     effect: mob_effect,
-    details: MobEffectDetails,
+    details: MobEffectDetails<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct MobEffectDetails {
+pub struct MobEffectDetails<'a> {
     #[mser(varint)]
     amplifier: u32,
     #[mser(varint)]
@@ -16,5 +16,5 @@ pub struct MobEffectDetails {
     ambient: bool,
     show_particles: bool,
     show_icon: bool,
-    hidden_effect: Option<BoxCodec<Self>>,
+    hidden_effect: Option<Cow<'a, Self>>,
 }
