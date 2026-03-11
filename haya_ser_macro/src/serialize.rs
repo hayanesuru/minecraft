@@ -1,4 +1,5 @@
-use crate::{V7MAX, V21MAX, has_varint_attr, kw};
+use crate::{Attrs, V7MAX, V21MAX, is_i32, parse_fields};
+use alloc::boxed::Box;
 use quote::quote;
 
 pub fn serialize_struct(
@@ -11,48 +12,32 @@ pub fn serialize_struct(
         syn::Data::Struct(data) => &data.fields,
         _ => unreachable!(),
     };
-    let write = fields
-        .iter()
-        .enumerate()
-        .map(|(idx, field)| match field.ident.clone() {
-            Some(ident) => (field, syn::Member::Named(ident)),
-            None => (
-                field,
-                syn::Member::Unnamed(syn::Index {
-                    index: idx as u32,
-                    span: proc_macro2::Span::call_site(),
-                }),
-            ),
-        })
-        .map(|(field, member)| {
-            let varint = has_varint_attr(field);
-            if varint {
+    let fields = parse_fields(fields)
+        .map(|(f, a, m)| (f, a.unwrap(), m))
+        .collect::<Box<_>>();
+
+    let write = fields.iter().map(|(field, attrs, member)| {
+        if attrs.varint {
+            if is_i32(&field.ty) {
+                quote!(::#cratename::Write::write(&::#cratename::V32(self.#member as u32), __w);)
+            } else {
                 quote!(::#cratename::Write::write(&::#cratename::V32(self.#member), __w);)
-            } else {
-                quote!(::#cratename::Write::write(&self.#member, __w);)
             }
-        });
-    let len_s = fields
-        .iter()
-        .enumerate()
-        .map(|(idx, field)| match field.ident.clone() {
-            Some(ident) => (field, syn::Member::Named(ident)),
-            None => (
-                field,
-                syn::Member::Unnamed(syn::Index {
-                    index: idx as u32,
-                    span: proc_macro2::Span::call_site(),
-                }),
-            ),
-        })
-        .map(|(field, member)| {
-            let varint = has_varint_attr(field);
-            if varint {
+        } else {
+            quote!(::#cratename::Write::write(&self.#member, __w);)
+        }
+    });
+    let len_s = fields.iter().map(|(field, attrs, member)| {
+        if attrs.varint {
+            if is_i32(&field.ty) {
+                quote!(::#cratename::Write::len_s(&::#cratename::V32(self.#member as u32)))
+            } else {
                 quote!(::#cratename::Write::len_s(&::#cratename::V32(self.#member)))
-            } else {
-                quote!(::#cratename::Write::len_s(&self.#member))
             }
-        });
+        } else {
+            quote!(::#cratename::Write::len_s(&self.#member))
+        }
+    });
 
     Ok(quote! {
         #[automatically_derived]
@@ -77,21 +62,16 @@ pub fn serialize_struct(
 pub fn serialize_enum(
     input: syn::DeriveInput,
     cratename: syn::Path,
+    attrs: Attrs,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
     let mut repr = None;
-    let mut varint = false;
+    let varint = attrs.varint;
     let variants = match &input.data {
         syn::Data::Enum(data) => &data.variants,
         _ => unreachable!(),
     };
     let len = variants.len();
-    for attr in &input.attrs {
-        if attr.path().is_ident("mser") {
-            attr.meta.require_list()?.parse_args::<kw::varint>()?;
-            varint = true;
-        }
-    }
     for attr in &input.attrs {
         if attr.path().is_ident("repr") {
             attr.parse_nested_meta(|meta| {
