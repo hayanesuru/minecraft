@@ -145,7 +145,14 @@ pub struct CustomData(pub Tag);
 pub struct ItemLore<'a>(pub List<'a, Component, 256>);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemEnchantments<'a>(pub Map<'a, Enchntment, V32>);
+pub struct ItemEnchantments<'a>(pub Map<'a, Enchntment, ItemEnchantmentLevel>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ItemEnchantmentLevel(#[mser(varint, filter = validate_enchantment_level)] pub i32);
+
+fn validate_enchantment_level(level: &i32) -> bool {
+    (0..=255).contains(level)
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AdventureModePredicate<'a> {
@@ -314,8 +321,12 @@ pub struct AttackRange {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Enchantable {
-    #[mser(varint)]
-    pub value: u32,
+    #[mser(varint, filter = validate_enchantable)]
+    pub value: i32,
+}
+
+fn validate_enchantable(value: &i32) -> bool {
+    *value > 0
 }
 
 #[derive(Clone, Serialize, Deserialize)]

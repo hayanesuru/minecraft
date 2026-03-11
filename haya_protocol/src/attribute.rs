@@ -4,7 +4,7 @@ use haya_ident::Ident;
 pub struct AttributeModifier<'a> {
     pub id: Ident<'a>,
     pub amount: f64,
-    operation: AttributeOperation,
+    pub operation: AttributeOperation,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

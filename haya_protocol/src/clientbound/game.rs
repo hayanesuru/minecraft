@@ -58,8 +58,11 @@ impl AnimateAction {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AwardStats<'a> {
-    pub stats: Map<'a, Stat, V32>,
+    pub stats: Map<'a, Stat, StatValue>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct StatValue(#[mser(varint)] pub u32);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BlockChangedAck {
