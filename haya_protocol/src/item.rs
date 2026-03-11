@@ -1,45 +1,27 @@
+pub mod item_attribute_modifiers;
+pub mod tool;
+
 use crate::advancement::BlockPredicate;
-use crate::attribute::AttributeModifier;
 use crate::effect::MobEffect;
 use crate::food::FoodProperties;
+use crate::item::item_attribute_modifiers::ItemAttributeModifiers;
+use crate::item::tool::Tool;
 use crate::sound::SoundEvent;
-use crate::{
-    Component, DamageType, Enchntment, EquipmentSlot, EquipmentSlotGroup, Holder, HolderSet, Rarity,
-};
+use crate::{Component, DamageType, Enchntment, EquipmentSlot, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
 use minecraft_data::{
-    attribute, block, consume_effect_type, data_component_type, entity_type, item, mob_effect,
-    sound_event,
+    consume_effect_type, data_component_type, entity_type, item, mob_effect, sound_event,
 };
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
-#[derive(Clone)]
-pub struct ItemStack<'a>(OptionalItemStack<'a>);
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ItemStack<'a>(#[mser(filter = validate_item_stack)] pub OptionalItemStack<'a>);
 
-impl<'a> Read<'a> for ItemStack<'a> {
-    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let item_stack = OptionalItemStack::read(buf)?;
-        if item_stack.count == 0 || item_stack.id == item::air {
-            Err(Error)
-        } else {
-            Ok(Self(item_stack))
-        }
-    }
-}
-
-impl<'a> Write for ItemStack<'a> {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            self.0.write(w);
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        self.0.len_s()
-    }
+fn validate_item_stack(item_stack: &OptionalItemStack<'_>) -> bool {
+    !(item_stack.count == 0 || item_stack.id == item::air)
 }
 
 #[derive(Clone)]
@@ -164,64 +146,11 @@ pub struct AdventureModePredicate<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemAttributeModifiers<'a> {
-    pub modifiers: List<'a, ItemAttributeModifiersEntry<'a>>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ItemAttributeModifiersEntry<'a> {
-    pub attribute: attribute,
-    pub modifier: AttributeModifier<'a>,
-    pub slot: EquipmentSlotGroup,
-    pub display: ItemAttributeModifiersDisplay,
-}
-
-#[derive(Clone)]
-pub enum ItemAttributeModifiersDisplay {
-    Default,
-    Hidden,
-    Override(Component),
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct CustomModelData<'a> {
     pub floats: List<'a, f32>,
     pub flags: List<'a, bool>,
     pub strings: List<'a, Utf8<'a>>,
     pub colors: List<'a, u32>,
-}
-
-impl<'a> Read<'a> for ItemAttributeModifiersDisplay {
-    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        Ok(match V21::read(buf)?.0 {
-            1 => Self::Hidden,
-            2 => Self::Override(Component::read(buf)?),
-            _ => Self::Default,
-        })
-    }
-}
-
-impl Write for ItemAttributeModifiersDisplay {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            match self {
-                Self::Default => w.write_byte(0),
-                Self::Hidden => w.write_byte(1),
-                Self::Override(component) => {
-                    w.write_byte(2);
-                    component.write(w);
-                }
-            }
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        match self {
-            Self::Default => 1,
-            Self::Hidden => 1,
-            Self::Override(component) => 1 + component.len_s(),
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -288,22 +217,6 @@ pub struct UseCooldown<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DamageResistant<'a> {
     pub types: TagKey<'a>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ToolRule<'a> {
-    pub blocks: HolderSet<'a, block>,
-    pub speed: Option<f32>,
-    pub correct_for_drops: Option<bool>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Tool<'a> {
-    pub rules: List<'a, ToolRule<'a>>,
-    pub default_mining_speed: f32,
-    #[mser(varint)]
-    pub damage_per_block: u32,
-    pub can_destroy_blocks_in_creative: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
