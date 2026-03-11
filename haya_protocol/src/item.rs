@@ -1,10 +1,12 @@
 pub mod item_attribute_modifiers;
+pub mod kinetic_weapon;
 pub mod tool;
 
 use crate::advancement::BlockPredicate;
 use crate::effect::MobEffect;
 use crate::food::FoodProperties;
 use crate::item::item_attribute_modifiers::ItemAttributeModifiers;
+use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::tool::Tool;
 use crate::sound::SoundEvent;
 use crate::{Component, DamageType, Enchntment, EquipmentSlot, Holder, HolderSet, Rarity};
@@ -434,7 +436,7 @@ pub enum TypedDataComponentType<'a> {
     DeathProtection(DeathProtection<'a>),
     BlocksAttacks(BlocksAttacks<'a>),
     PiercingWeapon(PiercingWeapon<'a>),
-    KineticWeapon,
+    KineticWeapon(KineticWeapon<'a>),
     SwingAnimation,
     StoredEnchantments,
     DyedColor,
@@ -543,6 +545,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             death_protection => Self::DeathProtection(DeathProtection::read(buf)?),
             blocks_attacks => Self::BlocksAttacks(BlocksAttacks::read(buf)?),
             piercing_weapon => Self::PiercingWeapon(PiercingWeapon::read(buf)?),
+            kinetic_weapon => Self::KineticWeapon(KineticWeapon::read(buf)?),
             _ => todo!(),
         })
     }
@@ -591,6 +594,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::DeathProtection(x) => x.write(w),
                 Self::BlocksAttacks(x) => x.write(w),
                 Self::PiercingWeapon(x) => x.write(w),
+                Self::KineticWeapon(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -637,6 +641,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::DeathProtection(x) => x.len_s(),
                 Self::BlocksAttacks(x) => x.len_s(),
                 Self::PiercingWeapon(x) => x.len_s(),
+                Self::KineticWeapon(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -686,7 +691,7 @@ impl TypedDataComponentType<'_> {
             Self::DeathProtection(..) => death_protection,
             Self::BlocksAttacks(..) => blocks_attacks,
             Self::PiercingWeapon(..) => piercing_weapon,
-            Self::KineticWeapon => kinetic_weapon,
+            Self::KineticWeapon(..) => kinetic_weapon,
             Self::SwingAnimation => swing_animation,
             Self::StoredEnchantments => stored_enchantments,
             Self::DyedColor => dyed_color,
