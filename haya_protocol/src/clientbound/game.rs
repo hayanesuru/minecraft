@@ -5,7 +5,7 @@ use haya_collection::{List, Map};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
-use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
+use mser::{ByteArray, Error, Read, Reader, Utf8, V21, Write, Writer};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
