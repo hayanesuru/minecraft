@@ -13,10 +13,14 @@
         "procMacro": {
           "enable": true,
         },
-        "initialization_options": {
-          "rust-analyzer.cargo.targetDir": true,
-          "rust-analyzer.assist.preferSelf": true,
-          "rust-analyzer.imports.preferNoStd": true,
+        "cargo": {
+          "targetDir": true,
+        },
+        "assist": {
+          "preferSelf": true,
+        },
+        "imports": {
+          "preferNoStd": true,
         },
       },
     },
