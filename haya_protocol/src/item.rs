@@ -446,6 +446,40 @@ impl<'a> Write for ConsumeEffect<'a> {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BlocksAttacks<'a> {
+    pub block_delay_seconds: f32,
+    pub disable_cooldown_scale: f32,
+    pub damage_reductions: List<'a, DamageReduction<'a>>,
+    pub item_damage: ItemDamageFunction,
+    pub bypassed_by: Option<TagKey<'a>>,
+    pub block_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub disable_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DamageReduction<'a> {
+    pub horizontal_blocking_angle: f32,
+    pub ty: Option<HolderSet<'a, DamageType>>,
+    pub base: f32,
+    pub factor: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ItemDamageFunction {
+    pub threshold: f32,
+    pub base: f32,
+    pub factor: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PiercingWeapon<'a> {
+    pub deals_knockback: bool,
+    pub dismounts: bool,
+    pub sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub hit_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -485,8 +519,8 @@ pub enum TypedDataComponentType<'a> {
     Glider,
     TooltipStyle(Ident<'a>),
     DeathProtection(DeathProtection<'a>),
-    BlocksAttacks,
-    PiercingWeapon,
+    BlocksAttacks(BlocksAttacks<'a>),
+    PiercingWeapon(PiercingWeapon<'a>),
     KineticWeapon,
     SwingAnimation,
     StoredEnchantments,
@@ -594,6 +628,8 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             glider => Self::Glider,
             tooltip_style => Self::TooltipStyle(Ident::read(buf)?),
             death_protection => Self::DeathProtection(DeathProtection::read(buf)?),
+            blocks_attacks => Self::BlocksAttacks(BlocksAttacks::read(buf)?),
+            piercing_weapon => Self::PiercingWeapon(PiercingWeapon::read(buf)?),
             _ => todo!(),
         })
     }
@@ -640,6 +676,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Glider => (),
                 Self::TooltipStyle(x) => x.write(w),
                 Self::DeathProtection(x) => x.write(w),
+                Self::BlocksAttacks(x) => x.write(w),
+                Self::PiercingWeapon(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -684,6 +722,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Glider => 0,
                 Self::TooltipStyle(x) => x.len_s(),
                 Self::DeathProtection(x) => x.len_s(),
+                Self::BlocksAttacks(x) => x.len_s(),
+                Self::PiercingWeapon(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -731,8 +771,8 @@ impl TypedDataComponentType<'_> {
             Self::Glider => glider,
             Self::TooltipStyle(..) => tooltip_style,
             Self::DeathProtection(..) => death_protection,
-            Self::BlocksAttacks => blocks_attacks,
-            Self::PiercingWeapon => piercing_weapon,
+            Self::BlocksAttacks(..) => blocks_attacks,
+            Self::PiercingWeapon(..) => piercing_weapon,
             Self::KineticWeapon => kinetic_weapon,
             Self::SwingAnimation => swing_animation,
             Self::StoredEnchantments => stored_enchantments,
