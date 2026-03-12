@@ -421,6 +421,15 @@ impl SwingAnimationType {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct DyedItemColor(pub u32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct MapItemColor(pub u32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct MapId(#[mser(varint)] pub u32);
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -465,9 +474,9 @@ pub enum TypedDataComponentType<'a> {
     KineticWeapon(KineticWeapon<'a>),
     SwingAnimation(SwingAnimation),
     StoredEnchantments(ItemEnchantments<'a>),
-    DyedColor,
-    MapColor,
-    MapId,
+    DyedColor(DyedItemColor),
+    MapColor(MapItemColor),
+    MapId(MapId),
     MapDecorations,
     MapPostProcessing,
     ChargedProjectiles,
@@ -574,6 +583,9 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             kinetic_weapon => Self::KineticWeapon(KineticWeapon::read(buf)?),
             swing_animation => Self::SwingAnimation(SwingAnimation::read(buf)?),
             stored_enchantments => Self::StoredEnchantments(ItemEnchantments::read(buf)?),
+            dyed_color => Self::DyedColor(DyedItemColor::read(buf)?),
+            map_color => Self::MapColor(MapItemColor::read(buf)?),
+            map_id => Self::MapId(MapId::read(buf)?),
             _ => todo!(),
         })
     }
@@ -625,6 +637,9 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::KineticWeapon(x) => x.write(w),
                 Self::SwingAnimation(x) => x.write(w),
                 Self::StoredEnchantments(x) => x.write(w),
+                Self::DyedColor(x) => x.write(w),
+                Self::MapColor(x) => x.write(w),
+                Self::MapId(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -674,6 +689,9 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::KineticWeapon(x) => x.len_s(),
                 Self::SwingAnimation(x) => x.len_s(),
                 Self::StoredEnchantments(x) => x.len_s(),
+                Self::DyedColor(x) => x.len_s(),
+                Self::MapColor(x) => x.len_s(),
+                Self::MapId(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -726,9 +744,9 @@ impl TypedDataComponentType<'_> {
             Self::KineticWeapon(..) => kinetic_weapon,
             Self::SwingAnimation(..) => swing_animation,
             Self::StoredEnchantments(..) => stored_enchantments,
-            Self::DyedColor => dyed_color,
-            Self::MapColor => map_color,
-            Self::MapId => map_id,
+            Self::DyedColor(..) => dyed_color,
+            Self::MapColor(..) => map_color,
+            Self::MapId(..) => map_id,
             Self::MapDecorations => map_decorations,
             Self::MapPostProcessing => map_post_processing,
             Self::ChargedProjectiles => charged_projectiles,
