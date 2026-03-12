@@ -395,6 +395,32 @@ pub struct PiercingWeapon<'a> {
     pub hit_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SwingAnimation {
+    pub ty: SwingAnimationType,
+    #[mser(varint)]
+    pub duration: u32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum SwingAnimationType {
+    None,
+    Whack,
+    Stab,
+}
+
+impl SwingAnimationType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Whack => "whack",
+            Self::Stab => "stab",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -437,8 +463,8 @@ pub enum TypedDataComponentType<'a> {
     BlocksAttacks(BlocksAttacks<'a>),
     PiercingWeapon(PiercingWeapon<'a>),
     KineticWeapon(KineticWeapon<'a>),
-    SwingAnimation,
-    StoredEnchantments,
+    SwingAnimation(SwingAnimation),
+    StoredEnchantments(ItemEnchantments<'a>),
     DyedColor,
     MapColor,
     MapId,
@@ -546,6 +572,8 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             blocks_attacks => Self::BlocksAttacks(BlocksAttacks::read(buf)?),
             piercing_weapon => Self::PiercingWeapon(PiercingWeapon::read(buf)?),
             kinetic_weapon => Self::KineticWeapon(KineticWeapon::read(buf)?),
+            swing_animation => Self::SwingAnimation(SwingAnimation::read(buf)?),
+            stored_enchantments => Self::StoredEnchantments(ItemEnchantments::read(buf)?),
             _ => todo!(),
         })
     }
@@ -595,6 +623,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BlocksAttacks(x) => x.write(w),
                 Self::PiercingWeapon(x) => x.write(w),
                 Self::KineticWeapon(x) => x.write(w),
+                Self::SwingAnimation(x) => x.write(w),
+                Self::StoredEnchantments(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -642,6 +672,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BlocksAttacks(x) => x.len_s(),
                 Self::PiercingWeapon(x) => x.len_s(),
                 Self::KineticWeapon(x) => x.len_s(),
+                Self::SwingAnimation(x) => x.len_s(),
+                Self::StoredEnchantments(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -692,8 +724,8 @@ impl TypedDataComponentType<'_> {
             Self::BlocksAttacks(..) => blocks_attacks,
             Self::PiercingWeapon(..) => piercing_weapon,
             Self::KineticWeapon(..) => kinetic_weapon,
-            Self::SwingAnimation => swing_animation,
-            Self::StoredEnchantments => stored_enchantments,
+            Self::SwingAnimation(..) => swing_animation,
+            Self::StoredEnchantments(..) => stored_enchantments,
             Self::DyedColor => dyed_color,
             Self::MapColor => map_color,
             Self::MapId => map_id,
