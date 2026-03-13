@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, Reader, V21, Write, Writer};
 
@@ -140,5 +141,36 @@ impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, 
             vec.push((k, v));
         }
         Ok(Self(List::Owned(vec)))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Cow<'a, T> {
+    Borrowed(&'a T),
+    Owned(Box<T>),
+}
+
+impl<'a, T> AsRef<T> for Cow<'a, T> {
+    fn as_ref(&self) -> &T {
+        match self {
+            Cow::Borrowed(t) => t,
+            Cow::Owned(t) => t,
+        }
+    }
+}
+
+impl<'a, T: Write> Write for Cow<'a, T> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.as_ref().write(w) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.as_ref().len_s()
+    }
+}
+
+impl<'a, T: Read<'a>> Read<'a> for Cow<'a, T> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self::Owned(Box::new(T::read(buf)?)))
     }
 }

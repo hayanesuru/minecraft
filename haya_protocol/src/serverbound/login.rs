@@ -1,5 +1,4 @@
-use crate::Utf8;
-use mser::{ByteArray, Rest, V32};
+use mser::{ByteArray, Rest, Utf8};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -16,7 +15,8 @@ pub struct Key<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CustomQueryAnswer<'a> {
-    pub transaction_id: V32,
+    #[mser(varint)]
+    pub transaction_id: u32,
     pub payload: Option<Rest<'a, 1048576>>,
 }
 

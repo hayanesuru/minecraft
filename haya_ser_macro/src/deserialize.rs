@@ -1,4 +1,4 @@
-use crate::{V7MAX, V21MAX, kw};
+use crate::{Attrs, V7MAX, V21MAX, is_i32, parse_fields};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt, quote};
 
@@ -22,9 +22,60 @@ pub fn deserialize_struct(
         syn::Data::Struct(data) => &data.fields,
         _ => unreachable!(),
     };
-    let read = fields
-        .members()
-        .map(|field| quote!(#field: ::#cratename::Read::read(r)?,));
+    let read = parse_fields(fields).map(|(field, attrs, member)| {
+        let attrs = attrs.unwrap();
+        if attrs.varint {
+            if is_i32(&field.ty) {
+                match attrs.filter {
+                    Some(filter) => {
+                        quote!(#member: {
+                            let __v = ::#cratename::V32::read(r)?.0 as i32;
+                            if #filter(&__v) {
+                                __v
+                            } else {
+                                return ::core::result::Result::Err(::#cratename::Error);
+                            }
+                        })
+                    }
+                    None => {
+                        quote!(#member: ::#cratename::V32::read(r)?.0 as i32,)
+                    }
+                }
+            } else {
+                match attrs.filter {
+                    Some(filter) => {
+                        quote!(#member: {
+                            let __v = ::#cratename::V32::read(r)?.0;
+                            if #filter(&__v) {
+                                __v
+                            } else {
+                                return ::core::result::Result::Err(::#cratename::Error);
+                            }
+                        })
+                    }
+                    None => {
+                        quote!(#member: ::#cratename::V32::read(r)?.0,)
+                    }
+                }
+            }
+        } else {
+            match attrs.filter {
+                Some(filter) => {
+                    quote!(#member: {
+                        let __v = ::#cratename::Read::read(r)?;
+                        if #filter(&__v) {
+                            __v
+                        } else {
+                            return ::core::result::Result::Err(::#cratename::Error);
+                        }
+                    })
+                }
+                None => {
+                    quote!(#member: ::#cratename::Read::read(r)?,)
+                }
+            }
+        }
+    });
     Ok(quote! {
         #[automatically_derived]
         impl <'__a #impl_generics ::#cratename::Read<'__a> for #name #tok {
@@ -41,10 +92,11 @@ pub fn deserialize_struct(
 pub fn deserialize_enum(
     input: syn::DeriveInput,
     cratename: syn::Path,
+    attrs: Attrs,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
     let mut read = None;
-    let mut varint = false;
+    let varint = attrs.varint;
     let variants = match &input.data {
         syn::Data::Enum(data) => &data.variants,
         _ => unreachable!(),
@@ -62,13 +114,6 @@ pub fn deserialize_enum(
                 ele,
                 "expected enum variants to have unit fields",
             ));
-        }
-    }
-
-    for attr in &input.attrs {
-        if attr.path().is_ident("mser") {
-            attr.meta.require_list()?.parse_args::<kw::varint>()?;
-            varint = true;
         }
     }
     for attr in &input.attrs {
@@ -212,15 +257,6 @@ pub fn deserialize_enum(
                             }
                         });
                     }
-                }
-                Ok(())
-            })?;
-        }
-        if attr.path().is_ident("mser") {
-            attr.parse_nested_meta(|meta| {
-                let lookahead = meta.input.lookahead1();
-                if lookahead.peek(kw::varint) {
-                    varint = true;
                 }
                 Ok(())
             })?;
