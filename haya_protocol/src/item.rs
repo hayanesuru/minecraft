@@ -1,21 +1,25 @@
 pub mod item_attribute_modifiers;
+pub mod item_enchantments;
 pub mod kinetic_weapon;
+pub mod suspicious_stew_effects;
 pub mod tool;
 
 use crate::advancement::BlockPredicate;
 use crate::effect::MobEffect;
 use crate::food::FoodProperties;
 use crate::item::item_attribute_modifiers::ItemAttributeModifiers;
+use crate::item::item_enchantments::ItemEnchantments;
 use crate::item::kinetic_weapon::KineticWeapon;
+use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
 use crate::sound::SoundEvent;
-use crate::{Component, DamageType, Enchntment, EquipmentSlot, Holder, HolderSet, Rarity};
+use crate::{Component, DamageType, EquipmentSlot, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
-use haya_collection::{List, Map};
+use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
 use minecraft_data::{
-    consume_effect_type, data_component_type, entity_type, item, mob_effect, sound_event,
+    consume_effect_type, data_component_type, entity_type, item, mob_effect, potion, sound_event,
 };
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
@@ -131,16 +135,6 @@ pub struct CustomData(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ItemLore<'a>(pub List<'a, Component, 256>);
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ItemEnchantments<'a>(pub Map<'a, Enchntment, ItemEnchantmentLevel>);
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ItemEnchantmentLevel(#[mser(varint, filter = validate_enchantment_level)] pub i32);
-
-fn validate_enchantment_level(level: &i32) -> bool {
-    (0..=255).contains(level)
-}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AdventureModePredicate<'a> {
@@ -430,6 +424,35 @@ pub struct MapItemColor(pub u32);
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct MapId(#[mser(varint)] pub u32);
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapDecorations {}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum MapPostProcessing {
+    Lock,
+    Scale,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChargedProjectiles<'a> {
+    pub items: List<'a, ItemStack<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BundleContents<'a> {
+    pub items: List<'a, ItemStack<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PotionContents<'a> {
+    pub potion: Option<potion>,
+    pub custom_color: Option<u32>,
+    pub custom_effects: List<'a, MobEffect<'a>>,
+    pub custom_name: Option<Utf8<'a>>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -477,13 +500,13 @@ pub enum TypedDataComponentType<'a> {
     DyedColor(DyedItemColor),
     MapColor(MapItemColor),
     MapId(MapId),
-    MapDecorations,
-    MapPostProcessing,
-    ChargedProjectiles,
-    BundleContents,
-    PotionContents,
-    PotionDurationScale,
-    SuspiciousStewEffects,
+    MapDecorations(MapDecorations),
+    MapPostProcessing(MapPostProcessing),
+    ChargedProjectiles(ChargedProjectiles<'a>),
+    BundleContents(BundleContents<'a>),
+    PotionContents(PotionContents<'a>),
+    PotionDurationScale(f32),
+    SuspiciousStewEffects(SuspiciousStewEffects<'a>),
     WritableBookContent,
     WrittenBookContent,
     Trim,
@@ -586,6 +609,15 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             dyed_color => Self::DyedColor(DyedItemColor::read(buf)?),
             map_color => Self::MapColor(MapItemColor::read(buf)?),
             map_id => Self::MapId(MapId::read(buf)?),
+            map_decorations => Self::MapDecorations(MapDecorations::read(buf)?),
+            map_post_processing => Self::MapPostProcessing(MapPostProcessing::read(buf)?),
+            charged_projectiles => Self::ChargedProjectiles(ChargedProjectiles::read(buf)?),
+            bundle_contents => Self::BundleContents(BundleContents::read(buf)?),
+            potion_contents => Self::PotionContents(PotionContents::read(buf)?),
+            potion_duration_scale => Self::PotionDurationScale(f32::read(buf)?),
+            suspicious_stew_effects => {
+                Self::SuspiciousStewEffects(SuspiciousStewEffects::read(buf)?)
+            }
             _ => todo!(),
         })
     }
@@ -640,6 +672,13 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::DyedColor(x) => x.write(w),
                 Self::MapColor(x) => x.write(w),
                 Self::MapId(x) => x.write(w),
+                Self::MapDecorations(x) => x.write(w),
+                Self::MapPostProcessing(x) => x.write(w),
+                Self::ChargedProjectiles(x) => x.write(w),
+                Self::BundleContents(x) => x.write(w),
+                Self::PotionContents(x) => x.write(w),
+                Self::PotionDurationScale(x) => x.write(w),
+                Self::SuspiciousStewEffects(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -692,6 +731,13 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::DyedColor(x) => x.len_s(),
                 Self::MapColor(x) => x.len_s(),
                 Self::MapId(x) => x.len_s(),
+                Self::MapDecorations(x) => x.len_s(),
+                Self::MapPostProcessing(x) => x.len_s(),
+                Self::ChargedProjectiles(x) => x.len_s(),
+                Self::BundleContents(x) => x.len_s(),
+                Self::PotionContents(x) => x.len_s(),
+                Self::PotionDurationScale(x) => x.len_s(),
+                Self::SuspiciousStewEffects(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -747,13 +793,13 @@ impl TypedDataComponentType<'_> {
             Self::DyedColor(..) => dyed_color,
             Self::MapColor(..) => map_color,
             Self::MapId(..) => map_id,
-            Self::MapDecorations => map_decorations,
-            Self::MapPostProcessing => map_post_processing,
-            Self::ChargedProjectiles => charged_projectiles,
-            Self::BundleContents => bundle_contents,
-            Self::PotionContents => potion_contents,
-            Self::PotionDurationScale => potion_duration_scale,
-            Self::SuspiciousStewEffects => suspicious_stew_effects,
+            Self::MapDecorations(..) => map_decorations,
+            Self::MapPostProcessing(..) => map_post_processing,
+            Self::ChargedProjectiles(..) => charged_projectiles,
+            Self::BundleContents(..) => bundle_contents,
+            Self::PotionContents(..) => potion_contents,
+            Self::PotionDurationScale(..) => potion_duration_scale,
+            Self::SuspiciousStewEffects(..) => suspicious_stew_effects,
             Self::WritableBookContent => writable_book_content,
             Self::WrittenBookContent => written_book_content,
             Self::Trim => trim,
