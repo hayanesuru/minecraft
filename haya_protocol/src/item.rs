@@ -13,7 +13,7 @@ use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
 use crate::sound::SoundEvent;
-use crate::{Component, DamageType, EquipmentSlot, Holder, HolderSet, Rarity};
+use crate::{Component, DamageType, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
@@ -455,7 +455,7 @@ pub struct PotionContents<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct WritableBookContent<'a> {
-    pub pages: List<'a, Utf8<'a, 1024>, 100>,
+    pub pages: List<'a, Filterable<Utf8<'a, 1024>>, 100>,
 }
 
 #[derive(Clone)]
