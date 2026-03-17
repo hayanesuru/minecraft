@@ -425,7 +425,9 @@ pub struct MapItemColor(pub u32);
 pub struct MapId(#[mser(varint)] pub u32);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct MapDecorations {}
+pub struct MapDecorations {
+    pub tag: Tag,
+}
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
@@ -456,6 +458,20 @@ pub struct PotionContents<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct WritableBookContent<'a> {
     pub pages: List<'a, Filterable<Utf8<'a, 1024>>, 100>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct WrittenBookContent<'a> {
+    pub title: Filterable<Utf8<'a, 32>>,
+    pub author: Utf8<'a>,
+    #[mser(varint, filter = validate_written_book_content)]
+    pub generation: u32,
+    pub pages: List<'a, Filterable<Component>>,
+    pub resolved: bool,
+}
+
+fn validate_written_book_content(generation: &u32) -> bool {
+    (0..=3).contains(generation)
 }
 
 #[derive(Clone)]
@@ -513,7 +529,7 @@ pub enum TypedDataComponentType<'a> {
     PotionDurationScale(f32),
     SuspiciousStewEffects(SuspiciousStewEffects<'a>),
     WritableBookContent(WritableBookContent<'a>),
-    WrittenBookContent,
+    WrittenBookContent(WrittenBookContent<'a>),
     Trim,
     DebugStickState,
     EntityData,
@@ -624,6 +640,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
                 Self::SuspiciousStewEffects(SuspiciousStewEffects::read(buf)?)
             }
             writable_book_content => Self::WritableBookContent(WritableBookContent::read(buf)?),
+            written_book_content => Self::WrittenBookContent(WrittenBookContent::read(buf)?),
             _ => todo!(),
         })
     }
@@ -686,6 +703,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PotionDurationScale(x) => x.write(w),
                 Self::SuspiciousStewEffects(x) => x.write(w),
                 Self::WritableBookContent(x) => x.write(w),
+                Self::WrittenBookContent(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -746,6 +764,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PotionDurationScale(x) => x.len_s(),
                 Self::SuspiciousStewEffects(x) => x.len_s(),
                 Self::WritableBookContent(x) => x.len_s(),
+                Self::WrittenBookContent(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -809,7 +828,7 @@ impl TypedDataComponentType<'_> {
             Self::PotionDurationScale(..) => potion_duration_scale,
             Self::SuspiciousStewEffects(..) => suspicious_stew_effects,
             Self::WritableBookContent(..) => writable_book_content,
-            Self::WrittenBookContent => written_book_content,
+            Self::WrittenBookContent(..) => written_book_content,
             Self::Trim => trim,
             Self::DebugStickState => debug_stick_state,
             Self::EntityData => entity_data,
