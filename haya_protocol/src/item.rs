@@ -453,6 +453,11 @@ pub struct PotionContents<'a> {
     pub custom_name: Option<Utf8<'a>>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct WritableBookContent<'a> {
+    pub pages: List<'a, Utf8<'a, 1024>, 100>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -507,7 +512,7 @@ pub enum TypedDataComponentType<'a> {
     PotionContents(PotionContents<'a>),
     PotionDurationScale(f32),
     SuspiciousStewEffects(SuspiciousStewEffects<'a>),
-    WritableBookContent,
+    WritableBookContent(WritableBookContent<'a>),
     WrittenBookContent,
     Trim,
     DebugStickState,
@@ -618,6 +623,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             suspicious_stew_effects => {
                 Self::SuspiciousStewEffects(SuspiciousStewEffects::read(buf)?)
             }
+            writable_book_content => Self::WritableBookContent(WritableBookContent::read(buf)?),
             _ => todo!(),
         })
     }
@@ -679,6 +685,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PotionContents(x) => x.write(w),
                 Self::PotionDurationScale(x) => x.write(w),
                 Self::SuspiciousStewEffects(x) => x.write(w),
+                Self::WritableBookContent(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -738,6 +745,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PotionContents(x) => x.len_s(),
                 Self::PotionDurationScale(x) => x.len_s(),
                 Self::SuspiciousStewEffects(x) => x.len_s(),
+                Self::WritableBookContent(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -800,7 +808,7 @@ impl TypedDataComponentType<'_> {
             Self::PotionContents(..) => potion_contents,
             Self::PotionDurationScale(..) => potion_duration_scale,
             Self::SuspiciousStewEffects(..) => suspicious_stew_effects,
-            Self::WritableBookContent => writable_book_content,
+            Self::WritableBookContent(..) => writable_book_content,
             Self::WrittenBookContent => written_book_content,
             Self::Trim => trim,
             Self::DebugStickState => debug_stick_state,

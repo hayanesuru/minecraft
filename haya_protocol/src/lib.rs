@@ -471,6 +471,34 @@ impl DyeColor {
     }
 }
 
+#[derive(Clone)]
+pub struct Filterable<T> {
+    pub raw: T,
+    pub filtered: Option<T>,
+}
+
+impl<T: Write> Write for Filterable<T> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.raw.write(w);
+            self.filtered.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        self.raw.len_s() + self.filtered.len_s()
+    }
+}
+
+impl<'a, T: Read<'a>> Read<'a> for Filterable<T> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            raw: T::read(buf)?,
+            filtered: Option::<T>::read(buf)?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
