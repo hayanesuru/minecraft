@@ -35,7 +35,7 @@ pub fn deserialize_struct(
                             } else {
                                 return ::core::result::Result::Err(::#cratename::Error);
                             }
-                        })
+                        },)
                     }
                     None => {
                         quote!(#member: ::#cratename::V32::read(r)?.0 as i32,)
@@ -51,7 +51,7 @@ pub fn deserialize_struct(
                             } else {
                                 return ::core::result::Result::Err(::#cratename::Error);
                             }
-                        })
+                        },)
                     }
                     None => {
                         quote!(#member: ::#cratename::V32::read(r)?.0,)
@@ -68,7 +68,7 @@ pub fn deserialize_struct(
                         } else {
                             return ::core::result::Result::Err(::#cratename::Error);
                         }
-                    })
+                    },)
                 }
                 None => {
                     quote!(#member: ::#cratename::Read::read(r)?,)
