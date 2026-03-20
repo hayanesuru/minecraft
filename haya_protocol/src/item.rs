@@ -12,8 +12,10 @@ use crate::item::item_enchantments::ItemEnchantments;
 use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
+use crate::registry::{DamageTypeRef, TrimMaterialRef, TrimPatternRef};
 use crate::sound::SoundEvent;
-use crate::{Component, DamageType, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
+use crate::trim::{TrimMaterial, TrimPattern};
+use crate::{Component, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
@@ -369,7 +371,7 @@ pub struct BlocksAttacks<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DamageReduction<'a> {
     pub horizontal_blocking_angle: f32,
-    pub ty: Option<HolderSet<'a, DamageType>>,
+    pub ty: Option<HolderSet<'a, DamageTypeRef>>,
     pub base: f32,
     pub factor: f32,
 }
@@ -474,6 +476,12 @@ fn validate_written_book_content(generation: &u32) -> bool {
     (0..=3).contains(generation)
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ArmorTrim<'a> {
+    pub material: Holder<TrimMaterial<'a>, TrimMaterialRef>,
+    pub pattern: Holder<TrimPattern<'a>, TrimPatternRef>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -484,7 +492,7 @@ pub enum TypedDataComponentType<'a> {
     UseEffects(UseEffects),
     CustomName(Component),
     MinimumAttackCharge(f32),
-    DamageType(Either<DamageType, ResourceKey<'a>>),
+    DamageType(Either<DamageTypeRef, ResourceKey<'a>>),
     ItemName(Component),
     ItemModel(Ident<'a>),
     Lore(ItemLore<'a>),
@@ -530,7 +538,7 @@ pub enum TypedDataComponentType<'a> {
     SuspiciousStewEffects(SuspiciousStewEffects<'a>),
     WritableBookContent(WritableBookContent<'a>),
     WrittenBookContent(WrittenBookContent<'a>),
-    Trim,
+    Trim(ArmorTrim<'a>),
     DebugStickState,
     EntityData,
     BucketEntityData,
@@ -641,6 +649,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             }
             writable_book_content => Self::WritableBookContent(WritableBookContent::read(buf)?),
             written_book_content => Self::WrittenBookContent(WrittenBookContent::read(buf)?),
+            trim => Self::Trim(ArmorTrim::read(buf)?),
             _ => todo!(),
         })
     }
@@ -704,6 +713,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::SuspiciousStewEffects(x) => x.write(w),
                 Self::WritableBookContent(x) => x.write(w),
                 Self::WrittenBookContent(x) => x.write(w),
+                Self::Trim(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -765,6 +775,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::SuspiciousStewEffects(x) => x.len_s(),
                 Self::WritableBookContent(x) => x.len_s(),
                 Self::WrittenBookContent(x) => x.len_s(),
+                Self::Trim(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -829,7 +840,7 @@ impl TypedDataComponentType<'_> {
             Self::SuspiciousStewEffects(..) => suspicious_stew_effects,
             Self::WritableBookContent(..) => writable_book_content,
             Self::WrittenBookContent(..) => written_book_content,
-            Self::Trim => trim,
+            Self::Trim(..) => trim,
             Self::DebugStickState => debug_stick_state,
             Self::EntityData => entity_data,
             Self::BucketEntityData => bucket_entity_data,

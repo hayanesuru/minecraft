@@ -1,8 +1,8 @@
-use crate::Enchntment;
+use crate::registry::EnchntmentRef;
 use haya_collection::Map;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemEnchantments<'a>(pub Map<'a, Enchntment, Level>);
+pub struct ItemEnchantments<'a>(pub Map<'a, EnchntmentRef, Level>);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Level(#[mser(varint, filter = validate_enchantment_level)] pub i32);
