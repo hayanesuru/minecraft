@@ -21,7 +21,8 @@ use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
 use minecraft_data::{
-    consume_effect_type, data_component_type, entity_type, item, mob_effect, potion, sound_event,
+    block_entity_type, consume_effect_type, data_component_type, entity_type, item, mob_effect,
+    potion, sound_event,
 };
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
@@ -482,6 +483,23 @@ pub struct ArmorTrim<'a> {
     pub pattern: Holder<TrimPattern<'a>, TrimPatternRef>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugStickState {
+    pub tag: Tag,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TypedEntityDataEntity {
+    pub ty: entity_type,
+    pub tag: Tag,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TypedEntityDataBlockEntity {
+    pub ty: block_entity_type,
+    pub tag: Tag,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -539,10 +557,10 @@ pub enum TypedDataComponentType<'a> {
     WritableBookContent(WritableBookContent<'a>),
     WrittenBookContent(WrittenBookContent<'a>),
     Trim(ArmorTrim<'a>),
-    DebugStickState,
-    EntityData,
-    BucketEntityData,
-    BlockEntityData,
+    DebugStickState(DebugStickState),
+    EntityData(TypedEntityDataEntity),
+    BucketEntityData(CustomData),
+    BlockEntityData(TypedEntityDataBlockEntity),
     Instrument,
     ProvidesTrimMaterial,
     OminousBottleAmplifier,
@@ -650,6 +668,10 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             writable_book_content => Self::WritableBookContent(WritableBookContent::read(buf)?),
             written_book_content => Self::WrittenBookContent(WrittenBookContent::read(buf)?),
             trim => Self::Trim(ArmorTrim::read(buf)?),
+            debug_stick_state => Self::DebugStickState(DebugStickState::read(buf)?),
+            entity_data => Self::EntityData(TypedEntityDataEntity::read(buf)?),
+            bucket_entity_data => Self::BucketEntityData(CustomData::read(buf)?),
+            block_entity_data => Self::BlockEntityData(TypedEntityDataBlockEntity::read(buf)?),
             _ => todo!(),
         })
     }
@@ -714,6 +736,10 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::WritableBookContent(x) => x.write(w),
                 Self::WrittenBookContent(x) => x.write(w),
                 Self::Trim(x) => x.write(w),
+                Self::DebugStickState(x) => x.write(w),
+                Self::EntityData(x) => x.write(w),
+                Self::BucketEntityData(x) => x.write(w),
+                Self::BlockEntityData(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -776,6 +802,10 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::WritableBookContent(x) => x.len_s(),
                 Self::WrittenBookContent(x) => x.len_s(),
                 Self::Trim(x) => x.len_s(),
+                Self::DebugStickState(x) => x.len_s(),
+                Self::EntityData(x) => x.len_s(),
+                Self::BucketEntityData(x) => x.len_s(),
+                Self::BlockEntityData(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -841,10 +871,10 @@ impl TypedDataComponentType<'_> {
             Self::WritableBookContent(..) => writable_book_content,
             Self::WrittenBookContent(..) => written_book_content,
             Self::Trim(..) => trim,
-            Self::DebugStickState => debug_stick_state,
-            Self::EntityData => entity_data,
-            Self::BucketEntityData => bucket_entity_data,
-            Self::BlockEntityData => block_entity_data,
+            Self::DebugStickState(..) => debug_stick_state,
+            Self::EntityData(..) => entity_data,
+            Self::BucketEntityData(..) => bucket_entity_data,
+            Self::BlockEntityData(..) => block_entity_data,
             Self::Instrument => instrument,
             Self::ProvidesTrimMaterial => provides_trim_material,
             Self::OminousBottleAmplifier => ominous_bottle_amplifier,
