@@ -12,7 +12,9 @@ use crate::item::item_enchantments::ItemEnchantments;
 use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
-use crate::registry::{DamageTypeRef, TrimMaterialRef, TrimPatternRef};
+use crate::registry::{
+    DamageTypeRef, InstrumentRef, SoundEventRef, TrimMaterialRef, TrimPatternRef,
+};
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
 use crate::{Component, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
@@ -22,7 +24,7 @@ use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_nbt::Tag;
 use minecraft_data::{
     block_entity_type, consume_effect_type, data_component_type, entity_type, item, mob_effect,
-    potion, sound_event,
+    potion,
 };
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
@@ -162,7 +164,7 @@ pub struct TooltipDisplay<'a> {
 pub struct Consumable<'a> {
     pub consume_seconds: f32,
     pub animation: ItemUseAnimation,
-    pub sound: Holder<SoundEvent<'a>, sound_event>,
+    pub sound: Holder<SoundEvent<'a>, SoundEventRef>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -248,7 +250,7 @@ fn validate_enchantable(value: &i32) -> bool {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Equippable<'a> {
     pub slot: EquipmentSlot,
-    pub equip_sound: Holder<SoundEvent<'a>, sound_event>,
+    pub equip_sound: Holder<SoundEvent<'a>, SoundEventRef>,
     pub asset_id: Option<Ident<'a>>,
     pub camera_overlay: Option<Ident<'a>>,
     pub allowed_entities: Option<HolderSet<'a, entity_type>>,
@@ -257,7 +259,7 @@ pub struct Equippable<'a> {
     pub damage_on_hurt: bool,
     pub equip_on_interact: bool,
     pub can_be_sheared: bool,
-    pub shearing_sound: Holder<SoundEvent<'a>, sound_event>,
+    pub shearing_sound: Holder<SoundEvent<'a>, SoundEventRef>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -284,7 +286,7 @@ pub enum ConsumeEffect<'a> {
         diameter: f32,
     },
     PlaySound {
-        sound: Holder<SoundEvent<'a>, sound_event>,
+        sound: Holder<SoundEvent<'a>, SoundEventRef>,
     },
 }
 
@@ -365,8 +367,8 @@ pub struct BlocksAttacks<'a> {
     pub damage_reductions: List<'a, DamageReduction<'a>>,
     pub item_damage: ItemDamageFunction,
     pub bypassed_by: Option<TagKey<'a>>,
-    pub block_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
-    pub disable_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub block_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
+    pub disable_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -388,8 +390,8 @@ pub struct ItemDamageFunction {
 pub struct PiercingWeapon<'a> {
     pub deals_knockback: bool,
     pub dismounts: bool,
-    pub sound: Option<Holder<SoundEvent<'a>, sound_event>>,
-    pub hit_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
+    pub hit_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -500,6 +502,14 @@ pub struct TypedEntityDataBlockEntity {
     pub tag: Tag,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Instrument<'a> {
+    pub sound_event: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub use_duration: f32,
+    pub range: f32,
+    pub description: Component,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -561,7 +571,7 @@ pub enum TypedDataComponentType<'a> {
     EntityData(TypedEntityDataEntity),
     BucketEntityData(CustomData),
     BlockEntityData(TypedEntityDataBlockEntity),
-    Instrument,
+    Instrument(Either<Holder<Instrument<'a>, InstrumentRef>, ResourceKey<'a>>),
     ProvidesTrimMaterial,
     OminousBottleAmplifier,
     JukeboxPlayable,
@@ -672,6 +682,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             entity_data => Self::EntityData(TypedEntityDataEntity::read(buf)?),
             bucket_entity_data => Self::BucketEntityData(CustomData::read(buf)?),
             block_entity_data => Self::BlockEntityData(TypedEntityDataBlockEntity::read(buf)?),
+            instrument => Self::Instrument(Either::read(buf)?),
             _ => todo!(),
         })
     }
@@ -740,6 +751,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::EntityData(x) => x.write(w),
                 Self::BucketEntityData(x) => x.write(w),
                 Self::BlockEntityData(x) => x.write(w),
+                Self::Instrument(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -806,6 +818,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::EntityData(x) => x.len_s(),
                 Self::BucketEntityData(x) => x.len_s(),
                 Self::BlockEntityData(x) => x.len_s(),
+                Self::Instrument(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -875,7 +888,7 @@ impl TypedDataComponentType<'_> {
             Self::EntityData(..) => entity_data,
             Self::BucketEntityData(..) => bucket_entity_data,
             Self::BlockEntityData(..) => block_entity_data,
-            Self::Instrument => instrument,
+            Self::Instrument(..) => instrument,
             Self::ProvidesTrimMaterial => provides_trim_material,
             Self::OminousBottleAmplifier => ominous_bottle_amplifier,
             Self::JukeboxPlayable => jukebox_playable,
