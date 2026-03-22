@@ -510,6 +510,11 @@ pub struct Instrument<'a> {
     pub description: Component,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ProvidesTrimMaterial<'a> {
+    pub material: Either<TrimMaterial<'a>, ResourceKey<'a>>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -572,7 +577,7 @@ pub enum TypedDataComponentType<'a> {
     BucketEntityData(CustomData),
     BlockEntityData(TypedEntityDataBlockEntity),
     Instrument(Either<Holder<Instrument<'a>, InstrumentRef>, ResourceKey<'a>>),
-    ProvidesTrimMaterial,
+    ProvidesTrimMaterial(ProvidesTrimMaterial<'a>),
     OminousBottleAmplifier,
     JukeboxPlayable,
     ProvidesBannerPatterns,
@@ -683,6 +688,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             bucket_entity_data => Self::BucketEntityData(CustomData::read(buf)?),
             block_entity_data => Self::BlockEntityData(TypedEntityDataBlockEntity::read(buf)?),
             instrument => Self::Instrument(Either::read(buf)?),
+            provides_trim_material => Self::ProvidesTrimMaterial(ProvidesTrimMaterial::read(buf)?),
             _ => todo!(),
         })
     }
@@ -752,6 +758,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BucketEntityData(x) => x.write(w),
                 Self::BlockEntityData(x) => x.write(w),
                 Self::Instrument(x) => x.write(w),
+                Self::ProvidesTrimMaterial(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -819,6 +826,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BucketEntityData(x) => x.len_s(),
                 Self::BlockEntityData(x) => x.len_s(),
                 Self::Instrument(x) => x.len_s(),
+                Self::ProvidesTrimMaterial(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -889,7 +897,7 @@ impl TypedDataComponentType<'_> {
             Self::BucketEntityData(..) => bucket_entity_data,
             Self::BlockEntityData(..) => block_entity_data,
             Self::Instrument(..) => instrument,
-            Self::ProvidesTrimMaterial => provides_trim_material,
+            Self::ProvidesTrimMaterial(..) => provides_trim_material,
             Self::OminousBottleAmplifier => ominous_bottle_amplifier,
             Self::JukeboxPlayable => jukebox_playable,
             Self::ProvidesBannerPatterns => provides_banner_patterns,
