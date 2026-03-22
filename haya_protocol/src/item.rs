@@ -515,6 +515,12 @@ pub struct ProvidesTrimMaterial<'a> {
     pub material: Either<TrimMaterial<'a>, ResourceKey<'a>>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct OminousBottleAmplifier {
+    #[mser(varint)]
+    pub value: u32,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -578,7 +584,7 @@ pub enum TypedDataComponentType<'a> {
     BlockEntityData(TypedEntityDataBlockEntity),
     Instrument(Either<Holder<Instrument<'a>, InstrumentRef>, ResourceKey<'a>>),
     ProvidesTrimMaterial(ProvidesTrimMaterial<'a>),
-    OminousBottleAmplifier,
+    OminousBottleAmplifier(OminousBottleAmplifier),
     JukeboxPlayable,
     ProvidesBannerPatterns,
     Recipes,
@@ -649,6 +655,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             repair_cost => Self::RepairCost(V32::read(buf)?.0),
             creative_slot_lock => Self::CreativeSlotLock,
             enchantment_glint_override => Self::EnchantmentGlintOverride(bool::read(buf)?),
+            intangible_projectile => Self::IntangibleProjectile,
             food => Self::Food(FoodProperties::read(buf)?),
             consumable => Self::Consumable(Consumable::read(buf)?),
             use_remainder => Self::UseRemainder(UseRemainder::read(buf)?),
@@ -689,7 +696,51 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             block_entity_data => Self::BlockEntityData(TypedEntityDataBlockEntity::read(buf)?),
             instrument => Self::Instrument(Either::read(buf)?),
             provides_trim_material => Self::ProvidesTrimMaterial(ProvidesTrimMaterial::read(buf)?),
-            _ => todo!(),
+            ominous_bottle_amplifier => {
+                Self::OminousBottleAmplifier(OminousBottleAmplifier::read(buf)?)
+            }
+            jukebox_playable => todo!(),
+            provides_banner_patterns => todo!(),
+            recipes => todo!(),
+            lodestone_tracker => todo!(),
+            firework_explosion => todo!(),
+            fireworks => todo!(),
+            profile => todo!(),
+            note_block_sound => todo!(),
+            banner_patterns => todo!(),
+            base_color => todo!(),
+            pot_decorations => todo!(),
+            container => todo!(),
+            block_state => todo!(),
+            bees => todo!(),
+            lock => todo!(),
+            container_loot => todo!(),
+            break_sound => todo!(),
+            villager_variant => todo!(),
+            wolf_variant => todo!(),
+            wolf_sound_variant => todo!(),
+            wolf_collar => todo!(),
+            fox_variant => todo!(),
+            salmon_size => todo!(),
+            parrot_variant => todo!(),
+            tropical_fish_pattern => todo!(),
+            tropical_fish_base_color => todo!(),
+            tropical_fish_pattern_color => todo!(),
+            mooshroom_variant => todo!(),
+            rabbit_variant => todo!(),
+            pig_variant => todo!(),
+            cow_variant => todo!(),
+            chicken_variant => todo!(),
+            zombie_nautilus_variant => todo!(),
+            frog_variant => todo!(),
+            horse_variant => todo!(),
+            painting_variant => todo!(),
+            llama_variant => todo!(),
+            axolotl_variant => todo!(),
+            cat_variant => todo!(),
+            cat_collar => todo!(),
+            sheep_color => todo!(),
+            shulker_color => todo!(),
         })
     }
 }
@@ -759,6 +810,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BlockEntityData(x) => x.write(w),
                 Self::Instrument(x) => x.write(w),
                 Self::ProvidesTrimMaterial(x) => x.write(w),
+                Self::OminousBottleAmplifier(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -827,6 +879,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BlockEntityData(x) => x.len_s(),
                 Self::Instrument(x) => x.len_s(),
                 Self::ProvidesTrimMaterial(x) => x.len_s(),
+                Self::OminousBottleAmplifier(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -898,7 +951,7 @@ impl TypedDataComponentType<'_> {
             Self::BlockEntityData(..) => block_entity_data,
             Self::Instrument(..) => instrument,
             Self::ProvidesTrimMaterial(..) => provides_trim_material,
-            Self::OminousBottleAmplifier => ominous_bottle_amplifier,
+            Self::OminousBottleAmplifier(..) => ominous_bottle_amplifier,
             Self::JukeboxPlayable => jukebox_playable,
             Self::ProvidesBannerPatterns => provides_banner_patterns,
             Self::Recipes => recipes,
