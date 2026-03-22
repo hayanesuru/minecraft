@@ -1,5 +1,5 @@
 use crate::Holder;
-use crate::item::Instrument;
+use crate::item::{Instrument, JukeboxSong};
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
 use minecraft_data::sound_event;
@@ -22,6 +22,9 @@ pub struct InstrumentRef(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct SoundEventRef(pub sound_event);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct JukeboxSongRef(#[mser(varint)] pub u32);
 
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, SoundEventRef> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
@@ -158,6 +161,45 @@ impl<'a> Read<'a> for Holder<Instrument<'a>, InstrumentRef> {
 }
 
 impl<'a> Write for Holder<Instrument<'a>, InstrumentRef> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                Self::Reference(id) => {
+                    V32(id.0 + 1).write(w);
+                }
+                Self::Direct(direct) => {
+                    V32(0).write(w);
+                    direct.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Reference(id) => V32(id.0 + 1).len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32(0).len_s();
+                len += direct.len_s();
+                len
+            }
+        }
+    }
+}
+
+impl<'a> Read<'a> for Holder<JukeboxSong<'a>, JukeboxSongRef> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let id = V32::read(buf)?.0;
+        if id == 0 {
+            Ok(Self::Direct(JukeboxSong::read(buf)?))
+        } else {
+            let x = id - 1;
+            Ok(Self::Reference(JukeboxSongRef(x)))
+        }
+    }
+}
+
+impl<'a> Write for Holder<JukeboxSong<'a>, JukeboxSongRef> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {

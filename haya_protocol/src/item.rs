@@ -15,7 +15,7 @@ use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
 use crate::registry::{
-    DamageTypeRef, InstrumentRef, SoundEventRef, TrimMaterialRef, TrimPatternRef,
+    DamageTypeRef, InstrumentRef, JukeboxSongRef, SoundEventRef, TrimMaterialRef, TrimPatternRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -432,6 +432,20 @@ pub struct OminousBottleAmplifier {
     pub value: u32,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct JukeboxPlayable<'a> {
+    pub song: Either<Holder<JukeboxSong<'a>, JukeboxSongRef>, ResourceKey<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct JukeboxSong<'a> {
+    pub sound_event: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub description: Component,
+    pub length_in_seconds: f32,
+    #[mser(varint)]
+    pub comparator_output: u32,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -496,7 +510,7 @@ pub enum TypedDataComponentType<'a> {
     Instrument(Either<Holder<Instrument<'a>, InstrumentRef>, ResourceKey<'a>>),
     ProvidesTrimMaterial(ProvidesTrimMaterial<'a>),
     OminousBottleAmplifier(OminousBottleAmplifier),
-    JukeboxPlayable,
+    JukeboxPlayable(JukeboxPlayable<'a>),
     ProvidesBannerPatterns,
     Recipes,
     LodestoneTracker,
@@ -610,7 +624,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             ominous_bottle_amplifier => {
                 Self::OminousBottleAmplifier(OminousBottleAmplifier::read(buf)?)
             }
-            jukebox_playable => todo!(),
+            jukebox_playable => Self::JukeboxPlayable(JukeboxPlayable::read(buf)?),
             provides_banner_patterns => todo!(),
             recipes => todo!(),
             lodestone_tracker => todo!(),
@@ -722,6 +736,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Instrument(x) => x.write(w),
                 Self::ProvidesTrimMaterial(x) => x.write(w),
                 Self::OminousBottleAmplifier(x) => x.write(w),
+                Self::JukeboxPlayable(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -791,6 +806,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Instrument(x) => x.len_s(),
                 Self::ProvidesTrimMaterial(x) => x.len_s(),
                 Self::OminousBottleAmplifier(x) => x.len_s(),
+                Self::JukeboxPlayable(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -863,7 +879,7 @@ impl TypedDataComponentType<'_> {
             Self::Instrument(..) => instrument,
             Self::ProvidesTrimMaterial(..) => provides_trim_material,
             Self::OminousBottleAmplifier(..) => ominous_bottle_amplifier,
-            Self::JukeboxPlayable => jukebox_playable,
+            Self::JukeboxPlayable(..) => jukebox_playable,
             Self::ProvidesBannerPatterns => provides_banner_patterns,
             Self::Recipes => recipes,
             Self::LodestoneTracker => lodestone_tracker,
