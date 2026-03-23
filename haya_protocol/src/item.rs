@@ -23,6 +23,7 @@ use crate::{Component, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
+use haya_math::{BlockPos, BlockPosPacked};
 use haya_nbt::Tag;
 use minecraft_data::{block_entity_type, data_component_type, entity_type, item, potion};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -449,6 +450,12 @@ pub struct JukeboxSong<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Recipes(pub Tag);
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LodestoneTracker {
+    pub target: Option<BlockPosPacked>,
+    pub tracked: bool,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -516,7 +523,7 @@ pub enum TypedDataComponentType<'a> {
     JukeboxPlayable(JukeboxPlayable<'a>),
     ProvidesBannerPatterns(TagKey<'a>),
     Recipes(Recipes),
-    LodestoneTracker,
+    LodestoneTracker(LodestoneTracker),
     FireworkExplosion,
     Fireworks,
     Profile,
@@ -630,7 +637,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             jukebox_playable => Self::JukeboxPlayable(JukeboxPlayable::read(buf)?),
             provides_banner_patterns => Self::ProvidesBannerPatterns(TagKey::read(buf)?),
             recipes => Self::Recipes(Recipes::read(buf)?),
-            lodestone_tracker => todo!(),
+            lodestone_tracker => Self::LodestoneTracker(LodestoneTracker::read(buf)?),
             firework_explosion => todo!(),
             fireworks => todo!(),
             profile => todo!(),
@@ -742,6 +749,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::JukeboxPlayable(x) => x.write(w),
                 Self::ProvidesBannerPatterns(x) => x.write(w),
                 Self::Recipes(x) => x.write(w),
+                Self::LodestoneTracker(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -814,6 +822,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::JukeboxPlayable(x) => x.len_s(),
                 Self::ProvidesBannerPatterns(x) => x.len_s(),
                 Self::Recipes(x) => x.len_s(),
+                Self::LodestoneTracker(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -889,7 +898,7 @@ impl TypedDataComponentType<'_> {
             Self::JukeboxPlayable(..) => jukebox_playable,
             Self::ProvidesBannerPatterns(..) => provides_banner_patterns,
             Self::Recipes(..) => recipes,
-            Self::LodestoneTracker => lodestone_tracker,
+            Self::LodestoneTracker(..) => lodestone_tracker,
             Self::FireworkExplosion => firework_explosion,
             Self::Fireworks => fireworks,
             Self::Profile => profile,
