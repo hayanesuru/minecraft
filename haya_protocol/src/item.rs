@@ -446,6 +446,9 @@ pub struct JukeboxSong<'a> {
     pub comparator_output: u32,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Recipes(pub Tag);
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -512,7 +515,7 @@ pub enum TypedDataComponentType<'a> {
     OminousBottleAmplifier(OminousBottleAmplifier),
     JukeboxPlayable(JukeboxPlayable<'a>),
     ProvidesBannerPatterns(TagKey<'a>),
-    Recipes,
+    Recipes(Recipes),
     LodestoneTracker,
     FireworkExplosion,
     Fireworks,
@@ -626,7 +629,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             }
             jukebox_playable => Self::JukeboxPlayable(JukeboxPlayable::read(buf)?),
             provides_banner_patterns => Self::ProvidesBannerPatterns(TagKey::read(buf)?),
-            recipes => todo!(),
+            recipes => Self::Recipes(Recipes::read(buf)?),
             lodestone_tracker => todo!(),
             firework_explosion => todo!(),
             fireworks => todo!(),
@@ -738,6 +741,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::OminousBottleAmplifier(x) => x.write(w),
                 Self::JukeboxPlayable(x) => x.write(w),
                 Self::ProvidesBannerPatterns(x) => x.write(w),
+                Self::Recipes(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -809,6 +813,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::OminousBottleAmplifier(x) => x.len_s(),
                 Self::JukeboxPlayable(x) => x.len_s(),
                 Self::ProvidesBannerPatterns(x) => x.len_s(),
+                Self::Recipes(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -883,7 +888,7 @@ impl TypedDataComponentType<'_> {
             Self::OminousBottleAmplifier(..) => ominous_bottle_amplifier,
             Self::JukeboxPlayable(..) => jukebox_playable,
             Self::ProvidesBannerPatterns(..) => provides_banner_patterns,
-            Self::Recipes => recipes,
+            Self::Recipes(..) => recipes,
             Self::LodestoneTracker => lodestone_tracker,
             Self::FireworkExplosion => firework_explosion,
             Self::Fireworks => fireworks,
