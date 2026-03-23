@@ -1,4 +1,5 @@
 pub mod consume_effect;
+pub mod firework_explosion;
 pub mod item_attribute_modifiers;
 pub mod item_enchantments;
 pub mod kinetic_weapon;
@@ -9,6 +10,7 @@ use crate::advancement::BlockPredicate;
 use crate::effect::MobEffect;
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
+use crate::item::firework_explosion::FireworkExplosion;
 use crate::item::item_attribute_modifiers::ItemAttributeModifiers;
 use crate::item::item_enchantments::ItemEnchantments;
 use crate::item::kinetic_weapon::KineticWeapon;
@@ -23,7 +25,7 @@ use crate::{Component, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
-use haya_math::{BlockPos, BlockPosPacked};
+use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
 use minecraft_data::{block_entity_type, data_component_type, entity_type, item, potion};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -524,7 +526,7 @@ pub enum TypedDataComponentType<'a> {
     ProvidesBannerPatterns(TagKey<'a>),
     Recipes(Recipes),
     LodestoneTracker(LodestoneTracker),
-    FireworkExplosion,
+    FireworkExplosion(FireworkExplosion<'a>),
     Fireworks,
     Profile,
     NoteBlockSound,
@@ -638,7 +640,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             provides_banner_patterns => Self::ProvidesBannerPatterns(TagKey::read(buf)?),
             recipes => Self::Recipes(Recipes::read(buf)?),
             lodestone_tracker => Self::LodestoneTracker(LodestoneTracker::read(buf)?),
-            firework_explosion => todo!(),
+            firework_explosion => Self::FireworkExplosion(FireworkExplosion::read(buf)?),
             fireworks => todo!(),
             profile => todo!(),
             note_block_sound => todo!(),
@@ -750,6 +752,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ProvidesBannerPatterns(x) => x.write(w),
                 Self::Recipes(x) => x.write(w),
                 Self::LodestoneTracker(x) => x.write(w),
+                Self::FireworkExplosion(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -823,6 +826,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ProvidesBannerPatterns(x) => x.len_s(),
                 Self::Recipes(x) => x.len_s(),
                 Self::LodestoneTracker(x) => x.len_s(),
+                Self::FireworkExplosion(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -899,7 +903,7 @@ impl TypedDataComponentType<'_> {
             Self::ProvidesBannerPatterns(..) => provides_banner_patterns,
             Self::Recipes(..) => recipes,
             Self::LodestoneTracker(..) => lodestone_tracker,
-            Self::FireworkExplosion => firework_explosion,
+            Self::FireworkExplosion(..) => firework_explosion,
             Self::Fireworks => fireworks,
             Self::Profile => profile,
             Self::NoteBlockSound => note_block_sound,
