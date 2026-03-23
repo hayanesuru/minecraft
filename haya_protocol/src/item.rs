@@ -511,7 +511,7 @@ pub enum TypedDataComponentType<'a> {
     ProvidesTrimMaterial(ProvidesTrimMaterial<'a>),
     OminousBottleAmplifier(OminousBottleAmplifier),
     JukeboxPlayable(JukeboxPlayable<'a>),
-    ProvidesBannerPatterns,
+    ProvidesBannerPatterns(TagKey<'a>),
     Recipes,
     LodestoneTracker,
     FireworkExplosion,
@@ -625,7 +625,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
                 Self::OminousBottleAmplifier(OminousBottleAmplifier::read(buf)?)
             }
             jukebox_playable => Self::JukeboxPlayable(JukeboxPlayable::read(buf)?),
-            provides_banner_patterns => todo!(),
+            provides_banner_patterns => Self::ProvidesBannerPatterns(TagKey::read(buf)?),
             recipes => todo!(),
             lodestone_tracker => todo!(),
             firework_explosion => todo!(),
@@ -737,6 +737,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ProvidesTrimMaterial(x) => x.write(w),
                 Self::OminousBottleAmplifier(x) => x.write(w),
                 Self::JukeboxPlayable(x) => x.write(w),
+                Self::ProvidesBannerPatterns(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -807,6 +808,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ProvidesTrimMaterial(x) => x.len_s(),
                 Self::OminousBottleAmplifier(x) => x.len_s(),
                 Self::JukeboxPlayable(x) => x.len_s(),
+                Self::ProvidesBannerPatterns(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -880,7 +882,7 @@ impl TypedDataComponentType<'_> {
             Self::ProvidesTrimMaterial(..) => provides_trim_material,
             Self::OminousBottleAmplifier(..) => ominous_bottle_amplifier,
             Self::JukeboxPlayable(..) => jukebox_playable,
-            Self::ProvidesBannerPatterns => provides_banner_patterns,
+            Self::ProvidesBannerPatterns(..) => provides_banner_patterns,
             Self::Recipes => recipes,
             Self::LodestoneTracker => lodestone_tracker,
             Self::FireworkExplosion => firework_explosion,
