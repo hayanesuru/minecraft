@@ -458,6 +458,13 @@ pub struct LodestoneTracker {
     pub tracked: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Fireworks<'a> {
+    #[mser(varint)]
+    pub flight_duration: u32,
+    pub explosions: List<'a, FireworkExplosion<'a>, 256>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -527,7 +534,7 @@ pub enum TypedDataComponentType<'a> {
     Recipes(Recipes),
     LodestoneTracker(LodestoneTracker),
     FireworkExplosion(FireworkExplosion<'a>),
-    Fireworks,
+    Fireworks(Fireworks<'a>),
     Profile,
     NoteBlockSound,
     BannerPatterns,
@@ -641,7 +648,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             recipes => Self::Recipes(Recipes::read(buf)?),
             lodestone_tracker => Self::LodestoneTracker(LodestoneTracker::read(buf)?),
             firework_explosion => Self::FireworkExplosion(FireworkExplosion::read(buf)?),
-            fireworks => todo!(),
+            fireworks => Self::Fireworks(Fireworks::read(buf)?),
             profile => todo!(),
             note_block_sound => todo!(),
             banner_patterns => todo!(),
@@ -753,6 +760,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Recipes(x) => x.write(w),
                 Self::LodestoneTracker(x) => x.write(w),
                 Self::FireworkExplosion(x) => x.write(w),
+                Self::Fireworks(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -827,6 +835,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Recipes(x) => x.len_s(),
                 Self::LodestoneTracker(x) => x.len_s(),
                 Self::FireworkExplosion(x) => x.len_s(),
+                Self::Fireworks(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -904,7 +913,7 @@ impl TypedDataComponentType<'_> {
             Self::Recipes(..) => recipes,
             Self::LodestoneTracker(..) => lodestone_tracker,
             Self::FireworkExplosion(..) => firework_explosion,
-            Self::Fireworks => fireworks,
+            Self::Fireworks(..) => fireworks,
             Self::Profile => profile,
             Self::NoteBlockSound => note_block_sound,
             Self::BannerPatterns => banner_patterns,
