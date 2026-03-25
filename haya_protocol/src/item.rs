@@ -7,7 +7,7 @@ pub mod suspicious_stew_effects;
 pub mod tool;
 
 use crate::advancement::BlockPredicate;
-use crate::block::BannerPatternLayers;
+use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
@@ -477,6 +477,11 @@ pub struct BlockItemStateProperties<'a> {
     pub properties: Map<'a, Utf8<'a>, Utf8<'a>>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Bees<'a> {
+    pub bees: List<'a, BeehiveOccupant>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -554,7 +559,7 @@ pub enum TypedDataComponentType<'a> {
     PotDecorations(List<'a, item, 4>),
     Container(ItemContainerContents<'a>),
     BlockState(BlockItemStateProperties<'a>),
-    Bees,
+    Bees(Bees<'a>),
     Lock,
     ContainerLoot,
     BreakSound,
@@ -668,7 +673,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             pot_decorations => Self::PotDecorations(List::read(buf)?),
             container => Self::Container(ItemContainerContents::read(buf)?),
             block_state => Self::BlockState(BlockItemStateProperties::read(buf)?),
-            bees => todo!(),
+            bees => Self::Bees(Bees::read(buf)?),
             lock => todo!(),
             container_loot => todo!(),
             break_sound => todo!(),
@@ -781,7 +786,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PotDecorations(x) => x.write(w),
                 Self::Container(x) => x.write(w),
                 Self::BlockState(x) => x.write(w),
-                Self::Bees => todo!(),
+                Self::Bees(x) => x.write(w),
                 Self::Lock => todo!(),
                 Self::ContainerLoot => todo!(),
                 Self::BreakSound => todo!(),
@@ -892,7 +897,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PotDecorations(x) => x.len_s(),
                 Self::Container(x) => x.len_s(),
                 Self::BlockState(x) => x.len_s(),
-                Self::Bees => todo!(),
+                Self::Bees(x) => x.len_s(),
                 Self::Lock => todo!(),
                 Self::ContainerLoot => todo!(),
                 Self::BreakSound => todo!(),
@@ -1005,7 +1010,7 @@ impl TypedDataComponentType<'_> {
             Self::PotDecorations(..) => pot_decorations,
             Self::Container(..) => container,
             Self::BlockState(..) => block_state,
-            Self::Bees => bees,
+            Self::Bees(..) => bees,
             Self::Lock => lock,
             Self::ContainerLoot => container_loot,
             Self::BreakSound => break_sound,

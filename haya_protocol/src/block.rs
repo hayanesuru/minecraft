@@ -1,3 +1,4 @@
+use crate::item::TypedEntityDataEntity;
 use crate::registry::BannerPatternRef;
 use crate::{DyeColor, Holder};
 use haya_collection::List;
@@ -19,4 +20,13 @@ pub struct BannerPatternLayers<'a> {
 pub struct BannerPatternLayer<'a> {
     pub pattern: Holder<BannerPattern<'a>, BannerPatternRef>,
     pub color: DyeColor,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BeehiveOccupant {
+    pub entity_data: TypedEntityDataEntity,
+    #[mser(varint)]
+    pub ticks_in_hive: u32,
+    #[mser(varint)]
+    pub min_ticks_in_hive: u32,
 }
