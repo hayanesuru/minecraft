@@ -223,3 +223,26 @@ impl LlamaVariant {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum AxolotlVariant {
+    Lucy,
+    Wild,
+    Gold,
+    Cyan,
+    Blue,
+}
+
+impl AxolotlVariant {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Lucy => "lucy",
+            Self::Wild => "wild",
+            Self::Gold => "gold",
+            Self::Cyan => "cyan",
+            Self::Blue => "blue",
+        }
+    }
+}

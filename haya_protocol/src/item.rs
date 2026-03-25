@@ -10,8 +10,8 @@ use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
 use crate::entity::{
-    EquineVariant, FoxVariant, LlamaVariant, MushroomCowVariant, PaintingVariant, ParrotVariant,
-    RabbitVariant, SalmonVariant, TropicalFishPattern,
+    AxolotlVariant, EquineVariant, FoxVariant, LlamaVariant, MushroomCowVariant, PaintingVariant,
+    ParrotVariant, RabbitVariant, SalmonVariant, TropicalFishPattern,
 };
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
@@ -592,7 +592,7 @@ pub enum TypedDataComponentType<'a> {
     HorseVariant(EquineVariant),
     PaintingVariant(Holder<PaintingVariant<'a>, PaintingVariantRef>),
     LlamaVariant(LlamaVariant),
-    AxolotlVariant,
+    AxolotlVariant(AxolotlVariant),
     CatVariant,
     CatCollar(DyeColor),
     SheepColor(DyeColor),
@@ -706,7 +706,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             horse_variant => Self::HorseVariant(EquineVariant::read(buf)?),
             painting_variant => Self::PaintingVariant(Holder::read(buf)?),
             llama_variant => Self::LlamaVariant(LlamaVariant::read(buf)?),
-            axolotl_variant => todo!(),
+            axolotl_variant => Self::AxolotlVariant(AxolotlVariant::read(buf)?),
             cat_variant => todo!(),
             cat_collar => Self::CatCollar(DyeColor::read(buf)?),
             sheep_color => Self::SheepColor(DyeColor::read(buf)?),
@@ -819,7 +819,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::HorseVariant(x) => x.write(w),
                 Self::PaintingVariant(x) => x.write(w),
                 Self::LlamaVariant(x) => x.write(w),
-                Self::AxolotlVariant => todo!(),
+                Self::AxolotlVariant(x) => x.write(w),
                 Self::CatVariant => todo!(),
                 Self::CatCollar(x) => x.write(w),
                 Self::SheepColor(x) => x.write(w),
@@ -930,7 +930,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::HorseVariant(x) => x.len_s(),
                 Self::PaintingVariant(x) => x.len_s(),
                 Self::LlamaVariant(x) => x.len_s(),
-                Self::AxolotlVariant => todo!(),
+                Self::AxolotlVariant(x) => x.len_s(),
                 Self::CatVariant => todo!(),
                 Self::CatCollar(x) => x.len_s(),
                 Self::SheepColor(x) => x.len_s(),
@@ -1043,7 +1043,7 @@ impl TypedDataComponentType<'_> {
             Self::HorseVariant(..) => horse_variant,
             Self::PaintingVariant(..) => painting_variant,
             Self::LlamaVariant(..) => llama_variant,
-            Self::AxolotlVariant => axolotl_variant,
+            Self::AxolotlVariant(..) => axolotl_variant,
             Self::CatVariant => cat_variant,
             Self::CatCollar(..) => cat_collar,
             Self::SheepColor(..) => sheep_color,
