@@ -56,3 +56,40 @@ impl ParrotVariant {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TropicalFishPattern {
+    Kob,
+    Sunstreak,
+    Snooper,
+    Dasher,
+    Brinely,
+    Spotty,
+    Flopper,
+    Stripey,
+    Glitter,
+    Blockfish,
+    Betty,
+    Clayfish,
+}
+
+impl TropicalFishPattern {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Kob => "kob",
+            Self::Sunstreak => "sunstreak",
+            Self::Snooper => "snooper",
+            Self::Dasher => "dasher",
+            Self::Brinely => "brinely",
+            Self::Spotty => "spotty",
+            Self::Flopper => "flopper",
+            Self::Stripey => "stripey",
+            Self::Glitter => "glitter",
+            Self::Blockfish => "blockfish",
+            Self::Betty => "betty",
+            Self::Clayfish => "clayfish",
+        }
+    }
+}

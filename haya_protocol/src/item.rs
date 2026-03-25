@@ -9,7 +9,7 @@ pub mod tool;
 use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
-use crate::entity::{FoxVariant, ParrotVariant, SalmonVariant};
+use crate::entity::{FoxVariant, ParrotVariant, SalmonVariant, TropicalFishPattern};
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
 use crate::item::firework_explosion::FireworkExplosion;
@@ -575,7 +575,7 @@ pub enum TypedDataComponentType<'a> {
     FoxVariant(FoxVariant),
     SalmonSize(SalmonVariant),
     ParrotVariant(ParrotVariant),
-    TropicalFishPattern,
+    TropicalFishPattern(TropicalFishPattern),
     TropicalFishBaseColor,
     TropicalFishPatternColor,
     MooshroomVariant,
@@ -689,7 +689,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             fox_variant => Self::FoxVariant(FoxVariant::read(buf)?),
             salmon_size => Self::SalmonSize(SalmonVariant::read(buf)?),
             parrot_variant => Self::ParrotVariant(ParrotVariant::read(buf)?),
-            tropical_fish_pattern => todo!(),
+            tropical_fish_pattern => Self::TropicalFishPattern(TropicalFishPattern::read(buf)?),
             tropical_fish_base_color => todo!(),
             tropical_fish_pattern_color => todo!(),
             mooshroom_variant => todo!(),
@@ -802,7 +802,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::FoxVariant(x) => x.write(w),
                 Self::SalmonSize(x) => x.write(w),
                 Self::ParrotVariant(x) => x.write(w),
-                Self::TropicalFishPattern => todo!(),
+                Self::TropicalFishPattern(x) => x.write(w),
                 Self::TropicalFishBaseColor => todo!(),
                 Self::TropicalFishPatternColor => todo!(),
                 Self::MooshroomVariant => todo!(),
@@ -913,7 +913,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::FoxVariant(x) => x.len_s(),
                 Self::SalmonSize(x) => x.len_s(),
                 Self::ParrotVariant(x) => x.len_s(),
-                Self::TropicalFishPattern => todo!(),
+                Self::TropicalFishPattern(x) => x.len_s(),
                 Self::TropicalFishBaseColor => todo!(),
                 Self::TropicalFishPatternColor => todo!(),
                 Self::MooshroomVariant => todo!(),
@@ -1026,7 +1026,7 @@ impl TypedDataComponentType<'_> {
             Self::FoxVariant(..) => fox_variant,
             Self::SalmonSize(..) => salmon_size,
             Self::ParrotVariant(..) => parrot_variant,
-            Self::TropicalFishPattern => tropical_fish_pattern,
+            Self::TropicalFishPattern(..) => tropical_fish_pattern,
             Self::TropicalFishBaseColor => tropical_fish_base_color,
             Self::TropicalFishPatternColor => tropical_fish_pattern_color,
             Self::MooshroomVariant => mooshroom_variant,
