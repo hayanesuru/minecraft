@@ -23,9 +23,9 @@ use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
-    ChickenVariantRef, CowVariantRef, DamageTypeRef, InstrumentRef, JukeboxSongRef, PigVariantRef,
-    SoundEventRef, TrimMaterialRef, TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef,
-    WolfVariantRef, ZombieNautilusVariantRef,
+    ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef, JukeboxSongRef,
+    PigVariantRef, SoundEventRef, TrimMaterialRef, TrimPatternRef, VillagerTypeRef,
+    WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -588,7 +588,7 @@ pub enum TypedDataComponentType<'a> {
     CowVariant(CowVariantRef),
     ChickenVariant(Either<ChickenVariantRef, ResourceKey<'a>>),
     ZombieNautilusVariant(Either<ZombieNautilusVariantRef, ResourceKey<'a>>),
-    FrogVariant,
+    FrogVariant(FrogVariantRef),
     HorseVariant,
     PaintingVariant,
     LlamaVariant,
@@ -702,7 +702,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             cow_variant => Self::CowVariant(CowVariantRef::read(buf)?),
             chicken_variant => Self::ChickenVariant(Either::read(buf)?),
             zombie_nautilus_variant => Self::ZombieNautilusVariant(Either::read(buf)?),
-            frog_variant => todo!(),
+            frog_variant => Self::FrogVariant(FrogVariantRef::read(buf)?),
             horse_variant => todo!(),
             painting_variant => todo!(),
             llama_variant => todo!(),
@@ -815,7 +815,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CowVariant(x) => x.write(w),
                 Self::ChickenVariant(x) => x.write(w),
                 Self::ZombieNautilusVariant(x) => x.write(w),
-                Self::FrogVariant => todo!(),
+                Self::FrogVariant(x) => x.write(w),
                 Self::HorseVariant => todo!(),
                 Self::PaintingVariant => todo!(),
                 Self::LlamaVariant => todo!(),
@@ -926,7 +926,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::CowVariant(x) => x.len_s(),
                 Self::ChickenVariant(x) => x.len_s(),
                 Self::ZombieNautilusVariant(x) => x.len_s(),
-                Self::FrogVariant => todo!(),
+                Self::FrogVariant(x) => x.len_s(),
                 Self::HorseVariant => todo!(),
                 Self::PaintingVariant => todo!(),
                 Self::LlamaVariant => todo!(),
@@ -1039,7 +1039,7 @@ impl TypedDataComponentType<'_> {
             Self::CowVariant(..) => cow_variant,
             Self::ChickenVariant(..) => chicken_variant,
             Self::ZombieNautilusVariant(..) => zombie_nautilus_variant,
-            Self::FrogVariant => frog_variant,
+            Self::FrogVariant(..) => frog_variant,
             Self::HorseVariant => horse_variant,
             Self::PaintingVariant => painting_variant,
             Self::LlamaVariant => llama_variant,
