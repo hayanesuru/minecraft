@@ -1,3 +1,5 @@
+use crate::Component;
+use haya_ident::Ident;
 use mser::{Read, V21, Write};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -188,4 +190,15 @@ impl EquineVariant {
             Self::DarkBrown => "dark_brown",
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PaintingVariant<'a> {
+    #[mser(varint)]
+    pub width: u32,
+    #[mser(varint)]
+    pub height: u32,
+    pub asset_id: Ident<'a>,
+    pub title: Option<Component>,
+    pub author: Option<Component>,
 }

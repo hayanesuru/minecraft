@@ -1,5 +1,6 @@
 use crate::Holder;
 use crate::block::BannerPattern;
+use crate::entity::PaintingVariant;
 use crate::item::{Instrument, JukeboxSong};
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -53,6 +54,9 @@ pub struct ZombieNautilusVariantRef(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct FrogVariantRef(#[mser(varint)] pub u32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct PaintingVariantRef(#[mser(varint)] pub u32);
 
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, SoundEventRef> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
@@ -267,6 +271,45 @@ impl<'a> Read<'a> for Holder<BannerPattern<'a>, BannerPatternRef> {
 }
 
 impl<'a> Write for Holder<BannerPattern<'a>, BannerPatternRef> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                Self::Reference(id) => {
+                    V32(id.0 + 1).write(w);
+                }
+                Self::Direct(direct) => {
+                    V32(0).write(w);
+                    direct.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Reference(id) => V32(id.0 + 1).len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32(0).len_s();
+                len += direct.len_s();
+                len
+            }
+        }
+    }
+}
+
+impl<'a> Read<'a> for Holder<PaintingVariant<'a>, PaintingVariantRef> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let id = V32::read(buf)?.0;
+        if id == 0 {
+            Ok(Self::Direct(PaintingVariant::read(buf)?))
+        } else {
+            let x = id - 1;
+            Ok(Self::Reference(PaintingVariantRef(x)))
+        }
+    }
+}
+
+impl<'a> Write for Holder<PaintingVariant<'a>, PaintingVariantRef> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {
