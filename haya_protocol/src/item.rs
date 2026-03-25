@@ -9,7 +9,9 @@ pub mod tool;
 use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
-use crate::entity::{FoxVariant, ParrotVariant, SalmonVariant, TropicalFishPattern};
+use crate::entity::{
+    FoxVariant, MushroomCowVariant, ParrotVariant, SalmonVariant, TropicalFishPattern,
+};
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
 use crate::item::firework_explosion::FireworkExplosion;
@@ -578,7 +580,7 @@ pub enum TypedDataComponentType<'a> {
     TropicalFishPattern(TropicalFishPattern),
     TropicalFishBaseColor(DyeColor),
     TropicalFishPatternColor(DyeColor),
-    MooshroomVariant,
+    MooshroomVariant(MushroomCowVariant),
     RabbitVariant,
     PigVariant,
     CowVariant,
@@ -692,7 +694,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             tropical_fish_pattern => Self::TropicalFishPattern(TropicalFishPattern::read(buf)?),
             tropical_fish_base_color => Self::TropicalFishBaseColor(DyeColor::read(buf)?),
             tropical_fish_pattern_color => Self::TropicalFishPatternColor(DyeColor::read(buf)?),
-            mooshroom_variant => todo!(),
+            mooshroom_variant => Self::MooshroomVariant(MushroomCowVariant::read(buf)?),
             rabbit_variant => todo!(),
             pig_variant => todo!(),
             cow_variant => todo!(),
@@ -805,7 +807,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::TropicalFishPattern(x) => x.write(w),
                 Self::TropicalFishBaseColor(x) => x.write(w),
                 Self::TropicalFishPatternColor(x) => x.write(w),
-                Self::MooshroomVariant => todo!(),
+                Self::MooshroomVariant(x) => x.write(w),
                 Self::RabbitVariant => todo!(),
                 Self::PigVariant => todo!(),
                 Self::CowVariant => todo!(),
@@ -916,7 +918,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::TropicalFishPattern(x) => x.len_s(),
                 Self::TropicalFishBaseColor(x) => x.len_s(),
                 Self::TropicalFishPatternColor(x) => x.len_s(),
-                Self::MooshroomVariant => todo!(),
+                Self::MooshroomVariant(x) => x.len_s(),
                 Self::RabbitVariant => todo!(),
                 Self::PigVariant => todo!(),
                 Self::CowVariant => todo!(),
@@ -1029,7 +1031,7 @@ impl TypedDataComponentType<'_> {
             Self::TropicalFishPattern(..) => tropical_fish_pattern,
             Self::TropicalFishBaseColor(..) => tropical_fish_base_color,
             Self::TropicalFishPatternColor(..) => tropical_fish_pattern_color,
-            Self::MooshroomVariant => mooshroom_variant,
+            Self::MooshroomVariant(..) => mooshroom_variant,
             Self::RabbitVariant => rabbit_variant,
             Self::PigVariant => pig_variant,
             Self::CowVariant => cow_variant,

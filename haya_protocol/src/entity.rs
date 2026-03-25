@@ -93,3 +93,20 @@ impl TropicalFishPattern {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum MushroomCowVariant {
+    Red,
+    Brown,
+}
+
+impl MushroomCowVariant {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Red => "red",
+            Self::Brown => "brown",
+        }
+    }
+}
