@@ -23,9 +23,9 @@ use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
-    ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef, JukeboxSongRef,
-    PaintingVariantRef, PigVariantRef, SoundEventRef, TrimMaterialRef, TrimPatternRef,
-    VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
+    CatVariantRef, ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
+    JukeboxSongRef, PaintingVariantRef, PigVariantRef, SoundEventRef, TrimMaterialRef,
+    TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -593,7 +593,7 @@ pub enum TypedDataComponentType<'a> {
     PaintingVariant(Holder<PaintingVariant<'a>, PaintingVariantRef>),
     LlamaVariant(LlamaVariant),
     AxolotlVariant(AxolotlVariant),
-    CatVariant,
+    CatVariant(CatVariantRef),
     CatCollar(DyeColor),
     SheepColor(DyeColor),
     ShulkerColor(DyeColor),
@@ -707,7 +707,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             painting_variant => Self::PaintingVariant(Holder::read(buf)?),
             llama_variant => Self::LlamaVariant(LlamaVariant::read(buf)?),
             axolotl_variant => Self::AxolotlVariant(AxolotlVariant::read(buf)?),
-            cat_variant => todo!(),
+            cat_variant => Self::CatVariant(CatVariantRef::read(buf)?),
             cat_collar => Self::CatCollar(DyeColor::read(buf)?),
             sheep_color => Self::SheepColor(DyeColor::read(buf)?),
             shulker_color => Self::ShulkerColor(DyeColor::read(buf)?),
@@ -820,7 +820,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PaintingVariant(x) => x.write(w),
                 Self::LlamaVariant(x) => x.write(w),
                 Self::AxolotlVariant(x) => x.write(w),
-                Self::CatVariant => todo!(),
+                Self::CatVariant(x) => x.write(w),
                 Self::CatCollar(x) => x.write(w),
                 Self::SheepColor(x) => x.write(w),
                 Self::ShulkerColor(x) => x.write(w),
@@ -931,7 +931,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PaintingVariant(x) => x.len_s(),
                 Self::LlamaVariant(x) => x.len_s(),
                 Self::AxolotlVariant(x) => x.len_s(),
-                Self::CatVariant => todo!(),
+                Self::CatVariant(x) => x.len_s(),
                 Self::CatCollar(x) => x.len_s(),
                 Self::SheepColor(x) => x.len_s(),
                 Self::ShulkerColor(x) => x.len_s(),
@@ -1044,7 +1044,7 @@ impl TypedDataComponentType<'_> {
             Self::PaintingVariant(..) => painting_variant,
             Self::LlamaVariant(..) => llama_variant,
             Self::AxolotlVariant(..) => axolotl_variant,
-            Self::CatVariant => cat_variant,
+            Self::CatVariant(..) => cat_variant,
             Self::CatCollar(..) => cat_collar,
             Self::SheepColor(..) => sheep_color,
             Self::ShulkerColor(..) => shulker_color,
