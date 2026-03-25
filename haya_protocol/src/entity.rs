@@ -1,3 +1,5 @@
+use mser::{Read, V21, Write};
+
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
@@ -107,6 +109,56 @@ impl MushroomCowVariant {
         match self {
             Self::Red => "red",
             Self::Brown => "brown",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(u8)]
+pub enum RabbitVariant {
+    Brown,
+    White,
+    Black,
+    WhiteSplotched,
+    Gold,
+    Salt,
+    Evil = 99,
+}
+
+impl Write for RabbitVariant {
+    unsafe fn write(&self, w: &mut mser::Writer) {
+        unsafe { w.write_byte(*self as u8) }
+    }
+
+    fn len_s(&self) -> usize {
+        1
+    }
+}
+
+impl<'a> Read<'a> for RabbitVariant {
+    fn read(buf: &mut mser::Reader<'a>) -> Result<Self, mser::Error> {
+        Ok(match V21::read(buf)?.0 {
+            1 => Self::White,
+            2 => Self::Black,
+            3 => Self::WhiteSplotched,
+            4 => Self::Gold,
+            5 => Self::Salt,
+            99 => Self::Evil,
+            _ => Self::Brown,
+        })
+    }
+}
+
+impl RabbitVariant {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Brown => "brown",
+            Self::White => "white",
+            Self::Black => "black",
+            Self::WhiteSplotched => "white_splotched",
+            Self::Gold => "gold",
+            Self::Salt => "salt",
+            Self::Evil => "evil",
         }
     }
 }
