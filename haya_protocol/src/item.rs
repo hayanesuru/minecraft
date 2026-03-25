@@ -537,7 +537,7 @@ pub enum TypedDataComponentType<'a> {
     FireworkExplosion(FireworkExplosion<'a>),
     Fireworks(Fireworks<'a>),
     Profile(ResolvableProfile<'a>),
-    NoteBlockSound,
+    NoteBlockSound(Ident<'a>),
     BannerPatterns,
     BaseColor,
     PotDecorations,
@@ -651,7 +651,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             firework_explosion => Self::FireworkExplosion(FireworkExplosion::read(buf)?),
             fireworks => Self::Fireworks(Fireworks::read(buf)?),
             profile => Self::Profile(ResolvableProfile::read(buf)?),
-            note_block_sound => todo!(),
+            note_block_sound => Self::NoteBlockSound(Ident::read(buf)?),
             banner_patterns => todo!(),
             base_color => todo!(),
             pot_decorations => todo!(),
@@ -763,6 +763,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::FireworkExplosion(x) => x.write(w),
                 Self::Fireworks(x) => x.write(w),
                 Self::Profile(x) => x.write(w),
+                Self::NoteBlockSound(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -839,6 +840,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::FireworkExplosion(x) => x.len_s(),
                 Self::Fireworks(x) => x.len_s(),
                 Self::Profile(x) => x.len_s(),
+                Self::NoteBlockSound(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -918,7 +920,7 @@ impl TypedDataComponentType<'_> {
             Self::FireworkExplosion(..) => firework_explosion,
             Self::Fireworks(..) => fireworks,
             Self::Profile(..) => profile,
-            Self::NoteBlockSound => note_block_sound,
+            Self::NoteBlockSound(..) => note_block_sound,
             Self::BannerPatterns => banner_patterns,
             Self::BaseColor => base_color,
             Self::PotDecorations => pot_decorations,
