@@ -23,7 +23,7 @@ use crate::registry::{
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
-use crate::{Component, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
+use crate::{Component, DyeColor, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey, TagKey};
@@ -540,7 +540,7 @@ pub enum TypedDataComponentType<'a> {
     Profile(ResolvableProfile<'a>),
     NoteBlockSound(Ident<'a>),
     BannerPatterns(BannerPatternLayers<'a>),
-    BaseColor,
+    BaseColor(DyeColor),
     PotDecorations,
     Container,
     BlockState,
@@ -654,7 +654,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             profile => Self::Profile(ResolvableProfile::read(buf)?),
             note_block_sound => Self::NoteBlockSound(Ident::read(buf)?),
             banner_patterns => Self::BannerPatterns(BannerPatternLayers::read(buf)?),
-            base_color => todo!(),
+            base_color => Self::BaseColor(DyeColor::read(buf)?),
             pot_decorations => todo!(),
             container => todo!(),
             block_state => todo!(),
@@ -766,6 +766,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Profile(x) => x.write(w),
                 Self::NoteBlockSound(x) => x.write(w),
                 Self::BannerPatterns(x) => x.write(w),
+                Self::BaseColor(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -844,6 +845,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Profile(x) => x.len_s(),
                 Self::NoteBlockSound(x) => x.len_s(),
                 Self::BannerPatterns(x) => x.len_s(),
+                Self::BaseColor(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -925,7 +927,7 @@ impl TypedDataComponentType<'_> {
             Self::Profile(..) => profile,
             Self::NoteBlockSound(..) => note_block_sound,
             Self::BannerPatterns(..) => banner_patterns,
-            Self::BaseColor => base_color,
+            Self::BaseColor(..) => base_color,
             Self::PotDecorations => pot_decorations,
             Self::Container => container,
             Self::BlockState => block_state,
