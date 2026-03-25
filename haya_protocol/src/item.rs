@@ -20,7 +20,7 @@ use crate::item::tool::Tool;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
     DamageTypeRef, InstrumentRef, JukeboxSongRef, SoundEventRef, TrimMaterialRef, TrimPatternRef,
-    VillagerTypeRef,
+    VillagerTypeRef, WolfVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -568,7 +568,7 @@ pub enum TypedDataComponentType<'a> {
     ContainerLoot(SeededContainerLoot),
     BreakSound(Holder<SoundEvent<'a>, SoundEventRef>),
     VillagerVariant(VillagerTypeRef),
-    WolfVariant,
+    WolfVariant(WolfVariantRef),
     WolfSoundVariant,
     WolfCollar,
     FoxVariant,
@@ -682,7 +682,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             container_loot => Self::ContainerLoot(SeededContainerLoot::read(buf)?),
             break_sound => Self::BreakSound(Holder::read(buf)?),
             villager_variant => Self::VillagerVariant(VillagerTypeRef::read(buf)?),
-            wolf_variant => todo!(),
+            wolf_variant => Self::WolfVariant(WolfVariantRef::read(buf)?),
             wolf_sound_variant => todo!(),
             wolf_collar => todo!(),
             fox_variant => todo!(),
@@ -795,7 +795,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ContainerLoot(x) => x.write(w),
                 Self::BreakSound(x) => x.write(w),
                 Self::VillagerVariant(x) => x.write(w),
-                Self::WolfVariant => todo!(),
+                Self::WolfVariant(x) => x.write(w),
                 Self::WolfSoundVariant => todo!(),
                 Self::WolfCollar => todo!(),
                 Self::FoxVariant => todo!(),
@@ -906,7 +906,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ContainerLoot(x) => x.len_s(),
                 Self::BreakSound(x) => x.len_s(),
                 Self::VillagerVariant(x) => x.len_s(),
-                Self::WolfVariant => todo!(),
+                Self::WolfVariant(x) => x.len_s(),
                 Self::WolfSoundVariant => todo!(),
                 Self::WolfCollar => todo!(),
                 Self::FoxVariant => todo!(),
@@ -1019,7 +1019,7 @@ impl TypedDataComponentType<'_> {
             Self::ContainerLoot(..) => container_loot,
             Self::BreakSound(..) => break_sound,
             Self::VillagerVariant(..) => villager_variant,
-            Self::WolfVariant => wolf_variant,
+            Self::WolfVariant(..) => wolf_variant,
             Self::WolfSoundVariant => wolf_sound_variant,
             Self::WolfCollar => wolf_collar,
             Self::FoxVariant => fox_variant,
