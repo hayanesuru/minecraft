@@ -45,6 +45,9 @@ pub struct PigVariantRef(#[mser(varint)] pub u32);
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct CowVariantRef(#[mser(varint)] pub u32);
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct ChickenVariantRef(#[mser(varint)] pub u32);
+
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, SoundEventRef> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let id = V32::read(buf)?.0;
