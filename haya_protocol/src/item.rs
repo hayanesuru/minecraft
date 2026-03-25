@@ -25,7 +25,7 @@ use crate::profile::ResolvableProfile;
 use crate::registry::{
     ChickenVariantRef, CowVariantRef, DamageTypeRef, InstrumentRef, JukeboxSongRef, PigVariantRef,
     SoundEventRef, TrimMaterialRef, TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef,
-    WolfVariantRef,
+    WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -587,7 +587,7 @@ pub enum TypedDataComponentType<'a> {
     PigVariant(PigVariantRef),
     CowVariant(CowVariantRef),
     ChickenVariant(Either<ChickenVariantRef, ResourceKey<'a>>),
-    ZombieNautilusVariant,
+    ZombieNautilusVariant(Either<ZombieNautilusVariantRef, ResourceKey<'a>>),
     FrogVariant,
     HorseVariant,
     PaintingVariant,
@@ -701,7 +701,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             pig_variant => Self::PigVariant(PigVariantRef::read(buf)?),
             cow_variant => Self::CowVariant(CowVariantRef::read(buf)?),
             chicken_variant => Self::ChickenVariant(Either::read(buf)?),
-            zombie_nautilus_variant => todo!(),
+            zombie_nautilus_variant => Self::ZombieNautilusVariant(Either::read(buf)?),
             frog_variant => todo!(),
             horse_variant => todo!(),
             painting_variant => todo!(),
@@ -814,7 +814,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PigVariant(x) => x.write(w),
                 Self::CowVariant(x) => x.write(w),
                 Self::ChickenVariant(x) => x.write(w),
-                Self::ZombieNautilusVariant => todo!(),
+                Self::ZombieNautilusVariant(x) => x.write(w),
                 Self::FrogVariant => todo!(),
                 Self::HorseVariant => todo!(),
                 Self::PaintingVariant => todo!(),
@@ -925,7 +925,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::PigVariant(x) => x.len_s(),
                 Self::CowVariant(x) => x.len_s(),
                 Self::ChickenVariant(x) => x.len_s(),
-                Self::ZombieNautilusVariant => todo!(),
+                Self::ZombieNautilusVariant(x) => x.len_s(),
                 Self::FrogVariant => todo!(),
                 Self::HorseVariant => todo!(),
                 Self::PaintingVariant => todo!(),
@@ -1038,7 +1038,7 @@ impl TypedDataComponentType<'_> {
             Self::PigVariant(..) => pig_variant,
             Self::CowVariant(..) => cow_variant,
             Self::ChickenVariant(..) => chicken_variant,
-            Self::ZombieNautilusVariant => zombie_nautilus_variant,
+            Self::ZombieNautilusVariant(..) => zombie_nautilus_variant,
             Self::FrogVariant => frog_variant,
             Self::HorseVariant => horse_variant,
             Self::PaintingVariant => painting_variant,
