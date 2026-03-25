@@ -576,7 +576,7 @@ pub enum TypedDataComponentType<'a> {
     SalmonSize(SalmonVariant),
     ParrotVariant(ParrotVariant),
     TropicalFishPattern(TropicalFishPattern),
-    TropicalFishBaseColor,
+    TropicalFishBaseColor(DyeColor),
     TropicalFishPatternColor,
     MooshroomVariant,
     RabbitVariant,
