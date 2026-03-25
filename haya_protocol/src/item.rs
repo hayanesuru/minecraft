@@ -16,6 +16,7 @@ use crate::item::item_enchantments::ItemEnchantments;
 use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
+use crate::profile::ResolvableProfile;
 use crate::registry::{
     DamageTypeRef, InstrumentRef, JukeboxSongRef, SoundEventRef, TrimMaterialRef, TrimPatternRef,
 };
@@ -535,7 +536,7 @@ pub enum TypedDataComponentType<'a> {
     LodestoneTracker(LodestoneTracker),
     FireworkExplosion(FireworkExplosion<'a>),
     Fireworks(Fireworks<'a>),
-    Profile,
+    Profile(ResolvableProfile<'a>),
     NoteBlockSound,
     BannerPatterns,
     BaseColor,
@@ -649,7 +650,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             lodestone_tracker => Self::LodestoneTracker(LodestoneTracker::read(buf)?),
             firework_explosion => Self::FireworkExplosion(FireworkExplosion::read(buf)?),
             fireworks => Self::Fireworks(Fireworks::read(buf)?),
-            profile => todo!(),
+            profile => Self::Profile(ResolvableProfile::read(buf)?),
             note_block_sound => todo!(),
             banner_patterns => todo!(),
             base_color => todo!(),
@@ -761,6 +762,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::LodestoneTracker(x) => x.write(w),
                 Self::FireworkExplosion(x) => x.write(w),
                 Self::Fireworks(x) => x.write(w),
+                Self::Profile(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -836,6 +838,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::LodestoneTracker(x) => x.len_s(),
                 Self::FireworkExplosion(x) => x.len_s(),
                 Self::Fireworks(x) => x.len_s(),
+                Self::Profile(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -914,7 +917,7 @@ impl TypedDataComponentType<'_> {
             Self::LodestoneTracker(..) => lodestone_tracker,
             Self::FireworkExplosion(..) => firework_explosion,
             Self::Fireworks(..) => fireworks,
-            Self::Profile => profile,
+            Self::Profile(..) => profile,
             Self::NoteBlockSound => note_block_sound,
             Self::BannerPatterns => banner_patterns,
             Self::BaseColor => base_color,
