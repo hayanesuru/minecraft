@@ -9,6 +9,7 @@ pub mod tool;
 use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
+use crate::entity::{FoxVariant, SalmonVariant};
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
 use crate::item::firework_explosion::FireworkExplosion;
@@ -571,8 +572,8 @@ pub enum TypedDataComponentType<'a> {
     WolfVariant(WolfVariantRef),
     WolfSoundVariant(WolfSoundVariantRef),
     WolfCollar(DyeColor),
-    FoxVariant,
-    SalmonSize,
+    FoxVariant(FoxVariant),
+    SalmonSize(SalmonVariant),
     ParrotVariant,
     TropicalFishPattern,
     TropicalFishBaseColor,
@@ -685,8 +686,8 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             wolf_variant => Self::WolfVariant(WolfVariantRef::read(buf)?),
             wolf_sound_variant => Self::WolfSoundVariant(WolfSoundVariantRef::read(buf)?),
             wolf_collar => Self::WolfCollar(DyeColor::read(buf)?),
-            fox_variant => todo!(),
-            salmon_size => todo!(),
+            fox_variant => Self::FoxVariant(FoxVariant::read(buf)?),
+            salmon_size => Self::SalmonSize(SalmonVariant::read(buf)?),
             parrot_variant => todo!(),
             tropical_fish_pattern => todo!(),
             tropical_fish_base_color => todo!(),
@@ -798,8 +799,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::WolfVariant(x) => x.write(w),
                 Self::WolfSoundVariant(x) => x.write(w),
                 Self::WolfCollar(x) => x.write(w),
-                Self::FoxVariant => todo!(),
-                Self::SalmonSize => todo!(),
+                Self::FoxVariant(x) => x.write(w),
+                Self::SalmonSize(x) => x.write(w),
                 Self::ParrotVariant => todo!(),
                 Self::TropicalFishPattern => todo!(),
                 Self::TropicalFishBaseColor => todo!(),
@@ -909,8 +910,8 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::WolfVariant(x) => x.len_s(),
                 Self::WolfSoundVariant(x) => x.len_s(),
                 Self::WolfCollar(x) => x.len_s(),
-                Self::FoxVariant => todo!(),
-                Self::SalmonSize => todo!(),
+                Self::FoxVariant(x) => x.len_s(),
+                Self::SalmonSize(x) => x.len_s(),
                 Self::ParrotVariant => todo!(),
                 Self::TropicalFishPattern => todo!(),
                 Self::TropicalFishBaseColor => todo!(),
@@ -1022,8 +1023,8 @@ impl TypedDataComponentType<'_> {
             Self::WolfVariant(..) => wolf_variant,
             Self::WolfSoundVariant(..) => wolf_sound_variant,
             Self::WolfCollar(..) => wolf_collar,
-            Self::FoxVariant => fox_variant,
-            Self::SalmonSize => salmon_size,
+            Self::FoxVariant(..) => fox_variant,
+            Self::SalmonSize(..) => salmon_size,
             Self::ParrotVariant => parrot_variant,
             Self::TropicalFishPattern => tropical_fish_pattern,
             Self::TropicalFishBaseColor => tropical_fish_base_color,
