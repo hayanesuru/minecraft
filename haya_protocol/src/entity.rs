@@ -162,3 +162,30 @@ impl RabbitVariant {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum EquineVariant {
+    White,
+    Creamy,
+    Chestnut,
+    Brown,
+    Black,
+    Gray,
+    DarkBrown,
+}
+
+impl EquineVariant {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::White => "white",
+            Self::Creamy => "creamy",
+            Self::Chestnut => "chestnut",
+            Self::Brown => "brown",
+            Self::Black => "black",
+            Self::Gray => "gray",
+            Self::DarkBrown => "dark_brown",
+        }
+    }
+}

@@ -10,7 +10,7 @@ use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
 use crate::entity::{
-    FoxVariant, MushroomCowVariant, ParrotVariant, RabbitVariant, SalmonVariant,
+    EquineVariant, FoxVariant, MushroomCowVariant, ParrotVariant, RabbitVariant, SalmonVariant,
     TropicalFishPattern,
 };
 use crate::food::FoodProperties;
@@ -589,7 +589,7 @@ pub enum TypedDataComponentType<'a> {
     ChickenVariant(Either<ChickenVariantRef, ResourceKey<'a>>),
     ZombieNautilusVariant(Either<ZombieNautilusVariantRef, ResourceKey<'a>>),
     FrogVariant(FrogVariantRef),
-    HorseVariant,
+    HorseVariant(EquineVariant),
     PaintingVariant,
     LlamaVariant,
     AxolotlVariant,
@@ -703,7 +703,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             chicken_variant => Self::ChickenVariant(Either::read(buf)?),
             zombie_nautilus_variant => Self::ZombieNautilusVariant(Either::read(buf)?),
             frog_variant => Self::FrogVariant(FrogVariantRef::read(buf)?),
-            horse_variant => todo!(),
+            horse_variant => Self::HorseVariant(EquineVariant::read(buf)?),
             painting_variant => todo!(),
             llama_variant => todo!(),
             axolotl_variant => todo!(),
@@ -816,7 +816,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ChickenVariant(x) => x.write(w),
                 Self::ZombieNautilusVariant(x) => x.write(w),
                 Self::FrogVariant(x) => x.write(w),
-                Self::HorseVariant => todo!(),
+                Self::HorseVariant(x) => x.write(w),
                 Self::PaintingVariant => todo!(),
                 Self::LlamaVariant => todo!(),
                 Self::AxolotlVariant => todo!(),
@@ -927,7 +927,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::ChickenVariant(x) => x.len_s(),
                 Self::ZombieNautilusVariant(x) => x.len_s(),
                 Self::FrogVariant(x) => x.len_s(),
-                Self::HorseVariant => todo!(),
+                Self::HorseVariant(x) => x.len_s(),
                 Self::PaintingVariant => todo!(),
                 Self::LlamaVariant => todo!(),
                 Self::AxolotlVariant => todo!(),
@@ -1040,7 +1040,7 @@ impl TypedDataComponentType<'_> {
             Self::ChickenVariant(..) => chicken_variant,
             Self::ZombieNautilusVariant(..) => zombie_nautilus_variant,
             Self::FrogVariant(..) => frog_variant,
-            Self::HorseVariant => horse_variant,
+            Self::HorseVariant(..) => horse_variant,
             Self::PaintingVariant => painting_variant,
             Self::LlamaVariant => llama_variant,
             Self::AxolotlVariant => axolotl_variant,
