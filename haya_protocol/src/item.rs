@@ -25,7 +25,7 @@ use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
 use crate::{Component, DyeColor, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
 use alloc::vec::Vec;
-use haya_collection::List;
+use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
@@ -472,6 +472,11 @@ pub struct ItemContainerContents<'a> {
     pub items: List<'a, OptionalItemStack<'a>, 256>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BlockItemStateProperties<'a> {
+    pub properties: Map<'a, Utf8<'a>, Utf8<'a>>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -548,7 +553,7 @@ pub enum TypedDataComponentType<'a> {
     BaseColor(DyeColor),
     PotDecorations(List<'a, item, 4>),
     Container(ItemContainerContents<'a>),
-    BlockState,
+    BlockState(BlockItemStateProperties<'a>),
     Bees,
     Lock,
     ContainerLoot,
@@ -662,7 +667,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             base_color => Self::BaseColor(DyeColor::read(buf)?),
             pot_decorations => Self::PotDecorations(List::read(buf)?),
             container => Self::Container(ItemContainerContents::read(buf)?),
-            block_state => todo!(),
+            block_state => Self::BlockState(BlockItemStateProperties::read(buf)?),
             bees => todo!(),
             lock => todo!(),
             container_loot => todo!(),
@@ -775,7 +780,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BaseColor(x) => x.write(w),
                 Self::PotDecorations(x) => x.write(w),
                 Self::Container(x) => x.write(w),
-                Self::BlockState => todo!(),
+                Self::BlockState(x) => x.write(w),
                 Self::Bees => todo!(),
                 Self::Lock => todo!(),
                 Self::ContainerLoot => todo!(),
@@ -886,7 +891,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BaseColor(x) => x.len_s(),
                 Self::PotDecorations(x) => x.len_s(),
                 Self::Container(x) => x.len_s(),
-                Self::BlockState => todo!(),
+                Self::BlockState(x) => x.len_s(),
                 Self::Bees => todo!(),
                 Self::Lock => todo!(),
                 Self::ContainerLoot => todo!(),
@@ -999,7 +1004,7 @@ impl TypedDataComponentType<'_> {
             Self::BaseColor(..) => base_color,
             Self::PotDecorations(..) => pot_decorations,
             Self::Container(..) => container,
-            Self::BlockState => block_state,
+            Self::BlockState(..) => block_state,
             Self::Bees => bees,
             Self::Lock => lock,
             Self::ContainerLoot => container_loot,
