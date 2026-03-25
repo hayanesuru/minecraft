@@ -482,6 +482,9 @@ pub struct Bees<'a> {
     pub bees: List<'a, BeehiveOccupant>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SeededContainerLoot(Tag);
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -561,7 +564,7 @@ pub enum TypedDataComponentType<'a> {
     BlockState(BlockItemStateProperties<'a>),
     Bees(Bees<'a>),
     Lock(LockCode),
-    ContainerLoot,
+    ContainerLoot(SeededContainerLoot),
     BreakSound,
     VillagerVariant,
     WolfVariant,
@@ -675,7 +678,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             block_state => Self::BlockState(BlockItemStateProperties::read(buf)?),
             bees => Self::Bees(Bees::read(buf)?),
             lock => Self::Lock(LockCode::read(buf)?),
-            container_loot => todo!(),
+            container_loot => Self::ContainerLoot(SeededContainerLoot::read(buf)?),
             break_sound => todo!(),
             villager_variant => todo!(),
             wolf_variant => todo!(),
@@ -788,7 +791,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BlockState(x) => x.write(w),
                 Self::Bees(x) => x.write(w),
                 Self::Lock(x) => x.write(w),
-                Self::ContainerLoot => todo!(),
+                Self::ContainerLoot(x) => x.write(w),
                 Self::BreakSound => todo!(),
                 Self::VillagerVariant => todo!(),
                 Self::WolfVariant => todo!(),
@@ -899,7 +902,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BlockState(x) => x.len_s(),
                 Self::Bees(x) => x.len_s(),
                 Self::Lock(x) => x.len_s(),
-                Self::ContainerLoot => todo!(),
+                Self::ContainerLoot(x) => x.len_s(),
                 Self::BreakSound => todo!(),
                 Self::VillagerVariant => todo!(),
                 Self::WolfVariant => todo!(),
@@ -1012,7 +1015,7 @@ impl TypedDataComponentType<'_> {
             Self::BlockState(..) => block_state,
             Self::Bees(..) => bees,
             Self::Lock(..) => lock,
-            Self::ContainerLoot => container_loot,
+            Self::ContainerLoot(..) => container_loot,
             Self::BreakSound => break_sound,
             Self::VillagerVariant => villager_variant,
             Self::WolfVariant => wolf_variant,
