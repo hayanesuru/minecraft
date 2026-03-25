@@ -12,6 +12,7 @@ pub mod block;
 pub mod clientbound;
 pub mod command;
 pub mod effect;
+pub mod entity;
 pub mod food;
 pub mod item;
 pub mod profile;
