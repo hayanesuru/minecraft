@@ -450,6 +450,9 @@ impl<'a, T: Read<'a>> Read<'a> for Filterable<T> {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LockCode(pub Tag);
+
 #[cfg(test)]
 mod tests {
     use super::*;

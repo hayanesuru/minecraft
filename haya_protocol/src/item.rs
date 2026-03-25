@@ -23,7 +23,7 @@ use crate::registry::{
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
-use crate::{Component, DyeColor, EquipmentSlot, Filterable, Holder, HolderSet, Rarity};
+use crate::{Component, DyeColor, EquipmentSlot, Filterable, Holder, HolderSet, LockCode, Rarity};
 use alloc::vec::Vec;
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey, TagKey};
@@ -560,7 +560,7 @@ pub enum TypedDataComponentType<'a> {
     Container(ItemContainerContents<'a>),
     BlockState(BlockItemStateProperties<'a>),
     Bees(Bees<'a>),
-    Lock,
+    Lock(LockCode),
     ContainerLoot,
     BreakSound,
     VillagerVariant,
@@ -674,7 +674,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             container => Self::Container(ItemContainerContents::read(buf)?),
             block_state => Self::BlockState(BlockItemStateProperties::read(buf)?),
             bees => Self::Bees(Bees::read(buf)?),
-            lock => todo!(),
+            lock => Self::Lock(LockCode::read(buf)?),
             container_loot => todo!(),
             break_sound => todo!(),
             villager_variant => todo!(),
@@ -787,7 +787,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Container(x) => x.write(w),
                 Self::BlockState(x) => x.write(w),
                 Self::Bees(x) => x.write(w),
-                Self::Lock => todo!(),
+                Self::Lock(x) => x.write(w),
                 Self::ContainerLoot => todo!(),
                 Self::BreakSound => todo!(),
                 Self::VillagerVariant => todo!(),
@@ -898,7 +898,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Container(x) => x.len_s(),
                 Self::BlockState(x) => x.len_s(),
                 Self::Bees(x) => x.len_s(),
-                Self::Lock => todo!(),
+                Self::Lock(x) => x.len_s(),
                 Self::ContainerLoot => todo!(),
                 Self::BreakSound => todo!(),
                 Self::VillagerVariant => todo!(),
@@ -1011,7 +1011,7 @@ impl TypedDataComponentType<'_> {
             Self::Container(..) => container,
             Self::BlockState(..) => block_state,
             Self::Bees(..) => bees,
-            Self::Lock => lock,
+            Self::Lock(..) => lock,
             Self::ContainerLoot => container_loot,
             Self::BreakSound => break_sound,
             Self::VillagerVariant => villager_variant,
