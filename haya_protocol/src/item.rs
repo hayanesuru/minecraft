@@ -467,6 +467,11 @@ pub struct Fireworks<'a> {
     pub explosions: List<'a, FireworkExplosion<'a>, 256>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ItemContainerContents<'a> {
+    pub items: List<'a, OptionalItemStack<'a>, 256>,
+}
+
 #[derive(Clone)]
 pub enum TypedDataComponentType<'a> {
     CustomData(CustomData),
@@ -542,7 +547,7 @@ pub enum TypedDataComponentType<'a> {
     BannerPatterns(BannerPatternLayers<'a>),
     BaseColor(DyeColor),
     PotDecorations(List<'a, item, 4>),
-    Container,
+    Container(ItemContainerContents<'a>),
     BlockState,
     Bees,
     Lock,
@@ -656,7 +661,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             banner_patterns => Self::BannerPatterns(BannerPatternLayers::read(buf)?),
             base_color => Self::BaseColor(DyeColor::read(buf)?),
             pot_decorations => Self::PotDecorations(List::read(buf)?),
-            container => todo!(),
+            container => Self::Container(ItemContainerContents::read(buf)?),
             block_state => todo!(),
             bees => todo!(),
             lock => todo!(),
@@ -769,7 +774,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BannerPatterns(x) => x.write(w),
                 Self::BaseColor(x) => x.write(w),
                 Self::PotDecorations(x) => x.write(w),
-                Self::Container => todo!(),
+                Self::Container(x) => x.write(w),
                 Self::BlockState => todo!(),
                 Self::Bees => todo!(),
                 Self::Lock => todo!(),
@@ -880,7 +885,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::BannerPatterns(x) => x.len_s(),
                 Self::BaseColor(x) => x.len_s(),
                 Self::PotDecorations(x) => x.len_s(),
-                Self::Container => todo!(),
+                Self::Container(x) => x.len_s(),
                 Self::BlockState => todo!(),
                 Self::Bees => todo!(),
                 Self::Lock => todo!(),
@@ -993,7 +998,7 @@ impl TypedDataComponentType<'_> {
             Self::BannerPatterns(..) => banner_patterns,
             Self::BaseColor(..) => base_color,
             Self::PotDecorations(..) => pot_decorations,
-            Self::Container => container,
+            Self::Container(..) => container,
             Self::BlockState => block_state,
             Self::Bees => bees,
             Self::Lock => lock,
