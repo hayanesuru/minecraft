@@ -25,16 +25,16 @@ edition = "2024"
 
 [workspace.dependencies]
 mser = { path = "haya_ser", version = "3.0", default-features = false }
-mser_macro = { path = "haya_ser_macro", version = "3.0", default-features = false }
+mser_macro = { path = "haya_ser_macro", version = "3.1", default-features = false }
 minecraft_data = { path = "haya_data", version = "3.0", default-features = false }
 haya_nbt = { path = "haya_nbt", version = "0.1" }
-haya_str = { path = "haya_str", version = "0.1" }
-haya_ident = { path = "haya_ident", version = "0.1" }
+haya_str = { path = "haya_str", version = "0.2" }
+haya_ident = { path = "haya_ident", version = "0.2" }
 haya_mutf8 = { path = "haya_mutf8", version = "0.1" }
 haya_ecs = { path = "haya_ecs", version = "0.1" }
 haya_text = { path = "haya_text", version = "0.1" }
 haya_math = { path = "haya_math", version = "0.1" }
-haya_collection = { path = "haya_collection", version = "0.1" }
+haya_collection = { path = "haya_collection", version = "0.2" }
 
 uuid = { version = "1", default-features = false }
 

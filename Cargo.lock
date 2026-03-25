@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "haya_collection"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "mser",
 ]
@@ -32,7 +32,7 @@ version = "0.1.0"
 
 [[package]]
 name = "haya_ident"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "haya_str",
  "mser",
@@ -75,7 +75,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "0.1.0-rc.0+1.21.11"
+version = "0.2.0"
 dependencies = [
  "haya_collection",
  "haya_ident",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "haya_str"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "haya_text"
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "mser_macro"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "itoa",
  "proc-macro2",
