@@ -10,8 +10,8 @@ use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
 use crate::entity::{
-    EquineVariant, FoxVariant, MushroomCowVariant, PaintingVariant, ParrotVariant, RabbitVariant,
-    SalmonVariant, TropicalFishPattern,
+    EquineVariant, FoxVariant, LlamaVariant, MushroomCowVariant, PaintingVariant, ParrotVariant,
+    RabbitVariant, SalmonVariant, TropicalFishPattern,
 };
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
@@ -591,7 +591,7 @@ pub enum TypedDataComponentType<'a> {
     FrogVariant(FrogVariantRef),
     HorseVariant(EquineVariant),
     PaintingVariant(Holder<PaintingVariant<'a>, PaintingVariantRef>),
-    LlamaVariant,
+    LlamaVariant(LlamaVariant),
     AxolotlVariant,
     CatVariant,
     CatCollar(DyeColor),
@@ -705,7 +705,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             frog_variant => Self::FrogVariant(FrogVariantRef::read(buf)?),
             horse_variant => Self::HorseVariant(EquineVariant::read(buf)?),
             painting_variant => Self::PaintingVariant(Holder::read(buf)?),
-            llama_variant => todo!(),
+            llama_variant => Self::LlamaVariant(LlamaVariant::read(buf)?),
             axolotl_variant => todo!(),
             cat_variant => todo!(),
             cat_collar => Self::CatCollar(DyeColor::read(buf)?),
@@ -818,7 +818,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::FrogVariant(x) => x.write(w),
                 Self::HorseVariant(x) => x.write(w),
                 Self::PaintingVariant(x) => x.write(w),
-                Self::LlamaVariant => todo!(),
+                Self::LlamaVariant(x) => x.write(w),
                 Self::AxolotlVariant => todo!(),
                 Self::CatVariant => todo!(),
                 Self::CatCollar(x) => x.write(w),
@@ -929,7 +929,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::FrogVariant(x) => x.len_s(),
                 Self::HorseVariant(x) => x.len_s(),
                 Self::PaintingVariant(x) => x.len_s(),
-                Self::LlamaVariant => todo!(),
+                Self::LlamaVariant(x) => x.len_s(),
                 Self::AxolotlVariant => todo!(),
                 Self::CatVariant => todo!(),
                 Self::CatCollar(x) => x.len_s(),
@@ -1042,7 +1042,7 @@ impl TypedDataComponentType<'_> {
             Self::FrogVariant(..) => frog_variant,
             Self::HorseVariant(..) => horse_variant,
             Self::PaintingVariant(..) => painting_variant,
-            Self::LlamaVariant => llama_variant,
+            Self::LlamaVariant(..) => llama_variant,
             Self::AxolotlVariant => axolotl_variant,
             Self::CatVariant => cat_variant,
             Self::CatCollar(..) => cat_collar,

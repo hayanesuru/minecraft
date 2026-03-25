@@ -202,3 +202,24 @@ pub struct PaintingVariant<'a> {
     pub title: Option<Component>,
     pub author: Option<Component>,
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum LlamaVariant {
+    Creamy,
+    White,
+    Brown,
+    Gray,
+}
+
+impl LlamaVariant {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Creamy => "creamy",
+            Self::White => "white",
+            Self::Brown => "brown",
+            Self::Gray => "gray",
+        }
+    }
+}
