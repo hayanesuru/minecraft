@@ -593,9 +593,9 @@ pub enum TypedDataComponentType<'a> {
     LlamaVariant,
     AxolotlVariant,
     CatVariant,
-    CatCollar,
-    SheepColor,
-    ShulkerColor,
+    CatCollar(DyeColor),
+    SheepColor(DyeColor),
+    ShulkerColor(DyeColor),
 }
 
 impl<'a> Read<'a> for TypedDataComponentType<'a> {
@@ -707,9 +707,9 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             llama_variant => todo!(),
             axolotl_variant => todo!(),
             cat_variant => todo!(),
-            cat_collar => todo!(),
-            sheep_color => todo!(),
-            shulker_color => todo!(),
+            cat_collar => Self::CatCollar(DyeColor::read(buf)?),
+            sheep_color => Self::SheepColor(DyeColor::read(buf)?),
+            shulker_color => Self::ShulkerColor(DyeColor::read(buf)?),
         })
     }
 }
@@ -820,9 +820,9 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::LlamaVariant => todo!(),
                 Self::AxolotlVariant => todo!(),
                 Self::CatVariant => todo!(),
-                Self::CatCollar => todo!(),
-                Self::SheepColor => todo!(),
-                Self::ShulkerColor => todo!(),
+                Self::CatCollar(x) => x.write(w),
+                Self::SheepColor(x) => x.write(w),
+                Self::ShulkerColor(x) => x.write(w),
             }
         }
     }
@@ -931,9 +931,9 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::LlamaVariant => todo!(),
                 Self::AxolotlVariant => todo!(),
                 Self::CatVariant => todo!(),
-                Self::CatCollar => todo!(),
-                Self::SheepColor => todo!(),
-                Self::ShulkerColor => todo!(),
+                Self::CatCollar(x) => x.len_s(),
+                Self::SheepColor(x) => x.len_s(),
+                Self::ShulkerColor(x) => x.len_s(),
             }
     }
 }
@@ -1044,9 +1044,9 @@ impl TypedDataComponentType<'_> {
             Self::LlamaVariant => llama_variant,
             Self::AxolotlVariant => axolotl_variant,
             Self::CatVariant => cat_variant,
-            Self::CatCollar => cat_collar,
-            Self::SheepColor => sheep_color,
-            Self::ShulkerColor => shulker_color,
+            Self::CatCollar(..) => cat_collar,
+            Self::SheepColor(..) => sheep_color,
+            Self::ShulkerColor(..) => shulker_color,
         }
     }
 }
