@@ -7,6 +7,7 @@ pub mod suspicious_stew_effects;
 pub mod tool;
 
 use crate::advancement::BlockPredicate;
+use crate::block::BannerPatternLayers;
 use crate::effect::MobEffect;
 use crate::food::FoodProperties;
 use crate::item::consume_effect::ConsumeEffect;
@@ -538,7 +539,7 @@ pub enum TypedDataComponentType<'a> {
     Fireworks(Fireworks<'a>),
     Profile(ResolvableProfile<'a>),
     NoteBlockSound(Ident<'a>),
-    BannerPatterns,
+    BannerPatterns(BannerPatternLayers<'a>),
     BaseColor,
     PotDecorations,
     Container,
@@ -652,7 +653,7 @@ impl<'a> Read<'a> for TypedDataComponentType<'a> {
             fireworks => Self::Fireworks(Fireworks::read(buf)?),
             profile => Self::Profile(ResolvableProfile::read(buf)?),
             note_block_sound => Self::NoteBlockSound(Ident::read(buf)?),
-            banner_patterns => todo!(),
+            banner_patterns => Self::BannerPatterns(BannerPatternLayers::read(buf)?),
             base_color => todo!(),
             pot_decorations => todo!(),
             container => todo!(),
@@ -764,6 +765,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Fireworks(x) => x.write(w),
                 Self::Profile(x) => x.write(w),
                 Self::NoteBlockSound(x) => x.write(w),
+                Self::BannerPatterns(x) => x.write(w),
                 _ => todo!(),
             }
         }
@@ -841,6 +843,7 @@ impl<'a> Write for TypedDataComponentType<'a> {
                 Self::Fireworks(x) => x.len_s(),
                 Self::Profile(x) => x.len_s(),
                 Self::NoteBlockSound(x) => x.len_s(),
+                Self::BannerPatterns(x) => x.len_s(),
                 _ => todo!(),
             }
     }
@@ -921,7 +924,7 @@ impl TypedDataComponentType<'_> {
             Self::Fireworks(..) => fireworks,
             Self::Profile(..) => profile,
             Self::NoteBlockSound(..) => note_block_sound,
-            Self::BannerPatterns => banner_patterns,
+            Self::BannerPatterns(..) => banner_patterns,
             Self::BaseColor => base_color,
             Self::PotDecorations => pot_decorations,
             Self::Container => container,

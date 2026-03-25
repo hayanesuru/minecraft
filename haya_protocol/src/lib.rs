@@ -8,6 +8,7 @@ use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 pub mod advancement;
 pub mod attribute;
+pub mod block;
 pub mod clientbound;
 pub mod command;
 pub mod effect;
@@ -98,7 +99,7 @@ pub enum KnownLinkType {
 }
 
 impl KnownLinkType {
-    pub const fn key(self) -> Translatable<'static> {
+    pub const fn translation_key(self) -> Translatable<'static> {
         Translatable(match self {
             Self::ReportBug => "known_server_link.report_bug",
             Self::CommunityGuidelines => "known_server_link.community_guidelines",
@@ -137,7 +138,7 @@ pub enum ChatVisibility {
 }
 
 impl ChatVisibility {
-    pub const fn key(self) -> Translatable<'static> {
+    pub const fn translation_key(self) -> Translatable<'static> {
         Translatable(match self {
             Self::Full => "options.chat.visibility.full",
             Self::System => "options.chat.visibility.system",
@@ -155,7 +156,7 @@ pub enum HumanoidArm {
 }
 
 impl HumanoidArm {
-    pub const fn key(self) -> Translatable<'static> {
+    pub const fn translation_key(self) -> Translatable<'static> {
         Translatable(match self {
             Self::Left => "options.mainHand.left",
             Self::Right => "options.mainHand.right",
@@ -180,7 +181,7 @@ pub enum ParticleStatus {
 }
 
 impl ParticleStatus {
-    pub const fn key(self) -> Translatable<'static> {
+    pub const fn translation_key(self) -> Translatable<'static> {
         Translatable(match self {
             Self::All => "options.particles.all",
             Self::Decreased => "options.particles.decreased",
@@ -209,7 +210,7 @@ impl Difficulty {
         }
     }
 
-    pub const fn key(self) -> Translatable<'static> {
+    pub const fn translation_key(self) -> Translatable<'static> {
         Translatable(match self {
             Self::Peaceful => "options.difficulty.peaceful",
             Self::Easy => "options.difficulty.easy",
