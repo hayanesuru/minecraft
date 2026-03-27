@@ -1,7 +1,9 @@
 use crate::command::CommandNode;
+use crate::item::OptionalItemStack;
 use crate::stat::Stat;
 use crate::{Component, ContainerId, Difficulty};
 use haya_collection::{List, Map};
+use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
@@ -329,4 +331,51 @@ pub struct Commands<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ContainerClose {
     pub container_id: ContainerId,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerSetContent<'a> {
+    pub container_id: ContainerId,
+    #[mser(varint)]
+    pub state_id: u32,
+    pub items: List<'a, OptionalItemStack<'a>>,
+    pub carried_item: OptionalItemStack<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerSetData {
+    pub container_id: ContainerId,
+    pub id: u16,
+    pub value: u16,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerSetSlot<'a> {
+    pub container_id: ContainerId,
+    #[mser(varint)]
+    pub state_id: u32,
+    pub slot: u16,
+    pub item_stack: OptionalItemStack<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Cooldown<'a> {
+    pub cooldownGroup: Ident<'a>,
+    #[mser(varint)]
+    pub duration: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomChatCompletions<'a> {
+    pub action: CustomChatCompletionsAction,
+    pub entries: List<'a, Utf8<'a>>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum CustomChatCompletionsAction {
+    Add,
+    Remove,
+    Set,
 }

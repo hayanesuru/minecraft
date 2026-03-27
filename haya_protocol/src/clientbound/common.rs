@@ -5,6 +5,12 @@ use mser::{ByteArray, Rest, Utf8, V32};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct GameCustomPayload<'a>(pub CustomPayload<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationCustomPayload<'a>(pub CustomPayload<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CustomPayload<'a> {
     pub id: Ident<'a>,
     pub payload: Rest<'a, 1048576>,
