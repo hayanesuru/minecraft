@@ -360,7 +360,7 @@ pub struct ContainerSetSlot<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Cooldown<'a> {
-    pub cooldownGroup: Ident<'a>,
+    pub cooldown_group: Ident<'a>,
     #[mser(varint)]
     pub duration: u32,
 }
