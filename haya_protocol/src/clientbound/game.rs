@@ -407,3 +407,9 @@ impl OptionalEntityId {
         self.0 == 0
     }
 }
+
+// #[derive(Clone, Serialize, Deserialize)]
+// pub struct DebugBlockValue<'a> {
+//     pub block_pos: BlockPosPacked,
+//     pub update: DebugSubscriptionUpdate<'a>,
+// }

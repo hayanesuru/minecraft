@@ -1,0 +1,31 @@
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum PathType {
+    Blocked,
+    Open,
+    Walkable,
+    WalkableDoor,
+    Trapdoor,
+    PowderSnow,
+    DangerPowderSnow,
+    Fence,
+    Lava,
+    Water,
+    WaterBorder,
+    Rail,
+    UnpassableRail,
+    DangerFire,
+    DamageFire,
+    DangerOther,
+    DamageOther,
+    DoorOpen,
+    DoorWoodClosed,
+    DoorIronClosed,
+    Breach,
+    Leaves,
+    StickyHoney,
+    Cocoa,
+    DamageCautious,
+    DangerTrapdoor,
+}
