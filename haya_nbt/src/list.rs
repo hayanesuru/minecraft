@@ -1,6 +1,4 @@
-use crate::{
-    ByteArray, Compound, IntArray, ListInfo, ListTag, LongArray, RefStringTag, StringTag, TagType,
-};
+use crate::{ByteArray, Compound, IntArray, ListInfo, ListTag, LongArray, StringTag, TagType};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use mser::{Error, Read, Reader, Write, Writer};
@@ -160,80 +158,6 @@ impl ListTag {
             Self::LongArray(items) => ListInfo(TagType::LongArray, items.len() as _),
             Self::List(items) => ListInfo(TagType::List, items.len() as _),
             Self::Compound(items) => ListInfo(TagType::Compound, items.len() as _),
-        }
-    }
-}
-
-impl Write for ListTag {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            self.list_info().write(w);
-            match self {
-                Self::None => {}
-                Self::Byte(x) => {
-                    w.write(crate::byte_array::i8_to_u8_slice(x));
-                }
-                Self::Short(x) => {
-                    x.iter().for_each(|x| x.write(w));
-                }
-                Self::Int(x) => {
-                    x.iter().for_each(|x| x.write(w));
-                }
-                Self::Long(x) => {
-                    x.iter().for_each(|x| x.write(w));
-                }
-                Self::Float(x) => {
-                    x.iter().for_each(|x| x.write(w));
-                }
-                Self::Double(x) => {
-                    x.iter().for_each(|x| x.write(w));
-                }
-                Self::String(x) => {
-                    x.iter().for_each(|x| RefStringTag(x).write(w));
-                }
-                Self::ByteArray(x) => {
-                    x.iter().for_each(|y| {
-                        (y.len() as u32).write(w);
-                        crate::byte_array::i8_to_u8_slice(y).write(w);
-                    });
-                }
-                Self::IntArray(x) => {
-                    x.iter().for_each(|y| {
-                        (y.len() as u32).write(w);
-                        y.iter().for_each(|z| z.write(w));
-                    });
-                }
-                Self::LongArray(x) => {
-                    x.iter().for_each(|y| {
-                        (y.len() as u32).write(w);
-                        y.iter().for_each(|z| z.write(w));
-                    });
-                }
-                Self::List(x) => {
-                    x.iter().for_each(|y| y.write(w));
-                }
-                Self::Compound(x) => {
-                    x.iter().for_each(|y| y.write(w));
-                }
-            }
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        5 + match self {
-            Self::None => 0,
-            Self::Byte(x) => x.len(),
-            Self::Short(x) => x.len() * 2,
-            Self::Int(x) => x.len() * 4,
-            Self::Long(x) => x.len() * 8,
-            Self::Float(x) => x.len() * 4,
-            Self::Double(x) => x.len() * 8,
-            Self::String(x) => x.iter().map(|x| RefStringTag(x).len_s()).sum::<usize>(),
-            Self::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
-            Self::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
-            Self::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
-            Self::List(x) => x.iter().map(|x| x.len_s()).sum::<usize>(),
-            Self::Compound(x) => x.iter().map(|x| x.len_s()).sum::<usize>(),
         }
     }
 }

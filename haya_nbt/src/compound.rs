@@ -1,5 +1,5 @@
 use crate::string::DecodeMutf8;
-use crate::{Compound, Name, RefStringTag, Tag, TagType, read_tag};
+use crate::{Compound, Name, Tag, read_tag};
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -90,58 +90,11 @@ impl AsMut<[(Name, Tag)]> for Compound {
 
 impl Write for Compound {
     unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            for (name, tag) in &self.0 {
-                tag.id().write(w);
-                name.write(w);
-                match tag {
-                    Tag::Byte(x) => x.write(w),
-                    Tag::Short(x) => x.write(w),
-                    Tag::Int(x) => x.write(w),
-                    Tag::Long(x) => x.write(w),
-                    Tag::Float(x) => x.write(w),
-                    Tag::Double(x) => x.write(w),
-                    Tag::String(x) => RefStringTag(x).write(w),
-                    Tag::ByteArray(x) => {
-                        (x.len() as u32).write(w);
-                        w.write(&*(x.as_slice() as *const [i8] as *const [u8]))
-                    }
-                    Tag::IntArray(x) => {
-                        (x.len() as u32).write(w);
-                        x.iter().for_each(|&x| x.write(w));
-                    }
-                    Tag::LongArray(x) => {
-                        (x.len() as u32).write(w);
-                        x.iter().for_each(|&x| x.write(w));
-                    }
-                    Tag::List(x) => x.write(w),
-                    Tag::Compound(x) => x.write(w),
-                }
-            }
-            TagType::End.write(w);
-        }
+        crate::write_tag(w, crate::WriteEntry::Compound(&self.0));
     }
 
     fn len_s(&self) -> usize {
-        let mut w = 1 + self.0.len();
-        for (name, tag) in &self.0 {
-            w += name.len_s();
-            w += match tag {
-                Tag::Byte(_) => 1,
-                Tag::Short(_) => 2,
-                Tag::Int(_) => 4,
-                Tag::Long(_) => 8,
-                Tag::Float(_) => 4,
-                Tag::Double(_) => 8,
-                Tag::String(x) => RefStringTag(x).len_s(),
-                Tag::ByteArray(x) => 4 + x.len(),
-                Tag::IntArray(x) => 4 + x.len() * 4,
-                Tag::LongArray(x) => 4 + x.len() * 8,
-                Tag::List(x) => x.len_s(),
-                Tag::Compound(x) => Write::len_s(x),
-            };
-        }
-        w
+        crate::len_tag(crate::WriteEntry::Compound(&self.0))
     }
 }
 
@@ -279,7 +232,7 @@ impl Compound {
 impl Read<'_> for Compound {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        match read_tag(buf, crate::Entry::Compound(Self::new()), 512) {
+        match read_tag(buf, crate::ReadEntry::Compound(Self::new()), 512) {
             Ok(Tag::Compound(x)) => Ok(x),
             Ok(_) => Err(Error),
             Err(e) => Err(e),
