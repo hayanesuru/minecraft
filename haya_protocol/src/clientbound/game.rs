@@ -1,5 +1,6 @@
 use crate::command::CommandNode;
 use crate::item::OptionalItemStack;
+use crate::registry::DamageTypeRef;
 use crate::stat::Stat;
 use crate::{Component, ContainerId, Difficulty};
 use haya_collection::{List, Map};
@@ -378,4 +379,31 @@ pub enum CustomChatCompletionsAction {
     Add,
     Remove,
     Set,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DamageEvent {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub source_type: DamageTypeRef,
+    pub source_cause_id: OptionalEntityId,
+    pub source_direct_id: OptionalEntityId,
+    pub source_position: Option<Vec3>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct OptionalEntityId(#[mser(varint)] u32);
+
+impl OptionalEntityId {
+    pub const fn new(id: u32) -> Self {
+        Self(id.wrapping_add(1))
+    }
+
+    pub const fn id(self) -> u32 {
+        self.0.wrapping_sub(1)
+    }
+
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
+    }
 }
