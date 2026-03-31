@@ -238,49 +238,43 @@ impl Write for ListTag {
     }
 }
 
-#[derive(Clone, Copy)]
-pub(crate) enum ListRec {
-    Compound,
-    List,
-}
-
 impl ListInfo {
-    pub(crate) fn list_no_rec(self, n: &mut Reader) -> Result<Result<ListTag, ListRec>, Error> {
+    pub(crate) fn list_no_rec(self, n: &mut Reader) -> Result<ListTag, Error> {
         let len = self.1 as usize;
         match self.0 {
-            TagType::End => Ok(Ok(ListTag::None)),
-            TagType::Byte => Ok(Ok(ListTag::Byte(Vec::from(
-                crate::byte_array::u8_to_i8_slice(n.read_slice(len)?),
+            TagType::End => Ok(ListTag::None),
+            TagType::Byte => Ok(ListTag::Byte(Vec::from(crate::byte_array::u8_to_i8_slice(
+                n.read_slice(len)?,
             )))),
             TagType::Short => unsafe {
-                Ok(Ok(ListTag::Short(short_list(
+                Ok(ListTag::Short(short_list(
                     len,
                     n.read_slice(len.checked_mul(2).ok_or(Error)?)?,
-                ))))
+                )))
             },
             TagType::Int => unsafe {
-                Ok(Ok(ListTag::Int(int_list(
+                Ok(ListTag::Int(int_list(
                     len,
                     n.read_slice(len.checked_mul(4).ok_or(Error)?)?,
-                ))))
+                )))
             },
             TagType::Long => unsafe {
-                Ok(Ok(ListTag::Long(long_list(
+                Ok(ListTag::Long(long_list(
                     len,
                     n.read_slice(len.checked_mul(8).ok_or(Error)?)?,
-                ))))
+                )))
             },
             TagType::Float => unsafe {
-                Ok(Ok(ListTag::Float(f32_list(
+                Ok(ListTag::Float(f32_list(
                     len,
                     n.read_slice(len.checked_mul(4).ok_or(Error)?)?,
-                ))))
+                )))
             },
             TagType::Double => unsafe {
-                Ok(Ok(ListTag::Double(f64_list(
+                Ok(ListTag::Double(f64_list(
                     len,
                     n.read_slice(len.checked_mul(8).ok_or(Error)?)?,
-                ))))
+                )))
             },
             TagType::ByteArray => {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
@@ -290,7 +284,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(ByteArray::read(n)?.0);
                 }
-                Ok(Ok(ListTag::ByteArray(list)))
+                Ok(ListTag::ByteArray(list))
             }
             TagType::String => {
                 if len.checked_mul(2).ok_or(Error)? > n.len() {
@@ -300,10 +294,10 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(StringTag::read(n)?.0);
                 }
-                Ok(Ok(ListTag::String(list)))
+                Ok(ListTag::String(list))
             }
-            TagType::List => Ok(Err(ListRec::List)),
-            TagType::Compound => Ok(Err(ListRec::Compound)),
+            TagType::List => Ok(ListTag::List(Vec::with_capacity(len.max(65536)))),
+            TagType::Compound => Ok(ListTag::Compound(Vec::with_capacity(len.max(65536)))),
             TagType::IntArray => {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
                     return Err(Error);
@@ -312,7 +306,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(IntArray::read(n)?.0);
                 }
-                Ok(Ok(ListTag::IntArray(list)))
+                Ok(ListTag::IntArray(list))
             }
             TagType::LongArray => {
                 if len.checked_mul(4).ok_or(Error)? > n.len() {
@@ -322,7 +316,7 @@ impl ListInfo {
                 for _ in 0..len {
                     list.push(LongArray::read(n)?.0);
                 }
-                Ok(Ok(ListTag::LongArray(list)))
+                Ok(ListTag::LongArray(list))
             }
         }
     }

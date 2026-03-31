@@ -1,5 +1,5 @@
 use crate::string::DecodeMutf8;
-use crate::{Compound, Name, RefStringTag, Tag, TagType};
+use crate::{Compound, Name, RefStringTag, Tag, TagType, read_tag};
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -279,7 +279,7 @@ impl Compound {
 impl Read<'_> for Compound {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        match TagType::Compound.tag(buf) {
+        match read_tag(buf, crate::Entry::Compound(Self::new()), 512) {
             Ok(Tag::Compound(x)) => Ok(x),
             Ok(_) => Err(Error),
             Err(e) => Err(e),
