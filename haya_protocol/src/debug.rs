@@ -1,6 +1,7 @@
+use crate::path::Path;
 use haya_collection::List;
 use haya_math::BlockPosPacked;
-use minecraft_data::debug_subscription;
+use minecraft_data::{block, debug_subscription, point_of_interest_type};
 use mser::Utf8;
 
 #[derive(Clone)]
@@ -10,10 +11,10 @@ pub enum DebugSubscriptionUpdate<'a> {
     Brains(Option<DebugBrainDump<'a>>),
     Breezes(Option<DebugBreezeInfo>),
     GoalSelectors(Option<DebugGoalInfo<'a>>),
-    EntityPaths,
-    EntityBlockIntersections,
-    BeeHives,
-    Pois,
+    EntityPaths(Option<DebugPathInfo<'a>>),
+    EntityBlockIntersections(Option<DebugEntityBlockIntersection>),
+    BeeHives(Option<DebugHiveInfo>),
+    Pois(Option<DebugPoiInfo>),
     RedstoneWireOrientations,
     VillageSections,
     Raids,
@@ -53,10 +54,10 @@ pub enum DebugSubscriptionEvent<'a> {
     Brains(DebugBrainDump<'a>),
     Breezes(DebugBreezeInfo),
     GoalSelectors(DebugGoalInfo<'a>),
-    EntityPaths,
-    EntityBlockIntersections,
-    BeeHives,
-    Pois,
+    EntityPaths(DebugPathInfo<'a>),
+    EntityBlockIntersections(DebugEntityBlockIntersection),
+    BeeHives(DebugHiveInfo),
+    Pois(DebugPoiInfo),
     RedstoneWireOrientations,
     VillageSections,
     Raids,
@@ -136,4 +137,37 @@ pub struct DebugGoal<'a> {
     pub priority: u32,
     pub is_running: bool,
     pub name: Utf8<'a, 255>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugPathInfo<'a> {
+    pub path: Path<'a>,
+    pub max_node_distance: f32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum DebugEntityBlockIntersection {
+    InBlock,
+    InFluid,
+    InAir,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugHiveInfo {
+    pub ty: block,
+    #[mser(varint)]
+    pub occupant_count: u32,
+    #[mser(varint)]
+    pub honey_level: u32,
+    pub sedated: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugPoiInfo {
+    pub pos: BlockPosPacked,
+    pub poi_type: point_of_interest_type,
+    #[mser(varint)]
+    pub free_ticket_count: u32,
 }
