@@ -420,3 +420,10 @@ pub struct DebugChunkValue<'a> {
     pub chunk_pos: ChunkPos,
     pub update: DebugSubscriptionUpdate<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugEntityValue<'a> {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub update: DebugSubscriptionUpdate<'a>,
+}
