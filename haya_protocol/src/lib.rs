@@ -18,10 +18,12 @@ pub mod food;
 pub mod item;
 pub mod path;
 pub mod profile;
+pub mod redstone;
 pub mod registry;
 pub mod serverbound;
 pub mod sound;
 pub mod stat;
+pub mod structure;
 pub mod trim;
 pub mod types;
 

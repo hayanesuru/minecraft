@@ -1,8 +1,10 @@
 use crate::path::Path;
+use crate::redstone::Orientation;
+use crate::structure::{BoundingBoxPacked, PiecePacked};
 use haya_collection::List;
-use haya_math::BlockPosPacked;
-use minecraft_data::{block, debug_subscription, point_of_interest_type};
-use mser::Utf8;
+use haya_math::{BlockPosPacked, Vec3};
+use minecraft_data::{block, debug_subscription, game_event, point_of_interest_type};
+use mser::{Error, Read, Reader, Utf8, Write, Writer};
 
 #[derive(Clone)]
 pub enum DebugSubscriptionUpdate<'a> {
@@ -15,13 +17,13 @@ pub enum DebugSubscriptionUpdate<'a> {
     EntityBlockIntersections(Option<DebugEntityBlockIntersection>),
     BeeHives(Option<DebugHiveInfo>),
     Pois(Option<DebugPoiInfo>),
-    RedstoneWireOrientations,
-    VillageSections,
-    Raids,
-    Structures,
-    GameEventListeners,
-    NeighborUpdates,
-    GameEvents,
+    RedstoneWireOrientations(Option<Orientation>),
+    VillageSections(Option<DebugVillageSection>),
+    Raids(Option<List<'a, BlockPosPacked>>),
+    Structures(Option<List<'a, DebugStructureInfo<'a>>>),
+    GameEventListeners(Option<DebugGameEventListenerInfo>),
+    NeighborUpdates(Option<BlockPosPacked>),
+    GameEvents(Option<DebugGameEventInfo>),
 }
 
 impl<'a> DebugSubscriptionUpdate<'a> {
@@ -47,6 +49,81 @@ impl<'a> DebugSubscriptionUpdate<'a> {
     }
 }
 
+impl<'a> Write for DebugSubscriptionUpdate<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.id().write(w);
+            match self {
+                Self::DedicatedServerTickTime => (),
+                Self::Bees(x) => x.write(w),
+                Self::Brains(x) => x.write(w),
+                Self::Breezes(x) => x.write(w),
+                Self::GoalSelectors(x) => x.write(w),
+                Self::EntityPaths(x) => x.write(w),
+                Self::EntityBlockIntersections(x) => x.write(w),
+                Self::BeeHives(x) => x.write(w),
+                Self::Pois(x) => x.write(w),
+                Self::RedstoneWireOrientations(x) => x.write(w),
+                Self::VillageSections(x) => x.write(w),
+                Self::Raids(x) => x.write(w),
+                Self::Structures(x) => x.write(w),
+                Self::GameEventListeners(x) => x.write(w),
+                Self::NeighborUpdates(x) => x.write(w),
+                Self::GameEvents(x) => x.write(w),
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        self.id().len_s()
+            + match self {
+                Self::DedicatedServerTickTime => 0,
+                Self::Bees(x) => x.len_s(),
+                Self::Brains(x) => x.len_s(),
+                Self::Breezes(x) => x.len_s(),
+                Self::GoalSelectors(x) => x.len_s(),
+                Self::EntityPaths(x) => x.len_s(),
+                Self::EntityBlockIntersections(x) => x.len_s(),
+                Self::BeeHives(x) => x.len_s(),
+                Self::Pois(x) => x.len_s(),
+                Self::RedstoneWireOrientations(x) => x.len_s(),
+                Self::VillageSections(x) => x.len_s(),
+                Self::Raids(x) => x.len_s(),
+                Self::Structures(x) => x.len_s(),
+                Self::GameEventListeners(x) => x.len_s(),
+                Self::NeighborUpdates(x) => x.len_s(),
+                Self::GameEvents(x) => x.len_s(),
+            }
+    }
+}
+
+impl<'a> Read<'a> for DebugSubscriptionUpdate<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(match debug_subscription::read(buf)? {
+            debug_subscription::dedicated_server_tick_time => Self::DedicatedServerTickTime,
+            debug_subscription::bees => Self::Bees(Read::read(buf)?),
+            debug_subscription::brains => Self::Brains(Read::read(buf)?),
+            debug_subscription::breezes => Self::Breezes(Read::read(buf)?),
+            debug_subscription::goal_selectors => Self::GoalSelectors(Read::read(buf)?),
+            debug_subscription::entity_paths => Self::EntityPaths(Read::read(buf)?),
+            debug_subscription::entity_block_intersections => {
+                Self::EntityBlockIntersections(Read::read(buf)?)
+            }
+            debug_subscription::bee_hives => Self::BeeHives(Read::read(buf)?),
+            debug_subscription::pois => Self::Pois(Read::read(buf)?),
+            debug_subscription::redstone_wire_orientations => {
+                Self::RedstoneWireOrientations(Read::read(buf)?)
+            }
+            debug_subscription::village_sections => Self::VillageSections(Read::read(buf)?),
+            debug_subscription::raids => Self::Raids(Read::read(buf)?),
+            debug_subscription::structures => Self::Structures(Read::read(buf)?),
+            debug_subscription::game_event_listeners => Self::GameEventListeners(Read::read(buf)?),
+            debug_subscription::neighbor_updates => Self::NeighborUpdates(Read::read(buf)?),
+            debug_subscription::game_events => Self::GameEvents(Read::read(buf)?),
+        })
+    }
+}
+
 #[derive(Clone)]
 pub enum DebugSubscriptionEvent<'a> {
     DedicatedServerTickTime,
@@ -58,13 +135,13 @@ pub enum DebugSubscriptionEvent<'a> {
     EntityBlockIntersections(DebugEntityBlockIntersection),
     BeeHives(DebugHiveInfo),
     Pois(DebugPoiInfo),
-    RedstoneWireOrientations,
-    VillageSections,
-    Raids,
-    Structures,
-    GameEventListeners,
-    NeighborUpdates,
-    GameEvents,
+    RedstoneWireOrientations(Orientation),
+    VillageSections(DebugVillageSection),
+    Raids(List<'a, BlockPosPacked>),
+    Structures(List<'a, DebugStructureInfo<'a>>),
+    GameEventListeners(DebugGameEventListenerInfo),
+    NeighborUpdates(BlockPosPacked),
+    GameEvents(DebugGameEventInfo),
 }
 
 impl<'a> DebugSubscriptionEvent<'a> {
@@ -87,6 +164,81 @@ impl<'a> DebugSubscriptionEvent<'a> {
             Self::NeighborUpdates { .. } => debug_subscription::neighbor_updates,
             Self::GameEvents { .. } => debug_subscription::game_events,
         }
+    }
+}
+
+impl<'a> Write for DebugSubscriptionEvent<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.id().write(w);
+            match self {
+                Self::DedicatedServerTickTime => (),
+                Self::Bees(x) => x.write(w),
+                Self::Brains(x) => x.write(w),
+                Self::Breezes(x) => x.write(w),
+                Self::GoalSelectors(x) => x.write(w),
+                Self::EntityPaths(x) => x.write(w),
+                Self::EntityBlockIntersections(x) => x.write(w),
+                Self::BeeHives(x) => x.write(w),
+                Self::Pois(x) => x.write(w),
+                Self::RedstoneWireOrientations(x) => x.write(w),
+                Self::VillageSections(x) => x.write(w),
+                Self::Raids(x) => x.write(w),
+                Self::Structures(x) => x.write(w),
+                Self::GameEventListeners(x) => x.write(w),
+                Self::NeighborUpdates(x) => x.write(w),
+                Self::GameEvents(x) => x.write(w),
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        self.id().len_s()
+            + match self {
+                Self::DedicatedServerTickTime => 0,
+                Self::Bees(x) => x.len_s(),
+                Self::Brains(x) => x.len_s(),
+                Self::Breezes(x) => x.len_s(),
+                Self::GoalSelectors(x) => x.len_s(),
+                Self::EntityPaths(x) => x.len_s(),
+                Self::EntityBlockIntersections(x) => x.len_s(),
+                Self::BeeHives(x) => x.len_s(),
+                Self::Pois(x) => x.len_s(),
+                Self::RedstoneWireOrientations(x) => x.len_s(),
+                Self::VillageSections(x) => x.len_s(),
+                Self::Raids(x) => x.len_s(),
+                Self::Structures(x) => x.len_s(),
+                Self::GameEventListeners(x) => x.len_s(),
+                Self::NeighborUpdates(x) => x.len_s(),
+                Self::GameEvents(x) => x.len_s(),
+            }
+    }
+}
+
+impl<'a> Read<'a> for DebugSubscriptionEvent<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(match debug_subscription::read(buf)? {
+            debug_subscription::dedicated_server_tick_time => Self::DedicatedServerTickTime,
+            debug_subscription::bees => Self::Bees(Read::read(buf)?),
+            debug_subscription::brains => Self::Brains(Read::read(buf)?),
+            debug_subscription::breezes => Self::Breezes(Read::read(buf)?),
+            debug_subscription::goal_selectors => Self::GoalSelectors(Read::read(buf)?),
+            debug_subscription::entity_paths => Self::EntityPaths(Read::read(buf)?),
+            debug_subscription::entity_block_intersections => {
+                Self::EntityBlockIntersections(Read::read(buf)?)
+            }
+            debug_subscription::bee_hives => Self::BeeHives(Read::read(buf)?),
+            debug_subscription::pois => Self::Pois(Read::read(buf)?),
+            debug_subscription::redstone_wire_orientations => {
+                Self::RedstoneWireOrientations(Read::read(buf)?)
+            }
+            debug_subscription::village_sections => Self::VillageSections(Read::read(buf)?),
+            debug_subscription::raids => Self::Raids(Read::read(buf)?),
+            debug_subscription::structures => Self::Structures(Read::read(buf)?),
+            debug_subscription::game_event_listeners => Self::GameEventListeners(Read::read(buf)?),
+            debug_subscription::neighbor_updates => Self::NeighborUpdates(Read::read(buf)?),
+            debug_subscription::game_events => Self::GameEvents(Read::read(buf)?),
+        })
     }
 }
 
@@ -171,3 +323,24 @@ pub struct DebugPoiInfo {
     #[mser(varint)]
     pub free_ticket_count: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugStructureInfo<'a> {
+    pub bounding_box: BoundingBoxPacked,
+    pub pieces: List<'a, PiecePacked>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugGameEventListenerInfo {
+    #[mser(varint)]
+    pub listener_radius: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugGameEventInfo {
+    pub event: game_event,
+    pub pos: Vec3,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugVillageSection {}

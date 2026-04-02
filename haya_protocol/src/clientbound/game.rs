@@ -1,4 +1,5 @@
 use crate::command::CommandNode;
+use crate::debug::DebugSubscriptionUpdate;
 use crate::item::OptionalItemStack;
 use crate::registry::DamageTypeRef;
 use crate::stat::Stat;
@@ -408,8 +409,8 @@ impl OptionalEntityId {
     }
 }
 
-// #[derive(Clone, Serialize, Deserialize)]
-// pub struct DebugBlockValue<'a> {
-//     pub block_pos: BlockPosPacked,
-//     pub update: DebugSubscriptionUpdate<'a>,
-// }
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugBlockValue<'a> {
+    pub block_pos: BlockPosPacked,
+    pub update: DebugSubscriptionUpdate<'a>,
+}
