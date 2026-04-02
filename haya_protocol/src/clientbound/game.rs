@@ -414,3 +414,9 @@ pub struct DebugBlockValue<'a> {
     pub block_pos: BlockPosPacked,
     pub update: DebugSubscriptionUpdate<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugChunkValue<'a> {
+    pub chunk_pos: ChunkPos,
+    pub update: DebugSubscriptionUpdate<'a>,
+}
