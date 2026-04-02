@@ -1,5 +1,5 @@
 use crate::command::CommandNode;
-use crate::debug::DebugSubscriptionUpdate;
+use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate};
 use crate::item::OptionalItemStack;
 use crate::registry::DamageTypeRef;
 use crate::stat::Stat;
@@ -426,4 +426,9 @@ pub struct DebugEntityValue<'a> {
     #[mser(varint)]
     pub entity_id: u32,
     pub update: DebugSubscriptionUpdate<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugEvent<'a> {
+    pub event: DebugSubscriptionEvent<'a>,
 }
