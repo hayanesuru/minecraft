@@ -344,3 +344,10 @@ pub struct DebugGameEventInfo {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DebugVillageSection {}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum RemoteDebugSampleType {
+    TickTime,
+}

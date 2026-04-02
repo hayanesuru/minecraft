@@ -1,5 +1,5 @@
 use crate::command::CommandNode;
-use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate};
+use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
 use crate::registry::DamageTypeRef;
 use crate::stat::Stat;
@@ -431,4 +431,10 @@ pub struct DebugEntityValue<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DebugEvent<'a> {
     pub event: DebugSubscriptionEvent<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugSample<'a> {
+    pub sample: List<'a, u64>,
+    pub debug_sample_type: RemoteDebugSampleType,
 }
