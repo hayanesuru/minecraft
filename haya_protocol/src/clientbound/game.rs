@@ -1,3 +1,4 @@
+use crate::chat::MessageSignaturePacked;
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
@@ -437,4 +438,9 @@ pub struct DebugEvent<'a> {
 pub struct DebugSample<'a> {
     pub sample: List<'a, u64>,
     pub debug_sample_type: RemoteDebugSampleType,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DeleteChat {
+    pub message_signature: MessageSignaturePacked,
 }

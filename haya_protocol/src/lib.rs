@@ -9,6 +9,7 @@ use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 pub mod advancement;
 pub mod attribute;
 pub mod block;
+pub mod chat;
 pub mod clientbound;
 pub mod command;
 pub mod debug;
