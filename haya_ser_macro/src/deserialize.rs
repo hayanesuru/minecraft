@@ -1,4 +1,4 @@
-use crate::{Attrs, V7MAX, V21MAX, is_i32, parse_fields};
+use crate::{Attrs, Ty, V7MAX, V21MAX, parse_fields, ty};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt, quote};
 
@@ -25,7 +25,7 @@ pub fn deserialize_struct(
     let read = parse_fields(fields).map(|(field, attrs, member)| {
         let attrs = attrs.unwrap();
         if attrs.varint {
-            if is_i32(&field.ty) {
+            if matches!(ty(&field.ty), Ty::I32) {
                 match attrs.filter {
                     Some(filter) => {
                         quote!(#member: {

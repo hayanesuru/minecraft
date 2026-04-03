@@ -1,4 +1,4 @@
-use crate::{Attrs, V7MAX, V21MAX, is_i32, parse_fields};
+use crate::{Attrs, Ty, V7MAX, V21MAX, parse_fields, ty};
 use alloc::boxed::Box;
 use quote::quote;
 
@@ -17,23 +17,29 @@ pub fn serialize_struct(
         .collect::<Box<_>>();
 
     let write = fields.iter().map(|(field, attrs, member)| {
+        let t = ty(&field.ty);
         if attrs.varint {
-            if is_i32(&field.ty) {
-                quote!(::#cratename::Write::write(&::#cratename::V32(self.#member as u32), __w);)
+            if matches!(t, Ty::I32) {
+                quote!(::#cratename::Write::write(&::#cratename::V32(self.#member as u32), __w))
             } else {
-                quote!(::#cratename::Write::write(&::#cratename::V32(self.#member), __w);)
+                quote!(::#cratename::Write::write(&::#cratename::V32(self.#member), __w))
             }
+        } else if matches!(t, Ty::U8Array) {
+            quote!(__w.write(&self.#member))
         } else {
-            quote!(::#cratename::Write::write(&self.#member, __w);)
+            quote!(::#cratename::Write::write(&self.#member, __w))
         }
     });
     let len_s = fields.iter().map(|(field, attrs, member)| {
+        let t = ty(&field.ty);
         if attrs.varint {
-            if is_i32(&field.ty) {
+            if matches!(t, Ty::I32) {
                 quote!(::#cratename::Write::len_s(&::#cratename::V32(self.#member as u32)))
             } else {
                 quote!(::#cratename::Write::len_s(&::#cratename::V32(self.#member)))
             }
+        } else if matches!(t, Ty::U8Array) {
+            quote!(self.#member.len())
         } else {
             quote!(::#cratename::Write::len_s(&self.#member))
         }
@@ -45,7 +51,7 @@ pub fn serialize_struct(
             #[inline]
             unsafe fn write(&self, __w: &mut ::#cratename::Writer) {
                 unsafe {
-                    #(#write)*
+                    #(#write);*
                 }
             }
 

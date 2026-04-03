@@ -163,12 +163,32 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldAttrs> {
     })
 }
 
-fn is_i32(ty: &syn::Type) -> bool {
+#[derive(Clone, Copy)]
+enum Ty {
+    I32,
+    U8Array,
+    Other,
+}
+
+fn ty(ty: &syn::Type) -> Ty {
     match ty {
-        syn::Type::Path(path) => match path.path.get_ident() {
-            Some(x) => x.eq("i32"),
-            None => false,
+        syn::Type::Path(path) => {
+            if path.path.is_ident("i32") {
+                Ty::I32
+            } else {
+                Ty::Other
+            }
+        }
+        syn::Type::Array(arr) => match &*arr.elem {
+            syn::Type::Path(x) => {
+                if x.path.is_ident("u8") {
+                    Ty::U8Array
+                } else {
+                    Ty::Other
+                }
+            }
+            _ => Ty::Other,
         },
-        _ => false,
+        _ => Ty::Other,
     }
 }
