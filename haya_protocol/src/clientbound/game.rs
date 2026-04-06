@@ -1,4 +1,4 @@
-use crate::chat::MessageSignaturePacked;
+use crate::chat::{Bound, MessageSignaturePacked};
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
@@ -443,4 +443,10 @@ pub struct DebugSample<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DeleteChat {
     pub message_signature: MessageSignaturePacked,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DisguisedChat<'a> {
+    pub message: Component,
+    pub chat_type: Bound<'a>,
 }

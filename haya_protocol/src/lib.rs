@@ -73,6 +73,9 @@ pub struct ComponentJson<'a>(pub Utf8<'a, 262144>);
 pub struct Component(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Style(pub Tag);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Dialog(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
