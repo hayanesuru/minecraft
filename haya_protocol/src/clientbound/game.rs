@@ -450,3 +450,9 @@ pub struct DisguisedChat<'a> {
     pub message: Component,
     pub chat_type: Bound<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EntityEvent {
+    pub entity_id: u32,
+    pub event_id: u8,
+}
