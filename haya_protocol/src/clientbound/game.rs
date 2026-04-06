@@ -456,3 +456,19 @@ pub struct EntityEvent {
     pub entity_id: u32,
     pub event_id: u8,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EntityPositionSync {
+    #[mser(varint)]
+    pub id: u32,
+    pub values: PositionMoveRotation,
+    pub on_ground: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PositionMoveRotation {
+    pub position: Vec3,
+    pub delta_movement: Vec3,
+    pub y_rot: f32,
+    pub x_rot: f32,
+}
