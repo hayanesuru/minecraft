@@ -8,6 +8,7 @@ mod serialize;
 
 use proc_macro::TokenStream;
 use syn::parse::ParseStream;
+use syn::spanned::Spanned;
 use syn::{DeriveInput, parse_macro_input};
 
 const V21MAX: usize = 0x1FFFFF;
@@ -16,6 +17,7 @@ const V7MAX: usize = 0x7F;
 mod kw {
     syn::custom_keyword!(varint);
     syn::custom_keyword!(filter);
+    syn::custom_keyword!(header);
 }
 
 struct Attrs {
@@ -23,27 +25,16 @@ struct Attrs {
 }
 
 fn crate_name(input: &DeriveInput) -> Result<(Attrs, syn::Path), syn::Error> {
-    let mut find = None;
-    for attr in input.attrs.iter() {
-        if attr.path().is_ident("mser") {
-            if find.is_some() {
-                return Err(syn::Error::new_spanned(attr, "multiple `mser` attributes"));
-            };
-            find = Some(Attrs {
-                varint: attr
-                    .meta
-                    .require_list()
-                    .and_then(|list| list.parse_args::<kw::varint>())
-                    .is_ok(),
-            });
-        }
+    let mut find = Attrs { varint: false };
+    for attr in input.attrs.iter().filter(|x| x.path().is_ident("mser")) {
+        find.varint = attr
+            .meta
+            .require_list()
+            .and_then(|list| list.parse_args::<kw::varint>())
+            .is_ok();
     }
-
     Ok((
-        match find {
-            Some(x) => x,
-            None => Attrs { varint: false },
-        },
+        find,
         syn::Ident::new("mser", proc_macro2::Span::call_site()).into(),
     ))
 }
@@ -130,14 +121,18 @@ fn parse_fields<'a>(
     fields
         .iter()
         .enumerate()
-        .map(|(idx, field)| match field.ident.clone() {
-            Some(ident) => (field, parse_field_attrs(field), syn::Member::Named(ident)),
+        .map(|(idx, field)| match &field.ident {
+            Some(ident) => (
+                field,
+                parse_field_attrs(field),
+                syn::Member::Named(ident.clone()),
+            ),
             None => (
                 field,
                 parse_field_attrs(field),
                 syn::Member::Unnamed(syn::Index {
                     index: idx as u32,
-                    span: proc_macro2::Span::call_site(),
+                    span: field.span(),
                 }),
             ),
         })
@@ -166,19 +161,31 @@ fn parse_field_attrs(field: &syn::Field) -> syn::Result<FieldAttrs> {
 #[derive(Clone, Copy)]
 enum Ty {
     I32,
+    U32,
+    U64,
+    I64,
     U8Array,
     Other,
 }
 
 fn ty(ty: &syn::Type) -> Ty {
     match ty {
-        syn::Type::Path(path) => {
-            if path.path.is_ident("i32") {
-                Ty::I32
-            } else {
-                Ty::Other
+        syn::Type::Path(path) => match path.path.get_ident() {
+            Some(x) => {
+                if x == "i32" {
+                    Ty::I32
+                } else if x == "u32" {
+                    Ty::U32
+                } else if x == "u64" {
+                    Ty::U64
+                } else if x == "i64" {
+                    Ty::I64
+                } else {
+                    Ty::Other
+                }
             }
-        }
+            None => Ty::Other,
+        },
         syn::Type::Array(arr) => match &*arr.elem {
             syn::Type::Path(x) => {
                 if x.path.is_ident("u8") {
