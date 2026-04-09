@@ -394,3 +394,28 @@ pub struct Explode<'a> {
 pub struct ForgetLevelChunk {
     pub pos: ChunkPos,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameEvent {
+    pub event: GameEventType,
+    pub param: f32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum GameEventType {
+    NoRespawnBlockAvailable,
+    StartRaining,
+    StopRaining,
+    ChangeGameMode,
+    WinGame,
+    DemoEvent,
+    PlayArrowHitSound,
+    RainLevelChange,
+    ThunderLevelChange,
+    PufferFishSting,
+    GuardianElderEffect,
+    ImmediateRespawn,
+    LimitedCrafting,
+    LevelChunksLoadStart,
+}
