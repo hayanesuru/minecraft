@@ -17,6 +17,7 @@ pub mod effect;
 pub mod entity;
 pub mod food;
 pub mod item;
+pub mod particle;
 pub mod path;
 pub mod profile;
 pub mod redstone;

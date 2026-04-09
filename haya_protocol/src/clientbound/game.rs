@@ -10,7 +10,7 @@ use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
-use mser::{ByteArray, Error, Read, Reader, Utf8, V21, Write, Writer};
+use mser::{ByteArray, Utf8, V21};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -110,7 +110,8 @@ pub struct BossEvent {
     pub operation: BossEventOperation,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = BossEventOperationType, camel_case)]
 pub enum BossEventOperation {
     Add {
         name: Component,
@@ -133,19 +134,6 @@ pub enum BossEventOperation {
     UpdateProperties {
         flags: BossEventFlags,
     },
-}
-
-impl BossEventOperation {
-    pub const fn to_type(&self) -> BossEventOperationType {
-        match self {
-            Self::Add { .. } => BossEventOperationType::Add,
-            Self::Remove {} => BossEventOperationType::Remove,
-            Self::UpdateProgress { .. } => BossEventOperationType::UpdateProgress,
-            Self::UpdateName { .. } => BossEventOperationType::UpdateName,
-            Self::UpdateStyle { .. } => BossEventOperationType::UpdateStyle,
-            Self::UpdateProperties { .. } => BossEventOperationType::UpdateProperties,
-        }
-    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -191,90 +179,6 @@ impl BossEventFlags {
     pub const DARKEN_SCREEN: u8 = 1;
     pub const PLAY_MUSIC: u8 = 2;
     pub const CREATE_WORLD_FOG: u8 = 4;
-}
-
-impl<'a> Read<'a> for BossEventOperation {
-    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        Ok(match BossEventOperationType::read(buf)? {
-            BossEventOperationType::Add => Self::Add {
-                name: Component::read(buf)?,
-                progress: f32::read(buf)?,
-                color: BossEventColor::read(buf)?,
-                overlay: BossEventOverlay::read(buf)?,
-                flags: BossEventFlags::read(buf)?,
-            },
-            BossEventOperationType::Remove => Self::Remove {},
-            BossEventOperationType::UpdateProgress => Self::UpdateProgress {
-                progress: f32::read(buf)?,
-            },
-            BossEventOperationType::UpdateName => Self::UpdateName {
-                name: Component::read(buf)?,
-            },
-            BossEventOperationType::UpdateStyle => Self::UpdateStyle {
-                color: BossEventColor::read(buf)?,
-                overlay: BossEventOverlay::read(buf)?,
-            },
-            BossEventOperationType::UpdateProperties => Self::UpdateProperties {
-                flags: BossEventFlags::read(buf)?,
-            },
-        })
-    }
-}
-
-impl Write for BossEventOperation {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            self.to_type().write(w);
-            match self {
-                Self::Add {
-                    name,
-                    progress,
-                    color,
-                    overlay,
-                    flags,
-                } => {
-                    name.write(w);
-                    progress.write(w);
-                    color.write(w);
-                    overlay.write(w);
-                    flags.write(w);
-                }
-                Self::Remove {} => {}
-                Self::UpdateProgress { progress } => {
-                    progress.write(w);
-                }
-                Self::UpdateName { name } => {
-                    name.write(w);
-                }
-                Self::UpdateStyle { color, overlay } => {
-                    color.write(w);
-                    overlay.write(w);
-                }
-                Self::UpdateProperties { flags } => {
-                    flags.write(w);
-                }
-            }
-        }
-    }
-
-    fn len_s(&self) -> usize {
-        let ty = self.to_type().len_s();
-        let len = match self {
-            Self::Add {
-                name,
-                progress,
-                color,
-                overlay,
-                flags,
-            } => name.len_s() + progress.len_s() + color.len_s() + overlay.len_s() + flags.len_s(),
-            Self::Remove {} => 0,
-            Self::UpdateProgress { progress } => progress.len_s(),
-            Self::UpdateName { name } => name.len_s(),
-            Self::UpdateStyle { color, overlay } => color.len_s() + overlay.len_s(),
-            Self::UpdateProperties { flags } => flags.len_s(),
-        };
-        ty + len
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
