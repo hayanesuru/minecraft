@@ -174,11 +174,11 @@ fn repr_enum(
 ) -> TokenStream {
     if !varint {
         quote! {
-            let __x = <#path as ::#cratename::Read>::read(__r)?.0;
+            let __x = <#path as ::#cratename::Read>::read(__r)?;
             if __x < #lit {
                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<#path, Self>(__x as #path) ) }
             } else {
-                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u8, Self>(0) ) }
+                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<#path, Self>(0) ) }
             }
         }
     } else if path == "u64" {
