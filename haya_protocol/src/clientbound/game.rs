@@ -2,9 +2,11 @@ use crate::chat::{Bound, MessageSignaturePacked};
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
-use crate::registry::DamageTypeRef;
+use crate::particle::{ExplosionParticleInfo, Particle};
+use crate::registry::{DamageTypeRef, SoundEventRef};
+use crate::sound::SoundEvent;
 use crate::stat::Stat;
-use crate::{Component, ContainerId, Difficulty};
+use crate::{Component, ContainerId, Difficulty, Holder, WeightedList};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
@@ -375,4 +377,15 @@ pub struct PositionMoveRotation {
     pub delta_movement: Vec3,
     pub y_rot: f32,
     pub x_rot: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Explode<'a> {
+    pub center: Vec3,
+    pub radius: f32,
+    pub block_count: u32,
+    pub player_knockback: Option<Vec3>,
+    pub explosion_particle: Particle<'a>,
+    pub explosion_sound: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub block_particles: WeightedList<'a, ExplosionParticleInfo<'a>>,
 }

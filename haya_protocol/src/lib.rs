@@ -16,6 +16,7 @@ pub mod debug;
 pub mod effect;
 pub mod entity;
 pub mod food;
+pub mod game_event;
 pub mod item;
 pub mod particle;
 pub mod path;
@@ -462,6 +463,52 @@ impl<'a, T: Read<'a>> Read<'a> for Filterable<T> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LockCode(pub Tag);
+
+#[derive(Clone)]
+pub struct WeightedList<'a, T, const MAX: usize = { usize::MAX }>(pub List<'a, Weighted<T>, MAX>);
+
+impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for WeightedList<'a, T, MAX> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self(List::read(buf)?))
+    }
+}
+
+impl<'a, T: Write, const MAX: usize> Write for WeightedList<'a, T, MAX> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.0.write(w) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len_s()
+    }
+}
+
+#[derive(Clone)]
+pub struct Weighted<T> {
+    pub weight: u32,
+    pub value: T,
+}
+
+impl<T: Write> Write for Weighted<T> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            V32(self.weight).write(w);
+            self.value.write(w);
+        }
+    }
+    fn len_s(&self) -> usize {
+        V32(self.weight).len_s() + self.value.len_s()
+    }
+}
+
+impl<'a, T: Read<'a>> Read<'a> for Weighted<T> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            weight: V32::read(buf)?.0,
+            value: T::read(buf)?,
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -123,7 +123,7 @@ packets! {
 //     disguised_chat = game::DisguisedChat<'_>,
 //     entity_event = game::EntityEvent,
 //     entity_position_sync = game::EntityPositionSync,
-//     explode,
+//     explode = game::Explode<'_>,
 //     forget_level_chunk,
 //     game_event,
 //     game_test_highlight_pos,
