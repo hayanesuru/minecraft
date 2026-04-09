@@ -489,7 +489,7 @@ pub struct Bees<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct SeededContainerLoot(Tag);
+pub struct SeededContainerLoot(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
 #[mser(header = data_component_type)]

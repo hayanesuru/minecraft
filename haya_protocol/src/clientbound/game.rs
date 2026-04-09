@@ -389,3 +389,8 @@ pub struct Explode<'a> {
     pub explosion_sound: Holder<SoundEvent<'a>, SoundEventRef>,
     pub block_particles: WeightedList<'a, ExplosionParticleInfo<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ForgetLevelChunk {
+    pub pos: ChunkPos,
+}
