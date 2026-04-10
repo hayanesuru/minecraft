@@ -28,6 +28,12 @@ pub struct Disconnect {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct GameKeepAlive(pub KeepAlive);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationKeepAlive(pub KeepAlive);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct KeepAlive {
     pub id: u64,
 }
