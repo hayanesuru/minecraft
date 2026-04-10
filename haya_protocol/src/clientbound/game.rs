@@ -425,3 +425,12 @@ pub struct GameTestHighlightPos {
     pub absolute_pos: BlockPosPacked,
     pub relative_pos: BlockPosPacked,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MountScreenOpen {
+    pub container_id: ContainerId,
+    #[mser(varint)]
+    pub inventory_columns: u32,
+    pub entity_id: u32,
+}
+:

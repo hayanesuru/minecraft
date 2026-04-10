@@ -127,7 +127,7 @@ packets! {
 //     forget_level_chunk = game::ForgetLevelChunk,
 //     game_event = game::GameEvent,
 //     game_test_highlight_pos = game::GameTestHighlightPos,
-//     mount_screen_open,
+//     mount_screen_open = game::MountScreenOpen,
 //     hurt_animation,
 //     initialize_border,
 //     keep_alive,
