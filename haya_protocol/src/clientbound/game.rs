@@ -433,4 +433,10 @@ pub struct MountScreenOpen {
     pub inventory_columns: u32,
     pub entity_id: u32,
 }
-:
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HurtAnimation {
+    #[mser(varint)]
+    pub id: u32,
+    pub yaw: f32,
+}
