@@ -126,7 +126,7 @@ packets! {
 //     explode = game::Explode<'_>,
 //     forget_level_chunk = game::ForgetLevelChunk,
 //     game_event = game::GameEvent,
-//     game_test_highlight_pos,
+//     game_test_highlight_pos = game::GameTestHighlightPos,
 //     mount_screen_open,
 //     hurt_animation,
 //     initialize_border,

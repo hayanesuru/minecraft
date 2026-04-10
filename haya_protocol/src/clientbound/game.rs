@@ -419,3 +419,9 @@ pub enum GameEventType {
     LimitedCrafting,
     LevelChunksLoadStart,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameTestHighlightPos {
+    pub absolute_pos: BlockPosPacked,
+    pub relative_pos: BlockPosPacked,
+}
