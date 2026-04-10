@@ -440,3 +440,19 @@ pub struct HurtAnimation {
     pub id: u32,
     pub yaw: f32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct InitializeBorder {
+    pub new_center_x: f64,
+    pub new_center_z: f64,
+    pub old_size: f64,
+    pub new_size: f64,
+    #[mser(varint)]
+    pub lerp_time: u64,
+    #[mser(varint)]
+    pub new_absolute_max_size: u32,
+    #[mser(varint)]
+    pub warning_blocks: u32,
+    #[mser(varint)]
+    pub warning_time: u32,
+}
