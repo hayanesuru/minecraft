@@ -52,8 +52,8 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
-    pub fn peek(&self) -> Result<u8, Error> {
-        if self.ptr == self.end {
+    pub fn peek_byte(&self) -> Result<u8, Error> {
+        if core::ptr::eq(self.ptr, self.end) {
             cold_path();
             Err(Error)
         } else {
