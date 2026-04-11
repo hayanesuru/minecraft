@@ -10,10 +10,6 @@ const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
 const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
 const LONG_ARRAY_PREFIX: &[u8; 3] = b"[L;";
 
-#[derive(Clone)]
-#[repr(transparent)]
-pub struct CompoundStringify(pub Compound);
-
 impl From<Compound> for CompoundStringify {
     #[inline]
     fn from(value: Compound) -> Self {
