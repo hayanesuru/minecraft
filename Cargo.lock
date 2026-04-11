@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "haya_collection"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "mser",
 ]
@@ -32,7 +32,7 @@ version = "0.1.0"
 
 [[package]]
 name = "haya_ident"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "haya_str",
  "mser",
@@ -40,7 +40,7 @@ dependencies = [
 
 [[package]]
 name = "haya_math"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "libm",
  "mser",
@@ -48,14 +48,14 @@ dependencies = [
 
 [[package]]
 name = "haya_mutf8"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "mser",
 ]
 
 [[package]]
 name = "haya_nbt"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "haya_mutf8",
  "haya_str",
@@ -67,7 +67,7 @@ dependencies = [
 
 [[package]]
 name = "haya_palette"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "minecraft_data",
  "mser",
@@ -75,7 +75,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "haya_collection",
  "haya_ident",
@@ -89,11 +89,11 @@ dependencies = [
 
 [[package]]
 name = "haya_str"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "haya_text"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "haya_str",
  "mser",
@@ -120,7 +120,7 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "minecraft_data"
-version = "3.0.0+1.21.11"
+version = "3.1.0"
 dependencies = [
  "itoa",
  "mser",
@@ -130,7 +130,7 @@ dependencies = [
 
 [[package]]
 name = "mser"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "uuid",
 ]
