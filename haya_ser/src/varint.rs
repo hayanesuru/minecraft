@@ -287,11 +287,9 @@ impl<'a> Read<'a> for V64 {
                 break 'd;
             }
             if let Ok(y) = buf.peek_array::<8>() {
-                let y = u64::from_le_bytes(y);
+                let y = u64::from_le_bytes(*y);
                 if y & 0xFE80_8080_8080_8080 == 0x0080_8080_8080_8080 {
-                    unsafe {
-                        buf.advance(8);
-                    }
+                    unsafe { buf.advance(8) }
                     p |= ((y & 0x0000_0000_0000_007F) << 14)
                         | ((y & 0x0000_0000_0000_7F00) << 13)
                         | ((y & 0x0000_0000_007F_0000) << 12)

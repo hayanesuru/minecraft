@@ -1,5 +1,6 @@
 #![no_std]
 
+mod memchr;
 mod read;
 mod reader;
 mod varint;

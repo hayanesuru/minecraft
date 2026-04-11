@@ -17,70 +17,70 @@ impl<'a> Read<'a> for i8 {
 impl<'a> Read<'a> for u16 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<2>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<2>()?))
     }
 }
 
 impl<'a> Read<'a> for i16 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<2>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<2>()?))
     }
 }
 
 impl<'a> Read<'a> for u32 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<4>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<4>()?))
     }
 }
 
 impl<'a> Read<'a> for i32 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<4>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<4>()?))
     }
 }
 
 impl<'a> Read<'a> for u64 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<8>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<8>()?))
     }
 }
 
 impl<'a> Read<'a> for i64 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<8>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<8>()?))
     }
 }
 
 impl<'a> Read<'a> for u128 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<16>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<16>()?))
     }
 }
 
 impl<'a> Read<'a> for i128 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<16>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<16>()?))
     }
 }
 
 impl<'a> Read<'a> for f32 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<4>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<4>()?))
     }
 }
 
 impl<'a> Read<'a> for f64 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(Self::from_be_bytes(buf.read_array::<8>()?))
+        Ok(Self::from_be_bytes(*buf.read_array::<8>()?))
     }
 }
 
@@ -101,7 +101,10 @@ impl<'a> Read<'a> for uuid::Uuid {
 impl<'a, const N: usize> Read<'a> for [u8; N] {
     #[inline]
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        buf.read_array::<N>()
+        match buf.read_array::<N>() {
+            Ok(&x) => Ok(x),
+            Err(e) => Err(e),
+        }
     }
 }
 
