@@ -95,6 +95,7 @@ version = "0.2.0"
 name = "haya_text"
 version = "0.1.0"
 dependencies = [
+ "haya_str",
  "mser",
  "uuid",
 ]
