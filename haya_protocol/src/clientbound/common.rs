@@ -17,9 +17,21 @@ pub struct CustomPayload<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationDisconnect(pub Disconnect);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameDisconnect(pub Disconnect);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Disconnect {
     pub reason: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameKeepAlive(pub KeepAlive);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationKeepAlive(pub KeepAlive);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct KeepAlive {
