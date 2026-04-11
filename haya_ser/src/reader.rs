@@ -102,15 +102,15 @@ impl<'a> Reader<'a> {
     }
 
     pub fn memchr(&self, needle: u8) -> *const u8 {
-        crate::memchr::memchr(needle, self.ptr, self.end)
+        unsafe { crate::memchr::memchr(needle, self.ptr, self.end) }
     }
 
     pub fn memchr2(&self, needle1: u8, needle2: u8) -> *const u8 {
-        crate::memchr::memchr2(needle1, needle2, self.ptr, self.end)
+        unsafe { crate::memchr::memchr2(needle1, needle2, self.ptr, self.end) }
     }
 
     pub fn memchr3(&self, needle1: u8, needle2: u8, needle3: u8) -> *const u8 {
-        crate::memchr::memchr3(needle1, needle2, needle3, self.ptr, self.end)
+        unsafe { crate::memchr::memchr3(needle1, needle2, needle3, self.ptr, self.end) }
     }
 
     pub fn position(&self, f: &[u8]) -> *const u8 {
