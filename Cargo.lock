@@ -75,7 +75,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "haya_collection",
  "haya_ident",
@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "mser_macro"
-version = "3.1.0"
+version = "3.2.0"
 dependencies = [
  "itoa",
  "proc-macro2",
