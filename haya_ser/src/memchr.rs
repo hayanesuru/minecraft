@@ -138,7 +138,8 @@ pub(crate) fn memchr2(needle1: u8, needle2: u8, mut ptr: *const u8, end: *const 
     }
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(not(target_feature = "avx2"))]
 pub(crate) fn memchr2(needle1: u8, needle2: u8, ptr: *const u8, end: *const u8) -> *const u8 {
     memchr2_fallback(needle1, needle2, ptr, end)
 }
@@ -198,7 +199,8 @@ pub(crate) fn memchr3(
     }
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(not(target_feature = "avx2"))]
 pub(crate) fn memchr3(
     needle1: u8,
     needle2: u8,
