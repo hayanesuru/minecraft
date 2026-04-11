@@ -7,14 +7,13 @@ mod compound;
 mod int_array;
 mod list;
 mod long_array;
+mod number;
 mod string;
-//mod stringify;
+mod stringify;
 
 use self::byte_array::ByteArray;
 use self::int_array::IntArray;
 use self::long_array::LongArray;
-pub use self::string::{RawStringTag, RefStringTag, StringTag};
-// pub use self::stringify::CompoundStringify;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_str::HayaStr;
@@ -38,9 +37,20 @@ pub enum TagType {
     LongArray,
 }
 
+#[derive(Clone)]
+pub struct StringTag(pub Box<str>);
+
+#[derive(Clone, Copy)]
+pub struct RefStringTag<'a>(pub &'a str);
+
+#[derive(Clone, Copy)]
+pub struct RawStringTag<'a>(&'a str);
+
 #[derive(Clone, Debug)]
-#[repr(transparent)]
 pub struct Compound(Vec<(Name, Tag)>);
+
+#[derive(Clone)]
+pub struct CompoundStringify(pub Compound);
 
 #[derive(Clone, Debug)]
 pub enum Name {

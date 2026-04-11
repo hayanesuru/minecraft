@@ -2,7 +2,6 @@
 
 extern crate alloc;
 
-pub mod hex;
 pub mod json;
 pub mod profile;
 

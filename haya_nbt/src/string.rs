@@ -1,14 +1,8 @@
-use crate::{Error, Name, Read, Write, Writer};
+use crate::{Error, Name, RawStringTag, Read, RefStringTag, StringTag, Write, Writer};
 use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_mutf8::{as_mutf8_ascii, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len};
 use mser::Reader;
-
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-#[must_use]
-pub struct RawStringTag<'a>(&'a str);
 
 impl<'a> RawStringTag<'a> {
     pub const fn new(n: &'a [u8]) -> Option<Self> {
@@ -57,11 +51,6 @@ impl<'a> Read<'a> for RawStringTag<'a> {
     }
 }
 
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-#[must_use]
-pub struct RefStringTag<'a>(pub &'a str);
-
 impl<'a> Write for RefStringTag<'a> {
     #[inline]
     unsafe fn write(&self, w: &mut Writer) {
@@ -90,10 +79,6 @@ impl<'a> Read<'a> for RefStringTag<'a> {
         Ok(Self(RawStringTag::read(buf)?.0))
     }
 }
-
-#[derive(Clone)]
-#[repr(transparent)]
-pub struct StringTag(pub Box<str>);
 
 impl<'a> Read<'a> for StringTag {
     #[inline]
