@@ -7,13 +7,13 @@ mod compound;
 mod int_array;
 mod list;
 mod long_array;
+mod number;
 mod string;
-//mod stringify;
+mod stringify;
 
 use self::byte_array::ByteArray;
 use self::int_array::IntArray;
 use self::long_array::LongArray;
-// pub use self::stringify::CompoundStringify;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_str::HayaStr;
