@@ -8,21 +8,21 @@ const INDEX_MASK: u64 = 0x3FFF_FFFF_FFFF_FFFF;
 
 #[derive(Clone)]
 pub struct Direct<T: Palette> {
-    pub data: [T; BLOCK_PER_CHUNK],
+    data: [T; BLOCK_PER_CHUNK],
 }
 
 #[derive(Clone)]
 #[repr(align(64))]
 pub struct Indirect4<T: Palette> {
-    pub palette: [T; 16],
-    pub data: [u8; INDIRECT4_PER_CHUNK],
+    palette: [T; 16],
+    data: [u8; INDIRECT4_PER_CHUNK],
 }
 
 #[derive(Clone)]
 #[repr(align(32))]
 pub struct Indirect2<T: Palette> {
-    pub palette: [T; 4],
-    pub data: [u8; INDIRECT2_PER_CHUNK],
+    palette: [T; 4],
+    data: [u8; INDIRECT2_PER_CHUNK],
 }
 
 #[derive(Clone)]
