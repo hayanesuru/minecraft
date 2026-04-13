@@ -4,7 +4,7 @@ mod chunk;
 
 extern crate alloc;
 
-pub use self::chunk::{ChunkCache, Direct, Indirect};
+pub use self::chunk::{ChunkCache, Direct, Indirect4};
 use alloc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error};
 use core::alloc::Layout;
 use core::array::from_fn;
@@ -30,6 +30,10 @@ impl Palette for block_state {
     fn to_id(self) -> u32 {
         self.id() as u32
     }
+}
+
+pub fn test1(s: &ChunkCache<block_state>, x: i32, y: i32, z: i32) -> Option<block_state> {
+    s.get(x, y, z)
 }
 
 impl Palette for Biome {

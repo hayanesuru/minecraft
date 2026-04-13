@@ -2,59 +2,84 @@ use crate::Palette;
 use alloc::vec::Vec;
 
 const BLOCK_PER_CHUNK: usize = 4 * 4 * 4;
-const INDIRECT_PER_CHUNK: usize = BLOCK_PER_CHUNK / 2;
-
+const INDIRECT4_PER_CHUNK: usize = BLOCK_PER_CHUNK / 2;
+const INDIRECT2_PER_CHUNK: usize = BLOCK_PER_CHUNK / 4;
 const INDEX_MASK: u64 = 0x3FFF_FFFF_FFFF_FFFF;
-const SINGLE_FLAG: u64 = 0x8000_0000_0000_0000;
-const INDIRECT_FLAG: u64 = 0x4000_0000_0000_0000;
 
-#[repr(align(64))]
 #[derive(Clone)]
 pub struct Direct<T: Palette> {
     pub data: [T; BLOCK_PER_CHUNK],
 }
 
-#[repr(align(64))]
 #[derive(Clone)]
-pub struct Indirect<T: Palette> {
+#[repr(align(64))]
+pub struct Indirect4<T: Palette> {
     pub palette: [T; 16],
-    pub data: [u8; INDIRECT_PER_CHUNK],
+    pub data: [u8; INDIRECT4_PER_CHUNK],
+}
+
+#[derive(Clone)]
+#[repr(align(32))]
+pub struct Indirect2<T: Palette> {
+    pub palette: [T; 4],
+    pub data: [u8; INDIRECT2_PER_CHUNK],
 }
 
 #[derive(Clone)]
 pub struct ChunkCache<T: Palette> {
     pub direct: Vec<Direct<T>>,
-    pub indirect: Vec<Indirect<T>>,
-    pub direct_key: Vec<u32>,
-    pub indirect_key: Vec<u32>,
-    pub single_key: Vec<u32>,
+    pub indirect2: Vec<Indirect2<T>>,
+    pub indirect4: Vec<Indirect4<T>>,
     pub chunks: Int64Map,
+    pub direct_key: Vec<u32>,
+    pub indirect4_key: Vec<u32>,
+    pub indirect2_key: Vec<u32>,
+    pub single_key: Vec<u32>,
 }
 
 impl<T: Palette> ChunkCache<T> {
     pub fn get(&self, x: i32, y: i32, z: i32) -> Option<T> {
-        let x = ((x >> 2) & 0x3FF_FFFF) as i64;
-        let y = ((y >> 2) & 0xFFF) as i64;
-        let z = ((z >> 2) & 0x3FF_FFFF) as i64;
-        let i = ((x << 38) | (z << 12) | y) as u64;
         let j = ((x & 3) | ((y & 3) << 2) | ((z & 3) << 4)) as usize;
-        match self.chunks.get(i) {
-            Some(t) => {
-                let n = (t & INDEX_MASK) as usize;
-                unsafe {
-                    Some(if (t & SINGLE_FLAG) != 0 {
-                        T::from_id(n as u32)
-                    } else if (t & INDIRECT_FLAG) == 0 {
-                        *self.direct.get_unchecked(n).data.get_unchecked(j)
-                    } else {
-                        let indirect = self.indirect.get_unchecked(n);
-                        let l = *indirect.data.get_unchecked(j >> 1);
-                        let index = (l >> ((j & 1) << 2)) & 0xF;
-                        *indirect.palette.get_unchecked(index as usize)
-                    })
-                }
+        let sx = ((x >> 2) & 0x3FF_FFFF) as i64;
+        let sy = ((y >> 2) & 0xFFF) as i64;
+        let sz = ((z >> 2) & 0x3FF_FFFF) as i64;
+        let i = ((sx << 38) | (sz << 12) | sy) as u64;
+        let t = match self.chunks.get(i) {
+            Some(t) => t,
+            None => {
+                mser::cold_path();
+                return None;
             }
-            None => None,
+        };
+        let n = (t & INDEX_MASK) as usize;
+        let ty = t >> 62;
+        unsafe {
+            Some(match ty {
+                3 => T::from_id(n as u32),
+                2 => self.indirect2.get_unchecked(n).get(j),
+                1 => self.indirect4.get_unchecked(n).get(j),
+                _ => *self.direct.get_unchecked(n).data.get_unchecked(j),
+            })
+        }
+    }
+}
+
+impl<T: Palette> Indirect2<T> {
+    unsafe fn get(&self, index: usize) -> T {
+        unsafe {
+            let b = *self.data.get_unchecked(index >> 2);
+            let i = (b >> ((index & 3) << 1)) & 0x3;
+            *self.palette.get_unchecked(i as usize)
+        }
+    }
+}
+
+impl<T: Palette> Indirect4<T> {
+    unsafe fn get(&self, index: usize) -> T {
+        unsafe {
+            let b = *self.data.get_unchecked(index >> 1);
+            let i = (b >> ((index & 1) << 2)) & 0xF;
+            *self.palette.get_unchecked(i as usize)
         }
     }
 }
