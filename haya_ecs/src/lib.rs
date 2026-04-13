@@ -4,6 +4,7 @@ extern crate alloc;
 
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
+use core::iter::FusedIterator;
 
 #[derive(Debug, Clone)]
 pub struct EntityAllocator {
@@ -303,6 +304,11 @@ impl<'a, T> Iterator for IterMut<'a, T> {
             .next()
             .map(|x| unsafe { (x, self.sparse.next().copied().unwrap_unchecked()) })
     }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.comp.size_hint()
+    }
 }
 
 impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
@@ -322,6 +328,11 @@ impl<'a, T> Iterator for Iter<'a, T> {
         self.comp
             .next()
             .map(|x| unsafe { (x, self.sparse.next().copied().unwrap_unchecked()) })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.comp.size_hint()
     }
 }
 
@@ -347,6 +358,9 @@ impl<'a, T> ExactSizeIterator for IterMut<'a, T> {
         self.comp.len()
     }
 }
+
+impl<'a, T> FusedIterator for Iter<'a, T> {}
+impl<'a, T> FusedIterator for IterMut<'a, T> {}
 
 #[cfg(test)]
 mod tests {
