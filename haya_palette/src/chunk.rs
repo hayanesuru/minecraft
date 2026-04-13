@@ -25,7 +25,6 @@ pub struct Indirect<T: Palette> {
 pub struct ChunkCache<T: Palette> {
     pub direct: Vec<Direct<T>>,
     pub indirect: Vec<Indirect<T>>,
-    pub single: Vec<T>,
     pub direct_key: Vec<u32>,
     pub indirect_key: Vec<u32>,
     pub single_key: Vec<u32>,
