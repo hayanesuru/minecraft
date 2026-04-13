@@ -109,20 +109,15 @@ pub struct Int64Map {
 }
 
 impl Int64Map {
-    pub const fn new() -> Self {
-        Self {
+    pub fn with_capacity(capacity: usize) -> Self {
+        let mut map = Self {
             cache: Vec::new(),
             size: 0,
             count: 0,
             mod_mask: 0,
             load_factor: 800,
-        }
-    }
-}
-
-impl Int64Map {
-    pub fn with_capacity(capacity: usize) -> Self {
-        let mut map = Self::new();
+        };
+        map.increase_cache();
         map.reserve(capacity);
         map
     }
@@ -202,9 +197,6 @@ impl Int64Map {
     }
 
     pub fn get(&self, key: u64) -> Option<u64> {
-        if self.is_empty() {
-            return None;
-        }
         let ix = mix(key, self.mod_mask);
         let vals = unsafe { self.cache.get_unchecked(ix) };
         match vals {
@@ -227,15 +219,11 @@ impl Int64Map {
     }
 
     pub fn get_mut(&mut self, key: u64) -> Option<&mut u64> {
-        if self.is_empty() {
-            return None;
-        }
-        let k = key;
-        let ix = mix(k, self.mod_mask);
+        let ix = mix(key, self.mod_mask);
         let vals = unsafe { self.cache.get_unchecked_mut(ix) };
         match vals {
             Slot::Single(k1, v1) => {
-                if *k1 == k {
+                if *k1 == key {
                     Some(v1)
                 } else {
                     None
@@ -243,7 +231,7 @@ impl Int64Map {
             }
             Slot::Multi(kvs) => {
                 for kv in kvs.iter_mut() {
-                    if kv.0 == k {
+                    if kv.0 == key {
                         return Some(&mut kv.1);
                     }
                 }
@@ -253,9 +241,6 @@ impl Int64Map {
     }
 
     pub fn remove(&mut self, key: u64) -> Option<u64> {
-        if self.is_empty() {
-            return None;
-        }
         let k = key;
         let ix = mix(k, self.mod_mask);
         let vals = unsafe { self.cache.get_unchecked_mut(ix) };
@@ -352,11 +337,7 @@ impl Int64Map {
 
     #[inline(always)]
     fn lim(&self) -> usize {
-        if self.size == 0 {
-            0
-        } else {
-            2usize.pow(self.size)
-        }
+        2usize.pow(self.size)
     }
 
     fn increase_cache(&mut self) {
@@ -416,9 +397,6 @@ impl Int64Map {
     #[inline]
     fn increase_cache_if_needed(&mut self) -> bool {
         let initial_cache_len = self.cache.len();
-        if self.cache.is_empty() {
-            self.increase_cache();
-        }
         while ((self.count * 1024) / self.cache.len()) > self.load_factor {
             self.increase_cache();
         }
@@ -475,7 +453,7 @@ impl Int64Map {
 
 impl Default for Int64Map {
     fn default() -> Self {
-        Self::new()
+        Self::with_capacity(8)
     }
 }
 
