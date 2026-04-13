@@ -1,7 +1,10 @@
 #![no_std]
 
+mod chunk;
+
 extern crate alloc;
 
+pub use self::chunk::{ChunkCache, Direct, Indirect};
 use alloc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error};
 use core::alloc::Layout;
 use core::array::from_fn;
@@ -10,6 +13,34 @@ use core::ptr::NonNull;
 use core::slice::from_raw_parts;
 use minecraft_data::block_state;
 use mser::{Error, Read, Reader, V21, V32, Write, Writer};
+
+pub trait Palette: Copy {
+    /// # Safety
+    ///
+    /// `value` must be a valid id.
+    unsafe fn from_id(value: u32) -> Self;
+    fn to_id(self) -> u32;
+}
+
+impl Palette for block_state {
+    unsafe fn from_id(value: u32) -> Self {
+        unsafe { block_state::new(value as u16).unwrap_unchecked() }
+    }
+
+    fn to_id(self) -> u32 {
+        self.id() as u32
+    }
+}
+
+impl Palette for Biome {
+    unsafe fn from_id(value: u32) -> Self {
+        unsafe { core::mem::transmute::<u8, Self>(value as u8) }
+    }
+
+    fn to_id(self) -> u32 {
+        self as u32
+    }
+}
 
 #[derive(Clone, Default, Copy, PartialEq, Eq)]
 #[repr(u8)]
