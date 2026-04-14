@@ -4,7 +4,10 @@ mod chunk;
 
 extern crate alloc;
 
-pub use self::chunk::{ChunkCache, Direct, Indirect};
+pub use self::chunk::{
+    ChunkCache, Direct, Indirect2, Indirect4, Int64Map, IntoIter, Iter, IterMut, Keys, Values,
+    ValuesMut,
+};
 use alloc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error};
 use core::alloc::Layout;
 use core::array::from_fn;
