@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "haya_ecs"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "haya_ident"
@@ -67,7 +67,7 @@ dependencies = [
 
 [[package]]
 name = "haya_palette"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "minecraft_data",
  "mser",
