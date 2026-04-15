@@ -225,21 +225,6 @@ impl Int64Map {
         self.len = 0;
     }
 
-    pub fn retain<F>(&mut self, mut f: F)
-    where
-        F: FnMut(u64, u64) -> bool,
-    {
-        for vals in self.slots.iter_mut() {
-            if vals.is_empty() {
-                continue;
-            }
-            if !(f)(vals.0, vals.1) {
-                *vals = Slot::EMPTY;
-                self.len -= 1;
-            }
-        }
-    }
-
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
