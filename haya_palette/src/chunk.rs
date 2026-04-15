@@ -109,14 +109,14 @@ pub struct Int64Map {
 
 impl Int64Map {
     pub fn with_capacity(capacity: usize) -> Self {
-        let mut map = Self {
-            slots: Vec::new(),
+        let size = capacity.next_power_of_two();
+        let mask = size - 1;
+        let slots = alloc::vec![Slot::EMPTY; size];
+        Self {
+            slots,
             len: 0,
-            mask: 0,
-        };
-        map.rehash();
-        map.reserve(capacity);
-        map
+            mask,
+        }
     }
 
     pub fn reserve(&mut self, additional: usize) {
@@ -127,7 +127,10 @@ impl Int64Map {
     }
 
     pub fn insert(&mut self, key: u64, value: u64) -> Option<u64> {
-        self.grow();
+        debug_assert_ne!(key, u64::MAX);
+        while self.len * 4 > self.slots.len() * 3 {
+            self.rehash();
+        }
         let mut i = mix(key, self.mask);
         loop {
             let slot = unsafe { self.slots.get_unchecked_mut(i) };
@@ -137,8 +140,9 @@ impl Int64Map {
                 return None;
             }
             if slot.0 == key {
+                let old = slot.1;
                 *slot = Slot(key, value);
-                return Some(slot.1);
+                return Some(old);
             }
             i = (i + 1) & self.mask;
         }
@@ -174,19 +178,42 @@ impl Int64Map {
 
     pub fn remove(&mut self, key: u64) -> Option<u64> {
         let mut i = mix(key, self.mask);
+        let mut slot = unsafe { self.slots.get_unchecked_mut(i) };
         loop {
-            let slot = unsafe { self.slots.get_unchecked_mut(i) };
             if slot.0 == key {
-                self.len -= 1;
-                let v = slot.1;
-                *slot = Slot::EMPTY;
-                return Some(v);
+                break;
             }
             if slot.is_empty() {
                 return None;
             }
             i = (i + 1) & self.mask;
+            slot = unsafe { self.slots.get_unchecked_mut(i) };
         }
+        self.len -= 1;
+        let v = slot.1;
+        *slot = Slot::EMPTY;
+        let mut j = (i + 1) & self.mask;
+        loop {
+            let v = unsafe { *self.slots.get_unchecked(j) };
+            if v.is_empty() {
+                break;
+            }
+            let natural = mix(v.0, self.mask);
+            let remove = if natural <= i {
+                i < j || j < natural
+            } else {
+                j < natural && i < j
+            };
+            if remove {
+                unsafe {
+                    *self.slots.get_unchecked_mut(i) = v;
+                    *self.slots.get_unchecked_mut(j) = Slot::EMPTY;
+                }
+                i = j;
+            }
+            j = (j + 1) & self.mask;
+        }
+        Some(v)
     }
 
     pub fn contains_key(&self, key: u64) -> bool {
@@ -260,22 +287,8 @@ impl Int64Map {
         }
     }
 
-    fn grow(&mut self) {
-        while self.len * 4 > self.slots.len() * 3 {
-            self.rehash();
-        }
-    }
-
     pub fn len(&self) -> usize {
         self.len
-    }
-
-    pub fn load(&self) -> u64 {
-        self.slots.iter().filter(|slot| !slot.is_empty()).count() as u64
-    }
-
-    pub fn load_rate(&self) -> f64 {
-        (self.len as f64) / (self.slots.len() as f64)
     }
 
     pub fn capacity(&self) -> usize {
