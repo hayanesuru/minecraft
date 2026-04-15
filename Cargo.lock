@@ -67,7 +67,7 @@ dependencies = [
 
 [[package]]
 name = "haya_palette"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "minecraft_data",
  "mser",
