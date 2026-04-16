@@ -3,12 +3,15 @@ use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
 use crate::particle::{ExplosionParticleInfo, Particle};
-use crate::registry::{DamageTypeRef, SoundEventRef};
+use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
-use crate::{BitSet, Component, ContainerId, Difficulty, HeightmapType, Holder, WeightedList};
+use crate::{
+    BitSet, Component, ContainerId, Difficulty, GameType, GameTypeNullable, GlobalPos,
+    HeightmapType, Holder, WeightedList,
+};
 use haya_collection::{List, Map};
-use haya_ident::Ident;
+use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
@@ -517,4 +520,39 @@ pub struct LightUpdate<'a> {
     #[mser(varint)]
     pub z: i32,
     pub light_data: LightData<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Login<'a> {
+    #[mser(varint)]
+    pub player_id: u32,
+    pub hardcore: bool,
+    pub levels: List<'a, ResourceKey<'a>>,
+    #[mser(varint)]
+    pub max_players: u32,
+    #[mser(varint)]
+    pub chunk_radius: u32,
+    #[mser(varint)]
+    pub simulation_distance: u32,
+    pub reduced_debug_info: bool,
+    pub show_death_screen: bool,
+    pub do_limited_crafting: bool,
+    pub common_player_spawn_info: CommonPlayerSpawnInfo<'a>,
+    pub enforces_secure_chat: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CommonPlayerSpawnInfo<'a> {
+    pub dimension_type: DimensionTypeRef,
+    pub dimension: ResourceKey<'a>,
+    pub seed: u64,
+    pub game_type: GameType,
+    pub previous_game_type: GameTypeNullable,
+    pub is_debug: bool,
+    pub is_flat: bool,
+    pub last_death_location: Option<GlobalPos<'a>>,
+    #[mser(varint)]
+    pub portal_cooldown: u32,
+    #[mser(varint)]
+    pub sea_level: u32,
 }
