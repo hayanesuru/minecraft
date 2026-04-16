@@ -133,6 +133,6 @@ packets! {
 //     keep_alive = common::GameKeepAlive,
 //     level_chunk_with_light = game::LevelChunkWithLight<'_>,
 //     level_event = game::LevelEvent,
-//     level_particles,
+//     level_particles = game::LevelParticles<'_>,
 //     light_update,
 // }

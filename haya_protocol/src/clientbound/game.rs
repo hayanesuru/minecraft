@@ -496,3 +496,16 @@ pub struct LevelEvent {
     pub data: u32,
     pub global_event: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LevelParticles<'a> {
+    pub override_limiter: bool,
+    pub always_show: bool,
+    pub pos: Vec3,
+    pub x_dist: f32,
+    pub y_dist: f32,
+    pub z_dist: f32,
+    pub max_speed: f32,
+    pub count: u32,
+    pub particle: Particle<'a>,
+}
