@@ -2,7 +2,8 @@
 
 use alloc::vec::Vec;
 use haya_collection::List;
-use haya_ident::Ident;
+use haya_ident::{Ident, ResourceKey};
+use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
@@ -18,6 +19,7 @@ pub mod entity;
 pub mod food;
 pub mod game_event;
 pub mod item;
+pub mod level_event;
 pub mod particle;
 pub mod path;
 pub mod profile;
@@ -508,6 +510,115 @@ impl<'a, T: Read<'a>> Read<'a> for Weighted<T> {
             value: T::read(buf)?,
         })
     }
+}
+
+#[derive(Clone, Copy)]
+pub struct FixedByteArray<'a, const L: usize>(pub &'a [u8; L]);
+
+impl<'a, const L: usize> Read<'a> for FixedByteArray<'a, L> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        match buf.read_array() {
+            Ok(x) => Ok(Self(x)),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl<'a, const L: usize> Write for FixedByteArray<'a, L> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { w.write(self.0) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len()
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum HeightmapType {
+    WorldSurfaceWg,
+    WorldSurface,
+    OceanFloorWg,
+    OceanFloor,
+    MotionBlocking,
+    MotionBlockingNoLeaves,
+}
+
+impl HeightmapType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::WorldSurfaceWg => "WORLD_SURFACE_WG",
+            Self::WorldSurface => "WORLD_SURFACE",
+            Self::OceanFloorWg => "OCEAN_FLOOR_WG",
+            Self::OceanFloor => "OCEAN_FLOOR",
+            Self::MotionBlocking => "MOTION_BLOCKING",
+            Self::MotionBlockingNoLeaves => "MOTION_BLOCKING_NO_LEAVES",
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BitSet<'a>(pub List<'a, u64>);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum GameType {
+    Survival,
+    Creative,
+    Adventure,
+    Spectator,
+}
+
+impl GameType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Survival => "survival",
+            Self::Creative => "creative",
+            Self::Adventure => "adventure",
+            Self::Spectator => "spectator",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct GameTypeNullable(pub Option<GameType>);
+
+impl<'a> Read<'a> for GameTypeNullable {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self(match u8::read(buf)? {
+            0xff => None,
+            1 => Some(GameType::Creative),
+            2 => Some(GameType::Adventure),
+            3 => Some(GameType::Spectator),
+            _ => Some(GameType::Survival),
+        }))
+    }
+}
+
+impl Write for GameTypeNullable {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self.0 {
+                Some(x) => x.write(w),
+                None => w.write_byte(0xff),
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self.0 {
+            Some(x) => x.len_s(),
+            None => 1,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GlobalPos<'a> {
+    pub dimension: ResourceKey<'a>,
+    pub pos: BlockPosPacked,
 }
 
 #[cfg(test)]

@@ -1,21 +1,20 @@
 use crate::registry::ChatTypeRef;
-use crate::{Component, Holder, Style};
-use alloc::boxed::Box;
+use crate::{Component, FixedByteArray, Holder, Style};
 use haya_collection::List;
 use mser::{Read, Utf8, V32, Write};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct MessageSignature {
-    pub bytes: [u8; 256],
+pub struct MessageSignature<'a> {
+    pub bytes: FixedByteArray<'a, 256>,
 }
 
 #[derive(Clone)]
-pub enum MessageSignaturePacked {
-    FullSignature(Box<MessageSignature>),
+pub enum MessageSignaturePacked<'a> {
+    FullSignature(MessageSignature<'a>),
     Index(u32),
 }
 
-impl Write for MessageSignaturePacked {
+impl<'a> Write for MessageSignaturePacked<'a> {
     unsafe fn write(&self, w: &mut mser::Writer) {
         unsafe {
             match self {
@@ -38,11 +37,11 @@ impl Write for MessageSignaturePacked {
     }
 }
 
-impl<'a> Read<'a> for MessageSignaturePacked {
+impl<'a> Read<'a> for MessageSignaturePacked<'a> {
     fn read(buf: &mut mser::Reader<'a>) -> Result<Self, mser::Error> {
         let id = V32::read(buf)?.0;
         Ok(if id == 0 {
-            Self::FullSignature(Box::new(MessageSignature::read(buf)?))
+            Self::FullSignature(MessageSignature::read(buf)?)
         } else {
             Self::Index(id)
         })

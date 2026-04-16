@@ -3,12 +3,15 @@ use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
 use crate::particle::{ExplosionParticleInfo, Particle};
-use crate::registry::{DamageTypeRef, SoundEventRef};
+use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
-use crate::{Component, ContainerId, Difficulty, Holder, WeightedList};
+use crate::{
+    BitSet, Component, ContainerId, Difficulty, GameType, GameTypeNullable, GlobalPos,
+    HeightmapType, Holder, WeightedList,
+};
 use haya_collection::{List, Map};
-use haya_ident::Ident;
+use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type};
@@ -347,8 +350,8 @@ pub struct DebugSample<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct DeleteChat {
-    pub message_signature: MessageSignaturePacked,
+pub struct DeleteChat<'a> {
+    pub message_signature: MessageSignaturePacked<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -455,4 +458,101 @@ pub struct InitializeBorder {
     pub warning_blocks: u32,
     #[mser(varint)]
     pub warning_time: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LevelChunkWithLight<'a> {
+    pub pos: ChunkPos,
+    pub chunk_data: ChunkData<'a>,
+    pub light_data: LightData<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChunkData<'a> {
+    pub heightmaps: Map<'a, HeightmapType, List<'a, u64>>,
+    pub data: ByteArray<'a>,
+    pub block_entities_data: List<'a, BlockEntityInfo>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BlockEntityInfo {
+    pub packed_xz: u8,
+    pub y: i16,
+    pub ty: block_entity_type,
+    pub tag: Tag,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LightData<'a> {
+    pub sky_y_mask: BitSet<'a>,
+    pub block_y_mask: BitSet<'a>,
+    pub empty_sky_y_mask: BitSet<'a>,
+    pub empty_block_y_mask: BitSet<'a>,
+    pub sky_updates: List<'a, ByteArray<'a, 2048>>,
+    pub block_updates: List<'a, ByteArray<'a, 2048>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LevelEvent {
+    pub ty: u32,
+    pub pos: BlockPosPacked,
+    pub data: u32,
+    pub global_event: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LevelParticles<'a> {
+    pub override_limiter: bool,
+    pub always_show: bool,
+    pub pos: Vec3,
+    pub x_dist: f32,
+    pub y_dist: f32,
+    pub z_dist: f32,
+    pub max_speed: f32,
+    pub count: u32,
+    pub particle: Particle<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LightUpdate<'a> {
+    #[mser(varint)]
+    pub x: i32,
+    #[mser(varint)]
+    pub z: i32,
+    pub light_data: LightData<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Login<'a> {
+    #[mser(varint)]
+    pub player_id: u32,
+    pub hardcore: bool,
+    pub levels: List<'a, ResourceKey<'a>>,
+    #[mser(varint)]
+    pub max_players: u32,
+    #[mser(varint)]
+    pub chunk_radius: u32,
+    #[mser(varint)]
+    pub simulation_distance: u32,
+    pub reduced_debug_info: bool,
+    pub show_death_screen: bool,
+    pub do_limited_crafting: bool,
+    pub common_player_spawn_info: CommonPlayerSpawnInfo<'a>,
+    pub enforces_secure_chat: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CommonPlayerSpawnInfo<'a> {
+    pub dimension_type: DimensionTypeRef,
+    pub dimension: ResourceKey<'a>,
+    pub seed: u64,
+    pub game_type: GameType,
+    pub previous_game_type: GameTypeNullable,
+    pub is_debug: bool,
+    pub is_flat: bool,
+    pub last_death_location: Option<GlobalPos<'a>>,
+    #[mser(varint)]
+    pub portal_cooldown: u32,
+    #[mser(varint)]
+    pub sea_level: u32,
 }
