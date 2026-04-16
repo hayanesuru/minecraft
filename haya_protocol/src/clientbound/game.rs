@@ -6,7 +6,7 @@ use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::registry::{DamageTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
-use crate::{Component, ContainerId, Difficulty, Holder, WeightedList};
+use crate::{BitSet, Component, ContainerId, Difficulty, HeightmapType, Holder, WeightedList};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
@@ -347,8 +347,8 @@ pub struct DebugSample<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct DeleteChat {
-    pub message_signature: MessageSignaturePacked,
+pub struct DeleteChat<'a> {
+    pub message_signature: MessageSignaturePacked<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -455,4 +455,36 @@ pub struct InitializeBorder {
     pub warning_blocks: u32,
     #[mser(varint)]
     pub warning_time: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LevelChunkWithLight<'a> {
+    pub pos: ChunkPos,
+    pub chunk_data: ChunkData<'a>,
+    pub light_data: LightData<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChunkData<'a> {
+    pub heightmaps: Map<'a, HeightmapType, List<'a, u64>>,
+    pub data: ByteArray<'a>,
+    pub block_entities_data: List<'a, BlockEntityInfo>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BlockEntityInfo {
+    pub packed_xz: u8,
+    pub y: i16,
+    pub r#type: block_entity_type,
+    pub tag: Tag,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LightData<'a> {
+    pub sky_y_mask: BitSet<'a>,
+    pub block_y_mask: BitSet<'a>,
+    pub empty_sky_y_mask: BitSet<'a>,
+    pub empty_block_y_mask: BitSet<'a>,
+    pub sky_updates: List<'a, ByteArray<'a, 2048>>,
+    pub block_updates: List<'a, ByteArray<'a, 2048>>,
 }

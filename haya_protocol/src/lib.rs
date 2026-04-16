@@ -510,6 +510,44 @@ impl<'a, T: Read<'a>> Read<'a> for Weighted<T> {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct FixedByteArray<'a, const L: usize>(pub &'a [u8; L]);
+
+impl<'a, const L: usize> Read<'a> for FixedByteArray<'a, L> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        match buf.read_array() {
+            Ok(x) => Ok(Self(x)),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl<'a, const L: usize> Write for FixedByteArray<'a, L> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { w.write(self.0) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len()
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+#[allow(non_camel_case_types)]
+pub enum HeightmapType {
+    WORLD_SURFACE_WG,
+    WORLD_SURFACE,
+    OCEAN_FLOOR_WG,
+    OCEAN_FLOOR,
+    MOTION_BLOCKING,
+    MOTION_BLOCKING_NO_LEAVES,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BitSet<'a>(pub List<'a, u64>);
+
 #[cfg(test)]
 mod tests {
     use super::*;
