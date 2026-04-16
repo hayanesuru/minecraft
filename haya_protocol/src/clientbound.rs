@@ -134,5 +134,5 @@ packets! {
 //     level_chunk_with_light = game::LevelChunkWithLight<'_>,
 //     level_event = game::LevelEvent,
 //     level_particles = game::LevelParticles<'_>,
-//     light_update,
+//     light_update = game::LightUpdate<'_>,
 // }

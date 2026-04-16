@@ -509,3 +509,12 @@ pub struct LevelParticles<'a> {
     pub count: u32,
     pub particle: Particle<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LightUpdate<'a> {
+    #[mser(varint)]
+    pub x: i32,
+    #[mser(varint)]
+    pub z: i32,
+    pub light_data: LightData<'a>,
+}
