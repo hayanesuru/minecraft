@@ -475,7 +475,7 @@ pub struct ChunkData<'a> {
 pub struct BlockEntityInfo {
     pub packed_xz: u8,
     pub y: i16,
-    pub r#type: block_entity_type,
+    pub ty: block_entity_type,
     pub tag: Tag,
 }
 
@@ -487,4 +487,12 @@ pub struct LightData<'a> {
     pub empty_block_y_mask: BitSet<'a>,
     pub sky_updates: List<'a, ByteArray<'a, 2048>>,
     pub block_updates: List<'a, ByteArray<'a, 2048>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LevelEvent {
+    pub ty: u32,
+    pub pos: BlockPosPacked,
+    pub data: u32,
+    pub global_event: bool,
 }

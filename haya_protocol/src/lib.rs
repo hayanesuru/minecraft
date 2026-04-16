@@ -18,6 +18,7 @@ pub mod entity;
 pub mod food;
 pub mod game_event;
 pub mod item;
+pub mod level_event;
 pub mod particle;
 pub mod path;
 pub mod profile;

@@ -132,7 +132,7 @@ packets! {
 //     initialize_border = game::InitializeBorder,
 //     keep_alive = common::GameKeepAlive,
 //     level_chunk_with_light = game::LevelChunkWithLight<'_>,
-//     level_event,
+//     level_event = game::LevelEvent,
 //     level_particles,
 //     light_update,
 // }
