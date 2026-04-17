@@ -573,3 +573,13 @@ pub struct MerchantOffers<'a> {
     pub container_id: ContainerId,
     pub offers: List<'a, MerchantOffer<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MoveEntityPos {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub xa: i16,
+    pub ya: i16,
+    pub za: i16,
+    pub on_ground: bool,
+}

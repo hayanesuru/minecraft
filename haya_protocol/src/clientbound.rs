@@ -138,7 +138,7 @@ packets! {
 //     login = game::Login<'_>,
 //     map_item_data = game::MapItemData<'_>,
 //     merchant_offers = game::MerchantOffers<'_>,
-//     move_entity_pos,
+//     move_entity_pos = game::MoveEntityPos,
 //     move_entity_pos_rot,
 //     move_minecart_along_track,
 //     move_entity_rot,
