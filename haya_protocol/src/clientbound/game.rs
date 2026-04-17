@@ -583,3 +583,15 @@ pub struct MoveEntityPos {
     pub za: i16,
     pub on_ground: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MoveEntityPosRot {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub xa: i16,
+    pub ya: i16,
+    pub za: i16,
+    pub y_rot: ByteAngle,
+    pub x_rot: ByteAngle,
+    pub on_ground: bool,
+}
