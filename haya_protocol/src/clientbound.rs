@@ -136,7 +136,7 @@ packets! {
 //     level_particles = game::LevelParticles<'_>,
 //     light_update = game::LightUpdate<'_>,
 //     login = game::Login<'_>,
-//     map_item_data,
+//     map_item_data = game::MapItemData<'_>,
 //     merchant_offers,
 //     move_entity_pos,
 //     move_entity_pos_rot,

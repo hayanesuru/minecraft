@@ -20,6 +20,7 @@ pub mod food;
 pub mod game_event;
 pub mod item;
 pub mod level_event;
+pub mod map;
 pub mod particle;
 pub mod path;
 pub mod profile;
@@ -583,9 +584,9 @@ impl GameType {
 }
 
 #[derive(Clone, Copy)]
-pub struct GameTypeNullable(pub Option<GameType>);
+pub struct GameTypeOptional(pub Option<GameType>);
 
-impl<'a> Read<'a> for GameTypeNullable {
+impl<'a> Read<'a> for GameTypeOptional {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(Self(match u8::read(buf)? {
             0xff => None,
@@ -597,7 +598,7 @@ impl<'a> Read<'a> for GameTypeNullable {
     }
 }
 
-impl Write for GameTypeNullable {
+impl Write for GameTypeOptional {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self.0 {

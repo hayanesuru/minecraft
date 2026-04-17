@@ -2,12 +2,13 @@ use crate::chat::{Bound, MessageSignaturePacked};
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
+use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, GameType, GameTypeNullable, GlobalPos,
+    BitSet, Component, ContainerId, Difficulty, GameType, GameTypeOptional, GlobalPos,
     HeightmapType, Holder, WeightedList,
 };
 use haya_collection::{List, Map};
@@ -547,7 +548,7 @@ pub struct CommonPlayerSpawnInfo<'a> {
     pub dimension: ResourceKey<'a>,
     pub seed: u64,
     pub game_type: GameType,
-    pub previous_game_type: GameTypeNullable,
+    pub previous_game_type: GameTypeOptional,
     pub is_debug: bool,
     pub is_flat: bool,
     pub last_death_location: Option<GlobalPos<'a>>,
@@ -555,4 +556,13 @@ pub struct CommonPlayerSpawnInfo<'a> {
     pub portal_cooldown: u32,
     #[mser(varint)]
     pub sea_level: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapItemData<'a> {
+    pub map_id: MapId,
+    pub scale: u8,
+    pub locked: bool,
+    pub decorations: Option<List<'a, MapDecoration>>,
+    pub color_patch: MapPatch<'a>,
 }

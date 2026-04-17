@@ -21,6 +21,7 @@ use crate::item::item_enchantments::ItemEnchantments;
 use crate::item::kinetic_weapon::KineticWeapon;
 use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
 use crate::item::tool::Tool;
+use crate::map::MapId;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
@@ -347,9 +348,6 @@ pub struct DyedItemColor(pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct MapItemColor(pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct MapId(#[mser(varint)] pub u32);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MapDecorations {
