@@ -1,5 +1,5 @@
 use crate::HolderSet;
-use crate::item::TypedDataComponentType;
+use crate::item::TypedDataComponent;
 use haya_collection::List;
 use haya_nbt::Tag;
 use minecraft_data::{block, data_component_predicate_type, data_component_type};
@@ -38,7 +38,7 @@ pub struct RangedMatcher<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DataComponentMatchers<'a> {
-    pub exact: List<'a, TypedDataComponentType<'a>>,
+    pub exact: List<'a, TypedDataComponent<'a>>,
     pub partial: List<'a, SingleDataComponentPredicate, 64>,
 }
 

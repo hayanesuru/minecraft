@@ -137,7 +137,7 @@ packets! {
 //     light_update = game::LightUpdate<'_>,
 //     login = game::Login<'_>,
 //     map_item_data = game::MapItemData<'_>,
-//     merchant_offers,
+//     merchant_offers = game::MerchantOffers<'_>,
 //     move_entity_pos,
 //     move_entity_pos_rot,
 //     move_minecart_along_track,

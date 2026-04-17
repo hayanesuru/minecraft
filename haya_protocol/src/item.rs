@@ -50,7 +50,7 @@ fn validate_item_stack(item_stack: &OptionalItemStack<'_>) -> bool {
 pub struct OptionalItemStack<'a> {
     pub id: item,
     pub count: u32,
-    pub patch_add: List<'a, TypedDataComponentType<'a>>,
+    pub patch_add: List<'a, TypedDataComponent<'a>>,
     pub patch_remove: List<'a, data_component_type>,
 }
 
@@ -78,7 +78,7 @@ impl<'a> Read<'a> for OptionalItemStack<'a> {
             } else {
                 let mut patch_add = Vec::with_capacity(usize::min(positive, 65536));
                 for _ in 0..positive {
-                    patch_add.push(TypedDataComponentType::read(buf)?);
+                    patch_add.push(TypedDataComponent::read(buf)?);
                 }
                 let mut patch_remove = Vec::with_capacity(usize::min(negative, 65536));
                 for _ in 0..negative {
@@ -168,7 +168,7 @@ pub struct CustomModelData<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TooltipDisplay<'a> {
     pub hide_tooltip: bool,
-    pub hidden_components: List<'a, TypedDataComponentType<'a>>,
+    pub hidden_components: List<'a, TypedDataComponent<'a>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -491,7 +491,7 @@ pub struct SeededContainerLoot(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
 #[mser(header = data_component_type)]
-pub enum TypedDataComponentType<'a> {
+pub enum TypedDataComponent<'a> {
     CustomData(CustomData),
     MaxStackSize(#[mser(varint)] u32),
     MaxDamage(#[mser(varint)] u32),
@@ -596,4 +596,9 @@ pub enum TypedDataComponentType<'a> {
     CatCollar(DyeColor),
     SheepColor(DyeColor),
     ShulkerColor(DyeColor),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DataComponentExactPredicate<'a> {
+    pub expected_components: List<'a, TypedDataComponent<'a>>,
 }

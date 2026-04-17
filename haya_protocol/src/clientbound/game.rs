@@ -7,6 +7,7 @@ use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
+use crate::trading::MerchantOffer;
 use crate::{
     BitSet, Component, ContainerId, Difficulty, GameType, GameTypeOptional, GlobalPos,
     HeightmapType, Holder, WeightedList,
@@ -565,4 +566,10 @@ pub struct MapItemData<'a> {
     pub locked: bool,
     pub decorations: Option<List<'a, MapDecoration>>,
     pub color_patch: MapPatch<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MerchantOffers<'a> {
+    pub container_id: ContainerId,
+    pub offers: List<'a, MerchantOffer<'a>>,
 }

@@ -30,6 +30,7 @@ pub mod serverbound;
 pub mod sound;
 pub mod stat;
 pub mod structure;
+pub mod trading;
 pub mod trim;
 pub mod types;
 
