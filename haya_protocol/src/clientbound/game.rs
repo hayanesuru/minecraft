@@ -17,7 +17,7 @@ use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
-use minecraft_data::{block, block_entity_type, block_state, entity_type};
+use minecraft_data::{block, block_entity_type, block_state, entity_type, menu};
 use mser::{ByteArray, Utf8, V21};
 use uuid::Uuid;
 
@@ -623,4 +623,11 @@ pub struct MoveVehicle {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct OpenBook {
     pub hand: InteractionHand,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct OpenScreen {
+    pub container_id: ContainerId,
+    pub ty: menu,
+    pub title: Component,
 }
