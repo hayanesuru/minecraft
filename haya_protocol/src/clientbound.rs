@@ -141,7 +141,7 @@ packets! {
 //     move_entity_pos = game::MoveEntityPos,
 //     move_entity_pos_rot = game::MoveEntityPosRot,
 //     move_minecart_along_track = game::MoveMinecartAlongTrack<'_>,
-//     move_entity_rot,
+//     move_entity_rot = game::MoveEntityRot,
 //     move_vehicle,
 //     open_book,
 //     open_screen,

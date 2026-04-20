@@ -603,3 +603,12 @@ pub struct MoveMinecartAlongTrack<'a> {
     pub entity_id: u32,
     pub lerp_steps: List<'a, MinecartStep>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MoveEntityRot {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub y_rot: ByteAngle,
+    pub x_rot: ByteAngle,
+    pub on_ground: bool,
+}
