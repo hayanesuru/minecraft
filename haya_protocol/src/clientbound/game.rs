@@ -5,6 +5,7 @@ use crate::item::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
+use crate::recipe::RecipeDisplay;
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
@@ -636,4 +637,10 @@ pub struct OpenScreen {
 pub struct OpenSignEditor {
     pub pos: BlockPosPacked,
     pub is_front_text: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlaceGhostRecipe<'a> {
+    pub container_id: ContainerId,
+    pub recipe_display: RecipeDisplay<'a>,
 }

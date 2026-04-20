@@ -25,6 +25,7 @@ pub mod minecart;
 pub mod particle;
 pub mod path;
 pub mod profile;
+pub mod recipe;
 pub mod redstone;
 pub mod registry;
 pub mod serverbound;

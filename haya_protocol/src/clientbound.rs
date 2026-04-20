@@ -148,7 +148,7 @@ packets! {
 //     open_sign_editor = game::OpenSignEditor,
 //     ping = common::GamePing,
 //     pong_response = ping::GamePongResponse,
-//     place_ghost_recipe,
+//     place_ghost_recipe = game::PlaceGhostRecipe<'_>,
 //     player_abilities,
 //     player_chat,
 //     player_combat_end,
