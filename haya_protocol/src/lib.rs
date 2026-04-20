@@ -624,7 +624,7 @@ pub struct GlobalPos<'a> {
     pub pos: BlockPosPacked,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
 pub enum InteractionHand {

@@ -39,6 +39,12 @@ pub struct KeepAlive {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct GamePing(pub Ping);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationPing(pub Ping);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Ping {
     pub id: u32,
 }
