@@ -612,3 +612,10 @@ pub struct MoveEntityRot {
     pub x_rot: ByteAngle,
     pub on_ground: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MoveVehicle {
+    pub position: Vec3,
+    pub y_rot: f32,
+    pub x_rot: f32,
+}
