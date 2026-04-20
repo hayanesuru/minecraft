@@ -145,7 +145,7 @@ packets! {
 //     move_vehicle = game::MoveVehicle,
 //     open_book = game::OpenBook,
 //     open_screen = game::OpenScreen,
-//     open_sign_editor,
+//     open_sign_editor = game::OpenSignEditor,
 //     ping,
 //     pong_response,
 //     place_ghost_recipe,

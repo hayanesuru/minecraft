@@ -631,3 +631,9 @@ pub struct OpenScreen {
     pub ty: menu,
     pub title: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct OpenSignEditor {
+    pub pos: BlockPosPacked,
+    pub is_front_text: bool,
+}
