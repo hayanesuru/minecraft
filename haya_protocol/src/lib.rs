@@ -21,6 +21,7 @@ pub mod game_event;
 pub mod item;
 pub mod level_event;
 pub mod map;
+pub mod minecart;
 pub mod particle;
 pub mod path;
 pub mod profile;

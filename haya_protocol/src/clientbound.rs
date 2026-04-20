@@ -140,7 +140,7 @@ packets! {
 //     merchant_offers = game::MerchantOffers<'_>,
 //     move_entity_pos = game::MoveEntityPos,
 //     move_entity_pos_rot = game::MoveEntityPosRot,
-//     move_minecart_along_track,
+//     move_minecart_along_track = game::MoveMinecartAlongTrack<'_>,
 //     move_entity_rot,
 //     move_vehicle,
 //     open_book,

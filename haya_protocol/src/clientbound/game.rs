@@ -3,6 +3,7 @@ use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
+use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
@@ -594,4 +595,11 @@ pub struct MoveEntityPosRot {
     pub y_rot: ByteAngle,
     pub x_rot: ByteAngle,
     pub on_ground: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MoveMinecartAlongTrack<'a> {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub lerp_steps: List<'a, MinecartStep>,
 }
