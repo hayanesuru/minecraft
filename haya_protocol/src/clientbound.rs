@@ -45,7 +45,7 @@ packets! {
     StatusHandler,
     handle,
     status_response = status::StatusResponse<'_>,
-    pong_response = ping::PongResponse,
+    pong_response = ping::StatusPongResponse,
 }
 packets! {
     clientbound__login,
@@ -147,7 +147,7 @@ packets! {
 //     open_screen = game::OpenScreen,
 //     open_sign_editor = game::OpenSignEditor,
 //     ping = common::GamePing,
-//     pong_response,
+//     pong_response = ping::GamePongResponse,
 //     place_ghost_recipe,
 //     player_abilities,
 //     player_chat,
