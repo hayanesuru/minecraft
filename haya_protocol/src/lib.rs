@@ -624,6 +624,14 @@ pub struct GlobalPos<'a> {
     pub pos: BlockPosPacked,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum InteractionHand {
+    MainHand,
+    OffHand,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

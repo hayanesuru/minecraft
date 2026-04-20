@@ -11,7 +11,7 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
     BitSet, Component, ContainerId, Difficulty, GameType, GameTypeOptional, GlobalPos,
-    HeightmapType, Holder, WeightedList,
+    HeightmapType, Holder, InteractionHand, WeightedList,
 };
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
@@ -618,4 +618,9 @@ pub struct MoveVehicle {
     pub position: Vec3,
     pub y_rot: f32,
     pub x_rot: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct OpenBook {
+    pub hand: InteractionHand,
 }
