@@ -1,4 +1,6 @@
-use crate::chat::{Bound, MessageSignaturePacked};
+use crate::chat::{
+    Bound, FilterMask, MessageSignature, MessageSignaturePacked, SignedMessageBodyPacked,
+};
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::item::OptionalItemStack;
@@ -657,4 +659,18 @@ impl PlayerAbilities {
     pub const FLYING_FLAG: u8 = 2;
     pub const CAN_FLY_FLAG: u8 = 4;
     pub const INSTABUILD_FLAG: u8 = 8;
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerChat<'a> {
+    #[mser(varint)]
+    pub global_index: u32,
+    pub sender: Uuid,
+    #[mser(varint)]
+    pub index: u32,
+    pub signature: Option<MessageSignature<'a>>,
+    pub body: SignedMessageBodyPacked<'a>,
+    pub unsigned_content: Option<Component>,
+    pub filter_mask: FilterMask<'a>,
+    pub chat_type: Bound<'a>,
 }

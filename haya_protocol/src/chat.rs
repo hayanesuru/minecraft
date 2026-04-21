@@ -1,5 +1,5 @@
 use crate::registry::ChatTypeRef;
-use crate::{Component, FixedByteArray, Holder, Style};
+use crate::{BitSet, Component, FixedByteArray, Holder, Style};
 use haya_collection::List;
 use mser::{Read, Utf8, V32, Write};
 
@@ -83,6 +83,46 @@ impl Parameter {
             Self::Sender => "sender",
             Self::Target => "target",
             Self::Content => "content",
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SignedMessageBodyPacked<'a> {
+    pub content: Utf8<'a, 256>,
+    pub timestamp: u64,
+    pub salt: u64,
+    pub last_seen: LastSeenMessagesPacked<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LastSeenMessagesPacked<'a> {
+    pub entries: List<'a, MessageSignaturePacked<'a>, 20>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = FilterMaskType, camel_case)]
+pub enum FilterMask<'a> {
+    PassThrough,
+    FullyFiltered,
+    PartiallyFiltered { mask: BitSet<'a> },
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum FilterMaskType {
+    PassThrough,
+    FullyFiltered,
+    PartiallyFiltered,
+}
+
+impl FilterMaskType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::PassThrough => "pass_through",
+            Self::FullyFiltered => "fully_filtered",
+            Self::PartiallyFiltered => "partially_filtered",
         }
     }
 }

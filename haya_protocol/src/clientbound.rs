@@ -150,7 +150,7 @@ packets! {
 //     pong_response = ping::GamePongResponse,
 //     place_ghost_recipe = game::PlaceGhostRecipe<'_>,
 //     player_abilities = game::PlayerAbilities,
-//     player_chat,
+//     player_chat = game::PlayerChat<'_>,
 //     player_combat_end,
 //     player_combat_enter,
 //     player_combat_kill,
