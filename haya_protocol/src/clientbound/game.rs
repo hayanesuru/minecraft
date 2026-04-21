@@ -644,3 +644,17 @@ pub struct PlaceGhostRecipe<'a> {
     pub container_id: ContainerId,
     pub recipe_display: RecipeDisplay<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerAbilities {
+    pub flags: u8,
+    pub flying_speed: f32,
+    pub walking_speed: f32,
+}
+
+impl PlayerAbilities {
+    pub const INVULNERABLE_FLAG: u8 = 1;
+    pub const FLYING_FLAG: u8 = 2;
+    pub const CAN_FLY_FLAG: u8 = 4;
+    pub const INSTABUILD_FLAG: u8 = 8;
+}
