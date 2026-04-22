@@ -690,3 +690,8 @@ pub struct PlayerCombatKill {
     pub player_id: u32,
     pub message: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerInfoRemove<'a> {
+    pub profile_ids: List<'a, Uuid>,
+}
