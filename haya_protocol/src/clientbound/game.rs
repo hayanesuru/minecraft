@@ -683,3 +683,10 @@ pub struct PlayerCombatEnd {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerCombatEnter {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerCombatKill {
+    #[mser(varint)]
+    pub player_id: u32,
+    pub message: Component,
+}

@@ -153,7 +153,7 @@ packets! {
 //     player_chat = game::PlayerChat<'_>,
 //     player_combat_end = game::PlayerCombatEnd,
 //     player_combat_enter = game::PlayerCombatEnter,
-//     player_combat_kill,
+//     player_combat_kill = game::PlayerCombatKill,
 //     player_info_remove,
 //     player_info_update,
 //     player_look_at,
