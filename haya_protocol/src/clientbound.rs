@@ -151,7 +151,7 @@ packets! {
 //     place_ghost_recipe = game::PlaceGhostRecipe<'_>,
 //     player_abilities = game::PlayerAbilities,
 //     player_chat = game::PlayerChat<'_>,
-//     player_combat_end,
+//     player_combat_end = game::PlayerCombatEnd,
 //     player_combat_enter,
 //     player_combat_kill,
 //     player_info_remove,

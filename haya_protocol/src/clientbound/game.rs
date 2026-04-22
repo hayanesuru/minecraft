@@ -674,3 +674,9 @@ pub struct PlayerChat<'a> {
     pub filter_mask: FilterMask<'a>,
     pub chat_type: Bound<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerCombatEnd {
+    #[mser(varint)]
+    pub duration: u32,
+}
