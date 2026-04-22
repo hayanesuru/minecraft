@@ -680,3 +680,6 @@ pub struct PlayerCombatEnd {
     #[mser(varint)]
     pub duration: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerCombatEnter {}
