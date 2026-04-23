@@ -611,6 +611,22 @@ pub enum InteractionHand {
     OffHand,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum EntityAnchor {
+    Feet,
+    Eyes,
+}
+
+impl EntityAnchor {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Feet => "feet",
+            Self::Eyes => "eyes",
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

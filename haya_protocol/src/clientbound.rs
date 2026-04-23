@@ -156,7 +156,7 @@ packets! {
 //     player_combat_kill = game::PlayerCombatKill,
 //     player_info_remove = game::PlayerInfoRemove<'_>,
 //     player_info_update = game::PlayerInfoUpdate<'_>,
-//     player_look_at,
+//     player_look_at = game::PlayerLookAt,
 //     player_position,
 //     player_rotation,
 //     recipe_book_add,

@@ -15,8 +15,8 @@ use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, GameType, GameTypeOptional, GlobalPos,
-    HeightmapType, Holder, InteractionHand, WeightedList,
+    BitSet, Component, ContainerId, Difficulty, EntityAnchor, GameType, GameTypeOptional,
+    GlobalPos, HeightmapType, Holder, InteractionHand, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -916,4 +916,17 @@ impl<'a> PlayerInfoUpdateEntry<'a> {
             },
         })
     }
+}
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerLookAt {
+    pub from_anchor: EntityAnchor,
+    pub pos: Vec3,
+    pub at_entity: Option<PlayerLookAtEntity>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerLookAtEntity {
+    #[mser(varint)]
+    pub entity: u32,
+    pub to_anchor: EntityAnchor,
 }
