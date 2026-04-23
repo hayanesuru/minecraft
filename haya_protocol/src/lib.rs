@@ -1,7 +1,7 @@
 #![no_std]
 
 use alloc::vec::Vec;
-use haya_collection::List;
+use haya_collection::{List, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
@@ -285,7 +285,7 @@ impl<'a, T: Read<'a>> Read<'a> for HolderSet<'a, T> {
             Ok(Self::Named(name))
         } else {
             let len = (len - 1) as usize;
-            let mut vec = Vec::with_capacity(usize::min(len, 65536));
+            let mut vec = Vec::with_capacity(capacity_fix(len));
             for _ in 0..len {
                 vec.push(T::read(buf)?);
             }
@@ -516,28 +516,6 @@ impl<'a, T: Read<'a>> Read<'a> for Weighted<T> {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct FixedByteArray<'a, const L: usize>(pub &'a [u8; L]);
-
-impl<'a, const L: usize> Read<'a> for FixedByteArray<'a, L> {
-    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        match buf.read_array() {
-            Ok(x) => Ok(Self(x)),
-            Err(e) => Err(e),
-        }
-    }
-}
-
-impl<'a, const L: usize> Write for FixedByteArray<'a, L> {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe { w.write(self.0) }
-    }
-
-    fn len_s(&self) -> usize {
-        self.0.len()
-    }
-}
-
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
@@ -637,9 +615,9 @@ pub enum InteractionHand {
 mod tests {
     use super::*;
     use crate::clientbound::login::LoginFinished;
-    use crate::profile::GameProfileRef;
+    use crate::profile::{GameProfileRef, PropertyMap};
     use crate::types::Id as _;
-    use haya_collection::List;
+    use haya_collection::{List, Map};
     use minecraft_data::clientbound__login;
     use uuid::Uuid;
 
@@ -649,7 +627,7 @@ mod tests {
             game_profile: GameProfileRef {
                 id: Uuid::nil(),
                 name: Utf8("abc"),
-                properties: List::Borrowed(&[]),
+                properties: PropertyMap(Map(List::Borrowed(&[]))),
             },
         };
 

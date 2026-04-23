@@ -1,4 +1,4 @@
-use haya_collection::List;
+use haya_collection::{List, Map};
 use haya_ident::Ident;
 use mser::{Either, Read, Utf8, Write};
 use uuid::Uuid;
@@ -7,12 +7,14 @@ use uuid::Uuid;
 pub struct GameProfileRef<'a> {
     pub id: Uuid,
     pub name: Utf8<'a, 16>,
-    pub properties: List<'a, PropertyRef<'a>, 16>,
+    pub properties: PropertyMap<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PropertyMap<'a>(pub Map<'a, Utf8<'a, 64>, PropertyRef<'a>, 16>);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct PropertyRef<'a> {
-    pub name: Utf8<'a, 64>,
     pub value: Utf8<'a, 32767>,
     pub signature: Option<Utf8<'a, 1024>>,
 }

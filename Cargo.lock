@@ -57,6 +57,7 @@ dependencies = [
 name = "haya_nbt"
 version = "0.3.0"
 dependencies = [
+ "haya_collection",
  "haya_mutf8",
  "haya_str",
  "itoa",

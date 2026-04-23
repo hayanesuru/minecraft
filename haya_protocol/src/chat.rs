@@ -1,7 +1,8 @@
 use crate::registry::ChatTypeRef;
-use crate::{BitSet, Component, FixedByteArray, Holder, Style};
-use haya_collection::List;
-use mser::{Read, Utf8, V32, Write};
+use crate::{BitSet, Component, Holder, Style};
+use haya_collection::{FixedByteArray, List};
+use mser::{ByteArray, Read, Utf8, V32, Write};
+use uuid::Uuid;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct MessageSignature<'a> {
@@ -125,4 +126,17 @@ impl FilterMaskType {
             Self::PartiallyFiltered => "partially_filtered",
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RemoteChatSession<'a> {
+    pub session_id: Uuid,
+    pub profile_public_key: ProfilePublicKey<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ProfilePublicKey<'a> {
+    pub expires_at: u64,
+    pub key: ByteArray<'a, 512>,
+    pub key_signature: ByteArray<'a, 4096>,
 }

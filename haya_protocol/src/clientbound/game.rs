@@ -1,5 +1,6 @@
 use crate::chat::{
-    Bound, FilterMask, MessageSignature, MessageSignaturePacked, SignedMessageBodyPacked,
+    Bound, FilterMask, MessageSignature, MessageSignaturePacked, RemoteChatSession,
+    SignedMessageBodyPacked,
 };
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
@@ -7,6 +8,7 @@ use crate::item::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
+use crate::profile::PropertyMap;
 use crate::recipe::RecipeDisplay;
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
@@ -16,12 +18,13 @@ use crate::{
     BitSet, Component, ContainerId, Difficulty, GameType, GameTypeOptional, GlobalPos,
     HeightmapType, Holder, InteractionHand, WeightedList,
 };
-use haya_collection::{List, Map};
+use alloc::vec::Vec;
+use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type, menu};
-use mser::{ByteArray, Utf8, V21};
+use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -32,7 +35,7 @@ pub struct AddEntity {
     #[mser(varint)]
     pub id: u32,
     pub uuid: Uuid,
-    pub r#type: entity_type,
+    pub ty: entity_type,
     pub pos: Vec3,
     pub movement: LpVec3,
     pub x_rot: ByteAngle,
@@ -97,7 +100,7 @@ pub struct BlockDestruction {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BlockEntityData {
     pub pos: BlockPosPacked,
-    pub r#type: block_entity_type,
+    pub ty: block_entity_type,
     pub tag: Tag,
 }
 
@@ -649,16 +652,19 @@ pub struct PlaceGhostRecipe<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerAbilities {
-    pub flags: u8,
+    pub flags: PlayerAbilitiesFlags,
     pub flying_speed: f32,
     pub walking_speed: f32,
 }
 
-impl PlayerAbilities {
-    pub const INVULNERABLE_FLAG: u8 = 1;
-    pub const FLYING_FLAG: u8 = 2;
-    pub const CAN_FLY_FLAG: u8 = 4;
-    pub const INSTABUILD_FLAG: u8 = 8;
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct PlayerAbilitiesFlags(pub u8);
+
+impl PlayerAbilitiesFlags {
+    pub const INVULNERABLE: u8 = 1;
+    pub const FLYING: u8 = 2;
+    pub const CAN_FLY: u8 = 4;
+    pub const INSTABUILD: u8 = 8;
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -694,4 +700,220 @@ pub struct PlayerCombatKill {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerInfoRemove<'a> {
     pub profile_ids: List<'a, Uuid>,
+}
+
+pub struct PlayerInfoUpdate<'a> {
+    pub actions: PlayerInfoUpdateActions,
+    pub entries: List<'a, PlayerInfoUpdateEntry<'a>>,
+}
+
+impl<'a> Write for PlayerInfoUpdate<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.actions.write(w);
+            for entry in self.entries.iter() {
+                entry.write(w, self.actions);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = self.actions.len_s();
+        for entry in self.entries.iter() {
+            l += entry.len_s(self.actions);
+        }
+        l
+    }
+}
+
+impl<'a> Read<'a> for PlayerInfoUpdate<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let actions = PlayerInfoUpdateActions::read(buf)?;
+        let len = V21::read(buf)?.0 as usize;
+        let mut vec = Vec::with_capacity(capacity_fix(len));
+        for _ in 0..len {
+            vec.push(PlayerInfoUpdateEntry::read(buf, actions)?);
+        }
+        Ok(Self {
+            actions,
+            entries: List::Owned(vec),
+        })
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct PlayerInfoUpdateActions(pub u8);
+
+impl PlayerInfoUpdateActions {
+    pub const ADD_PLAYER: u8 = 1;
+    pub const INITIALIZE_CHAT: u8 = 2;
+    pub const UPDATE_GAME_MODE: u8 = 4;
+    pub const UPDATE_LISTED: u8 = 8;
+    pub const UPDATE_LATENCY: u8 = 16;
+    pub const UPDATE_DISPLAY_NAME: u8 = 32;
+    pub const UPDATE_LIST_ORDER: u8 = 64;
+    pub const UPDATE_HAT: u8 = 128;
+
+    pub const fn add_player(self) -> bool {
+        self.0 & Self::ADD_PLAYER != 0
+    }
+
+    pub const fn initialize_chat(self) -> bool {
+        self.0 & Self::INITIALIZE_CHAT != 0
+    }
+
+    pub const fn update_game_mode(self) -> bool {
+        self.0 & Self::UPDATE_GAME_MODE != 0
+    }
+
+    pub const fn update_listed(self) -> bool {
+        self.0 & Self::UPDATE_LISTED != 0
+    }
+
+    pub const fn update_latency(self) -> bool {
+        self.0 & Self::UPDATE_LATENCY != 0
+    }
+
+    pub const fn update_display_name(self) -> bool {
+        self.0 & Self::UPDATE_DISPLAY_NAME != 0
+    }
+
+    pub const fn update_list_order(self) -> bool {
+        self.0 & Self::UPDATE_LIST_ORDER != 0
+    }
+
+    pub const fn update_hat(self) -> bool {
+        self.0 & Self::UPDATE_HAT != 0
+    }
+}
+
+#[derive(Clone)]
+pub struct PlayerInfoUpdateEntry<'a> {
+    pub profile_id: Uuid,
+    pub name: Utf8<'a, 16>,
+    pub properties: PropertyMap<'a>,
+    pub chat_session: Option<RemoteChatSession<'a>>,
+    pub game_mode: GameType,
+    pub listed: bool,
+    pub latency: u32,
+    pub display_name: Option<Component>,
+    pub list_order: u32,
+    pub show_hat: bool,
+}
+
+impl<'a> PlayerInfoUpdateEntry<'a> {
+    /// # Safety
+    ///
+    /// [`mser::Write::write`]
+    pub unsafe fn write(&self, w: &mut Writer, actions: PlayerInfoUpdateActions) {
+        unsafe {
+            self.profile_id.write(w);
+            if actions.add_player() {
+                self.name.write(w);
+                self.properties.write(w);
+            }
+            if actions.initialize_chat() {
+                self.chat_session.write(w);
+            }
+            if actions.update_game_mode() {
+                self.game_mode.write(w);
+            }
+            if actions.update_listed() {
+                self.listed.write(w);
+            }
+            if actions.update_latency() {
+                V32(self.latency).write(w);
+            }
+            if actions.update_display_name() {
+                self.display_name.write(w);
+            }
+            if actions.update_list_order() {
+                V32(self.list_order).write(w);
+            }
+            if actions.update_hat() {
+                self.show_hat.write(w);
+            }
+        }
+    }
+
+    pub fn len_s(&self, actions: PlayerInfoUpdateActions) -> usize {
+        let mut len = self.profile_id.len_s();
+        if actions.add_player() {
+            len += self.name.len_s();
+            len += self.properties.len_s();
+        }
+        if actions.initialize_chat() {
+            len += self.chat_session.len_s();
+        }
+        if actions.update_game_mode() {
+            len += self.game_mode.len_s();
+        }
+        if actions.update_listed() {
+            len += self.listed.len_s();
+        }
+        if actions.update_latency() {
+            len += V32(self.latency).len_s();
+        }
+        if actions.update_display_name() {
+            len += self.display_name.len_s();
+        }
+        if actions.update_list_order() {
+            len += V32(self.list_order).len_s();
+        }
+        if actions.update_hat() {
+            len += self.show_hat.len_s();
+        }
+        len
+    }
+
+    pub fn read(buf: &mut Reader<'a>, actions: PlayerInfoUpdateActions) -> Result<Self, Error> {
+        Ok(Self {
+            profile_id: Uuid::read(buf)?,
+            name: if actions.add_player() {
+                Utf8::read(buf)?
+            } else {
+                Utf8("")
+            },
+            properties: if actions.add_player() {
+                PropertyMap::read(buf)?
+            } else {
+                PropertyMap(Map(List::Borrowed(&[])))
+            },
+            chat_session: if actions.initialize_chat() {
+                Read::read(buf)?
+            } else {
+                None
+            },
+            game_mode: if actions.update_game_mode() {
+                GameType::read(buf)?
+            } else {
+                GameType::Survival
+            },
+            listed: if actions.update_listed() {
+                bool::read(buf)?
+            } else {
+                false
+            },
+            latency: if actions.update_latency() {
+                V32::read(buf)?.0
+            } else {
+                0
+            },
+            display_name: if actions.update_display_name() {
+                Read::read(buf)?
+            } else {
+                None
+            },
+            list_order: if actions.update_list_order() {
+                V32::read(buf)?.0
+            } else {
+                0
+            },
+            show_hat: if actions.update_hat() {
+                bool::read(buf)?
+            } else {
+                false
+            },
+        })
+    }
 }

@@ -11,6 +11,7 @@ edition.workspace = true
 mser = { workspace = true }
 haya_mutf8 = { workspace = true }
 haya_str = { workspace = true }
+haya_collection = { workspace = true }
 
 unicode_names2 = { version = "2", features = ["no_std"] }
 itoa = "1"

@@ -32,7 +32,7 @@ use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
 use crate::{Component, DyeColor, EquipmentSlot, Filterable, Holder, HolderSet, LockCode, Rarity};
 use alloc::vec::Vec;
-use haya_collection::{List, Map};
+use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
@@ -76,11 +76,11 @@ impl<'a> Read<'a> for OptionalItemStack<'a> {
                     patch_remove: List::Borrowed(&[]),
                 })
             } else {
-                let mut patch_add = Vec::with_capacity(usize::min(positive, 65536));
+                let mut patch_add = Vec::with_capacity(capacity_fix(positive));
                 for _ in 0..positive {
                     patch_add.push(TypedDataComponent::read(buf)?);
                 }
-                let mut patch_remove = Vec::with_capacity(usize::min(negative, 65536));
+                let mut patch_remove = Vec::with_capacity(capacity_fix(negative));
                 for _ in 0..negative {
                     patch_remove.push(data_component_type::read(buf)?);
                 }
