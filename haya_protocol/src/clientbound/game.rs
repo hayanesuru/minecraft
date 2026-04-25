@@ -9,7 +9,7 @@ use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
-use crate::recipe::RecipeDisplay;
+use crate::recipe::{RecipeDisplay, RecipeDisplayEntry};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
@@ -939,7 +939,7 @@ pub struct PlayerPosition {
     pub relatives: Relatives,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Relatives(pub u32);
 
 impl Relatives {
@@ -972,4 +972,24 @@ pub struct PlayerRotation {
     pub relative_y: bool,
     pub x_rot: f32,
     pub relative_x: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookAdd<'a> {
+    pub entries: List<'a, RecipeBookAddEntry<'a>>,
+    pub replace: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookAddEntry<'a> {
+    pub contents: RecipeDisplayEntry<'a>,
+    pub flags: RecipeBookAddFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct RecipeBookAddFlags(pub u8);
+
+impl RecipeBookAddFlags {
+    pub const NOTIFICATION: u8 = 1;
+    pub const HIGHLIGHT: u8 = 2;
 }

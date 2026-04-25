@@ -1,10 +1,10 @@
-use crate::Holder;
 use crate::item::ItemStack;
 use crate::registry::TrimPatternRef;
 use crate::trim::TrimPattern;
+use crate::{Holder, HolderSet, V32Optional};
 use haya_collection::{Cow, List};
 use haya_ident::TagKey;
-use minecraft_data::{item, recipe_display, slot_display};
+use minecraft_data::{item, recipe_book_category, recipe_display, slot_display};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[mser(header = recipe_display)]
@@ -82,4 +82,24 @@ pub struct SmithingTrimDemoSlotDisplay<'a> {
 pub struct WithRemainder<'a> {
     pub input: SlotDisplay<'a>,
     pub remainder: SlotDisplay<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeDisplayEntry<'a> {
+    pub id: RecipeDisplayId,
+    pub display: RecipeDisplay<'a>,
+    pub group: V32Optional,
+    pub category: recipe_book_category,
+    pub crafting_requirements: Option<List<'a, Ingredient<'a>>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeDisplayId {
+    #[mser(varint)]
+    pub index: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Ingredient<'a> {
+    pub values: HolderSet<'a, item>,
 }

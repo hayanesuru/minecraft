@@ -627,6 +627,37 @@ impl EntityAnchor {
         }
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct V32Optional(#[mser(varint)] u32);
+
+impl Default for V32Optional {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl V32Optional {
+    pub const fn new_with(value: u32) -> Self {
+        Self(value + 1)
+    }
+    pub const fn new() -> Self {
+        Self(0)
+    }
+    pub const fn is_some(self) -> bool {
+        self.0 != 0
+    }
+    pub const fn is_none(self) -> bool {
+        self.0 == 0
+    }
+    pub const fn get(self) -> Option<u32> {
+        if self.0 == 0 { None } else { Some(self.0 - 1) }
+    }
+    pub const fn unwrap(self) -> u32 {
+        self.0 - 1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

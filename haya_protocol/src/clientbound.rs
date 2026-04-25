@@ -159,7 +159,7 @@ packets! {
 //     player_look_at = game::PlayerLookAt,
 //     player_position = game::PlayerPosition,
 //     player_rotation = game::PlayerRotation,
-//     recipe_book_add,
+//     recipe_book_add = game::RecipeBookAdd<'_>,
 //     recipe_book_remove,
 //     recipe_book_settings,
 //     remove_entities,
