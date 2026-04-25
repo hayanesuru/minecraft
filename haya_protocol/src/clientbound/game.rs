@@ -998,3 +998,17 @@ impl RecipeBookAddFlags {
 pub struct RecipeBookRemove<'a> {
     pub recipes: List<'a, RecipeDisplayId>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookSettings {
+    pub crafting: TypeSettings,
+    pub furnace: TypeSettings,
+    pub blast_furnace: TypeSettings,
+    pub smoker: TypeSettings,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TypeSettings {
+    pub open: bool,
+    pub filtering: bool,
+}
