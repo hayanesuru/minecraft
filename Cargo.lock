@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "haya_collection"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "mser",
 ]
@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "haya_nbt"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "haya_collection",
  "haya_mutf8",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "haya_collection",
  "haya_ident",
