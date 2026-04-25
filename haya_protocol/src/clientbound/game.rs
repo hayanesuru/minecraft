@@ -9,7 +9,7 @@ use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
-use crate::recipe::{RecipeDisplay, RecipeDisplayEntry};
+use crate::recipe::{RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
@@ -992,4 +992,9 @@ pub struct RecipeBookAddFlags(pub u8);
 impl RecipeBookAddFlags {
     pub const NOTIFICATION: u8 = 1;
     pub const HIGHLIGHT: u8 = 2;
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookRemove<'a> {
+    pub recipes: List<'a, RecipeDisplayId>,
 }

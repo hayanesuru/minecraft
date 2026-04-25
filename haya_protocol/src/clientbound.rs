@@ -160,7 +160,7 @@ packets! {
 //     player_position = game::PlayerPosition,
 //     player_rotation = game::PlayerRotation,
 //     recipe_book_add = game::RecipeBookAdd<'_>,
-//     recipe_book_remove,
+//     recipe_book_remove = game::RecipeBookRemove<'_>,
 //     recipe_book_settings,
 //     remove_entities,
 //     remove_mob_effect,
