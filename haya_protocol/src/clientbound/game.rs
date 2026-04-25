@@ -1024,3 +1024,9 @@ pub struct RemoveMobEffect {
     pub entity_id: u32,
     pub effect: mob_effect,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResetScore<'a> {
+    pub owner: Utf8<'a>,
+    pub objective_name: Option<Utf8<'a>>,
+}
