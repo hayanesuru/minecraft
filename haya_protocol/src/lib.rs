@@ -658,6 +658,41 @@ impl V32Optional {
     }
 }
 
+#[derive(Clone)]
+pub struct IntIdList<'a>(pub List<'a, u32>);
+
+impl<'a> Read<'a> for IntIdList<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let len = V21::read(buf)?.0 as usize;
+        let mut vec = Vec::with_capacity(capacity_fix(len));
+        for _ in 0..len {
+            vec.push(V32::read(buf)?.0);
+        }
+        Ok(Self(List::Owned(vec)))
+    }
+}
+
+impl<'a> Write for IntIdList<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let x = self.0.as_slice();
+            V21(x.len() as u32).write(w);
+            for y in x {
+                V32(*y).write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let x = self.0.as_slice();
+        let mut len = V21(x.len() as u32).len_s();
+        for y in x {
+            len += V32(*y).len_s();
+        }
+        len
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -16,7 +16,7 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
     BitSet, Component, ContainerId, Difficulty, EntityAnchor, GameType, GameTypeOptional,
-    GlobalPos, HeightmapType, Holder, InteractionHand, WeightedList,
+    GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -1011,4 +1011,9 @@ pub struct RecipeBookSettings {
 pub struct TypeSettings {
     pub open: bool,
     pub filtering: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RemoveEntities<'a> {
+    pub entity_ids: IntIdList<'a>,
 }
