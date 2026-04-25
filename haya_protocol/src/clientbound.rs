@@ -167,7 +167,7 @@ packets! {
     recipe_book_remove = game::RecipeBookRemove<'_>,
     recipe_book_settings = game::RecipeBookSettings,
     remove_entities = game::RemoveEntities<'_>,
-    // remove_mob_effect,
+    remove_mob_effect = game::RemoveMobEffect,
     // reset_score,
     // resource_pack_pop,
     // resource_pack_push,

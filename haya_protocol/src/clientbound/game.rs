@@ -23,7 +23,7 @@ use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
 use haya_nbt::Tag;
-use minecraft_data::{block, block_entity_type, block_state, entity_type, menu};
+use minecraft_data::{block, block_entity_type, block_state, entity_type, menu, mob_effect};
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
 
@@ -1016,4 +1016,11 @@ pub struct TypeSettings {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RemoveEntities<'a> {
     pub entity_ids: IntIdList<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RemoveMobEffect {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub effect: mob_effect,
 }
