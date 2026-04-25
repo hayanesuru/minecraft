@@ -158,7 +158,7 @@ packets! {
 //     player_info_update = game::PlayerInfoUpdate<'_>,
 //     player_look_at = game::PlayerLookAt,
 //     player_position = game::PlayerPosition,
-//     player_rotation,
+//     player_rotation = game::PlayerRotation,
 //     recipe_book_add,
 //     recipe_book_remove,
 //     recipe_book_settings,

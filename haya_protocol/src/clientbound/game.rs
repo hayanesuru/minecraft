@@ -965,3 +965,11 @@ impl Relatives {
     pub const ROTATION: u32 = Self::Y_ROT | Self::X_ROT;
     pub const DELTA: u32 = Self::DELTA_X | Self::DELTA_Y | Self::DELTA_Z | Self::ROTATE_DELTA;
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerRotation {
+    pub y_rot: f32,
+    pub relative_y: bool,
+    pub x_rot: f32,
+    pub relative_x: bool,
+}
