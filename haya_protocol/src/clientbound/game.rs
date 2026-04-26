@@ -1059,3 +1059,10 @@ impl RespawnFlags {
     pub const KEEP_ENTITY_DATA: u8 = 2;
     pub const KEEP_ALL_DATA: u8 = 4;
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RotateHead {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub y_head_rot: ByteAngle,
+}
