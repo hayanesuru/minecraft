@@ -1030,3 +1030,8 @@ pub struct ResetScore<'a> {
     pub owner: Utf8<'a>,
     pub objective_name: Option<Utf8<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResourcePackPop {
+    pub id: Option<Uuid>,
+}

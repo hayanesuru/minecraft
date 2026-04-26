@@ -169,7 +169,7 @@ packets! {
     remove_entities = game::RemoveEntities<'_>,
     remove_mob_effect = game::RemoveMobEffect,
     reset_score = game::ResetScore<'_>,
-    // resource_pack_pop,
+    resource_pack_pop = game::ResourcePackPop,
     // resource_pack_push,
     // respawn,
     // rotate_head,
