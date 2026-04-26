@@ -171,7 +171,7 @@ packets! {
     reset_score = game::ResetScore<'_>,
     resource_pack_pop = game::ResourcePackPop,
     resource_pack_push = game::ResourcePackPush<'_>,
-    // respawn,
+    respawn = game::Respawn<'_>,
     // rotate_head,
     // section_blocks_update,
     // select_advancements_tab,

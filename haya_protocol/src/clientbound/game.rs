@@ -1044,3 +1044,18 @@ pub struct ResourcePackPush<'a> {
     pub required: bool,
     pub prompt: Option<Component>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Respawn<'a> {
+    pub common_player_spawn_info: CommonPlayerSpawnInfo<'a>,
+    pub data_to_keep: RespawnFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct RespawnFlags(pub u8);
+
+impl RespawnFlags {
+    pub const KEEP_ATTRIBUTE_MODIFIERS: u8 = 1;
+    pub const KEEP_ENTITY_DATA: u8 = 2;
+    pub const KEEP_ALL_DATA: u8 = 4;
+}
