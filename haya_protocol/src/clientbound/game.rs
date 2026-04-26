@@ -1035,3 +1035,12 @@ pub struct ResetScore<'a> {
 pub struct ResourcePackPop {
     pub id: Option<Uuid>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResourcePackPush<'a> {
+    pub id: Uuid,
+    pub url: Utf8<'a>,
+    pub hash: Utf8<'a, 40>,
+    pub required: bool,
+    pub prompt: Option<Component>,
+}

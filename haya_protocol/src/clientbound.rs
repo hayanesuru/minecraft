@@ -170,7 +170,7 @@ packets! {
     remove_mob_effect = game::RemoveMobEffect,
     reset_score = game::ResetScore<'_>,
     resource_pack_pop = game::ResourcePackPop,
-    // resource_pack_push,
+    resource_pack_push = game::ResourcePackPush<'_>,
     // respawn,
     // rotate_head,
     // section_blocks_update,
