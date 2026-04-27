@@ -1189,3 +1189,9 @@ pub struct SetChunkCacheCenter {
     #[mser(varint)]
     pub z: i32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetChunkCacheRadius {
+    #[mser(varint)]
+    pub radius: u32,
+}
