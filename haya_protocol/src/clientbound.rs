@@ -175,7 +175,7 @@ packets! {
     rotate_head = game::RotateHead,
     section_blocks_update = game::SectionBlocksUpdate<'_>,
     select_advancements_tab = game::SelectAdvancementsTab<'_>,
-    // server_data,
+    server_data = game::ServerData<'_>,
     // set_action_bar_text,
     // set_border_center,
     // set_border_lerp_size,

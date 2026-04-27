@@ -1133,3 +1133,9 @@ impl SectionBlocksUpdatePacked {
 pub struct SelectAdvancementsTab<'a> {
     pub tab: Option<Ident<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ServerData<'a> {
+    pub motd: Component,
+    pub icon_bytes: Option<ByteArray<'a>>,
+}
