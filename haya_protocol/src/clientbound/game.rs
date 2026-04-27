@@ -15,15 +15,14 @@ use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, EntityAnchor, GameType, GameTypeOptional,
-    GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, RespawnData, WeightedList,
+    BitSet, Component, ContainerId, Difficulty, DisplaySlot, EntityAnchor, GameType,
+    GameTypeOptional, GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, RespawnData,
+    WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
-use haya_math::{
-    BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPos, ChunkSectionPosPacked, LpVec3, Vec3,
-};
+use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type, menu, mob_effect};
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -1204,4 +1203,10 @@ pub struct SetCursorItem<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetDefaultSpawnPosition<'a> {
     pub respawn_data: RespawnData<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetDisplayObjective<'a> {
+    pub slot: DisplaySlot,
+    pub objective_name: Utf8<'a>,
 }
