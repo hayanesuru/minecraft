@@ -1144,3 +1144,9 @@ pub struct ServerData<'a> {
 pub struct SetActionBarText {
     pub text: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderCenter {
+    pub new_center_x: f64,
+    pub new_center_z: f64,
+}
