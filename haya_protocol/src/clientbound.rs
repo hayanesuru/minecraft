@@ -185,7 +185,7 @@ packets! {
     set_camera = game::SetCamera,
     set_chunk_cache_center = game::SetChunkCacheCenter,
     set_chunk_cache_radius = game::SetChunkCacheRadius,
-    // set_cursor_item,
+    set_cursor_item = game::SetCursorItem<'_>,
     // set_default_spawn_position,
     // set_display_objective,
     // set_entity_data,

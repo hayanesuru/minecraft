@@ -1195,3 +1195,8 @@ pub struct SetChunkCacheRadius {
     #[mser(varint)]
     pub radius: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCursorItem<'a> {
+    pub contents: OptionalItemStack<'a>,
+}
