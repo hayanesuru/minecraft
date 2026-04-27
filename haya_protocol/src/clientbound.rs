@@ -178,7 +178,7 @@ packets! {
     server_data = game::ServerData<'_>,
     set_action_bar_text = game::SetActionBarText,
     set_border_center = game::SetBorderCenter,
-    // set_border_lerp_size,
+    set_border_lerp_size = game::SetBorderLerpSize,
     // set_border_size,
     // set_border_warning_delay,
     // set_border_warning_distance,

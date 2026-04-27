@@ -1150,3 +1150,11 @@ pub struct SetBorderCenter {
     pub new_center_x: f64,
     pub new_center_z: f64,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderLerpSize {
+    pub old_size: f64,
+    pub new_size: f64,
+    #[mser(varint)]
+    pub lerp_time: u64,
+}
