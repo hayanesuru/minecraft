@@ -1139,3 +1139,8 @@ pub struct ServerData<'a> {
     pub motd: Component,
     pub icon_bytes: Option<ByteArray<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetActionBarText {
+    pub text: Component,
+}
