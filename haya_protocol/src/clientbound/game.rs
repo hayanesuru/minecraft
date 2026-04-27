@@ -1175,3 +1175,9 @@ pub struct SetBorderWarningDistance {
     #[mser(varint)]
     pub warning_blocks: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCamera {
+    #[mser(varint)]
+    pub camera_id: u32,
+}
