@@ -1169,3 +1169,9 @@ pub struct SetBorderWarningDelay {
     #[mser(varint)]
     pub warning_delay: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderWarningDistance {
+    #[mser(varint)]
+    pub warning_blocks: u32,
+}

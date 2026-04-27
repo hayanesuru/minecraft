@@ -181,7 +181,7 @@ packets! {
     set_border_lerp_size = game::SetBorderLerpSize,
     set_border_size = game::SetBorderSize,
     set_border_warning_delay = game::SetBorderWarningDelay,
-    // set_border_warning_distance,
+    set_border_warning_distance = game::SetBorderWarningDistance,
     // set_camera,
     // set_chunk_cache_center,
     // set_chunk_cache_radius,
