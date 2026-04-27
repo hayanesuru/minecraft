@@ -186,7 +186,7 @@ packets! {
     set_chunk_cache_center = game::SetChunkCacheCenter,
     set_chunk_cache_radius = game::SetChunkCacheRadius,
     set_cursor_item = game::SetCursorItem<'_>,
-    // set_default_spawn_position,
+    set_default_spawn_position = game::SetDefaultSpawnPosition<'_>,
     // set_display_objective,
     // set_entity_data,
     // set_entity_link,

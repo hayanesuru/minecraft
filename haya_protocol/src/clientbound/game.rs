@@ -16,7 +16,7 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
     BitSet, Component, ContainerId, Difficulty, EntityAnchor, GameType, GameTypeOptional,
-    GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, WeightedList,
+    GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, RespawnData, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -1199,4 +1199,9 @@ pub struct SetChunkCacheRadius {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetCursorItem<'a> {
     pub contents: OptionalItemStack<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetDefaultSpawnPosition<'a> {
+    pub respawn_data: RespawnData<'a>,
 }

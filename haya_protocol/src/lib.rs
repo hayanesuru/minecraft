@@ -693,6 +693,13 @@ impl<'a> Write for IntIdList<'a> {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RespawnData<'a> {
+    pub global_pos: GlobalPos<'a>,
+    pub yaw: f32,
+    pub pitch: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
