@@ -21,7 +21,9 @@ use crate::{
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
-use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
+use haya_math::{
+    BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPos, ChunkSectionPosPacked, LpVec3, Vec3,
+};
 use haya_nbt::Tag;
 use minecraft_data::{block, block_entity_type, block_state, entity_type, menu, mob_effect};
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -964,6 +966,42 @@ impl Relatives {
         | Self::ROTATE_DELTA;
     pub const ROTATION: u32 = Self::Y_ROT | Self::X_ROT;
     pub const DELTA: u32 = Self::DELTA_X | Self::DELTA_Y | Self::DELTA_Z | Self::ROTATE_DELTA;
+
+    pub const fn x(self) -> bool {
+        self.0 & Self::X != 0
+    }
+
+    pub const fn y(self) -> bool {
+        self.0 & Self::Y != 0
+    }
+
+    pub const fn z(self) -> bool {
+        self.0 & Self::Z != 0
+    }
+
+    pub const fn y_rot(self) -> bool {
+        self.0 & Self::Y_ROT != 0
+    }
+
+    pub const fn x_rot(self) -> bool {
+        self.0 & Self::X_ROT != 0
+    }
+
+    pub const fn delta_x(self) -> bool {
+        self.0 & Self::DELTA_X != 0
+    }
+
+    pub const fn delta_y(self) -> bool {
+        self.0 & Self::DELTA_Y != 0
+    }
+
+    pub const fn delta_z(self) -> bool {
+        self.0 & Self::DELTA_Z != 0
+    }
+
+    pub const fn rotate_delta(self) -> bool {
+        self.0 & Self::ROTATE_DELTA != 0
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1065,4 +1103,28 @@ pub struct RotateHead {
     #[mser(varint)]
     pub entity_id: u32,
     pub y_head_rot: ByteAngle,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SectionBlocksUpdate<'a> {
+    pub section_pos: ChunkSectionPosPacked,
+    pub changes: List<'a, SectionBlocksUpdatePacked>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(transparent)]
+pub struct SectionBlocksUpdatePacked(#[mser(varint)] pub u64);
+
+impl SectionBlocksUpdatePacked {
+    pub const fn position(self) -> u64 {
+        self.0 & 4095
+    }
+
+    pub const fn state(self) -> u64 {
+        self.0 >> 12
+    }
+
+    pub const fn new(position: u64, state: u64) -> Self {
+        Self((state << 12) | position)
+    }
 }

@@ -274,7 +274,7 @@ impl BlockPosPacked {
 
 impl BlockPos {
     #[must_use]
-    pub const fn to_i64(self) -> BlockPosPacked {
+    pub const fn pack(self) -> BlockPosPacked {
         let x = (self.x & 0x3FF_FFFF) as i64;
         let y = (self.y & 0xFFF) as i64;
         let z = (self.z & 0x3FF_FFFF) as i64;
@@ -310,5 +310,115 @@ impl<'a> Read<'a> for ChunkPos {
             x: i32::read(buf)?,
             z: i32::read(buf)?,
         })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChunkSectionPosPacked(i64);
+
+impl Write for ChunkSectionPosPacked {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.0.write(w) }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        self.0.len_s()
+    }
+}
+
+impl<'a> Read<'a> for ChunkSectionPosPacked {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
+        Ok(Self(i64::read(buf)?))
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChunkSectionPos {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl ChunkSectionPosPacked {
+    #[must_use]
+    pub const fn to_pos(self) -> ChunkSectionPos {
+        ChunkSectionPos {
+            x: (self.0 >> 42) as i32,
+            y: (self.0 << 44 >> 44) as i32,
+            z: (self.0 << 22 >> 42) as i32,
+        }
+    }
+}
+
+impl ChunkSectionPos {
+    #[must_use]
+    pub fn pack(self) -> ChunkSectionPosPacked {
+        ChunkSectionPosPacked(
+            (((self.x & 0x3FFFFF) as i64) << 42)
+                | (self.y & 0xFFFFF) as i64
+                | (((self.z & 0x3FFFFF) as i64) << 20),
+        )
+    }
+}
+
+impl core::ops::Add for BlockPos {
+    type Output = BlockPos;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl core::ops::AddAssign for BlockPos {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+    }
+}
+
+impl core::ops::Sub for BlockPos {
+    type Output = BlockPos;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl core::ops::SubAssign for BlockPos {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
+    }
+}
+
+impl core::ops::Mul for BlockPos {
+    type Output = BlockPos;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
+    }
+}
+
+impl core::ops::MulAssign for BlockPos {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+        self.z *= rhs.z;
     }
 }

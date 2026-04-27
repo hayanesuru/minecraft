@@ -173,7 +173,7 @@ packets! {
     resource_pack_push = game::ResourcePackPush<'_>,
     respawn = game::Respawn<'_>,
     rotate_head = game::RotateHead,
-    // section_blocks_update,
+    section_blocks_update = game::SectionBlocksUpdate<'_>,
     // select_advancements_tab,
     // server_data,
     // set_action_bar_text,
