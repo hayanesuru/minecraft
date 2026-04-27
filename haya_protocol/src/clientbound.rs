@@ -179,7 +179,7 @@ packets! {
     set_action_bar_text = game::SetActionBarText,
     set_border_center = game::SetBorderCenter,
     set_border_lerp_size = game::SetBorderLerpSize,
-    // set_border_size,
+    set_border_size = game::SetBorderSize,
     // set_border_warning_delay,
     // set_border_warning_distance,
     // set_camera,

@@ -1158,3 +1158,8 @@ pub struct SetBorderLerpSize {
     #[mser(varint)]
     pub lerp_time: u64,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderSize {
+    pub size: f64,
+}
