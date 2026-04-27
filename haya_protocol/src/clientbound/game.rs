@@ -1181,3 +1181,11 @@ pub struct SetCamera {
     #[mser(varint)]
     pub camera_id: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetChunkCacheCenter {
+    #[mser(varint)]
+    pub x: i32,
+    #[mser(varint)]
+    pub z: i32,
+}

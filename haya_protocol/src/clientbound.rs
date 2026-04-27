@@ -183,7 +183,7 @@ packets! {
     set_border_warning_delay = game::SetBorderWarningDelay,
     set_border_warning_distance = game::SetBorderWarningDistance,
     set_camera = game::SetCamera,
-    // set_chunk_cache_center,
+    set_chunk_cache_center = game::SetChunkCacheCenter,
     // set_chunk_cache_radius,
     // set_cursor_item,
     // set_default_spawn_position,
