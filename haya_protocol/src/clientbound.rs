@@ -174,7 +174,7 @@ packets! {
     respawn = game::Respawn<'_>,
     rotate_head = game::RotateHead,
     section_blocks_update = game::SectionBlocksUpdate<'_>,
-    // select_advancements_tab,
+    select_advancements_tab = game::SelectAdvancementsTab<'_>,
     // server_data,
     // set_action_bar_text,
     // set_border_center,

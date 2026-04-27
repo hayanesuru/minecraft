@@ -1128,3 +1128,8 @@ impl SectionBlocksUpdatePacked {
         Self((state << 12) | position)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SelectAdvancementsTab<'a> {
+    pub tab: Option<Ident<'a>>,
+}
