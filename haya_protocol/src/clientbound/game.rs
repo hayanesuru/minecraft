@@ -1163,3 +1163,9 @@ pub struct SetBorderLerpSize {
 pub struct SetBorderSize {
     pub size: f64,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderWarningDelay {
+    #[mser(varint)]
+    pub warning_delay: u32,
+}
