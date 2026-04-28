@@ -4,6 +4,7 @@ use crate::chat::{
 };
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
+use crate::entity_data::EntityDataSerializer;
 use crate::item::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
@@ -15,9 +16,8 @@ use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, DisplaySlot, EntityAnchor, GameType,
-    GameTypeOptional, GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, RespawnData,
-    WeightedList,
+    BitSet, Component, ContainerId, Difficulty, DisplaySlot, EntityAnchor, GameType, GlobalPos,
+    HeightmapType, Holder, IntIdList, InteractionHand, OptionalGameType, RespawnData, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -557,7 +557,7 @@ pub struct CommonPlayerSpawnInfo<'a> {
     pub dimension: ResourceKey<'a>,
     pub seed: u64,
     pub game_type: GameType,
-    pub previous_game_type: GameTypeOptional,
+    pub previous_game_type: OptionalGameType,
     pub is_debug: bool,
     pub is_flat: bool,
     pub last_death_location: Option<GlobalPos<'a>>,
@@ -1209,4 +1209,49 @@ pub struct SetDefaultSpawnPosition<'a> {
 pub struct SetDisplayObjective<'a> {
     pub slot: DisplaySlot,
     pub objective_name: Utf8<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEntityData<'a> {
+    #[mser(varint)]
+    pub id: u32,
+    pub packed_items: SetEntityDataValues<'a>,
+}
+
+#[derive(Clone)]
+pub struct SetEntityDataValues<'a>(pub List<'a, (u8, EntityDataSerializer<'a>)>);
+
+impl<'a> Read<'a> for SetEntityDataValues<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let mut vec = Vec::new();
+        loop {
+            let id = u8::read(buf)?;
+            if id == 255 {
+                break;
+            }
+            let value = EntityDataSerializer::read(buf)?;
+            vec.push((id, value));
+        }
+        Ok(Self(List::Owned(vec)))
+    }
+}
+
+impl<'a> Write for SetEntityDataValues<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            for (id, val) in self.0.as_slice() {
+                id.write(w);
+                val.write(w);
+            }
+            255u8.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = 0;
+        for (id, val) in self.0.as_slice() {
+            l += id.len_s() + val.len_s();
+        }
+        l + 1
+    }
 }

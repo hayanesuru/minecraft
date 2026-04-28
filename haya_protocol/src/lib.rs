@@ -16,6 +16,7 @@ pub mod command;
 pub mod debug;
 pub mod effect;
 pub mod entity;
+pub mod entity_data;
 pub mod food;
 pub mod game_event;
 pub mod item;
@@ -565,9 +566,9 @@ impl GameType {
 }
 
 #[derive(Clone, Copy)]
-pub struct GameTypeOptional(pub Option<GameType>);
+pub struct OptionalGameType(pub Option<GameType>);
 
-impl<'a> Read<'a> for GameTypeOptional {
+impl<'a> Read<'a> for OptionalGameType {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(Self(match u8::read(buf)? {
             0xff => None,
@@ -579,7 +580,7 @@ impl<'a> Read<'a> for GameTypeOptional {
     }
 }
 
-impl Write for GameTypeOptional {
+impl Write for OptionalGameType {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self.0 {
@@ -629,19 +630,19 @@ impl EntityAnchor {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct V32Optional(#[mser(varint)] u32);
+pub struct OptionalV32(#[mser(varint)] u32);
 
-impl Default for V32Optional {
+impl Default for OptionalV32 {
     fn default() -> Self {
-        Self::new()
+        Self::none()
     }
 }
 
-impl V32Optional {
-    pub const fn new_with(value: u32) -> Self {
+impl OptionalV32 {
+    pub const fn some(value: u32) -> Self {
         Self(value + 1)
     }
-    pub const fn new() -> Self {
+    pub const fn none() -> Self {
         Self(0)
     }
     pub const fn is_some(self) -> bool {
@@ -747,6 +748,34 @@ impl DisplaySlot {
             Self::TeamLightPurple => "sidebar.team.light_purple",
             Self::TeamYellow => "sidebar.team.yellow",
             Self::TeamWhite => "sidebar.team.white",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct Rotations {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum WeatheringCopperState {
+    Unaffected,
+    Exposed,
+    Weathered,
+    Oxidized,
+}
+
+impl WeatheringCopperState {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Unaffected => "unaffected",
+            Self::Exposed => "exposed",
+            Self::Weathered => "weathered",
+            Self::Oxidized => "oxidized",
         }
     }
 }

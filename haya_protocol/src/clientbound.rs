@@ -188,7 +188,7 @@ packets! {
     set_cursor_item = game::SetCursorItem<'_>,
     set_default_spawn_position = game::SetDefaultSpawnPosition<'_>,
     set_display_objective = game::SetDisplayObjective<'_>,
-    // set_entity_data,
+    set_entity_data = game::SetEntityData<'_>,
     // set_entity_link,
     // set_entity_motion,
     // set_equipment,

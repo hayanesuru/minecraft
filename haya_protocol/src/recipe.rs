@@ -1,7 +1,7 @@
 use crate::item::ItemStack;
 use crate::registry::TrimPatternRef;
 use crate::trim::TrimPattern;
-use crate::{Holder, HolderSet, V32Optional};
+use crate::{Holder, HolderSet, OptionalV32};
 use haya_collection::{Cow, List};
 use haya_ident::TagKey;
 use minecraft_data::{item, recipe_book_category, recipe_display, slot_display};
@@ -88,7 +88,7 @@ pub struct WithRemainder<'a> {
 pub struct RecipeDisplayEntry<'a> {
     pub id: RecipeDisplayId,
     pub display: RecipeDisplay<'a>,
-    pub group: V32Optional,
+    pub group: OptionalV32,
     pub category: recipe_book_category,
     pub crafting_requirements: Option<List<'a, Ingredient<'a>>>,
 }
