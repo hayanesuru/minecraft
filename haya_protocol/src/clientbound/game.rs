@@ -1314,3 +1314,12 @@ impl<'a> Write for SetEquipmentSlots<'a> {
         l
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetExperience {
+    pub experience_progress: f32,
+    #[mser(varint)]
+    pub total_experience: u32,
+    #[mser(varint)]
+    pub experience_level: u32,
+}

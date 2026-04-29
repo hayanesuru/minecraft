@@ -192,7 +192,7 @@ packets! {
     set_entity_link = game::SetEntityLink,
     set_entity_motion = game::SetEntityMotion,
     set_equipment = game::SetEquipment<'_>,
-    // set_experience,
+    set_experience = game::SetExperience,
     // set_health,
     // set_held_slot,
     // set_objective,
