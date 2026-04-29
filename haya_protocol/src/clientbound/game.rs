@@ -1261,3 +1261,11 @@ pub struct SetEntityLink {
     pub source_id: u32,
     pub dest_id: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEntityMotion {
+    #[mser(varint)]
+    pub id: u32,
+    pub movement: LpVec3,
+}
+

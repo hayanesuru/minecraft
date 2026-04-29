@@ -190,7 +190,7 @@ packets! {
     set_display_objective = game::SetDisplayObjective<'_>,
     set_entity_data = game::SetEntityData<'_>,
     set_entity_link = game::SetEntityLink,
-    // set_entity_motion,
+    set_entity_motion = game::SetEntityMotion,
     // set_equipment,
     // set_experience,
     // set_health,
