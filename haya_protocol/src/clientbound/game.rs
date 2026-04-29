@@ -1323,3 +1323,11 @@ pub struct SetExperience {
     #[mser(varint)]
     pub experience_level: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetHealth {
+    pub health: f32,
+    #[mser(varint)]
+    pub food: u32,
+    pub saturation: f32,
+}
