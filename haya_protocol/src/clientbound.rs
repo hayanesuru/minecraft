@@ -194,7 +194,7 @@ packets! {
     set_equipment = game::SetEquipment<'_>,
     set_experience = game::SetExperience,
     set_health = game::SetHealth,
-    // set_held_slot,
+    set_held_slot = game::SetHeldSlot,
     // set_objective,
     // set_passengers,
     // set_player_inventory,

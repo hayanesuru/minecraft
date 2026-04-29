@@ -1331,3 +1331,9 @@ pub struct SetHealth {
     pub food: u32,
     pub saturation: f32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetHeldSlot {
+    #[mser(varint)]
+    pub slot: u32,
+}
