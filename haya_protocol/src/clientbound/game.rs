@@ -1255,3 +1255,9 @@ impl<'a> Write for SetEntityDataValues<'a> {
         l + 1
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEntityLink {
+    pub source_id: u32,
+    pub dest_id: u32,
+}
