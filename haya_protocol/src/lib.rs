@@ -381,6 +381,14 @@ pub enum EquipmentSlot {
 }
 
 impl EquipmentSlot {
+    pub const fn new(n: u8) -> Self {
+        if n > Self::Saddle as u8 {
+            Self::Mainhand
+        } else {
+            unsafe { core::mem::transmute::<u8, Self>(n) }
+        }
+    }
+
     pub const fn name(self) -> &'static str {
         match self {
             Self::Mainhand => "mainhand",

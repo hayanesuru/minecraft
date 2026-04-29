@@ -5,7 +5,7 @@ use crate::chat::{
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::entity_data::EntityDataSerializer;
-use crate::item::OptionalItemStack;
+use crate::item::{ItemStack, OptionalItemStack};
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
@@ -16,8 +16,9 @@ use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, DisplaySlot, EntityAnchor, GameType, GlobalPos,
-    HeightmapType, Holder, IntIdList, InteractionHand, OptionalGameType, RespawnData, WeightedList,
+    BitSet, Component, ContainerId, Difficulty, DisplaySlot, EntityAnchor, EquipmentSlot, GameType,
+    GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, OptionalGameType, RespawnData,
+    WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -48,32 +49,20 @@ pub struct AddEntity {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Animate {
-    #[mser(varint)]
-    pub id: u32,
+    pub id: AnimateAction,
     pub action: u8,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
-#[derive(Clone, Copy)]
+#[mser(varint)]
 pub enum AnimateAction {
-    SwingMainHand = 0,
-    WakeUp = 2,
-    SwingOffHand = 3,
-    CriticalHit = 4,
-    MagicCriticalHit = 5,
-}
-
-impl AnimateAction {
-    pub const fn new(action: u8) -> Option<Self> {
-        match action {
-            0 => Some(Self::SwingMainHand),
-            2 => Some(Self::WakeUp),
-            3 => Some(Self::SwingOffHand),
-            4 => Some(Self::CriticalHit),
-            5 => Some(Self::MagicCriticalHit),
-            _ => None,
-        }
-    }
+    SwingMainHand,
+    Unused,
+    WakeUp,
+    SwingOffHand,
+    CriticalHit,
+    MagicCriticalHit,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1269,3 +1258,59 @@ pub struct SetEntityMotion {
     pub movement: LpVec3,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEquipment<'a> {
+    pub entity: u32,
+    pub slots: SetEquipmentSlots<'a>,
+}
+
+#[derive(Clone)]
+pub struct SetEquipmentSlots<'a>(pub List<'a, (EquipmentSlot, OptionalItemStack<'a>)>);
+
+impl<'a> Read<'a> for SetEquipmentSlots<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let mut vec = Vec::new();
+        loop {
+            let id = buf.read_byte()?;
+            let slot = EquipmentSlot::new(id & 127);
+            let stack = OptionalItemStack::read(buf)?;
+            vec.push((slot, stack));
+            if id & 128 == 0 {
+                break;
+            }
+        }
+        Ok(Self(List::Owned(vec)))
+    }
+}
+
+impl<'a> Write for SetEquipmentSlots<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let mut iter = self.0.as_slice().iter();
+            let mut curr = match iter.next() {
+                Some(x) => x,
+                None => return,
+            };
+            loop {
+                let next = iter.next();
+                let (slot, stack) = curr;
+                let c = if next.is_none() { 0 } else { 128 };
+                w.write_byte((*slot as u8) | c);
+                stack.write(w);
+                curr = match next {
+                    Some(x) => x,
+                    None => return,
+                };
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = 0;
+        for (_, stack) in self.0.as_slice() {
+            l += 1;
+            l += stack.len_s();
+        }
+        l
+    }
+}

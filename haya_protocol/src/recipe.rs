@@ -9,41 +9,56 @@ use minecraft_data::{item, recipe_book_category, recipe_display, slot_display};
 #[derive(Clone, Serialize, Deserialize)]
 #[mser(header = recipe_display)]
 pub enum RecipeDisplay<'a> {
-    CraftingShapeless {
-        ingredients: List<'a, SlotDisplay<'a>>,
-        result: SlotDisplay<'a>,
-        crafting_station: SlotDisplay<'a>,
-    },
-    CraftingShaped {
-        #[mser(varint)]
-        width: u32,
-        #[mser(varint)]
-        height: u32,
-        ingredients: List<'a, SlotDisplay<'a>>,
-        result: SlotDisplay<'a>,
-        crafting_station: SlotDisplay<'a>,
-    },
-    Furnace {
-        ingredient: SlotDisplay<'a>,
-        fuel: SlotDisplay<'a>,
-        result: SlotDisplay<'a>,
-        crafting_station: SlotDisplay<'a>,
-        #[mser(varint)]
-        duration: u32,
-        experience: f32,
-    },
-    Stonecutter {
-        input: SlotDisplay<'a>,
-        result: SlotDisplay<'a>,
-        crafting_station: SlotDisplay<'a>,
-    },
-    Smithing {
-        template: SlotDisplay<'a>,
-        base: SlotDisplay<'a>,
-        addition: SlotDisplay<'a>,
-        result: SlotDisplay<'a>,
-        crafting_station: SlotDisplay<'a>,
-    },
+    CraftingShapeless(ShapelessCraftingRecipeDisplay<'a>),
+    CraftingShaped(ShapedCraftingRecipeDisplay<'a>),
+    Furnace(FurnaceRecipeDisplay<'a>),
+    Stonecutter(StonecutterRecipeDisplay<'a>),
+    Smithing(SmithingRecipeDisplay<'a>),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShapelessCraftingRecipeDisplay<'a> {
+    pub ingredients: List<'a, SlotDisplay<'a>>,
+    pub result: SlotDisplay<'a>,
+    pub crafting_station: SlotDisplay<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShapedCraftingRecipeDisplay<'a> {
+    #[mser(varint)]
+    pub width: u32,
+    #[mser(varint)]
+    pub height: u32,
+    pub ingredients: List<'a, SlotDisplay<'a>>,
+    pub result: SlotDisplay<'a>,
+    pub crafting_station: SlotDisplay<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct FurnaceRecipeDisplay<'a> {
+    pub ingredient: SlotDisplay<'a>,
+    pub fuel: SlotDisplay<'a>,
+    pub result: SlotDisplay<'a>,
+    pub crafting_station: SlotDisplay<'a>,
+    #[mser(varint)]
+    pub duration: u32,
+    pub experience: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct StonecutterRecipeDisplay<'a> {
+    pub input: SlotDisplay<'a>,
+    pub result: SlotDisplay<'a>,
+    pub crafting_station: SlotDisplay<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SmithingRecipeDisplay<'a> {
+    pub template: SlotDisplay<'a>,
+    pub base: SlotDisplay<'a>,
+    pub addition: SlotDisplay<'a>,
+    pub result: SlotDisplay<'a>,
+    pub crafting_station: SlotDisplay<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
