@@ -202,7 +202,7 @@ packets! {
     set_score = game::SetScore<'_>,
     set_simulation_distance = game::SetSimulationDistance,
     set_subtitle_text = game::SetSubtitleText,
-    // set_time,
+    set_time = game::SetTime,
     // set_title_text,
     // set_titles_animation,
     // sound_entity,

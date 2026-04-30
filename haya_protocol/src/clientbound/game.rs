@@ -1450,3 +1450,10 @@ pub struct SetSimulationDistance {
 pub struct SetSubtitleText {
     pub text: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTime {
+    pub game_time: u64,
+    pub day_time: u64,
+    pub tick_day_time: bool,
+}
