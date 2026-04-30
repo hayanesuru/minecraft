@@ -1560,3 +1560,10 @@ pub struct TabList {
     pub header: Component,
     pub footer: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TagQuery {
+    #[mser(varint)]
+    pub transaction_id: u32,
+    pub tag: Tag,
+}

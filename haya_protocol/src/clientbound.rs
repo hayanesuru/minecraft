@@ -216,7 +216,7 @@ packets! {
     store_cookie = common::GameStoreCookie<'_>,
     system_chat = game::SystemChat,
     tab_list = game::TabList,
-    // tag_query,
+    tag_query = game::TagQuery,
     // take_item_entity,
     // teleport_entity,
     // test_instance_block_status,
