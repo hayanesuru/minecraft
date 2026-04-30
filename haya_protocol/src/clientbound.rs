@@ -215,7 +215,7 @@ packets! {
     stop_sound = game::StopSound<'_>,
     store_cookie = common::GameStoreCookie<'_>,
     system_chat = game::SystemChat,
-    // tab_list,
+    tab_list = game::TabList,
     // tag_query,
     // take_item_entity,
     // teleport_entity,

@@ -1554,3 +1554,9 @@ pub struct SystemChat {
     pub content: Component,
     pub overlay: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TabList {
+    pub header: Component,
+    pub footer: Component,
+}
