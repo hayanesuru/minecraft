@@ -201,7 +201,7 @@ packets! {
     set_player_team = game::SetPlayerTeam<'_>,
     set_score = game::SetScore<'_>,
     set_simulation_distance = game::SetSimulationDistance,
-    // set_subtitle_text,
+    set_subtitle_text = game::SetSubtitleText,
     // set_time,
     // set_title_text,
     // set_titles_animation,

@@ -1445,3 +1445,8 @@ pub struct SetSimulationDistance {
     #[mser(varint)]
     pub simulation_distance: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetSubtitleText {
+    pub text: Component,
+}
