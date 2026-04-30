@@ -829,6 +829,9 @@ impl Relatives {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResourceTexture<'a>(pub Ident<'a>);
+
 #[cfg(test)]
 mod tests {
     use super::*;

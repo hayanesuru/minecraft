@@ -1,3 +1,4 @@
+use crate::advancement::{AdvancementHolder, AdvancementProgress};
 use crate::chat::{
     Bound, FilterMask, MessageSignature, MessageSignaturePacked, RemoteChatSession,
     SignedMessageBodyPacked,
@@ -22,7 +23,6 @@ use crate::{
     RespawnData, V32List, WeightedList,
 };
 use alloc::vec::Vec;
-use core::range;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, IVec3, LpVec3, Vec3};
@@ -1547,4 +1547,13 @@ pub struct Transfer<'a> {
     pub host: Utf8<'a>,
     #[mser(varint)]
     pub port: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateAdvancements<'a> {
+    pub reset: bool,
+    pub added: List<'a, AdvancementHolder<'a>>,
+    pub removed: List<'a, Ident<'a>>,
+    pub progress: Map<'a, Ident<'a>, AdvancementProgress<'a>>,
+    pub show_advancements: bool,
 }

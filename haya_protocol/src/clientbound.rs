@@ -223,7 +223,7 @@ packets! {
     ticking_state = game::TickingState,
     ticking_step = game::TickingStep,
     transfer = game::Transfer<'_>,
-    // update_advancements,
+    update_advancements = game::UpdateAdvancements<'_>,
     // update_attributes,
     // update_mob_effect,
     // update_recipes,
