@@ -1529,3 +1529,9 @@ pub struct TestInstanceBlockStatus {
     pub status: Component,
     pub size: Option<IVec3>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TickingState {
+    pub tick_rate: f32,
+    pub is_frozen: bool,
+}
