@@ -42,6 +42,37 @@ impl<'a> Read<'a> for Vec3 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IVec3 {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl<'a> Read<'a> for IVec3 {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            x: V32::read(buf)?.0 as i32,
+            y: V32::read(buf)?.0 as i32,
+            z: V32::read(buf)?.0 as i32,
+        })
+    }
+}
+
+impl Write for IVec3 {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            V32(self.x as u32).write(w);
+            V32(self.y as u32).write(w);
+            V32(self.z as u32).write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        V32(self.x as u32).len_s() + V32(self.y as u32).len_s() + V32(self.z as u32).len_s()
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct FVec3 {
     pub x: f32,

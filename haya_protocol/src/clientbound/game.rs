@@ -25,7 +25,7 @@ use alloc::vec::Vec;
 use core::range;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
-use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, LpVec3, Vec3};
+use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, IVec3, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{
     block, block_entity_type, block_state, entity_type, menu, mob_effect, number_format_type,
@@ -1522,4 +1522,10 @@ pub struct TeleportEntity {
     pub change: PositionMoveRotation,
     pub relatives: Relatives,
     pub on_ground: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TestInstanceBlockStatus {
+    pub status: Component,
+    pub size: Option<IVec3>,
 }

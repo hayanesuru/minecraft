@@ -219,7 +219,7 @@ packets! {
     tag_query = game::TagQuery,
     take_item_entity = game::TakeItemEntity,
     teleport_entity = game::TeleportEntity,
-    // test_instance_block_status,
+    test_instance_block_status = game::TestInstanceBlockStatus,
     // ticking_state,
     // ticking_step,
     // transfer,
