@@ -217,7 +217,7 @@ packets! {
     system_chat = game::SystemChat,
     tab_list = game::TabList,
     tag_query = game::TagQuery,
-    // take_item_entity,
+    take_item_entity = game::TakeItemEntity,
     // teleport_entity,
     // test_instance_block_status,
     // ticking_state,

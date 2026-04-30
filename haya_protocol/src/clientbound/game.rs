@@ -1567,3 +1567,13 @@ pub struct TagQuery {
     pub transaction_id: u32,
     pub tag: Tag,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TakeItemEntity {
+    #[mser(varint)]
+    pub item_id: u32,
+    #[mser(varint)]
+    pub player_id: u32,
+    #[mser(varint)]
+    pub amount: u32,
+}
