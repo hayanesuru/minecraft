@@ -1429,3 +1429,13 @@ pub struct SetPlayerTeamParameters {
     pub player_prefix: Component,
     pub player_suffix: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetScore<'a> {
+    pub owner: Utf8<'a>,
+    pub objective_name: Utf8<'a>,
+    #[mser(varint)]
+    pub score: u32,
+    pub display: Option<Component>,
+    pub number_format: Option<number_format_type>,
+}
