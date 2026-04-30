@@ -67,6 +67,12 @@ pub struct ResourcePackPush<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationStoreCookie<'a>(StoreCookie<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameStoreCookie<'a>(StoreCookie<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct StoreCookie<'a> {
     pub key: Ident<'a>,
     pub payload: ByteArray<'a, 5120>,
