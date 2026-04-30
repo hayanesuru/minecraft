@@ -10,6 +10,11 @@ pub mod login;
 pub mod ping;
 pub mod status;
 
+#[cold]
+fn err() -> Result<(), mser::Error> {
+    Err(mser::Error)
+}
+
 macro_rules! packets {
     ($m:ty, $handler:ident, $handle:ident, $($variant:ident = $type:ty),+ $(,)*) => {
         $(
@@ -27,8 +32,7 @@ macro_rules! packets {
                         <$m>::$variant => {
                             let e = <$type as mser::Read>::read(&mut packet)?;
                             if !packet.is_empty() {
-                                mser::cold_path();
-                                return Err(mser::Error);
+                                return err();
                             }
                             self.$variant(e);
                         }
@@ -208,7 +212,7 @@ packets! {
     sound_entity = game::SoundEntity<'_>,
     sound = game::Sound<'_>,
     start_configuration = game::StartConfiguration,
-    // stop_sound,
+    stop_sound = game::StopSound<'_>,
     // store_cookie,
     // system_chat,
     // tab_list,

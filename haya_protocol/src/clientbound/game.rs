@@ -22,6 +22,7 @@ use crate::{
     V32List, WeightedList,
 };
 use alloc::vec::Vec;
+use core::range;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, LpVec3, Vec3};
@@ -1496,3 +1497,54 @@ pub struct Sound<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StartConfiguration {}
+
+#[derive(Clone)]
+pub struct StopSound<'a> {
+    pub source: Option<SoundSource>,
+    pub name: Option<Ident<'a>>,
+}
+
+impl<'a> Write for StopSound<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let mut flags = 0u8;
+            flags |= self.source.is_some() as u8;
+            flags |= if self.name.is_some() { 2 } else { 0 };
+            w.write_byte(flags);
+            if let Some(source) = self.source {
+                source.write(w);
+            }
+            if let Some(name) = self.name {
+                name.write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = 1;
+        if let Some(source) = self.source {
+            l += source.len_s();
+        }
+        if let Some(name) = self.name {
+            l += name.len_s();
+        }
+        l
+    }
+}
+
+impl<'a> Read<'a> for StopSound<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = buf.read_byte()?;
+        let source = if flags & 1 != 0 {
+            Some(SoundSource::read(buf)?)
+        } else {
+            None
+        };
+        let name = if flags & 2 != 0 {
+            Some(Ident::read(buf)?)
+        } else {
+            None
+        };
+        Ok(Self { source, name })
+    }
+}
