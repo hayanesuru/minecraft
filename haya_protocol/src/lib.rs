@@ -669,12 +669,12 @@ impl OptionalV32 {
 }
 
 #[derive(Clone)]
-pub struct IntIdList<'a>(pub List<'a, u32>);
+pub struct V32List<'a>(pub List<'a, u32>);
 
-impl<'a> Read<'a> for IntIdList<'a> {
+impl<'a> Read<'a> for V32List<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = V21::read(buf)?.0 as usize;
-        let mut vec = Vec::with_capacity(capacity_fix(len));
+        let mut vec = Vec::with_capacity(capacity_fix(len).min(buf.len()));
         for _ in 0..len {
             vec.push(V32::read(buf)?.0);
         }
@@ -682,7 +682,7 @@ impl<'a> Read<'a> for IntIdList<'a> {
     }
 }
 
-impl<'a> Write for IntIdList<'a> {
+impl<'a> Write for V32List<'a> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             let x = self.0.as_slice();

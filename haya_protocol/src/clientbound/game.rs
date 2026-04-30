@@ -18,7 +18,7 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
     BitSet, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot, GameType, GlobalPos,
-    HeightmapType, Holder, IntIdList, InteractionHand, OptionalGameType, RespawnData, WeightedList,
+    HeightmapType, Holder, InteractionHand, OptionalGameType, RespawnData, V32List, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -1043,7 +1043,7 @@ pub struct TypeSettings {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RemoveEntities<'a> {
-    pub entity_ids: IntIdList<'a>,
+    pub entity_ids: V32List<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1368,4 +1368,11 @@ pub enum SetObjectiveMethodType {
     Add,
     Remove,
     Change,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPassengers<'a> {
+    #[mser(varint)]
+    pub vehicle: u32,
+    pub passengers: V32List<'a>,
 }

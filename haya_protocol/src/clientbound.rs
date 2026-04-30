@@ -196,7 +196,7 @@ packets! {
     set_health = game::SetHealth,
     set_held_slot = game::SetHeldSlot,
     set_objective = game::SetObjective<'_>,
-    // set_passengers,
+    set_passengers = game::SetPassengers<'_>,
     // set_player_inventory,
     // set_player_team,
     // set_score,
