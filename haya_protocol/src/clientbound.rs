@@ -200,7 +200,7 @@ packets! {
     set_player_inventory = game::SetPlayerInventory<'_>,
     set_player_team = game::SetPlayerTeam<'_>,
     set_score = game::SetScore<'_>,
-    // set_simulation_distance,
+    set_simulation_distance = game::SetSimulationDistance,
     // set_subtitle_text,
     // set_time,
     // set_title_text,

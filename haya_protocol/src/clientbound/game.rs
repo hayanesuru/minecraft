@@ -1439,3 +1439,9 @@ pub struct SetScore<'a> {
     pub display: Option<Component>,
     pub number_format: Option<number_format_type>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetSimulationDistance {
+    #[mser(varint)]
+    pub simulation_distance: u32,
+}
