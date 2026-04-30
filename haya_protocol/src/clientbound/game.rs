@@ -1,29 +1,37 @@
+use crate::advancement::{AdvancementHolder, AdvancementProgress};
+use crate::attribute::AttributeModifier;
 use crate::chat::{
     Bound, FilterMask, MessageSignature, MessageSignaturePacked, RemoteChatSession,
     SignedMessageBodyPacked,
 };
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
+use crate::entity_data::EntityDataSerializer;
 use crate::item::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
 use crate::recipe::{RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId};
-use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
-use crate::sound::SoundEvent;
+use crate::registry::{DamageTypeRef, DimensionTypeRef};
+use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
+use crate::sound::{SoundEvent, SoundSource};
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, EntityAnchor, GameType, GameTypeOptional,
-    GlobalPos, HeightmapType, Holder, InteractionHand, WeightedList,
+    BitSet, ChatFormatting, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot,
+    GameType, GlobalPos, HeightmapType, Holder, InteractionHand, OptionalGameType, Relatives,
+    RespawnData, V32List, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
-use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, LpVec3, Vec3};
+use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, IVec3, LpVec3, Vec3};
 use haya_nbt::Tag;
-use minecraft_data::{block, block_entity_type, block_state, entity_type, menu};
+use minecraft_data::{
+    attribute, block, block_entity_type, block_state, entity_type, menu, mob_effect,
+    number_format_type, sound_event,
+};
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
 
@@ -47,32 +55,20 @@ pub struct AddEntity {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Animate {
-    #[mser(varint)]
-    pub id: u32,
+    pub id: AnimateAction,
     pub action: u8,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
-#[derive(Clone, Copy)]
+#[mser(varint)]
 pub enum AnimateAction {
-    SwingMainHand = 0,
-    WakeUp = 2,
-    SwingOffHand = 3,
-    CriticalHit = 4,
-    MagicCriticalHit = 5,
-}
-
-impl AnimateAction {
-    pub const fn new(action: u8) -> Option<Self> {
-        match action {
-            0 => Some(Self::SwingMainHand),
-            2 => Some(Self::WakeUp),
-            3 => Some(Self::SwingOffHand),
-            4 => Some(Self::CriticalHit),
-            5 => Some(Self::MagicCriticalHit),
-            _ => None,
-        }
-    }
+    SwingMainHand,
+    Unused,
+    WakeUp,
+    SwingOffHand,
+    CriticalHit,
+    MagicCriticalHit,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -398,7 +394,7 @@ pub struct Explode<'a> {
     pub block_count: u32,
     pub player_knockback: Option<Vec3>,
     pub explosion_particle: Particle<'a>,
-    pub explosion_sound: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub explosion_sound: Holder<SoundEvent<'a>, sound_event>,
     pub block_particles: WeightedList<'a, ExplosionParticleInfo<'a>>,
 }
 
@@ -556,7 +552,7 @@ pub struct CommonPlayerSpawnInfo<'a> {
     pub dimension: ResourceKey<'a>,
     pub seed: u64,
     pub game_type: GameType,
-    pub previous_game_type: GameTypeOptional,
+    pub previous_game_type: OptionalGameType,
     pub is_debug: bool,
     pub is_flat: bool,
     pub last_death_location: Option<GlobalPos<'a>>,
@@ -939,33 +935,6 @@ pub struct PlayerPosition {
     pub relatives: Relatives,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Relatives(pub u32);
-
-impl Relatives {
-    pub const X: u32 = 1;
-    pub const Y: u32 = 2;
-    pub const Z: u32 = 4;
-    pub const Y_ROT: u32 = 8;
-    pub const X_ROT: u32 = 16;
-    pub const DELTA_X: u32 = 32;
-    pub const DELTA_Y: u32 = 64;
-    pub const DELTA_Z: u32 = 128;
-    pub const ROTATE_DELTA: u32 = 256;
-
-    pub const ALL: u32 = Self::X
-        | Self::Y
-        | Self::Z
-        | Self::Y_ROT
-        | Self::X_ROT
-        | Self::DELTA_X
-        | Self::DELTA_Y
-        | Self::DELTA_Z
-        | Self::ROTATE_DELTA;
-    pub const ROTATION: u32 = Self::Y_ROT | Self::X_ROT;
-    pub const DELTA: u32 = Self::DELTA_X | Self::DELTA_Y | Self::DELTA_Z | Self::ROTATE_DELTA;
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerRotation {
     pub y_rot: f32,
@@ -997,4 +966,631 @@ impl RecipeBookAddFlags {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RecipeBookRemove<'a> {
     pub recipes: List<'a, RecipeDisplayId>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookSettings {
+    pub crafting: TypeSettings,
+    pub furnace: TypeSettings,
+    pub blast_furnace: TypeSettings,
+    pub smoker: TypeSettings,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TypeSettings {
+    pub open: bool,
+    pub filtering: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RemoveEntities<'a> {
+    pub entity_ids: V32List<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RemoveMobEffect {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub effect: mob_effect,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResetScore<'a> {
+    pub owner: Utf8<'a>,
+    pub objective_name: Option<Utf8<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResourcePackPop {
+    pub id: Option<Uuid>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResourcePackPush<'a> {
+    pub id: Uuid,
+    pub url: Utf8<'a>,
+    pub hash: Utf8<'a, 40>,
+    pub required: bool,
+    pub prompt: Option<Component>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Respawn<'a> {
+    pub common_player_spawn_info: CommonPlayerSpawnInfo<'a>,
+    pub data_to_keep: RespawnFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct RespawnFlags(pub u8);
+
+impl RespawnFlags {
+    pub const KEEP_ATTRIBUTE_MODIFIERS: u8 = 1;
+    pub const KEEP_ENTITY_DATA: u8 = 2;
+    pub const KEEP_ALL_DATA: u8 = 4;
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RotateHead {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub y_head_rot: ByteAngle,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SectionBlocksUpdate<'a> {
+    pub section_pos: ChunkSectionPosPacked,
+    pub changes: List<'a, SectionBlocksUpdatePacked>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(transparent)]
+pub struct SectionBlocksUpdatePacked(#[mser(varint)] pub u64);
+
+impl SectionBlocksUpdatePacked {
+    pub const fn position(self) -> u64 {
+        self.0 & 4095
+    }
+
+    pub const fn state(self) -> u64 {
+        self.0 >> 12
+    }
+
+    pub const fn new(position: u64, state: u64) -> Self {
+        Self((state << 12) | position)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SelectAdvancementsTab<'a> {
+    pub tab: Option<Ident<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ServerData<'a> {
+    pub motd: Component,
+    pub icon_bytes: Option<ByteArray<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetActionBarText {
+    pub text: Component,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderCenter {
+    pub new_center_x: f64,
+    pub new_center_z: f64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderLerpSize {
+    pub old_size: f64,
+    pub new_size: f64,
+    #[mser(varint)]
+    pub lerp_time: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderSize {
+    pub size: f64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderWarningDelay {
+    #[mser(varint)]
+    pub warning_delay: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBorderWarningDistance {
+    #[mser(varint)]
+    pub warning_blocks: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCamera {
+    #[mser(varint)]
+    pub camera_id: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetChunkCacheCenter {
+    #[mser(varint)]
+    pub x: i32,
+    #[mser(varint)]
+    pub z: i32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetChunkCacheRadius {
+    #[mser(varint)]
+    pub radius: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCursorItem<'a> {
+    pub contents: OptionalItemStack<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetDefaultSpawnPosition<'a> {
+    pub respawn_data: RespawnData<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetDisplayObjective<'a> {
+    pub slot: DisplaySlot,
+    pub objective_name: Utf8<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEntityData<'a> {
+    #[mser(varint)]
+    pub id: u32,
+    pub packed_items: SetEntityDataValues<'a>,
+}
+
+#[derive(Clone)]
+pub struct SetEntityDataValues<'a>(pub List<'a, (u8, EntityDataSerializer<'a>)>);
+
+impl<'a> Read<'a> for SetEntityDataValues<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let mut vec = Vec::new();
+        loop {
+            let id = u8::read(buf)?;
+            if id == 255 {
+                break;
+            }
+            let value = EntityDataSerializer::read(buf)?;
+            vec.push((id, value));
+        }
+        Ok(Self(List::Owned(vec)))
+    }
+}
+
+impl<'a> Write for SetEntityDataValues<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            for (id, val) in self.0.as_slice() {
+                id.write(w);
+                val.write(w);
+            }
+            255u8.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = 0;
+        for (id, val) in self.0.as_slice() {
+            l += id.len_s() + val.len_s();
+        }
+        l + 1
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEntityLink {
+    pub source_id: u32,
+    pub dest_id: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEntityMotion {
+    #[mser(varint)]
+    pub id: u32,
+    pub movement: LpVec3,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetEquipment<'a> {
+    pub entity: u32,
+    pub slots: SetEquipmentSlots<'a>,
+}
+
+#[derive(Clone)]
+pub struct SetEquipmentSlots<'a>(pub List<'a, (EquipmentSlot, OptionalItemStack<'a>)>);
+
+impl<'a> Read<'a> for SetEquipmentSlots<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let mut vec = Vec::new();
+        loop {
+            let id = buf.read_byte()?;
+            let slot = EquipmentSlot::new(id & 127);
+            let stack = OptionalItemStack::read(buf)?;
+            vec.push((slot, stack));
+            if id & 128 == 0 {
+                break;
+            }
+        }
+        Ok(Self(List::Owned(vec)))
+    }
+}
+
+impl<'a> Write for SetEquipmentSlots<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let mut iter = self.0.as_slice().iter();
+            let mut curr = match iter.next() {
+                Some(x) => x,
+                None => return,
+            };
+            loop {
+                let next = iter.next();
+                let (slot, stack) = curr;
+                let c = if next.is_none() { 0 } else { 128 };
+                w.write_byte((*slot as u8) | c);
+                stack.write(w);
+                curr = match next {
+                    Some(x) => x,
+                    None => return,
+                };
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = 0;
+        for (_, stack) in self.0.as_slice() {
+            l += 1;
+            l += stack.len_s();
+        }
+        l
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetExperience {
+    pub experience_progress: f32,
+    #[mser(varint)]
+    pub total_experience: u32,
+    #[mser(varint)]
+    pub experience_level: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetHealth {
+    pub health: f32,
+    #[mser(varint)]
+    pub food: u32,
+    pub saturation: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetHeldSlot {
+    #[mser(varint)]
+    pub slot: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetObjective<'a> {
+    pub objective_name: Utf8<'a>,
+    pub method: SetObjectiveMethod,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = SetObjectiveMethodType, camel_case)]
+pub enum SetObjectiveMethod {
+    Add {
+        display_name: Component,
+        render_type: ObjectiveCriteriaRenderType,
+        number_format: Option<number_format_type>,
+    },
+    Remove,
+    Change {
+        display_name: Component,
+        render_type: ObjectiveCriteriaRenderType,
+        number_format: Option<number_format_type>,
+    },
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum SetObjectiveMethodType {
+    Add,
+    Remove,
+    Change,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPassengers<'a> {
+    #[mser(varint)]
+    pub vehicle: u32,
+    pub passengers: V32List<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPlayerInventory<'a> {
+    #[mser(varint)]
+    pub slot: u32,
+    pub contents: OptionalItemStack<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPlayerTeam<'a> {
+    pub name: Utf8<'a>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum SetPlayerTeamMethodType {
+    Add,
+    Remove,
+    Change,
+    Join,
+    Leave,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = SetPlayerTeamMethodType, camel_case)]
+pub enum SetPlayerTeamMethod<'a> {
+    Add {
+        parameters: SetPlayerTeamParameters,
+        players: List<'a, Utf8<'a>>,
+    },
+    Remove,
+    Change {
+        parameters: SetPlayerTeamParameters,
+    },
+    Join {
+        players: List<'a, Utf8<'a>>,
+    },
+    Leave {
+        players: List<'a, Utf8<'a>>,
+    },
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPlayerTeamParameters {
+    pub display_name: Component,
+    pub options: u8,
+    pub nametag_visibility: TeamVisibility,
+    pub collision_rule: TeamCollisionRule,
+    pub color: ChatFormatting,
+    pub player_prefix: Component,
+    pub player_suffix: Component,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetScore<'a> {
+    pub owner: Utf8<'a>,
+    pub objective_name: Utf8<'a>,
+    #[mser(varint)]
+    pub score: u32,
+    pub display: Option<Component>,
+    pub number_format: Option<number_format_type>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetSimulationDistance {
+    #[mser(varint)]
+    pub simulation_distance: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetSubtitleText {
+    pub text: Component,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTime {
+    pub game_time: u64,
+    pub day_time: u64,
+    pub tick_day_time: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTitleText {
+    pub text: Component,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTitlesAnimation {
+    pub fade_in: u32,
+    pub stay: u32,
+    pub fade_out: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SoundEntity<'a> {
+    pub sound: Holder<SoundEvent<'a>, sound_event>,
+    pub source: SoundSource,
+    #[mser(varint)]
+    pub id: u32,
+    pub volume: f32,
+    pub pitch: f32,
+    pub seed: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Sound<'a> {
+    pub sound: Holder<SoundEvent<'a>, sound_event>,
+    pub source: SoundSource,
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+    pub volume: f32,
+    pub pitch: f32,
+    pub seed: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct StartConfiguration {}
+
+#[derive(Clone)]
+pub struct StopSound<'a> {
+    pub source: Option<SoundSource>,
+    pub name: Option<Ident<'a>>,
+}
+
+impl<'a> Write for StopSound<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let mut flags = 0u8;
+            flags |= self.source.is_some() as u8;
+            flags |= if self.name.is_some() { 2 } else { 0 };
+            w.write_byte(flags);
+            if let Some(source) = self.source {
+                source.write(w);
+            }
+            if let Some(name) = self.name {
+                name.write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let mut l = 1;
+        if let Some(source) = self.source {
+            l += source.len_s();
+        }
+        if let Some(name) = self.name {
+            l += name.len_s();
+        }
+        l
+    }
+}
+
+impl<'a> Read<'a> for StopSound<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = buf.read_byte()?;
+        let source = if flags & 1 != 0 {
+            Some(SoundSource::read(buf)?)
+        } else {
+            None
+        };
+        let name = if flags & 2 != 0 {
+            Some(Ident::read(buf)?)
+        } else {
+            None
+        };
+        Ok(Self { source, name })
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SystemChat {
+    pub content: Component,
+    pub overlay: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TabList {
+    pub header: Component,
+    pub footer: Component,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TagQuery {
+    #[mser(varint)]
+    pub transaction_id: u32,
+    pub tag: Tag,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TakeItemEntity {
+    #[mser(varint)]
+    pub item_id: u32,
+    #[mser(varint)]
+    pub player_id: u32,
+    #[mser(varint)]
+    pub amount: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TeleportEntity {
+    #[mser(varint)]
+    pub id: u32,
+    pub change: PositionMoveRotation,
+    pub relatives: Relatives,
+    pub on_ground: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TestInstanceBlockStatus {
+    pub status: Component,
+    pub size: Option<IVec3>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TickingState {
+    pub tick_rate: f32,
+    pub is_frozen: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TickingStep {
+    #[mser(varint)]
+    pub tick_steps: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Transfer<'a> {
+    pub host: Utf8<'a>,
+    #[mser(varint)]
+    pub port: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateAdvancements<'a> {
+    pub reset: bool,
+    pub added: List<'a, AdvancementHolder<'a>>,
+    pub removed: List<'a, Ident<'a>>,
+    pub progress: Map<'a, Ident<'a>, AdvancementProgress<'a>>,
+    pub show_advancements: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateAttributes<'a> {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub attributes: List<'a, AttributeSnapshot<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AttributeSnapshot<'a> {
+    pub attribute: attribute,
+    pub base: f64,
+    pub modifiers: List<'a, AttributeModifier<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateMobEffect {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub effect: mob_effect,
+    #[mser(varint)]
+    pub effect_amplifier: u32,
+    #[mser(varint)]
+    pub effect_duration_ticks: u32,
+    pub flags: UpdateMobEffectFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct UpdateMobEffectFlags(pub u8);
+
+impl UpdateMobEffectFlags {
+    pub const AMBIENT: u8 = 1;
+    pub const VISIBLE: u8 = 2;
+    pub const SHOW_ICON: u8 = 4;
+    pub const BLEND: u8 = 8;
 }

@@ -1,7 +1,7 @@
-use crate::{Component, Dialog, ServerLinkUntrustedEntry};
+use crate::{Component, Dialog, ServerLinkUntrustedEntry, V32List};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
-use mser::{ByteArray, Rest, Utf8, V32};
+use mser::{ByteArray, Rest, Utf8};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -67,6 +67,12 @@ pub struct ResourcePackPush<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationStoreCookie<'a>(StoreCookie<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameStoreCookie<'a>(StoreCookie<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct StoreCookie<'a> {
     pub key: Ident<'a>,
     pub payload: ByteArray<'a, 5120>,
@@ -81,7 +87,7 @@ pub struct Transfer<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateTags<'a> {
-    pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, List<'a, V32>>>,
+    pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, V32List<'a>>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

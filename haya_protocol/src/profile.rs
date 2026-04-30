@@ -1,5 +1,5 @@
+use crate::ResourceTexture;
 use haya_collection::{List, Map};
-use haya_ident::Ident;
 use mser::{Either, Read, Utf8, Write};
 use uuid::Uuid;
 
@@ -75,6 +75,3 @@ impl Write for PlayerModelType {
         .len_s()
     }
 }
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ResourceTexture<'a>(pub Ident<'a>);

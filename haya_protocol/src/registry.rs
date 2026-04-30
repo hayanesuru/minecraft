@@ -24,9 +24,6 @@ pub struct TrimPatternRef(#[mser(varint)] pub u32);
 pub struct InstrumentRef(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct SoundEventRef(pub sound_event);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct JukeboxSongRef(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -68,10 +65,7 @@ pub struct ChatTypeRef(#[mser(varint)] pub u32);
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct DimensionTypeRef(#[mser(varint)] pub u32);
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct MapDecorationTypeRef(#[mser(varint)] pub u32);
-
-impl<'a> Read<'a> for Holder<SoundEvent<'a>, SoundEventRef> {
+impl<'a> Read<'a> for Holder<SoundEvent<'a>, sound_event> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let id = V32::read(buf)?.0;
         if id == 0 {
@@ -81,19 +75,19 @@ impl<'a> Read<'a> for Holder<SoundEvent<'a>, SoundEventRef> {
                 Ok(x) => sound_event::new(x),
                 Err(_) => None,
             } {
-                Some(x) => Ok(Self::Reference(SoundEventRef(x))),
+                Some(x) => Ok(Self::Reference(x)),
                 None => Err(Error),
             }
         }
     }
 }
 
-impl<'a> Write for Holder<SoundEvent<'a>, SoundEventRef> {
+impl<'a> Write for Holder<SoundEvent<'a>, sound_event> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {
                 Self::Reference(id) => {
-                    V32((id.0.id() as u32) + 1).write(w);
+                    V32((id.id() as u32) + 1).write(w);
                 }
                 Self::Direct(direct) => {
                     V32(0).write(w);
@@ -105,7 +99,7 @@ impl<'a> Write for Holder<SoundEvent<'a>, SoundEventRef> {
 
     fn len_s(&self) -> usize {
         match self {
-            Self::Reference(id) => V32((id.0.id() as u32) + 1).len_s(),
+            Self::Reference(id) => V32((id.id() as u32) + 1).len_s(),
             Self::Direct(direct) => {
                 let mut len = V32(0).len_s();
                 len += direct.len_s();

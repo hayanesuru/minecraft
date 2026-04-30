@@ -16,6 +16,7 @@ pub mod command;
 pub mod debug;
 pub mod effect;
 pub mod entity;
+pub mod entity_data;
 pub mod food;
 pub mod game_event;
 pub mod item;
@@ -28,6 +29,7 @@ pub mod profile;
 pub mod recipe;
 pub mod redstone;
 pub mod registry;
+pub mod score;
 pub mod serverbound;
 pub mod sound;
 pub mod stat;
@@ -380,6 +382,14 @@ pub enum EquipmentSlot {
 }
 
 impl EquipmentSlot {
+    pub const fn new(n: u8) -> Self {
+        if n > Self::Saddle as u8 {
+            Self::Mainhand
+        } else {
+            unsafe { core::mem::transmute::<u8, Self>(n) }
+        }
+    }
+
     pub const fn name(self) -> &'static str {
         match self {
             Self::Mainhand => "mainhand",
@@ -565,9 +575,9 @@ impl GameType {
 }
 
 #[derive(Clone, Copy)]
-pub struct GameTypeOptional(pub Option<GameType>);
+pub struct OptionalGameType(pub Option<GameType>);
 
-impl<'a> Read<'a> for GameTypeOptional {
+impl<'a> Read<'a> for OptionalGameType {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(Self(match u8::read(buf)? {
             0xff => None,
@@ -579,7 +589,7 @@ impl<'a> Read<'a> for GameTypeOptional {
     }
 }
 
-impl Write for GameTypeOptional {
+impl Write for OptionalGameType {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self.0 {
@@ -629,19 +639,19 @@ impl EntityAnchor {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct V32Optional(#[mser(varint)] u32);
+pub struct OptionalV32(#[mser(varint)] u32);
 
-impl Default for V32Optional {
+impl Default for OptionalV32 {
     fn default() -> Self {
-        Self::new()
+        Self::none()
     }
 }
 
-impl V32Optional {
-    pub const fn new_with(value: u32) -> Self {
+impl OptionalV32 {
+    pub const fn some(value: u32) -> Self {
         Self(value + 1)
     }
-    pub const fn new() -> Self {
+    pub const fn none() -> Self {
         Self(0)
     }
     pub const fn is_some(self) -> bool {
@@ -657,6 +667,170 @@ impl V32Optional {
         self.0 - 1
     }
 }
+
+#[derive(Clone)]
+pub struct V32List<'a>(pub List<'a, u32>);
+
+impl<'a> Read<'a> for V32List<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let len = V21::read(buf)?.0 as usize;
+        let mut vec = Vec::with_capacity(capacity_fix(len).min(buf.len()));
+        for _ in 0..len {
+            vec.push(V32::read(buf)?.0);
+        }
+        Ok(Self(List::Owned(vec)))
+    }
+}
+
+impl<'a> Write for V32List<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let x = self.0.as_slice();
+            V21(x.len() as u32).write(w);
+            for y in x {
+                V32(*y).write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let x = self.0.as_slice();
+        let mut len = V21(x.len() as u32).len_s();
+        for y in x {
+            len += V32(*y).len_s();
+        }
+        len
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RespawnData<'a> {
+    pub global_pos: GlobalPos<'a>,
+    pub yaw: f32,
+    pub pitch: f32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct Rotations {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum WeatheringCopperState {
+    Unaffected,
+    Exposed,
+    Weathered,
+    Oxidized,
+}
+
+impl WeatheringCopperState {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Unaffected => "unaffected",
+            Self::Exposed => "exposed",
+            Self::Weathered => "weathered",
+            Self::Oxidized => "oxidized",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum ChatFormatting {
+    Black,
+    DarkBlue,
+    DarkGreen,
+    DarkAqua,
+    DarkRed,
+    DarkPurple,
+    Gold,
+    Gray,
+    DarkGray,
+    Blue,
+    Green,
+    Aqua,
+    Red,
+    LightPurple,
+    Yellow,
+    White,
+    Obfuscated,
+    Bold,
+    Strikethrough,
+    Underline,
+    Italic,
+    Reset,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct Relatives(pub u32);
+
+impl Relatives {
+    pub const X: u32 = 1;
+    pub const Y: u32 = 2;
+    pub const Z: u32 = 4;
+    pub const Y_ROT: u32 = 8;
+    pub const X_ROT: u32 = 16;
+    pub const DELTA_X: u32 = 32;
+    pub const DELTA_Y: u32 = 64;
+    pub const DELTA_Z: u32 = 128;
+    pub const ROTATE_DELTA: u32 = 256;
+
+    pub const ALL: u32 = Self::X
+        | Self::Y
+        | Self::Z
+        | Self::Y_ROT
+        | Self::X_ROT
+        | Self::DELTA_X
+        | Self::DELTA_Y
+        | Self::DELTA_Z
+        | Self::ROTATE_DELTA;
+    pub const ROTATION: u32 = Self::Y_ROT | Self::X_ROT;
+    pub const DELTA: u32 = Self::DELTA_X | Self::DELTA_Y | Self::DELTA_Z | Self::ROTATE_DELTA;
+
+    pub const fn x(self) -> bool {
+        self.0 & Self::X != 0
+    }
+
+    pub const fn y(self) -> bool {
+        self.0 & Self::Y != 0
+    }
+
+    pub const fn z(self) -> bool {
+        self.0 & Self::Z != 0
+    }
+
+    pub const fn y_rot(self) -> bool {
+        self.0 & Self::Y_ROT != 0
+    }
+
+    pub const fn x_rot(self) -> bool {
+        self.0 & Self::X_ROT != 0
+    }
+
+    pub const fn delta_x(self) -> bool {
+        self.0 & Self::DELTA_X != 0
+    }
+
+    pub const fn delta_y(self) -> bool {
+        self.0 & Self::DELTA_Y != 0
+    }
+
+    pub const fn delta_z(self) -> bool {
+        self.0 & Self::DELTA_Z != 0
+    }
+
+    pub const fn rotate_delta(self) -> bool {
+        self.0 & Self::ROTATE_DELTA != 0
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResourceTexture<'a>(pub Ident<'a>);
 
 #[cfg(test)]
 mod tests {

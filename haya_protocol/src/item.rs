@@ -25,8 +25,8 @@ use crate::map::MapId;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
-    JukeboxSongRef, PaintingVariantRef, PigVariantRef, SoundEventRef, TrimMaterialRef,
-    TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
+    JukeboxSongRef, PaintingVariantRef, PigVariantRef, TrimMaterialRef, TrimPatternRef,
+    VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -36,7 +36,9 @@ use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
-use minecraft_data::{block_entity_type, data_component_type, entity_type, item, potion};
+use minecraft_data::{
+    block_entity_type, data_component_type, entity_type, item, potion, sound_event,
+};
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -175,7 +177,7 @@ pub struct TooltipDisplay<'a> {
 pub struct Consumable<'a> {
     pub consume_seconds: f32,
     pub animation: ItemUseAnimation,
-    pub sound: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub sound: Holder<SoundEvent<'a>, sound_event>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -261,7 +263,7 @@ fn validate_enchantable(value: &i32) -> bool {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Equippable<'a> {
     pub slot: EquipmentSlot,
-    pub equip_sound: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub equip_sound: Holder<SoundEvent<'a>, sound_event>,
     pub asset_id: Option<Ident<'a>>,
     pub camera_overlay: Option<Ident<'a>>,
     pub allowed_entities: Option<HolderSet<'a, entity_type>>,
@@ -270,7 +272,7 @@ pub struct Equippable<'a> {
     pub damage_on_hurt: bool,
     pub equip_on_interact: bool,
     pub can_be_sheared: bool,
-    pub shearing_sound: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub shearing_sound: Holder<SoundEvent<'a>, sound_event>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -290,8 +292,8 @@ pub struct BlocksAttacks<'a> {
     pub damage_reductions: List<'a, DamageReduction<'a>>,
     pub item_damage: ItemDamageFunction,
     pub bypassed_by: Option<TagKey<'a>>,
-    pub block_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
-    pub disable_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
+    pub block_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub disable_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -313,8 +315,8 @@ pub struct ItemDamageFunction {
 pub struct PiercingWeapon<'a> {
     pub deals_knockback: bool,
     pub dismounts: bool,
-    pub sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
-    pub hit_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
+    pub sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub hit_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -424,7 +426,7 @@ pub struct TypedEntityDataBlockEntity {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Instrument<'a> {
-    pub sound_event: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub sound_event: Holder<SoundEvent<'a>, sound_event>,
     pub use_duration: f32,
     pub range: f32,
     pub description: Component,
@@ -448,7 +450,7 @@ pub struct JukeboxPlayable<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JukeboxSong<'a> {
-    pub sound_event: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub sound_event: Holder<SoundEvent<'a>, sound_event>,
     pub description: Component,
     pub length_in_seconds: f32,
     #[mser(varint)]
@@ -570,7 +572,7 @@ pub enum TypedDataComponent<'a> {
     Bees(Bees<'a>),
     Lock(LockCode),
     ContainerLoot(SeededContainerLoot),
-    BreakSound(Holder<SoundEvent<'a>, SoundEventRef>),
+    BreakSound(Holder<SoundEvent<'a>, sound_event>),
     VillagerVariant(VillagerTypeRef),
     WolfVariant(WolfVariantRef),
     WolfSoundVariant(WolfSoundVariantRef),

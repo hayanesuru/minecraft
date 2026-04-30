@@ -1,12 +1,18 @@
 #![no_std]
 
-use mser::{Error, Read, Reader, V32, Write, Writer};
+use mser::{Error, Read, Reader, V21, V32, Write, Writer};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
     pub z: f64,
+}
+
+impl Default for Vec3 {
+    fn default() -> Self {
+        Self::ZERO
+    }
 }
 
 impl Write for Vec3 {
@@ -36,12 +42,128 @@ impl<'a> Read<'a> for Vec3 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IVec3 {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl<'a> Read<'a> for IVec3 {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            x: V32::read(buf)?.0 as i32,
+            y: V32::read(buf)?.0 as i32,
+            z: V32::read(buf)?.0 as i32,
+        })
+    }
+}
+
+impl Write for IVec3 {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            V32(self.x as u32).write(w);
+            V32(self.y as u32).write(w);
+            V32(self.z as u32).write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        V32(self.x as u32).len_s() + V32(self.y as u32).len_s() + V32(self.z as u32).len_s()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FVec3 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+impl Write for FVec3 {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.x.write(w);
+            self.y.write(w);
+            self.z.write(w);
+        }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        self.x.len_s() + self.y.len_s() + self.z.len_s()
+    }
+}
+
+impl<'a> Read<'a> for FVec3 {
+    #[inline]
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
+        Ok(Self {
+            x: f32::read(buf)?,
+            y: f32::read(buf)?,
+            z: f32::read(buf)?,
+        })
+    }
+}
+
+impl Default for FVec3 {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
+impl FVec3 {
+    pub const ZERO: Self = Self {
+        x: 0.,
+        y: 0.,
+        z: 0.,
+    };
+}
+
 impl Vec3 {
     pub const ZERO: Self = Self {
         x: 0.,
         y: 0.,
         z: 0.,
     };
+}
+
+#[derive(Clone, Copy)]
+pub struct FQuat {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub w: f32,
+}
+
+impl Write for FQuat {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.x.write(w);
+            self.y.write(w);
+            self.z.write(w);
+            self.w.write(w);
+        }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        self.x.len_s() + self.y.len_s() + self.z.len_s() + self.w.len_s()
+    }
+}
+
+impl<'a> Read<'a> for FQuat {
+    #[inline]
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
+        Ok(Self {
+            x: f32::read(buf)?,
+            y: f32::read(buf)?,
+            z: f32::read(buf)?,
+            w: f32::read(buf)?,
+        })
+    }
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -199,7 +321,7 @@ impl From<Vec3> for LpVec3 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ByteAngle(pub u8);
 
 impl ByteAngle {
@@ -274,7 +396,7 @@ impl BlockPosPacked {
 
 impl BlockPos {
     #[must_use]
-    pub const fn to_i64(self) -> BlockPosPacked {
+    pub const fn pack(self) -> BlockPosPacked {
         let x = (self.x & 0x3FF_FFFF) as i64;
         let y = (self.y & 0xFFF) as i64;
         let z = (self.z & 0x3FF_FFFF) as i64;
@@ -283,7 +405,6 @@ impl BlockPos {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(align(8))]
 pub struct ChunkPos {
     pub x: i32,
     pub z: i32,
@@ -310,5 +431,156 @@ impl<'a> Read<'a> for ChunkPos {
             x: i32::read(buf)?,
             z: i32::read(buf)?,
         })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChunkSectionPosPacked(i64);
+
+impl Write for ChunkSectionPosPacked {
+    #[inline]
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { self.0.write(w) }
+    }
+
+    #[inline]
+    fn len_s(&self) -> usize {
+        self.0.len_s()
+    }
+}
+
+impl<'a> Read<'a> for ChunkSectionPosPacked {
+    fn read(buf: &mut Reader) -> Result<Self, Error> {
+        Ok(Self(i64::read(buf)?))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChunkSectionPos {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl ChunkSectionPosPacked {
+    #[must_use]
+    pub const fn to_pos(self) -> ChunkSectionPos {
+        ChunkSectionPos {
+            x: (self.0 >> 42) as i32,
+            y: (self.0 << 44 >> 44) as i32,
+            z: (self.0 << 22 >> 42) as i32,
+        }
+    }
+}
+
+impl ChunkSectionPos {
+    #[must_use]
+    pub fn pack(self) -> ChunkSectionPosPacked {
+        ChunkSectionPosPacked(
+            (((self.x & 0x3FFFFF) as i64) << 42)
+                | (self.y & 0xFFFFF) as i64
+                | (((self.z & 0x3FFFFF) as i64) << 20),
+        )
+    }
+}
+
+impl core::ops::Add for BlockPos {
+    type Output = BlockPos;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl core::ops::AddAssign for BlockPos {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+    }
+}
+
+impl core::ops::Sub for BlockPos {
+    type Output = BlockPos;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl core::ops::SubAssign for BlockPos {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
+    }
+}
+
+impl core::ops::Mul for BlockPos {
+    type Output = BlockPos;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
+    }
+}
+
+impl core::ops::MulAssign for BlockPos {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+        self.z *= rhs.z;
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(u8)]
+#[must_use]
+pub enum Direction {
+    /// NEG Y
+    Down,
+    /// Y
+    Up,
+    /// NEG Z
+    North,
+    /// Z
+    South,
+    /// NEG X
+    West,
+    /// X
+    East,
+}
+
+impl<'a> Read<'a> for Direction {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(match V21::read(buf)?.0 {
+            1 => Self::Up,
+            2 => Self::North,
+            3 => Self::South,
+            4 => Self::West,
+            5 => Self::East,
+            _ => Self::Down,
+        })
+    }
+}
+
+impl Write for Direction {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { w.write_byte(*self as u8) }
+    }
+
+    fn len_s(&self) -> usize {
+        1
     }
 }

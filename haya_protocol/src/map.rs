@@ -1,5 +1,5 @@
 use crate::Component;
-use crate::registry::MapDecorationTypeRef;
+use minecraft_data::map_decoration_type;
 use mser::{ByteArray, Read, Write};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -7,7 +7,7 @@ pub struct MapId(#[mser(varint)] pub u32);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MapDecoration {
-    pub ty: MapDecorationTypeRef,
+    pub ty: map_decoration_type,
     pub x: u8,
     pub y: u8,
     pub rot: u8,

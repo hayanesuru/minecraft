@@ -1,6 +1,8 @@
 use crate::Component;
 use haya_ident::Ident;
+use minecraft_data::{villager_profession, villager_type};
 use mser::{Read, V21, Write};
+use uuid::Uuid;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
@@ -243,6 +245,125 @@ impl AxolotlVariant {
             Self::Gold => "gold",
             Self::Cyan => "cyan",
             Self::Blue => "blue",
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EntityReference {
+    pub entity: Uuid,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct VillagerData {
+    pub ty: villager_type,
+    pub profession: villager_profession,
+    #[mser(varint)]
+    pub level: u32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum ArmadilloState {
+    Idle,
+    Rolling,
+    Scared,
+    Unrolling,
+}
+
+impl ArmadilloState {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::Rolling => "rolling",
+            Self::Scared => "scared",
+            Self::Unrolling => "unrolling",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum SnifferState {
+    Idling,
+    FeelingHappy,
+    Scenting,
+    Sniffing,
+    Searching,
+    Digging,
+    Rising,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum CopperGolemState {
+    Idle,
+    GettingItem,
+    GettingNoItem,
+    DroppingItem,
+    DroppingNoItem,
+}
+
+impl CopperGolemState {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Idle => "idle",
+            Self::GettingItem => "getting_item",
+            Self::GettingNoItem => "getting_no_item",
+            Self::DroppingItem => "dropping_item",
+            Self::DroppingNoItem => "dropping_no_item",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[mser(varint)]
+#[repr(u8)]
+pub enum Pose {
+    Standing,
+    FallFlying,
+    Sleeping,
+    Swimming,
+    SpinAttack,
+    Crouching,
+    LongJumping,
+    Dying,
+    Croaking,
+    UsingTongue,
+    Sitting,
+    Roaring,
+    Sniffing,
+    Emerging,
+    Digging,
+    Sliding,
+    Shooting,
+    Inhaling,
+}
+
+impl Pose {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Standing => "standing",
+            Self::FallFlying => "fall_flying",
+            Self::Sleeping => "sleeping",
+            Self::Swimming => "swimming",
+            Self::SpinAttack => "spin_attack",
+            Self::Crouching => "crouching",
+            Self::LongJumping => "long_jumping",
+            Self::Dying => "dying",
+            Self::Croaking => "croaking",
+            Self::UsingTongue => "using_tongue",
+            Self::Sitting => "sitting",
+            Self::Roaring => "roaring",
+            Self::Sniffing => "sniffing",
+            Self::Emerging => "emerging",
+            Self::Digging => "digging",
+            Self::Sliding => "sliding",
+            Self::Shooting => "shooting",
+            Self::Inhaling => "inhaling",
         }
     }
 }
