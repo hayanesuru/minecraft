@@ -1,4 +1,5 @@
 use crate::advancement::{AdvancementHolder, AdvancementProgress};
+use crate::attribute::AttributeModifier;
 use crate::chat::{
     Bound, FilterMask, MessageSignature, MessageSignaturePacked, RemoteChatSession,
     SignedMessageBodyPacked,
@@ -28,8 +29,8 @@ use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, IVec3, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{
-    block, block_entity_type, block_state, entity_type, menu, mob_effect, number_format_type,
-    sound_event,
+    attribute, block, block_entity_type, block_state, entity_type, menu, mob_effect,
+    number_format_type, sound_event,
 };
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
@@ -1556,4 +1557,18 @@ pub struct UpdateAdvancements<'a> {
     pub removed: List<'a, Ident<'a>>,
     pub progress: Map<'a, Ident<'a>, AdvancementProgress<'a>>,
     pub show_advancements: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateAttributes<'a> {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub attributes: List<'a, AttributeSnapshot<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AttributeSnapshot<'a> {
+    pub attribute: attribute,
+    pub base: f64,
+    pub modifiers: List<'a, AttributeModifier<'a>>,
 }
