@@ -1535,3 +1535,9 @@ pub struct TickingState {
     pub tick_rate: f32,
     pub is_frozen: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TickingStep {
+    #[mser(varint)]
+    pub tick_steps: u32,
+}

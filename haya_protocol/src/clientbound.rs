@@ -221,7 +221,7 @@ packets! {
     teleport_entity = game::TeleportEntity,
     test_instance_block_status = game::TestInstanceBlockStatus,
     ticking_state = game::TickingState,
-    // ticking_step,
+    ticking_step = game::TickingStep,
     // transfer,
     // update_advancements,
     // update_attributes,
