@@ -207,7 +207,7 @@ packets! {
     set_titles_animation = game::SetTitlesAnimation,
     sound_entity = game::SoundEntity<'_>,
     sound = game::Sound<'_>,
-    // start_configuration,
+    start_configuration = game::StartConfiguration,
     // stop_sound,
     // store_cookie,
     // system_chat,

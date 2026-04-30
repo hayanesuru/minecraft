@@ -1493,3 +1493,6 @@ pub struct Sound<'a> {
     pub pitch: f32,
     pub seed: u64,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct StartConfiguration {}
