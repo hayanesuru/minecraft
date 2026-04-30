@@ -222,7 +222,7 @@ packets! {
     test_instance_block_status = game::TestInstanceBlockStatus,
     ticking_state = game::TickingState,
     ticking_step = game::TickingStep,
-    // transfer,
+    transfer = game::Transfer<'_>,
     // update_advancements,
     // update_attributes,
     // update_mob_effect,

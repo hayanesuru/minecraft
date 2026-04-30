@@ -1541,3 +1541,10 @@ pub struct TickingStep {
     #[mser(varint)]
     pub tick_steps: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Transfer<'a> {
+    pub host: Utf8<'a>,
+    #[mser(varint)]
+    pub port: u32,
+}
