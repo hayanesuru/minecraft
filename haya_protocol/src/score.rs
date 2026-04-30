@@ -65,3 +65,45 @@ impl ObjectiveCriteriaRenderType {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TeamVisibility {
+    Always,
+    Never,
+    HideForOtherTeams,
+    HideForOwnTeam,
+}
+
+impl TeamVisibility {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Always => "always",
+            Self::Never => "never",
+            Self::HideForOtherTeams => "hideForOtherTeams",
+            Self::HideForOwnTeam => "hideForOwnTeam",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TeamCollisionRule {
+    Always,
+    Never,
+    PushOtherTeams,
+    PushOwnTeam,
+}
+
+impl TeamCollisionRule {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Always => "always",
+            Self::Never => "never",
+            Self::PushOtherTeams => "pushOtherTeams",
+            Self::PushOwnTeam => "pushOwnTeam",
+        }
+    }
+}

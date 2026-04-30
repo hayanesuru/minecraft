@@ -12,13 +12,14 @@ use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
 use crate::recipe::{RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
-use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType};
+use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot, GameType, GlobalPos,
-    HeightmapType, Holder, InteractionHand, OptionalGameType, RespawnData, V32List, WeightedList,
+    BitSet, ChatFormatting, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot,
+    GameType, GlobalPos, HeightmapType, Holder, InteractionHand, OptionalGameType, RespawnData,
+    V32List, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -1382,4 +1383,49 @@ pub struct SetPlayerInventory<'a> {
     #[mser(varint)]
     pub slot: u32,
     pub contents: OptionalItemStack<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPlayerTeam<'a> {
+    pub name: Utf8<'a>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum SetPlayerTeamMethodType {
+    Add,
+    Remove,
+    Change,
+    Join,
+    Leave,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = SetPlayerTeamMethodType, camel_case)]
+pub enum SetPlayerTeamMethod<'a> {
+    Add {
+        parameters: SetPlayerTeamParameters,
+        players: List<'a, Utf8<'a>>,
+    },
+    Remove,
+    Change {
+        parameters: SetPlayerTeamParameters,
+    },
+    Join {
+        players: List<'a, Utf8<'a>>,
+    },
+    Leave {
+        players: List<'a, Utf8<'a>>,
+    },
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPlayerTeamParameters {
+    pub display_name: Component,
+    pub options: u8,
+    pub nametag_visibility: TeamVisibility,
+    pub collision_rule: TeamCollisionRule,
+    pub color: ChatFormatting,
+    pub player_prefix: Component,
+    pub player_suffix: Component,
 }

@@ -738,6 +738,34 @@ impl WeatheringCopperState {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum ChatFormatting {
+    Black,
+    DarkBlue,
+    DarkGreen,
+    DarkAqua,
+    DarkRed,
+    DarkPurple,
+    Gold,
+    Gray,
+    DarkGray,
+    Blue,
+    Green,
+    Aqua,
+    Red,
+    LightPurple,
+    Yellow,
+    White,
+    Obfuscated,
+    Bold,
+    Strikethrough,
+    Underline,
+    Italic,
+    Reset,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
