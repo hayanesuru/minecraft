@@ -218,7 +218,7 @@ packets! {
     tab_list = game::TabList,
     tag_query = game::TagQuery,
     take_item_entity = game::TakeItemEntity,
-    // teleport_entity,
+    teleport_entity = game::TeleportEntity,
     // test_instance_block_status,
     // ticking_state,
     // ticking_step,

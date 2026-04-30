@@ -18,8 +18,8 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
     BitSet, ChatFormatting, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot,
-    GameType, GlobalPos, HeightmapType, Holder, InteractionHand, OptionalGameType, RespawnData,
-    V32List, WeightedList,
+    GameType, GlobalPos, HeightmapType, Holder, InteractionHand, OptionalGameType, Relatives,
+    RespawnData, V32List, WeightedList,
 };
 use alloc::vec::Vec;
 use core::range;
@@ -934,69 +934,6 @@ pub struct PlayerPosition {
     pub relatives: Relatives,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Relatives(pub u32);
-
-impl Relatives {
-    pub const X: u32 = 1;
-    pub const Y: u32 = 2;
-    pub const Z: u32 = 4;
-    pub const Y_ROT: u32 = 8;
-    pub const X_ROT: u32 = 16;
-    pub const DELTA_X: u32 = 32;
-    pub const DELTA_Y: u32 = 64;
-    pub const DELTA_Z: u32 = 128;
-    pub const ROTATE_DELTA: u32 = 256;
-
-    pub const ALL: u32 = Self::X
-        | Self::Y
-        | Self::Z
-        | Self::Y_ROT
-        | Self::X_ROT
-        | Self::DELTA_X
-        | Self::DELTA_Y
-        | Self::DELTA_Z
-        | Self::ROTATE_DELTA;
-    pub const ROTATION: u32 = Self::Y_ROT | Self::X_ROT;
-    pub const DELTA: u32 = Self::DELTA_X | Self::DELTA_Y | Self::DELTA_Z | Self::ROTATE_DELTA;
-
-    pub const fn x(self) -> bool {
-        self.0 & Self::X != 0
-    }
-
-    pub const fn y(self) -> bool {
-        self.0 & Self::Y != 0
-    }
-
-    pub const fn z(self) -> bool {
-        self.0 & Self::Z != 0
-    }
-
-    pub const fn y_rot(self) -> bool {
-        self.0 & Self::Y_ROT != 0
-    }
-
-    pub const fn x_rot(self) -> bool {
-        self.0 & Self::X_ROT != 0
-    }
-
-    pub const fn delta_x(self) -> bool {
-        self.0 & Self::DELTA_X != 0
-    }
-
-    pub const fn delta_y(self) -> bool {
-        self.0 & Self::DELTA_Y != 0
-    }
-
-    pub const fn delta_z(self) -> bool {
-        self.0 & Self::DELTA_Z != 0
-    }
-
-    pub const fn rotate_delta(self) -> bool {
-        self.0 & Self::ROTATE_DELTA != 0
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerRotation {
     pub y_rot: f32,
@@ -1576,4 +1513,13 @@ pub struct TakeItemEntity {
     pub player_id: u32,
     #[mser(varint)]
     pub amount: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TeleportEntity {
+    #[mser(varint)]
+    pub id: u32,
+    pub change: PositionMoveRotation,
+    pub relatives: Relatives,
+    pub on_ground: bool,
 }
