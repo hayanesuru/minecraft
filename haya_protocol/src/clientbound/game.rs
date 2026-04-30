@@ -1457,3 +1457,8 @@ pub struct SetTime {
     pub day_time: u64,
     pub tick_day_time: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTitleText {
+    pub text: Component,
+}
