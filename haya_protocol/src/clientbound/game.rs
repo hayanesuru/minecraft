@@ -1481,3 +1481,15 @@ pub struct SoundEntity<'a> {
     pub pitch: f32,
     pub seed: u64,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Sound<'a> {
+    pub sound: Holder<SoundEvent<'a>, sound_event>,
+    pub source: SoundSource,
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+    pub volume: f32,
+    pub pitch: f32,
+    pub seed: u64,
+}
