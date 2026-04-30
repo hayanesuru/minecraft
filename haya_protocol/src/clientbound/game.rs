@@ -1376,3 +1376,10 @@ pub struct SetPassengers<'a> {
     pub vehicle: u32,
     pub passengers: V32List<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetPlayerInventory<'a> {
+    #[mser(varint)]
+    pub slot: u32,
+    pub contents: OptionalItemStack<'a>,
+}

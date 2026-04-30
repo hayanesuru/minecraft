@@ -197,7 +197,7 @@ packets! {
     set_held_slot = game::SetHeldSlot,
     set_objective = game::SetObjective<'_>,
     set_passengers = game::SetPassengers<'_>,
-    // set_player_inventory,
+    set_player_inventory = game::SetPlayerInventory<'_>,
     // set_player_team,
     // set_score,
     // set_simulation_distance,
