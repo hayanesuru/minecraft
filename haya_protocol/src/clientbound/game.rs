@@ -1462,3 +1462,10 @@ pub struct SetTime {
 pub struct SetTitleText {
     pub text: Component,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTitlesAnimation {
+    pub fade_in: u32,
+    pub stay: u32,
+    pub fade_out: u32,
+}

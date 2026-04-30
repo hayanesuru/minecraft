@@ -204,7 +204,7 @@ packets! {
     set_subtitle_text = game::SetSubtitleText,
     set_time = game::SetTime,
     set_title_text = game::SetTitleText,
-    // set_titles_animation,
+    set_titles_animation = game::SetTitlesAnimation,
     // sound_entity,
     // sound,
     // start_configuration,
