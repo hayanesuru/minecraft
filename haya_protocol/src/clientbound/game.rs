@@ -5,27 +5,29 @@ use crate::chat::{
 use crate::command::CommandNode;
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::entity_data::EntityDataSerializer;
-use crate::item::{ItemStack, OptionalItemStack};
+use crate::item::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
 use crate::recipe::{RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId};
 use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
+use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType};
 use crate::sound::SoundEvent;
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
-    BitSet, Component, ContainerId, Difficulty, DisplaySlot, EntityAnchor, EquipmentSlot, GameType,
-    GlobalPos, HeightmapType, Holder, IntIdList, InteractionHand, OptionalGameType, RespawnData,
-    WeightedList,
+    BitSet, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot, GameType, GlobalPos,
+    HeightmapType, Holder, IntIdList, InteractionHand, OptionalGameType, RespawnData, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, LpVec3, Vec3};
 use haya_nbt::Tag;
-use minecraft_data::{block, block_entity_type, block_state, entity_type, menu, mob_effect};
+use minecraft_data::{
+    block, block_entity_type, block_state, entity_type, menu, mob_effect, number_format_type,
+};
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
 
@@ -1336,4 +1338,34 @@ pub struct SetHealth {
 pub struct SetHeldSlot {
     #[mser(varint)]
     pub slot: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetObjective<'a> {
+    pub objective_name: Utf8<'a>,
+    pub method: SetObjectiveMethod,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = SetObjectiveMethodType, camel_case)]
+pub enum SetObjectiveMethod {
+    Add {
+        display_name: Component,
+        render_type: ObjectiveCriteriaRenderType,
+        number_format: Option<number_format_type>,
+    },
+    Remove,
+    Change {
+        display_name: Component,
+        render_type: ObjectiveCriteriaRenderType,
+        number_format: Option<number_format_type>,
+    },
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+pub enum SetObjectiveMethodType {
+    Add,
+    Remove,
+    Change,
 }
