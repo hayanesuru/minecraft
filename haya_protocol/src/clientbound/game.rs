@@ -1572,3 +1572,25 @@ pub struct AttributeSnapshot<'a> {
     pub base: f64,
     pub modifiers: List<'a, AttributeModifier<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateMobEffect {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub effect: mob_effect,
+    #[mser(varint)]
+    pub effect_amplifier: u32,
+    #[mser(varint)]
+    pub effect_duration_ticks: u32,
+    pub flags: UpdateMobEffectFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct UpdateMobEffectFlags(pub u8);
+
+impl UpdateMobEffectFlags {
+    pub const AMBIENT: u8 = 1;
+    pub const VISIBLE: u8 = 2;
+    pub const SHOW_ICON: u8 = 4;
+    pub const BLEND: u8 = 8;
+}

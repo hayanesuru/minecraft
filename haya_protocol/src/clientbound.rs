@@ -225,7 +225,7 @@ packets! {
     transfer = game::Transfer<'_>,
     update_advancements = game::UpdateAdvancements<'_>,
     update_attributes = game::UpdateAttributes<'_>,
-    // update_mob_effect,
+    update_mob_effect = game::UpdateMobEffect,
     // update_recipes,
     // update_tags,
     // projectile_power,
