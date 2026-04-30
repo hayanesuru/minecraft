@@ -1,9 +1,8 @@
 use crate::effect::MobEffect;
-use crate::registry::SoundEventRef;
 use crate::sound::SoundEvent;
 use crate::{Holder, HolderSet};
 use haya_collection::List;
-use minecraft_data::{consume_effect_type, mob_effect};
+use minecraft_data::{consume_effect_type, mob_effect, sound_event};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[mser(header = consume_effect_type)]
@@ -20,6 +19,6 @@ pub enum ConsumeEffect<'a> {
         diameter: f32,
     },
     PlaySound {
-        sound: Holder<SoundEvent<'a>, SoundEventRef>,
+        sound: Holder<SoundEvent<'a>, sound_event>,
     },
 }

@@ -11,9 +11,9 @@ use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
 use crate::recipe::{RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId};
-use crate::registry::{DamageTypeRef, DimensionTypeRef, SoundEventRef};
+use crate::registry::{DamageTypeRef, DimensionTypeRef};
 use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
-use crate::sound::SoundEvent;
+use crate::sound::{SoundEvent, SoundSource};
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::{
@@ -28,6 +28,7 @@ use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, LpVe
 use haya_nbt::Tag;
 use minecraft_data::{
     block, block_entity_type, block_state, entity_type, menu, mob_effect, number_format_type,
+    sound_event,
 };
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
@@ -391,7 +392,7 @@ pub struct Explode<'a> {
     pub block_count: u32,
     pub player_knockback: Option<Vec3>,
     pub explosion_particle: Particle<'a>,
-    pub explosion_sound: Holder<SoundEvent<'a>, SoundEventRef>,
+    pub explosion_sound: Holder<SoundEvent<'a>, sound_event>,
     pub block_particles: WeightedList<'a, ExplosionParticleInfo<'a>>,
 }
 
@@ -1468,4 +1469,15 @@ pub struct SetTitlesAnimation {
     pub fade_in: u32,
     pub stay: u32,
     pub fade_out: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SoundEntity<'a> {
+    pub sound: Holder<SoundEvent<'a>, sound_event>,
+    pub source: SoundSource,
+    #[mser(varint)]
+    pub id: u32,
+    pub volume: f32,
+    pub pitch: f32,
+    pub seed: u64,
 }

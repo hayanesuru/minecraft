@@ -1,6 +1,6 @@
 use crate::Holder;
-use crate::registry::SoundEventRef;
 use crate::sound::SoundEvent;
+use minecraft_data::sound_event;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct KineticWeapon<'a> {
@@ -13,8 +13,8 @@ pub struct KineticWeapon<'a> {
     pub damage_conditions: Option<Condition>,
     pub forward_movement: f32,
     pub damage_multiplier: f32,
-    pub sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
-    pub hit_sound: Option<Holder<SoundEvent<'a>, SoundEventRef>>,
+    pub sound: Option<Holder<SoundEvent<'a>, sound_event>>,
+    pub hit_sound: Option<Holder<SoundEvent<'a>, sound_event>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
