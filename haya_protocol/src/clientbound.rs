@@ -214,7 +214,7 @@ packets! {
     start_configuration = game::StartConfiguration,
     stop_sound = game::StopSound<'_>,
     store_cookie = common::GameStoreCookie<'_>,
-    // system_chat,
+    system_chat = game::SystemChat,
     // tab_list,
     // tag_query,
     // take_item_entity,

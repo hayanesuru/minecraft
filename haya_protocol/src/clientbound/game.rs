@@ -1548,3 +1548,9 @@ impl<'a> Read<'a> for StopSound<'a> {
         Ok(Self { source, name })
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SystemChat {
+    pub content: Component,
+    pub overlay: bool,
+}
