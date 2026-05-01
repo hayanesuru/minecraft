@@ -1595,3 +1595,10 @@ pub struct UpdateRecipes<'a> {
     pub item_sets: Map<'a, ResourceKey<'a>, RecipePropertySet<'a>>,
     pub stonecutter_recipes: SingleInputSet<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ProjectilePower {
+    #[mser(varint)]
+    pub id: u32,
+    pub acceleration_power: f64,
+}

@@ -228,7 +228,7 @@ packets! {
     update_mob_effect = game::UpdateMobEffect,
     update_recipes = game::UpdateRecipes<'_>,
     update_tags = common::GameUpdateTags<'_>,
-    // projectile_power,
+    projectile_power = game::ProjectilePower,
     // custom_report_details,
     // server_links,
     // waypoint,

@@ -1,5 +1,5 @@
 use crate::item::{ItemStack, TypedDataComponent};
-use crate::{Component, HolderSet, ResourceTexture, serverbound};
+use crate::{Component, HolderSet, ResourceTexture};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_nbt::Tag;
