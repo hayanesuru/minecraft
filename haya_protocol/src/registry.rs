@@ -397,7 +397,7 @@ impl<'a> Read<'a> for Holder<Dialog, DialogRef> {
     }
 }
 
-impl<'a> Write for Holder<Dialog, DialogRef> {
+impl Write for Holder<Dialog, DialogRef> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {
