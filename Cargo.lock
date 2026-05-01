@@ -40,7 +40,7 @@ dependencies = [
 
 [[package]]
 name = "haya_math"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "libm",
  "mser",
@@ -76,7 +76,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "haya_collection",
  "haya_ident",
