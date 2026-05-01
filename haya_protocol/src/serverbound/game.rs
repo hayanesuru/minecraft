@@ -12,3 +12,16 @@ pub struct BlockEntityTagQuery {
     pub transaction_id: u32,
     pub pos: BlockPosPacked,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BundleItemSelected {
+    #[mser(varint)]
+    pub slot_id: u32,
+    #[mser(varint, filter = valicate_bundle_item_selected)]
+    pub selected_item_index: u32,
+}
+
+fn valicate_bundle_item_selected(x: &u32) -> bool {
+    let x = *x as i32;
+    x >= 0 || x == -1
+}

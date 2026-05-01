@@ -28,6 +28,7 @@ struct Attrs {
     varint: bool,
     header: Option<syn::Path>,
     camel_case: bool,
+    filter: Option<syn::Path>,
 }
 
 impl syn::parse::Parse for Attrs {
@@ -45,6 +46,10 @@ impl syn::parse::Parse for Attrs {
             } else if lookahead.peek(kw::camel_case) {
                 let _: kw::camel_case = input.parse()?;
                 attr.camel_case = true;
+            } else if lookahead.peek(kw::filter) {
+                let _: kw::filter = input.parse()?;
+                let _: syn::Token![=] = input.parse()?;
+                attr.filter = Some(input.parse::<syn::Path>()?);
             } else {
                 return Err(lookahead.error());
             }
@@ -100,7 +105,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Deserialize, attributes(mser))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
-    let (attr, cratename) = match crate_name(&input) {
+    let (attrs, cratename) = match crate_name(&input) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();
@@ -108,8 +113,8 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
     };
 
     let x = match input.data {
-        syn::Data::Struct(_) => deserialize::deserialize_struct(input, cratename),
-        syn::Data::Enum(_) => deserialize::deserialize_enum(input, cratename, attr),
+        syn::Data::Struct(_) => deserialize::deserialize_struct(input, cratename, attrs),
+        syn::Data::Enum(_) => deserialize::deserialize_enum(input, cratename, attrs),
         syn::Data::Union(_) => Err(syn::Error::new_spanned(input, "unions are not supported")),
     };
     match x {
@@ -119,8 +124,8 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 }
 
 struct FieldAttrs {
-    pub filter: Option<syn::Path>,
-    pub varint: bool,
+    filter: Option<syn::Path>,
+    varint: bool,
 }
 
 impl syn::parse::Parse for FieldAttrs {

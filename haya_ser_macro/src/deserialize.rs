@@ -6,6 +6,7 @@ use quote::{ToTokens, TokenStreamExt, quote};
 pub fn deserialize_struct(
     input: syn::DeriveInput,
     cratename: syn::Path,
+    attrs: Attrs,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
     let generics = &input.generics;
@@ -26,14 +27,27 @@ pub fn deserialize_struct(
     let read = fields
         .iter()
         .map(|(field, attrs, m)| read_field(&cratename, field, attrs, m));
+    let read = quote!(Self {
+        #(#read,)*
+    });
+    let read = if let Some(filter) = attrs.filter {
+        quote! {
+            let __v = #read;
+            if #filter(&__v) {
+                ::core::result::Result::Ok(__v)
+            } else {
+                ::core::result::Result::Err(::#cratename::Error)
+            }
+        }
+    } else {
+        quote!(::core::result::Result::Ok(#read))
+    };
     Ok(quote! {
         #[automatically_derived]
         impl <'__a #impl_generics ::#cratename::Read<'__a> for #name #tok {
             #[inline]
             fn read(__r: &mut ::#cratename::Reader<'__a>) -> ::core::result::Result<Self, ::mser::Error> {
-                ::core::result::Result::Ok(Self {
-                    #(#read,)*
-                })
+               #read
             }
         }
     })
@@ -98,9 +112,9 @@ pub fn deserialize_enum(
         }
 
         read = Some(quote! {
-            ::core::result::Result::Ok(match <#header as ::#cratename::Read>::read(__r)? {
+            match <#header as ::#cratename::Read>::read(__r)? {
                 #(#match_arms,)*
-            })
+            }
         });
     }
 
@@ -113,6 +127,19 @@ pub fn deserialize_enum(
             ));
         }
     };
+    let read = if let Some(filter) = attrs.filter {
+        quote! {
+            let __v = #read;
+            if #filter(&__v) {
+                ::core::result::Result::Ok(__v)
+            } else {
+                ::core::result::Result::Err(::#cratename::Error)
+            }
+        }
+    } else {
+        quote!(::core::result::Result::Ok(#read))
+    };
+
     let generics = &input.generics;
     let has_lifetimes = generics.lifetimes().next().is_some();
 
@@ -173,41 +200,41 @@ fn repr_enum(
     lit: syn::LitInt,
 ) -> TokenStream {
     if !varint {
-        quote! {
+        quote! {{
             let __x = <#path as ::#cratename::Read>::read(__r)?;
             if __x < #lit {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<#path, Self>(__x as #path) ) }
+                unsafe { ::core::mem::transmute::<#path, Self>(__x as #path) }
             } else {
-                 unsafe { ::core::result::Result::Ok(::core::mem::transmute::<#path, Self>(0) ) }
+                 unsafe { ::core::mem::transmute::<#path, Self>(0) }
             }
-        }
+        }}
     } else if path == "u64" {
-        quote! {
+        quote! {{
             let __x = <::#cratename::V64 as ::#cratename::Read>::read(__r)?.0;
             if __x < #lit {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(__x) ) }
+                unsafe { ::core::mem::transmute::<u64, Self>(__x) }
             } else {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u64, Self>(0) ) }
+                unsafe { ::core::mem::transmute::<u64, Self>(0) }
             }
-        }
+        }}
     } else if len > V21MAX {
-        quote! {
+        quote! {{
             let __x = <::#cratename::V32 as ::#cratename::Read>::read(__r)?.0;
             if __x < #lit {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(__x) ) }
+                unsafe { ::core::mem::transmute::<u32, Self>(__x) }
             } else {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<u32, Self>(0) ) }
+                unsafe { ::core::mem::transmute::<u32, Self>(0) }
             }
-        }
+        }}
     } else {
-        quote! {
+        quote! {{
             let __x = <::#cratename::V21 as ::#cratename::Read>::read(__r)?.0;
             if __x < #lit {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<#path, Self>(__x as #path) ) }
+                unsafe { ::core::mem::transmute::<#path, Self>(__x as #path) }
             } else {
-                unsafe { ::core::result::Result::Ok(::core::mem::transmute::<#path, Self>(0) ) }
+                unsafe { ::core::mem::transmute::<#path, Self>(0) }
             }
-        }
+        }}
     }
 }
 

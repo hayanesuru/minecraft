@@ -94,7 +94,7 @@ packets! {
     handle,
     accept_teleportation = game::AcceptTeleportation,
     block_entity_tag_query = game::BlockEntityTagQuery,
-    // bundle_item_selected,
+    bundle_item_selected = game::BundleItemSelected,
     // change_difficulty,
     // change_game_mode,
     // chat_ack,
