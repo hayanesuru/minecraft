@@ -93,7 +93,7 @@ packets! {
     GameHandler,
     handle,
     accept_teleportation = game::AcceptTeleportation,
-    // block_entity_tag_query,
+    block_entity_tag_query = game::BlockEntityTagQuery,
     // bundle_item_selected,
     // change_difficulty,
     // change_game_mode,
