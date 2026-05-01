@@ -92,6 +92,12 @@ pub struct Transfer<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationUpdateTags<'a>(pub UpdateTags<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameUpdateTags<'a>(pub UpdateTags<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateTags<'a> {
     pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, V32List<'a>>>,
 }
