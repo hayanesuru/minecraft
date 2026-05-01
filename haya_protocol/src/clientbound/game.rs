@@ -5,6 +5,9 @@ use crate::chat::{
     SignedMessageBodyPacked,
 };
 use crate::command::CommandNode;
+use crate::crafting::{
+    RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId, RecipePropertySet, SingleInputSet,
+};
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::entity_data::EntityDataSerializer;
 use crate::item::OptionalItemStack;
@@ -12,7 +15,6 @@ use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMap;
-use crate::recipe::{RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId};
 use crate::registry::{DamageTypeRef, DimensionTypeRef};
 use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
 use crate::sound::{SoundEvent, SoundSource};
@@ -1544,13 +1546,6 @@ pub struct TickingStep {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Transfer<'a> {
-    pub host: Utf8<'a>,
-    #[mser(varint)]
-    pub port: u32,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAdvancements<'a> {
     pub reset: bool,
     pub added: List<'a, AdvancementHolder<'a>>,
@@ -1593,4 +1588,10 @@ impl UpdateMobEffectFlags {
     pub const VISIBLE: u8 = 2;
     pub const SHOW_ICON: u8 = 4;
     pub const BLEND: u8 = 8;
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateRecipes<'a> {
+    pub item_sets: Map<'a, ResourceKey<'a>, RecipePropertySet<'a>>,
+    pub stonecutter_recipes: SingleInputSet<'a>,
 }

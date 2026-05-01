@@ -118,3 +118,24 @@ pub struct RecipeDisplayId {
 pub struct Ingredient<'a> {
     pub values: HolderSet<'a, item>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipePropertySet<'a> {
+    pub items: List<'a, item>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SingleInputSet<'a> {
+    pub entries: List<'a, SingleInputEntry<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SingleInputEntry<'a> {
+    pub input: Ingredient<'a>,
+    pub recipe: SelectableRecipe<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SelectableRecipe<'a> {
+    pub option_display: SlotDisplay<'a>,
+}
