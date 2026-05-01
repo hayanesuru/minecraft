@@ -87,8 +87,8 @@ packets! {
     select_known_packs = configuration::SelectKnownPacks<'_>,
     custom_report_details = common::ConfigurationCustomReportDetails<'_>,
     server_links = common::ConfigurationServerLinks<'_>,
-    clear_dialog = common::ClearDialog,
-    show_dialog = common::ShowDialog,
+    clear_dialog = common::ConfigurationClearDialog,
+    show_dialog = common::ConfigurationShowDialog,
     code_of_conduct = configuration::CodeOfConduct<'_>,
 }
 packets! {
@@ -232,6 +232,6 @@ packets! {
     custom_report_details = common::GameCustomReportDetails<'_>,
     server_links = common::GameServerLinks<'_>,
     waypoint = game::Waypoint<'_>,
-    // clear_dialog,
+    clear_dialog = common::GameClearDialog,
     // show_dialog,
 }

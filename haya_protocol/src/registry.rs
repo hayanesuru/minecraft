@@ -1,10 +1,10 @@
-use crate::Holder;
 use crate::block::BannerPattern;
 use crate::chat::ChatType;
 use crate::entity::PaintingVariant;
 use crate::item::{Instrument, JukeboxSong};
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
+use crate::{Dialog, Holder};
 use minecraft_data::sound_event;
 use mser::{Error, Read, Reader, V32, Write, Writer};
 
@@ -64,6 +64,9 @@ pub struct ChatTypeRef(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct DimensionTypeRef(#[mser(varint)] pub u32);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct DialogRef(#[mser(varint)] pub u32);
 
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, sound_event> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
@@ -356,6 +359,45 @@ impl<'a> Read<'a> for Holder<ChatType<'a>, ChatTypeRef> {
 }
 
 impl<'a> Write for Holder<ChatType<'a>, ChatTypeRef> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            match self {
+                Self::Reference(id) => {
+                    V32(id.0 + 1).write(w);
+                }
+                Self::Direct(direct) => {
+                    V32(0).write(w);
+                    direct.write(w);
+                }
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        match self {
+            Self::Reference(id) => V32(id.0 + 1).len_s(),
+            Self::Direct(direct) => {
+                let mut len = V32(0).len_s();
+                len += direct.len_s();
+                len
+            }
+        }
+    }
+}
+
+impl<'a> Read<'a> for Holder<Dialog, DialogRef> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let id = V32::read(buf)?.0;
+        if id == 0 {
+            Ok(Self::Direct(Dialog::read(buf)?))
+        } else {
+            let x = id - 1;
+            Ok(Self::Reference(DialogRef(x)))
+        }
+    }
+}
+
+impl<'a> Write for Holder<Dialog, DialogRef> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {

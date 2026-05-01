@@ -1,4 +1,5 @@
-use crate::{Component, Dialog, ServerLinkUntrustedEntry, V32List};
+use crate::registry::DialogRef;
+use crate::{Component, Dialog, Holder, ServerLinkUntrustedEntry, V32List};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use mser::{ByteArray, Rest, Utf8};
@@ -125,9 +126,17 @@ pub struct ServerLinks<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ClearDialog {}
+pub struct ConfigurationClearDialog {}
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ShowDialog {
+pub struct GameClearDialog {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationShowDialog {
     pub dialog: Dialog,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameShowDialog {
+    pub dialog: Holder<Dialog, DialogRef>,
 }
