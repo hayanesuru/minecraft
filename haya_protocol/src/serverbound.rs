@@ -1,10 +1,12 @@
 use minecraft_data::{
-    serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__status,
+    serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__play,
+    serverbound__status,
 };
 
 pub mod common;
 pub mod configuration;
 pub mod cookie;
+pub mod game;
 pub mod handshake;
 pub mod login;
 pub mod ping;
@@ -37,6 +39,8 @@ macro_rules! packets {
                             self.$variant(e);
                         }
                     )+
+                    #[allow(unreachable_patterns)]
+                    _ => todo!(),
                 }
                 Ok(())
             }
@@ -83,4 +87,75 @@ packets! {
     select_known_packs = configuration::SelectKnownPacks<'_>,
     custom_click_action = common::CustomClickAction<'_>,
     accept_code_of_conduct = configuration::AcceptCodeOfConduct,
+}
+packets! {
+    serverbound__play,
+    GameHandler,
+    handle,
+    accept_teleportation = game::AcceptTeleportation,
+    // block_entity_tag_query,
+    // bundle_item_selected,
+    // change_difficulty,
+    // change_game_mode,
+    // chat_ack,
+    // chat_command,
+    // chat_command_signed,
+    // chat,
+    // chat_session_update,
+    // chunk_batch_received,
+    // client_command,
+    // client_tick_end,
+    // client_information,
+    // command_suggestion,
+    // configuration_acknowledged,
+    // container_button_click,
+    // container_click,
+    // container_close,
+    // container_slot_state_changed,
+    // cookie_response,
+    // custom_payload,
+    // debug_subscription_request,
+    // edit_book,
+    // entity_tag_query,
+    // interact,
+    // jigsaw_generate,
+    // keep_alive,
+    // lock_difficulty,
+    // move_player_pos,
+    // move_player_pos_rot,
+    // move_player_rot,
+    // move_player_status_only,
+    // move_vehicle,
+    // paddle_boat,
+    // pick_item_from_block,
+    // pick_item_from_entity,
+    // ping_request,
+    // place_recipe,
+    // player_abilities,
+    // player_action,
+    // player_command,
+    // player_input,
+    // player_loaded,
+    // pong,
+    // recipe_book_change_settings,
+    // recipe_book_seen_recipe,
+    // rename_item,
+    // resource_pack,
+    // seen_advancements,
+    // select_trade,
+    // set_beacon,
+    // set_carried_item,
+    // set_command_block,
+    // set_command_minecart,
+    // set_creative_mode_slot,
+    // set_jigsaw_block,
+    // set_structure_block,
+    // set_test_block,
+    // sign_update,
+    // swing,
+    // teleport_to_entity,
+    // test_instance_block_action,
+    // use_item_on,
+    // use_item,
+    // custom_click_action,
 }
