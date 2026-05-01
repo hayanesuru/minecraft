@@ -37,8 +37,6 @@ macro_rules! packets {
                             self.$variant(e);
                         }
                     )+
-                    #[allow(unused)]
-                    _ => {} // todo
                 }
                 Ok(())
             }
@@ -233,5 +231,5 @@ packets! {
     server_links = common::GameServerLinks<'_>,
     waypoint = game::Waypoint<'_>,
     clear_dialog = common::GameClearDialog,
-    // show_dialog,
+    show_dialog = common::GameShowDialog,
 }
