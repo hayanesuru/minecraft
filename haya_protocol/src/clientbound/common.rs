@@ -114,6 +114,12 @@ pub struct CustomReportDetails<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationServerLinks<'a>(pub ServerLinks<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameServerLinks<'a>(pub ServerLinks<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ServerLinks<'a> {
     pub links: List<'a, ServerLinkUntrustedEntry<'a>>,
 }
