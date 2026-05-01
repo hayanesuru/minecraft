@@ -103,6 +103,12 @@ pub struct UpdateTags<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationCustomReportDetails<'a>(pub CustomReportDetails<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameCustomReportDetails<'a>(pub CustomReportDetails<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CustomReportDetails<'a> {
     pub details: Map<'a, Utf8<'a, 128>, Utf8<'a, 4096>, 32>,
 }
