@@ -231,7 +231,7 @@ packets! {
     projectile_power = game::ProjectilePower,
     custom_report_details = common::GameCustomReportDetails<'_>,
     server_links = common::GameServerLinks<'_>,
-    // waypoint,
+    waypoint = game::Waypoint<'_>,
     // clear_dialog,
     // show_dialog,
 }

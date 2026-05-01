@@ -37,6 +37,7 @@ pub mod structure;
 pub mod trading;
 pub mod trim;
 pub mod types;
+pub mod waypoint;
 
 #[macro_use]
 extern crate mser_macro;
@@ -831,6 +832,13 @@ impl Relatives {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ResourceTexture<'a>(pub Ident<'a>);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct RgbColor {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
 
 #[cfg(test)]
 mod tests {

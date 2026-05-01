@@ -20,6 +20,7 @@ use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, 
 use crate::sound::{SoundEvent, SoundSource};
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
+use crate::waypoint::TrackedWaypoint;
 use crate::{
     BitSet, ChatFormatting, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot,
     GameType, GlobalPos, HeightmapType, Holder, InteractionHand, OptionalGameType, Relatives,
@@ -1601,4 +1602,19 @@ pub struct ProjectilePower {
     #[mser(varint)]
     pub id: u32,
     pub acceleration_power: f64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Waypoint<'a> {
+    pub operation: WaypointOperation,
+    pub waypoint: TrackedWaypoint<'a>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum WaypointOperation {
+    Track,
+    Untrack,
+    Update,
 }
