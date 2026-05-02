@@ -840,6 +840,9 @@ pub struct RgbColor {
     pub b: u8,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct MilliSeconds(pub u64);
+
 #[cfg(test)]
 mod tests {
     use super::*;

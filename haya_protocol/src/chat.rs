@@ -1,5 +1,5 @@
 use crate::registry::ChatTypeRef;
-use crate::{BitSet, Component, Holder, Style};
+use crate::{BitSet, Component, Holder, MilliSeconds, Style};
 use haya_collection::List;
 use mser::{ByteArray, FixedByteArray, Read, Utf8, V32, Write};
 use uuid::Uuid;
@@ -91,7 +91,7 @@ impl Parameter {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SignedMessageBodyPacked<'a> {
     pub content: Utf8<'a, 256>,
-    pub timestamp: u64,
+    pub timestamp: MilliSeconds,
     pub salt: u64,
     pub last_seen: LastSeenMessagesPacked<'a>,
 }
@@ -136,7 +136,15 @@ pub struct RemoteChatSession<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ProfilePublicKey<'a> {
-    pub expires_at: u64,
+    pub expires_at: MilliSeconds,
     pub key: ByteArray<'a, 512>,
     pub key_signature: ByteArray<'a, 4096>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LastSeenMessagesUpdate<'a> {
+    #[mser(varint)]
+    pub offset: u32,
+    pub acknowledged: FixedByteArray<'a, 3>,
+    pub checksum: u8,
 }

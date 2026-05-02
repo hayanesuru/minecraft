@@ -99,7 +99,7 @@ packets! {
     change_game_mode = game::ChangeGameMode,
     chat_ack = game::ChatAck,
     chat_command = game::ChatCommand<'_>,
-    // chat_command_signed,
+    chat_command_signed = game::ChatCommandSigned<'_>,
     // chat,
     // chat_session_update,
     // chunk_batch_received,

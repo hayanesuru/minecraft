@@ -1,3 +1,4 @@
+use crate::chat::MessageSignature;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey};
 use minecraft_data::command_argument_type;
@@ -708,4 +709,13 @@ impl<'a> Read<'a> for CommandNode<'a> {
             _ => Self::Root { children, redirect },
         })
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ArgumentSignatures<'a>(List<'a, ArgumentSignature<'a>, 8>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ArgumentSignature<'a> {
+    pub name: Utf8<'a, 16>,
+    pub signature: MessageSignature<'a>,
 }

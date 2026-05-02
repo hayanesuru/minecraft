@@ -1,4 +1,6 @@
-use crate::{Difficulty, GameType};
+use crate::chat::LastSeenMessagesUpdate;
+use crate::command::ArgumentSignatures;
+use crate::{Difficulty, GameType, MilliSeconds};
 use haya_math::BlockPosPacked;
 use mser::Utf8;
 
@@ -46,4 +48,13 @@ pub struct ChatAck {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChatCommand<'a> {
     pub command: Utf8<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatCommandSigned<'a> {
+    pub command: Utf8<'a>,
+    pub time_stamp: MilliSeconds,
+    pub salt: u64,
+    pub argument_signatures: ArgumentSignatures<'a>,
+    pub last_seen_messages: LastSeenMessagesUpdate<'a>,
 }

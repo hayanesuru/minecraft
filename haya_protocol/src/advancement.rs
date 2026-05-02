@@ -1,5 +1,5 @@
 use crate::item::{ItemStack, TypedDataComponent};
-use crate::{Component, HolderSet, ResourceTexture};
+use crate::{Component, HolderSet, MilliSeconds, ResourceTexture};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_nbt::Tag;
@@ -183,5 +183,5 @@ pub struct AdvancementProgress<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CriterionProgress {
-    pub obtained: Option<u64>,
+    pub obtained: Option<MilliSeconds>,
 }
