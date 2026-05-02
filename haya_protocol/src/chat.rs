@@ -1,7 +1,7 @@
 use crate::registry::ChatTypeRef;
 use crate::{BitSet, Component, Holder, Style};
-use haya_collection::{FixedByteArray, List};
-use mser::{ByteArray, Read, Utf8, V32, Write};
+use haya_collection::List;
+use mser::{ByteArray, FixedByteArray, Read, Utf8, V32, Write};
 use uuid::Uuid;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

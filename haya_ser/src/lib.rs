@@ -90,20 +90,13 @@ impl<'a, const MAX: usize> Write for ByteArray<'a, MAX> {
 
 impl<'a, const MAX: usize> Read<'a> for ByteArray<'a, MAX> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let len = V21::read(buf)?.0 as usize;
-        if len > MAX {
-            return Err(Error);
-        }
+        let len = read_v21_len(buf, MAX)?;
         Ok(Self(buf.read_slice(len)?))
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Utf8<'a, const MAX: usize = 32767>(pub &'a str);
-
-impl<'a, const MAX: usize> Utf8<'a, MAX> {
-    const MAX_BYTES: usize = MAX.checked_mul(3).unwrap();
-}
 
 impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
     #[inline]
@@ -123,17 +116,14 @@ impl<'a, const MAX: usize> Write for Utf8<'a, MAX> {
 impl<'a, const MAX: usize> Read<'a> for Utf8<'a, MAX> {
     #[inline]
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let len = V21::read(buf)?.0 as usize;
-        if len > Self::MAX_BYTES {
-            return Err(Error);
-        }
+        let len = read_v21_len(buf, MAX.saturating_mul(3))?;
         let bytes = buf.read_slice(len)?;
         let s = match core::str::from_utf8(bytes) {
             Ok(x) => x,
             Err(_) => return Err(Error),
         };
-        if s.chars().map(|x| x.len_utf16()).sum::<usize>() <= MAX {
-            Ok(Utf8(s))
+        if s.chars().map(char::len_utf16).sum::<usize>() <= MAX {
+            Ok(Self(s))
         } else {
             Err(Error)
         }
@@ -194,6 +184,38 @@ impl<'a, const MAX: usize> Read<'a> for Rest<'a, MAX> {
 }
 
 impl<'a, const MAX: usize> Write for Rest<'a, MAX> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { w.write(self.0) }
+    }
+
+    fn len_s(&self) -> usize {
+        self.0.len()
+    }
+}
+
+#[inline(always)]
+pub fn read_v21_len(buf: &mut Reader<'_>, max: usize) -> Result<usize, Error> {
+    let len = V21::read(buf)?.0 as usize;
+    if len > max {
+        cold_path();
+        return Err(Error);
+    }
+    Ok(len)
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FixedByteArray<'a, const L: usize>(pub &'a [u8; L]);
+
+impl<'a, const L: usize> Read<'a> for FixedByteArray<'a, L> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        match buf.read_array() {
+            Ok(x) => Ok(Self(x)),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl<'a, const L: usize> Write for FixedByteArray<'a, L> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe { w.write(self.0) }
     }

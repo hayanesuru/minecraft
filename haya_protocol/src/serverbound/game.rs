@@ -1,3 +1,4 @@
+use crate::Difficulty;
 use haya_math::BlockPosPacked;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -24,4 +25,9 @@ pub struct BundleItemSelected {
 fn valicate_bundle_item_selected(x: &u32) -> bool {
     let x = *x as i32;
     x >= 0 || x == -1
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChangeDifficulty {
+    pub difficulty: Difficulty,
 }

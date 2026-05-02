@@ -4,7 +4,7 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use mser::{Error, Read, Reader, V21, Write, Writer};
+use mser::{Error, Read, Reader, V21, Write, Writer, read_v21_len};
 
 pub enum List<'a, T: 'a, const MAX: usize = { usize::MAX }> {
     Borrowed(&'a [T]),
@@ -95,10 +95,7 @@ pub fn capacity_fix(len: usize) -> usize {
 
 impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for List<'a, T, MAX> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let len = V21::read(buf)?.0 as usize;
-        if len > MAX {
-            return Err(Error);
-        }
+        let len = read_v21_len(buf, MAX)?;
         let mut vec = Vec::with_capacity(capacity_fix(len));
         for _ in 0..len {
             vec.push(T::read(buf)?);
@@ -135,10 +132,7 @@ impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V,
 
 impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, MAX> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let len = V21::read(buf)?.0 as usize;
-        if len > MAX {
-            return Err(Error);
-        }
+        let len = read_v21_len(buf, MAX)?;
         let mut vec = Vec::with_capacity(capacity_fix(len));
         for _ in 0..len {
             let k = K::read(buf)?;
@@ -177,27 +171,5 @@ impl<'a, T: Write> Write for Cow<'a, T> {
 impl<'a, T: Read<'a>> Read<'a> for Cow<'a, T> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(Self::Owned(Box::new(T::read(buf)?)))
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct FixedByteArray<'a, const L: usize>(pub &'a [u8; L]);
-
-impl<'a, const L: usize> Read<'a> for FixedByteArray<'a, L> {
-    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        match buf.read_array() {
-            Ok(x) => Ok(Self(x)),
-            Err(e) => Err(e),
-        }
-    }
-}
-
-impl<'a, const L: usize> Write for FixedByteArray<'a, L> {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe { w.write(self.0) }
-    }
-
-    fn len_s(&self) -> usize {
-        self.0.len()
     }
 }
