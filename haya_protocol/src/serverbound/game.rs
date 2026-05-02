@@ -1,5 +1,6 @@
 use crate::{Difficulty, GameType};
 use haya_math::BlockPosPacked;
+use mser::Utf8;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AcceptTeleportation {
@@ -40,4 +41,9 @@ pub struct ChangeGameMode {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChatAck {
     pub offset: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatCommand<'a> {
+    pub command: Utf8<'a>,
 }
