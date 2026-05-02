@@ -96,7 +96,7 @@ packets! {
     block_entity_tag_query = game::BlockEntityTagQuery,
     bundle_item_selected = game::BundleItemSelected,
     change_difficulty = game::ChangeDifficulty,
-    // change_game_mode,
+    change_game_mode = game::ChangeGameMode,
     // chat_ack,
     // chat_command,
     // chat_command_signed,

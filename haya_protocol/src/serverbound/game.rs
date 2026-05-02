@@ -1,4 +1,4 @@
-use crate::Difficulty;
+use crate::{Difficulty, GameType};
 use haya_math::BlockPosPacked;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -30,4 +30,9 @@ fn valicate_bundle_item_selected(x: &u32) -> bool {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChangeDifficulty {
     pub difficulty: Difficulty,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChangeGameMode {
+    pub mode: GameType,
 }
