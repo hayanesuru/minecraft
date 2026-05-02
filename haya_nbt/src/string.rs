@@ -1,4 +1,4 @@
-use crate::{Error, Name, RawStringTag, Read, RefStringTag, StringTag, Write, Writer};
+use crate::{Error, Inner, Name, RawStringTag, Read, RefStringTag, StringTag, Write, Writer};
 use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 use haya_mutf8::{as_mutf8_ascii, decode_mutf8, decode_mutf8_len, encode_mutf8, encode_mutf8_len};
@@ -129,21 +129,27 @@ impl Write for Name {
     #[inline]
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
-            if let Some(x) = RawStringTag::new(self.as_bytes()) {
-                x.write(w);
-            } else {
-                (encode_mutf8_len(self) as u16).write(w);
-                encode_mutf8(self, w);
+            match &self.0 {
+                Inner::Thin(direct) => RawStringTag::new_unchecked(direct).write(w),
+                Inner::Heap(x) => match RawStringTag::new(x.as_bytes()) {
+                    Some(x) => x.write(w),
+                    None => {
+                        (encode_mutf8_len(self) as u16).write(w);
+                        encode_mutf8(self, w);
+                    }
+                },
             }
         }
     }
 
     #[inline]
     fn len_s(&self) -> usize {
-        if let Some(x) = RawStringTag::new(self.as_bytes()) {
-            x.len_s()
-        } else {
-            encode_mutf8_len(self) + 2
+        match &self.0 {
+            Inner::Thin(direct) => RawStringTag::new_unchecked(direct).len_s(),
+            Inner::Heap(x) => match RawStringTag::new(x.as_bytes()) {
+                Some(x) => x.len_s(),
+                None => encode_mutf8_len(self) + 2,
+            },
         }
     }
 }

@@ -53,7 +53,10 @@ pub struct Compound(Vec<(Name, Tag)>);
 pub struct CompoundStringify(pub Compound);
 
 #[derive(Clone, Debug)]
-pub enum Name {
+pub struct Name(Inner);
+
+#[derive(Clone, Debug)]
+enum Inner {
     Thin(HayaStr),
     Heap(Box<str>),
 }

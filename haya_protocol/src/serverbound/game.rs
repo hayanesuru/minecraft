@@ -36,3 +36,8 @@ pub struct ChangeDifficulty {
 pub struct ChangeGameMode {
     pub mode: GameType,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatAck {
+    pub offset: u32,
+}

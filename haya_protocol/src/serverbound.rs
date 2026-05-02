@@ -97,7 +97,7 @@ packets! {
     bundle_item_selected = game::BundleItemSelected,
     change_difficulty = game::ChangeDifficulty,
     change_game_mode = game::ChangeGameMode,
-    // chat_ack,
+    chat_ack = game::ChatAck,
     // chat_command,
     // chat_command_signed,
     // chat,

@@ -7,42 +7,21 @@ use haya_mutf8::{as_mutf8_ascii, decode_mutf8_len};
 use haya_str::HayaStr;
 use mser::{Error, Read, Reader, Write, Writer};
 
-enum CowVec {
-    Thin(HayaStr),
-    Heap(Vec<u8>),
-}
-
 impl<'a> Read<'a> for Name {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = u16::read(buf)? as usize;
         let data = buf.read_slice(len)?;
         if let Some(x) = as_mutf8_ascii(data) {
-            Ok(Self::new(x))
+            unsafe { Ok(Self::new(x)) }
         } else {
             let len = decode_mutf8_len(data)?;
-            let mut ptr = if len <= haya_str::MAX {
-                CowVec::Thin(HayaStr::new())
-            } else {
-                CowVec::Heap(Vec::with_capacity(len))
-            };
+            let mut vec = Vec::with_capacity(len);
             unsafe {
-                mser::write_unchecked(
-                    match &mut ptr {
-                        CowVec::Thin(s) => s.as_mut_ptr(),
-                        CowVec::Heap(x) => x.as_mut_ptr(),
-                    },
-                    &(DecodeMutf8(data, len)),
-                );
-                match ptr {
-                    CowVec::Thin(mut s) => {
-                        s.set_len(len);
-                        Ok(Self::Thin(s))
-                    }
-                    CowVec::Heap(mut x) => {
-                        x.set_len(len);
-                        Ok(Self::Heap(String::from_utf8_unchecked(x).into_boxed_str()))
-                    }
-                }
+                mser::write_unchecked(vec.as_mut_ptr(), &(DecodeMutf8(data, len)));
+                vec.set_len(len);
+                Ok(Self(crate::Inner::Heap(
+                    String::from_utf8_unchecked(vec).into_boxed_str(),
+                )))
             }
         }
     }
@@ -50,9 +29,9 @@ impl<'a> Read<'a> for Name {
 
 impl AsRef<str> for Name {
     fn as_ref(&self) -> &str {
-        match self {
-            Self::Thin(x) => x,
-            Self::Heap(x) => x,
+        match &self.0 {
+            crate::Inner::Thin(x) => x,
+            crate::Inner::Heap(x) => x,
         }
     }
 }
@@ -66,10 +45,10 @@ impl core::ops::Deref for Name {
 }
 
 impl Name {
-    pub fn new(s: &str) -> Self {
+    pub(crate) unsafe fn new(s: &str) -> Self {
         match HayaStr::copy_from(s) {
-            Ok(x) => Self::Thin(x),
-            Err(_) => Self::Heap(s.to_owned().into_boxed_str()),
+            Ok(x) => Self(crate::Inner::Thin(x)),
+            Err(_) => Self(crate::Inner::Heap(s.to_owned().into_boxed_str())),
         }
     }
 }
