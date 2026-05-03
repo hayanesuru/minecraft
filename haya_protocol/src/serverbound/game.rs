@@ -262,3 +262,10 @@ pub struct PickItemFromBlock {
     pub pos: BlockPosPacked,
     pub include_data: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PickItemFromEntity {
+    #[mser(varint)]
+    pub id: u32,
+    pub include_data: bool,
+}

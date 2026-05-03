@@ -128,7 +128,7 @@ packets! {
     move_vehicle = game::MoveVehicle,
     paddle_boat = game::PaddleBoat,
     pick_item_from_block = game::PickItemFromBlock,
-    // pick_item_from_entity,
+    pick_item_from_entity = game::PickItemFromEntity,
     // ping_request,
     // place_recipe,
     // player_abilities,
