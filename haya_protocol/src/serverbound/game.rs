@@ -1,8 +1,10 @@
 use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
-use crate::{ClickType, ContainerId, Difficulty, GameType, HashedStack, MilliSeconds};
+use crate::{
+    ClickType, ContainerId, Difficulty, GameType, HashedStack, InteractionHand, MilliSeconds,
+};
 use haya_collection::{List, Map};
-use haya_math::BlockPosPacked;
+use haya_math::{BlockPosPacked, FVec3};
 use minecraft_data::debug_subscription;
 use mser::Utf8;
 
@@ -162,4 +164,34 @@ pub struct EntityTagQuery {
     pub transaction_id: u32,
     #[mser(varint)]
     pub entity_id: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Interact {
+    #[mser(varint)]
+    pub entity_id: u32,
+    pub action: InteractAction,
+    pub using_secondary_action: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = InteractActionType, camel_case)]
+pub enum InteractAction {
+    Interact {
+        hand: InteractionHand,
+    },
+    Attack,
+    InteractAt {
+        location: FVec3,
+        hand: InteractionHand,
+    },
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum InteractActionType {
+    Interact,
+    Attack,
+    InteractAt,
 }

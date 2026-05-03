@@ -117,7 +117,7 @@ packets! {
     debug_subscription_request = game::DebugSubscriptionRequest<'_>,
     edit_book = game::EditBook<'_>,
     entity_tag_query = game::EntityTagQuery,
-    // interact,
+    interact = game::Interact,
     // jigsaw_generate,
     // keep_alive,
     // lock_difficulty,
