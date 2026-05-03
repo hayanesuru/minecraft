@@ -152,7 +152,7 @@ packets! {
     set_structure_block = game::SetStructureBlock<'_>,
     set_test_block = game::SetTestBlock<'_>,
     sign_update = game::SignUpdate<'_>,
-    // swing,
+    swing = game::Swing,
     // teleport_to_entity,
     // test_instance_block_action,
     // use_item_on,

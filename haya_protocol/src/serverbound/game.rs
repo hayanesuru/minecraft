@@ -497,3 +497,8 @@ pub struct SignUpdate<'a> {
     pub line3: Utf8<'a, 384>,
     pub line4: Utf8<'a, 384>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Swing {
+    pub hand: InteractionHand,
+}
