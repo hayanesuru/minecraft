@@ -133,3 +133,11 @@ pub struct ContainerClick<'a> {
 pub struct ContainerClose {
     pub container_id: ContainerId,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerSlotStateChanged {
+    #[mser(varint)]
+    pub slot_id: u32,
+    pub container_id: ContainerId,
+    pub new_state: bool,
+}

@@ -111,7 +111,7 @@ packets! {
     container_button_click = game::ContainerButtonClick,
     container_click = game::ContainerClick<'_>,
     container_close = game::ContainerClose,
-    // container_slot_state_changed,
+    container_slot_state_changed = game::ContainerSlotStateChanged,
     // cookie_response,
     // custom_payload,
     // debug_subscription_request,
