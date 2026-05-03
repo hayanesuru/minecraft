@@ -74,3 +74,8 @@ pub struct Chat<'a> {
 pub struct ChatSessionUpdate<'a> {
     pub chat_session: RemoteChatSession<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChunkBatchReceived {
+    pub desired_chunks_per_tick: f32,
+}
