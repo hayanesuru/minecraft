@@ -139,7 +139,7 @@ packets! {
     pong = common::GamePong,
     recipe_book_change_settings = game::RecipeBookChangeSettings,
     recipe_book_seen_recipe = game::RecipeBookSeenRecipe,
-    // rename_item,
+    rename_item = game::RenameItem<'_>,
     // resource_pack,
     // seen_advancements,
     // select_trade,

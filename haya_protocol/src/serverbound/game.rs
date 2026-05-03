@@ -357,3 +357,8 @@ pub struct RecipeBookChangeSettings {
 pub struct RecipeBookSeenRecipe {
     pub recipe: RecipeDisplayId,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RenameItem<'a> {
+    pub name: Utf8<'a>,
+}
