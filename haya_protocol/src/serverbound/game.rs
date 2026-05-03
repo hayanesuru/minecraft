@@ -395,3 +395,8 @@ pub struct SetBeacon {
     pub primary: Option<mob_effect>,
     pub secondary: Option<mob_effect>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCarriedItem {
+    pub slot: u16,
+}

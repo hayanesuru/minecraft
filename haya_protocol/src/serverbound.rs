@@ -144,7 +144,7 @@ packets! {
     seen_advancements = game::SeenAdvancements<'_>,
     select_trade = game::SelectTrade,
     set_beacon = game::SetBeacon,
-    // set_carried_item,
+    set_carried_item = game::SetCarriedItem,
     // set_command_block,
     // set_command_minecart,
     // set_creative_mode_slot,
