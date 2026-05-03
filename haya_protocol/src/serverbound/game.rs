@@ -230,3 +230,10 @@ pub struct MovePlayerPosRot {
     pub x_rot: f32,
     pub flags: MovePlayerFlags,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MovePlayerRot {
+    pub y_rot: f32,
+    pub x_rot: f32,
+    pub flags: MovePlayerFlags,
+}
