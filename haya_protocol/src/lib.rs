@@ -789,6 +789,50 @@ pub enum CommandBlockEntityMode {
     Redstone,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum JointType {
+    Rollable,
+    Aligned,
+}
+
+#[derive(Clone, Copy)]
+pub struct JointTypeName(pub JointType);
+
+impl<'a> Read<'a> for JointTypeName {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let a: Utf8 = Utf8::read(buf)?;
+        Ok(match a.0 {
+            "rollable" => Self(JointType::Rollable),
+            _ => Self(JointType::Aligned),
+        })
+    }
+}
+
+impl Write for JointTypeName {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let a: Utf8 = Utf8(self.0.name());
+            a.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let a: Utf8 = Utf8(self.0.name());
+        a.len_s()
+    }
+}
+
+impl JointType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Rollable => "rollable",
+            Self::Aligned => "aligned",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -3,7 +3,8 @@ use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
-    ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, MilliSeconds,
+    ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, JointTypeName,
+    MilliSeconds,
 };
 use haya_collection::{List, Map};
 use haya_ident::Ident;
@@ -433,4 +434,18 @@ pub struct SetCreativeModeSlot<'a> {
     pub slot_num: u16,
     // pub item_stack: OptionalItemStack<'a>,
     pub item_stack: Rest<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetJigsawBlock<'a> {
+    pub pos: BlockPosPacked,
+    pub name: Ident<'a>,
+    pub target: Ident<'a>,
+    pub pool: Ident<'a>,
+    pub final_state: Utf8<'a>,
+    pub joint: JointTypeName,
+    #[mser(varint)]
+    pub selection_priority: u32,
+    #[mser(varint)]
+    pub placement_priority: u32,
 }
