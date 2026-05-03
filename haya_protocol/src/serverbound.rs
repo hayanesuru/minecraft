@@ -133,7 +133,7 @@ packets! {
     place_recipe = game::PlaceRecipe,
     player_abilities = game::PlayerAbilities,
     player_action = game::PlayerAction,
-    // player_command,
+    player_command = game::PlayerCommand,
     // player_input,
     // player_loaded,
     // pong,

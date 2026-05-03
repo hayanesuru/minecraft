@@ -316,3 +316,25 @@ pub enum PlayerActionType {
     SwapItemWithOffhand,
     Stab,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerCommand {
+    #[mser(varint)]
+    pub id: u32,
+    pub action: PlayerCommandAction,
+    #[mser(varint)]
+    pub data: u32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum PlayerCommandAction {
+    StopSleeping,
+    StartSprinting,
+    StopSprinting,
+    StartRidingJump,
+    StopRidingJump,
+    OpenInventory,
+    StartFallFlying,
+}
