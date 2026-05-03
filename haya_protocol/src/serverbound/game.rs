@@ -9,7 +9,7 @@ use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
 use minecraft_data::{debug_subscription, mob_effect};
-use mser::Utf8;
+use mser::{Rest, Utf8};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AcceptTeleportation {
@@ -426,4 +426,11 @@ pub struct SetCommandMinecart<'a> {
     pub entity: u32,
     pub command: Utf8<'a>,
     pub track_output: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCreativeModeSlot<'a> {
+    pub slot_num: u16,
+    // pub item_stack: OptionalItemStack<'a>,
+    pub item_stack: Rest<'a>,
 }
