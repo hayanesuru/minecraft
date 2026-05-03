@@ -118,7 +118,7 @@ packets! {
     edit_book = game::EditBook<'_>,
     entity_tag_query = game::EntityTagQuery,
     interact = game::Interact,
-    // jigsaw_generate,
+    jigsaw_generate = game::JigsawGenerate,
     // keep_alive,
     // lock_difficulty,
     // move_player_pos,

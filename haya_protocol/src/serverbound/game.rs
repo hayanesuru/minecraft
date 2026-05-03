@@ -195,3 +195,11 @@ pub enum InteractActionType {
     Attack,
     InteractAt,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct JigsawGenerate {
+    pub pos: BlockPosPacked,
+    #[mser(varint)]
+    pub levels: u32,
+    pub keep_jigsaws: bool,
+}
