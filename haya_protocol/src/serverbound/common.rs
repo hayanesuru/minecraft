@@ -42,6 +42,12 @@ pub struct Pong {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationResourcePack(pub ResourcePack);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameResourcePack(pub ResourcePack);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ResourcePack {
     pub id: Uuid,
     pub action: ResourcePackAction,
