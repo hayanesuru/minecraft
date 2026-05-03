@@ -250,3 +250,9 @@ pub struct MoveVehicle {
     pub x_rot: f32,
     pub on_ground: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PaddleBoat {
+    pub left: bool,
+    pub right: bool,
+}
