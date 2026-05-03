@@ -124,7 +124,7 @@ packets! {
     move_player_pos = game::MovePlayerPos,
     move_player_pos_rot = game::MovePlayerPosRot,
     move_player_rot = game::MovePlayerRot,
-    // move_player_status_only,
+    move_player_status_only = game::MovePlayerStatusOnly,
     // move_vehicle,
     // paddle_boat,
     // pick_item_from_block,
