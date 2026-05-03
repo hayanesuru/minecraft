@@ -1,3 +1,4 @@
+pub mod consumable;
 pub mod consume_effect;
 pub mod firework_explosion;
 pub mod item_attribute_modifiers;
@@ -6,6 +7,14 @@ pub mod kinetic_weapon;
 pub mod suspicious_stew_effects;
 pub mod tool;
 
+use self::consumable::Consumable;
+use self::consume_effect::ConsumeEffect;
+use self::firework_explosion::FireworkExplosion;
+use self::item_attribute_modifiers::ItemAttributeModifiers;
+use self::item_enchantments::ItemEnchantments;
+use self::kinetic_weapon::KineticWeapon;
+use self::suspicious_stew_effects::SuspiciousStewEffects;
+use self::tool::Tool;
 use crate::advancement::BlockPredicate;
 use crate::block::{BannerPatternLayers, BeehiveOccupant};
 use crate::effect::MobEffect;
@@ -14,13 +23,6 @@ use crate::entity::{
     ParrotVariant, RabbitVariant, SalmonVariant, TropicalFishPattern,
 };
 use crate::food::FoodProperties;
-use crate::item::consume_effect::ConsumeEffect;
-use crate::item::firework_explosion::FireworkExplosion;
-use crate::item::item_attribute_modifiers::ItemAttributeModifiers;
-use crate::item::item_enchantments::ItemEnchantments;
-use crate::item::kinetic_weapon::KineticWeapon;
-use crate::item::suspicious_stew_effects::SuspiciousStewEffects;
-use crate::item::tool::Tool;
 use crate::map::MapId;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
@@ -171,50 +173,6 @@ pub struct CustomModelData<'a> {
 pub struct TooltipDisplay<'a> {
     pub hide_tooltip: bool,
     pub hidden_components: List<'a, TypedDataComponent<'a>>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Consumable<'a> {
-    pub consume_seconds: f32,
-    pub animation: ItemUseAnimation,
-    pub sound: Holder<SoundEvent<'a>, sound_event>,
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[mser(varint)]
-#[repr(u8)]
-pub enum ItemUseAnimation {
-    None,
-    Eat,
-    Drink,
-    Block,
-    Bow,
-    Trident,
-    Crossbow,
-    Spyglass,
-    TootHorn,
-    Brush,
-    Bundle,
-    Spear,
-}
-
-impl ItemUseAnimation {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::None => "none",
-            Self::Eat => "eat",
-            Self::Drink => "drink",
-            Self::Block => "block",
-            Self::Bow => "bow",
-            Self::Trident => "trident",
-            Self::Crossbow => "crossbow",
-            Self::Spyglass => "spyglass",
-            Self::TootHorn => "toot_horn",
-            Self::Brush => "brush",
-            Self::Bundle => "bundle",
-            Self::Spear => "spear",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

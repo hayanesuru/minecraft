@@ -1,4 +1,4 @@
-use crate::item::TypedEntityDataEntity;
+use crate::item_stack::TypedEntityDataEntity;
 use crate::registry::BannerPatternRef;
 use crate::{DyeColor, Holder};
 use haya_collection::List;

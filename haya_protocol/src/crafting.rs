@@ -1,4 +1,4 @@
-use crate::item::ItemStack;
+use crate::item_stack::ItemStack;
 use crate::registry::TrimPatternRef;
 use crate::trim::TrimPattern;
 use crate::{Holder, HolderSet, OptionalV32};

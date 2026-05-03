@@ -1,5 +1,5 @@
 use crate::game_event::PositionSource;
-use crate::item::ItemStack;
+use crate::item_stack::ItemStack;
 use haya_math::Vec3;
 use minecraft_data::{block_state, particle_type};
 

@@ -1,10 +1,11 @@
 #![no_std]
 
 use alloc::vec::Vec;
-use haya_collection::{List, capacity_fix};
+use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::BlockPosPacked;
 use haya_nbt::Tag;
+use minecraft_data::data_component_type;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 pub mod advancement;
@@ -20,7 +21,7 @@ pub mod entity;
 pub mod entity_data;
 pub mod food;
 pub mod game_event;
-pub mod item;
+pub mod item_stack;
 pub mod level_event;
 pub mod map;
 pub mod minecart;
@@ -842,6 +843,34 @@ pub struct RgbColor {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct MilliSeconds(pub u64);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum ClickType {
+    Pickup,
+    QuickMove,
+    Swap,
+    Clone,
+    Throw,
+    QuickCraft,
+    PickupAll,
+}
+
+// CRC32C
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HashedPatchMap<'a> {
+    pub added_components: Map<'a, data_component_type, u32, 256>,
+    pub removed_components: List<'a, data_component_type, 256>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HashedStack<'a> {
+    pub item: minecraft_data::item,
+    #[mser(varint)]
+    pub count: u32,
+    pub components: HashedPatchMap<'a>,
+}
 
 #[cfg(test)]
 mod tests {

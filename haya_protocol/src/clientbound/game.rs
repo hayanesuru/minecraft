@@ -10,7 +10,7 @@ use crate::crafting::{
 };
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::entity_data::EntityDataSerializer;
-use crate::item::OptionalItemStack;
+use crate::item_stack::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};

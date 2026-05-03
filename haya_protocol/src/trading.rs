@@ -1,4 +1,4 @@
-use crate::item::{DataComponentExactPredicate, ItemStack};
+use crate::item_stack::{DataComponentExactPredicate, ItemStack};
 use minecraft_data::item;
 
 #[derive(Clone, Serialize, Deserialize)]

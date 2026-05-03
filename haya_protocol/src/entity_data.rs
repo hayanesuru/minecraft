@@ -2,7 +2,7 @@ use crate::entity::{
     ArmadilloState, CopperGolemState, EntityReference, PaintingVariant, Pose, SnifferState,
     VillagerData,
 };
-use crate::item::OptionalItemStack;
+use crate::item_stack::OptionalItemStack;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef,

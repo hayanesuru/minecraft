@@ -1,8 +1,7 @@
-use crate::chat::{
-    LastSeenMessagesUpdate, MessageSignature, MessageSignaturePacked, RemoteChatSession,
-};
+use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
-use crate::{ContainerId, Difficulty, GameType, MilliSeconds};
+use crate::{ClickType, ContainerId, Difficulty, GameType, HashedStack, MilliSeconds};
+use haya_collection::Map;
 use haya_math::BlockPosPacked;
 use mser::Utf8;
 
@@ -116,4 +115,16 @@ pub struct ContainerButtonClick {
     pub container_id: ContainerId,
     #[mser(varint)]
     pub button_id: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerClick<'a> {
+    pub container_id: ContainerId,
+    #[mser(varint)]
+    pub state_id: u32,
+    pub slot_num: u16,
+    pub button_num: u8,
+    pub click_type: ClickType,
+    pub changed_slots: Map<'a, u16, Option<HashedStack<'a>>, 128>,
+    pub carried_item: Option<HashedStack<'a>>,
 }

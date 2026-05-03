@@ -1,7 +1,7 @@
 use crate::block::BannerPattern;
 use crate::chat::ChatType;
 use crate::entity::PaintingVariant;
-use crate::item::{Instrument, JukeboxSong};
+use crate::item_stack::{Instrument, JukeboxSong};
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
 use crate::{Dialog, Holder};

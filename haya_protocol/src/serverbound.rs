@@ -109,7 +109,7 @@ packets! {
     command_suggestion = game::CommandSuggestion<'_>,
     configuration_acknowledged = game::ConfigurationAcknowledged,
     container_button_click = game::ContainerButtonClick,
-    // container_click,
+    container_click = game::ContainerClick<'_>,
     // container_close,
     // container_slot_state_changed,
     // cookie_response,

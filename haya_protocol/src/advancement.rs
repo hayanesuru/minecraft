@@ -1,4 +1,4 @@
-use crate::item::{ItemStack, TypedDataComponent};
+use crate::item_stack::{ItemStack, TypedDataComponent};
 use crate::{Component, HolderSet, MilliSeconds, ResourceTexture};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
