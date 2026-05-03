@@ -122,7 +122,7 @@ packets! {
     keep_alive = common::GameKeepAlive,
     lock_difficulty = game::LockDifficulty,
     move_player_pos = game::MovePlayerPos,
-    // move_player_pos_rot,
+    move_player_pos_rot = game::MovePlayerPosRot,
     // move_player_rot,
     // move_player_status_only,
     // move_vehicle,

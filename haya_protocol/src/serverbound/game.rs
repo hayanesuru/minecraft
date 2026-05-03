@@ -212,13 +212,21 @@ pub struct LockDifficulty {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MovePlayerPos {
     pub pos: Vec3,
-    pub flags: MovePlayerPosFlags,
+    pub flags: MovePlayerFlags,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct MovePlayerPosFlags(pub u8);
+pub struct MovePlayerFlags(pub u8);
 
-impl MovePlayerPosFlags {
+impl MovePlayerFlags {
     pub const ON_GROUND: u8 = 1;
     pub const HORIZONTAL_COLLISION: u8 = 2;
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MovePlayerPosRot {
+    pub pos: Vec3,
+    pub y_rot: f32,
+    pub x_rot: f32,
+    pub flags: MovePlayerFlags,
 }
