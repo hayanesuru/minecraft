@@ -92,3 +92,6 @@ pub enum ClientCommandAction {
     PerformRespawn,
     RequestStats,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ClientTickEnd {}

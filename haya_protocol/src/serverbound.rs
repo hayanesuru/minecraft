@@ -104,7 +104,7 @@ packets! {
     chat_session_update = game::ChatSessionUpdate<'_>,
     chunk_batch_received = game::ChunkBatchReceived,
     client_command = game::ClientCommand,
-    // client_tick_end,
+    client_tick_end = game::ClientTickEnd,
     // client_information,
     // command_suggestion,
     // configuration_acknowledged,
