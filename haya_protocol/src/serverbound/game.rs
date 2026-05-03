@@ -11,6 +11,7 @@ use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
 use minecraft_data::{debug_subscription, mob_effect};
 use mser::{Rest, Utf8};
+use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AcceptTeleportation {
@@ -501,4 +502,9 @@ pub struct SignUpdate<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Swing {
     pub hand: InteractionHand,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TeleportToEntity {
+    pub uuid: Uuid,
 }
