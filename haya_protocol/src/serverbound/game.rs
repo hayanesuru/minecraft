@@ -128,3 +128,8 @@ pub struct ContainerClick<'a> {
     pub changed_slots: Map<'a, u16, Option<HashedStack<'a>>, 128>,
     pub carried_item: Option<HashedStack<'a>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerClose {
+    pub container_id: ContainerId,
+}
