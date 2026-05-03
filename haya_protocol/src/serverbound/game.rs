@@ -343,3 +343,6 @@ pub enum PlayerCommandAction {
 pub struct PlayerInput {
     pub input: Input,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerLoaded {}
