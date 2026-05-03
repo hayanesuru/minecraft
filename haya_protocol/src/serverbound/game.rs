@@ -2,7 +2,7 @@ use crate::chat::{
     LastSeenMessagesUpdate, MessageSignature, MessageSignaturePacked, RemoteChatSession,
 };
 use crate::command::ArgumentSignatures;
-use crate::{Difficulty, GameType, MilliSeconds};
+use crate::{ContainerId, Difficulty, GameType, MilliSeconds};
 use haya_math::BlockPosPacked;
 use mser::Utf8;
 
@@ -110,3 +110,10 @@ pub struct CommandSuggestion<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ConfigurationAcknowledged {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ContainerButtonClick {
+    pub container_id: ContainerId,
+    #[mser(varint)]
+    pub button_id: u32,
+}
