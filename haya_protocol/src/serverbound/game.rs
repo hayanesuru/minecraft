@@ -487,3 +487,13 @@ pub struct SetTestBlock<'a> {
     pub mode: TestBlockMode,
     pub message: Utf8<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SignUpdate<'a> {
+    pub pos: BlockPosPacked,
+    pub is_front_text: bool,
+    pub line1: Utf8<'a, 384>,
+    pub line2: Utf8<'a, 384>,
+    pub line3: Utf8<'a, 384>,
+    pub line4: Utf8<'a, 384>,
+}

@@ -151,7 +151,7 @@ packets! {
     set_jigsaw_block = game::SetJigsawBlock<'_>,
     set_structure_block = game::SetStructureBlock<'_>,
     set_test_block = game::SetTestBlock<'_>,
-    // sign_update,
+    sign_update = game::SignUpdate<'_>,
     // swing,
     // teleport_to_entity,
     // test_instance_block_action,
