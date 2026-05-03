@@ -4,6 +4,7 @@ use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{ClickType, Difficulty, GameType, HashedStack, Input, MilliSeconds};
 use haya_collection::{List, Map};
+use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
 use minecraft_data::debug_subscription;
 use mser::Utf8;
@@ -361,4 +362,24 @@ pub struct RecipeBookSeenRecipe {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RenameItem<'a> {
     pub name: Utf8<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SeenAdvancements<'a> {
+    pub action: SeenAdvancementsAction<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = SeenAdvancementsType, camel_case)]
+pub enum SeenAdvancementsAction<'a> {
+    OpenedTab { tab: Ident<'a> },
+    ClosedScreen,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum SeenAdvancementsType {
+    OpenedTab,
+    ClosedScreen,
 }

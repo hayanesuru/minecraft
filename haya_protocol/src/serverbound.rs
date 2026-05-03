@@ -141,7 +141,7 @@ packets! {
     recipe_book_seen_recipe = game::RecipeBookSeenRecipe,
     rename_item = game::RenameItem<'_>,
     resource_pack = common::GameResourcePack,
-    // seen_advancements,
+    seen_advancements = game::SeenAdvancements<'_>,
     // select_trade,
     // set_beacon,
     // set_carried_item,
