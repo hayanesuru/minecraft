@@ -131,7 +131,7 @@ packets! {
     pick_item_from_entity = game::PickItemFromEntity,
     ping_request = ping::GamePingRequest,
     place_recipe = game::PlaceRecipe,
-    // player_abilities,
+    player_abilities = game::PlayerAbilities,
     // player_action,
     // player_command,
     // player_input,

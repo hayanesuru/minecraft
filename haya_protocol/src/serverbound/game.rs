@@ -216,7 +216,7 @@ pub struct MovePlayerPos {
     pub flags: MovePlayerFlags,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct MovePlayerFlags(pub u8);
 
 impl MovePlayerFlags {
@@ -276,4 +276,20 @@ pub struct PlaceRecipe {
     pub container_id: ContainerId,
     pub recipe: RecipeDisplayId,
     pub use_max_items: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerAbilities {
+    pub flags: PlayerAbilitiesFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct PlayerAbilitiesFlags(pub u8);
+
+impl PlayerAbilitiesFlags {
+    pub const FLYING: u8 = 2;
+
+    pub const fn flying(self) -> bool {
+        self.0 & Self::FLYING != 0
+    }
 }
