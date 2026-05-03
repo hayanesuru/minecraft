@@ -150,7 +150,7 @@ packets! {
     set_creative_mode_slot = game::SetCreativeModeSlot<'_>,
     set_jigsaw_block = game::SetJigsawBlock<'_>,
     set_structure_block = game::SetStructureBlock<'_>,
-    // set_test_block,
+    set_test_block = game::SetTestBlock<'_>,
     // sign_update,
     // swing,
     // teleport_to_entity,

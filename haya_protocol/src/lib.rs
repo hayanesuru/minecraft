@@ -904,6 +904,27 @@ impl Rotation {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TestBlockMode {
+    Start,
+    Log,
+    Fail,
+    Accept,
+}
+
+impl TestBlockMode {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Start => "start",
+            Self::Log => "log",
+            Self::Fail => "fail",
+            Self::Accept => "accept",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

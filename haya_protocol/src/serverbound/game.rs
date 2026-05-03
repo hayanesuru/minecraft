@@ -4,7 +4,7 @@ use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
     ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, JointTypeName,
-    MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType,
+    MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType, TestBlockMode,
 };
 use haya_collection::{List, Map};
 use haya_ident::Ident;
@@ -479,4 +479,11 @@ impl SetStructureBlockFlags {
     pub const SHOW_AIR: u8 = 2;
     pub const SHOW_BOUNDING_BOX: u8 = 4;
     pub const STRICT: u8 = 8;
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetTestBlock<'a> {
+    pub position: BlockPosPacked,
+    pub mode: TestBlockMode,
+    pub message: Utf8<'a>,
 }
