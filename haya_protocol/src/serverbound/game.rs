@@ -95,3 +95,8 @@ pub enum ClientCommandAction {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ClientTickEnd {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ClientInformation<'a> {
+    pub information: crate::ClientInformation<'a>,
+}

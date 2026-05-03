@@ -105,7 +105,7 @@ packets! {
     chunk_batch_received = game::ChunkBatchReceived,
     client_command = game::ClientCommand,
     client_tick_end = game::ClientTickEnd,
-    // client_information,
+    client_information = game::ClientInformation<'_>,
     // command_suggestion,
     // configuration_acknowledged,
     // container_button_click,
