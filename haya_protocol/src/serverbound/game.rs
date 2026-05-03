@@ -100,3 +100,10 @@ pub struct ClientTickEnd {}
 pub struct ClientInformation<'a> {
     pub information: crate::ClientInformation<'a>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CommandSuggestion<'a> {
+    #[mser(varint)]
+    pub id: u32,
+    pub command: Utf8<'a, 32500>,
+}

@@ -106,7 +106,7 @@ packets! {
     client_command = game::ClientCommand,
     client_tick_end = game::ClientTickEnd,
     client_information = game::ClientInformation<'_>,
-    // command_suggestion,
+    command_suggestion = game::CommandSuggestion<'_>,
     // configuration_acknowledged,
     // container_button_click,
     // container_click,
