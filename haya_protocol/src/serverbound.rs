@@ -71,7 +71,7 @@ packets! {
     key = login::Key<'_>,
     custom_query_answer = login::CustomQueryAnswer<'_>,
     login_acknowledged = login::LoginAcknowledged,
-    cookie_response = cookie::CookieResponse<'_>,
+    cookie_response = cookie::LoginCookieResponse<'_>,
 }
 packets! {
     serverbound__configuration,
@@ -112,7 +112,7 @@ packets! {
     container_click = game::ContainerClick<'_>,
     container_close = game::ContainerClose,
     container_slot_state_changed = game::ContainerSlotStateChanged,
-    // cookie_response,
+    cookie_response = cookie::GameCookieResponse<'_>,
     // custom_payload,
     // debug_subscription_request,
     // edit_book,
