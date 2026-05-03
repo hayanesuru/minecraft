@@ -147,3 +147,11 @@ pub struct ContainerSlotStateChanged {
 pub struct DebugSubscriptionRequest<'a> {
     pub subscriptions: List<'a, debug_subscription>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EditBook<'a> {
+    #[mser(varint)]
+    pub slot: u32,
+    pub pages: List<'a, Utf8<'a, 1024>, 100>,
+    pub title: Option<Utf8<'a, 32>>,
+}
