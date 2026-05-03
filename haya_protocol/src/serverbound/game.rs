@@ -4,7 +4,7 @@ use crate::{
     ClickType, ContainerId, Difficulty, GameType, HashedStack, InteractionHand, MilliSeconds,
 };
 use haya_collection::{List, Map};
-use haya_math::{BlockPosPacked, FVec3};
+use haya_math::{BlockPosPacked, FVec3, Vec3};
 use minecraft_data::debug_subscription;
 use mser::Utf8;
 
@@ -207,4 +207,18 @@ pub struct JigsawGenerate {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LockDifficulty {
     pub locked: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MovePlayerPos {
+    pub pos: Vec3,
+    pub flags: MovePlayerPosFlags,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MovePlayerPosFlags(pub u8);
+
+impl MovePlayerPosFlags {
+    pub const ON_GROUND: u8 = 1;
+    pub const HORIZONTAL_COLLISION: u8 = 2;
 }
