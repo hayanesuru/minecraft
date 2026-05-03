@@ -23,6 +23,7 @@ use crate::entity::{
     ParrotVariant, RabbitVariant, SalmonVariant, TropicalFishPattern,
 };
 use crate::food::FoodProperties;
+use crate::inventory::EquipmentSlot;
 use crate::map::MapId;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
@@ -32,7 +33,7 @@ use crate::registry::{
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
-use crate::{Component, DyeColor, EquipmentSlot, Filterable, Holder, HolderSet, LockCode, Rarity};
+use crate::{Component, DyeColor, Filterable, Holder, HolderSet, LockCode, Rarity};
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, TagKey};

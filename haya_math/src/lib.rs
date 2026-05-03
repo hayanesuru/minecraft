@@ -567,7 +567,7 @@ pub struct ByteDirection(pub Direction);
 
 impl<'a> Read<'a> for ByteDirection {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        Ok(Self(match buf.read_byte() {
+        Ok(Self(match buf.read_byte()? {
             1 => Direction::Up,
             2 => Direction::North,
             3 => Direction::South,

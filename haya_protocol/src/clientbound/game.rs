@@ -10,6 +10,7 @@ use crate::crafting::{
 };
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
 use crate::entity_data::EntityDataSerializer;
+use crate::inventory::{ContainerId, EquipmentSlot, InteractionHand};
 use crate::item_stack::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
@@ -22,9 +23,8 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::waypoint::TrackedWaypoint;
 use crate::{
-    BitSet, ChatFormatting, Component, ContainerId, Difficulty, EntityAnchor, EquipmentSlot,
-    GameType, GlobalPos, HeightmapType, Holder, InteractionHand, OptionalGameType, Relatives,
-    RespawnData, V32List, WeightedList,
+    BitSet, ChatFormatting, Component, Difficulty, EntityAnchor, GameType, GlobalPos,
+    HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, V32List, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};

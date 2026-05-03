@@ -2,15 +2,14 @@ use crate::entity::{
     ArmadilloState, CopperGolemState, EntityReference, PaintingVariant, Pose, SnifferState,
     VillagerData,
 };
+use crate::inventory::HumanoidArm;
 use crate::item_stack::OptionalItemStack;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef,
     PigVariantRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
-use crate::{
-    Component, GlobalPos, Holder, HumanoidArm, OptionalV32, Rotations, WeatheringCopperState,
-};
+use crate::{Component, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
 use haya_collection::List;
 use haya_math::{BlockPosPacked, Direction, FQuat, FVec3};
 use minecraft_data::{block_state, particle_type};

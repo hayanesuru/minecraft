@@ -1,5 +1,6 @@
+use crate::Component;
 use crate::attribute::AttributeModifier;
-use crate::{Component, EquipmentSlotGroup};
+use crate::inventory::EquipmentSlotGroup;
 use haya_collection::List;
 use minecraft_data::attribute;
 use mser::{Error, Read, Reader, V21, Write, Writer};

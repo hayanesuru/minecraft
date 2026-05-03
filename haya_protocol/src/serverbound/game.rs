@@ -1,11 +1,10 @@
 use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
-use crate::{
-    ClickType, ContainerId, Difficulty, GameType, HashedStack, Input, InteractionHand, MilliSeconds,
-};
+use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
+use crate::{ClickType, Difficulty, GameType, HashedStack, Input, MilliSeconds};
 use haya_collection::{List, Map};
-use haya_math::{BlockPosPacked, ByteDirection, Direction, FVec3, Vec3};
+use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
 use minecraft_data::debug_subscription;
 use mser::Utf8;
 
@@ -346,3 +345,10 @@ pub struct PlayerInput {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerLoaded {}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookChangeSettings {
+    pub book_type: RecipeBookType,
+    pub is_open: bool,
+    pub is_filtering: bool,
+}
