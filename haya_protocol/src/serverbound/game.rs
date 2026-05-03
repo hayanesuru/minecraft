@@ -79,3 +79,16 @@ pub struct ChatSessionUpdate<'a> {
 pub struct ChunkBatchReceived {
     pub desired_chunks_per_tick: f32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ClientCommand {
+    pub action: ClientCommandAction,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum ClientCommandAction {
+    PerformRespawn,
+    RequestStats,
+}
