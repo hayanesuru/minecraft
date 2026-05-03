@@ -352,3 +352,8 @@ pub struct RecipeBookChangeSettings {
     pub is_open: bool,
     pub is_filtering: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RecipeBookSeenRecipe {
+    pub recipe: RecipeDisplayId,
+}

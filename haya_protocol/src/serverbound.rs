@@ -138,7 +138,7 @@ packets! {
     player_loaded = game::PlayerLoaded,
     pong = common::GamePong,
     recipe_book_change_settings = game::RecipeBookChangeSettings,
-    // recipe_book_seen_recipe,
+    recipe_book_seen_recipe = game::RecipeBookSeenRecipe,
     // rename_item,
     // resource_pack,
     // seen_advancements,
