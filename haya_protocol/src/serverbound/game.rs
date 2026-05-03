@@ -419,3 +419,11 @@ impl SetCommandBlockFlags {
     pub const CONDITIONAL: u8 = 2;
     pub const AUTOMATIC: u8 = 4;
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCommandMinecart<'a> {
+    #[mser(varint)]
+    pub entity: u32,
+    pub command: Utf8<'a>,
+    pub track_output: bool,
+}

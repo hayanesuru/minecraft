@@ -146,7 +146,7 @@ packets! {
     set_beacon = game::SetBeacon,
     set_carried_item = game::SetCarriedItem,
     set_command_block = game::SetCommandBlock<'_>,
-    // set_command_minecart,
+    set_command_minecart = game::SetCommandMinecart<'_>,
     // set_creative_mode_slot,
     // set_jigsaw_block,
     // set_structure_block,
