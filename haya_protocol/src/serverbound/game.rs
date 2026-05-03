@@ -383,3 +383,9 @@ pub enum SeenAdvancementsType {
     OpenedTab,
     ClosedScreen,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SelectTrade {
+    #[mser(varint)]
+    pub item: u32,
+}

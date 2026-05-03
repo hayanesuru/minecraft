@@ -142,7 +142,7 @@ packets! {
     rename_item = game::RenameItem<'_>,
     resource_pack = common::GameResourcePack,
     seen_advancements = game::SeenAdvancements<'_>,
-    // select_trade,
+    select_trade = game::SelectTrade,
     // set_beacon,
     // set_carried_item,
     // set_command_block,
