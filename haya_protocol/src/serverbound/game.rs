@@ -1,5 +1,6 @@
 use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
+use crate::crafting::RecipeDisplayId;
 use crate::{
     ClickType, ContainerId, Difficulty, GameType, HashedStack, InteractionHand, MilliSeconds,
 };
@@ -268,4 +269,11 @@ pub struct PickItemFromEntity {
     #[mser(varint)]
     pub id: u32,
     pub include_data: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlaceRecipe {
+    pub container_id: ContainerId,
+    pub recipe: RecipeDisplayId,
+    pub use_max_items: bool,
 }
