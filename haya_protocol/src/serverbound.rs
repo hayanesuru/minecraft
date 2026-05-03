@@ -101,7 +101,7 @@ packets! {
     chat_command = game::ChatCommand<'_>,
     chat_command_signed = game::ChatCommandSigned<'_>,
     chat = game::Chat<'_>,
-    // chat_session_update,
+    chat_session_update = game::ChatSessionUpdate<'_>,
     // chunk_batch_received,
     // client_command,
     // client_tick_end,

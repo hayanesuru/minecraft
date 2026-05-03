@@ -1,4 +1,6 @@
-use crate::chat::{LastSeenMessagesUpdate, MessageSignature, MessageSignaturePacked};
+use crate::chat::{
+    LastSeenMessagesUpdate, MessageSignature, MessageSignaturePacked, RemoteChatSession,
+};
 use crate::command::ArgumentSignatures;
 use crate::{Difficulty, GameType, MilliSeconds};
 use haya_math::BlockPosPacked;
@@ -66,4 +68,9 @@ pub struct Chat<'a> {
     pub salt: u64,
     pub signature: Option<MessageSignature<'a>>,
     pub last_seen_messages: LastSeenMessagesUpdate<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatSessionUpdate<'a> {
+    pub chat_session: RemoteChatSession<'a>,
 }
