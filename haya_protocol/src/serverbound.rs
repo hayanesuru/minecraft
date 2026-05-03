@@ -61,7 +61,7 @@ packets! {
     StatusHandler,
     handle,
     status_request = status::StatusRequest,
-    ping_request = ping::PingRequest,
+    ping_request = ping::StatusPingRequest,
 }
 packets! {
     serverbound__login,
@@ -129,7 +129,7 @@ packets! {
     paddle_boat = game::PaddleBoat,
     pick_item_from_block = game::PickItemFromBlock,
     pick_item_from_entity = game::PickItemFromEntity,
-    // ping_request,
+    ping_request = ping::GamePingRequest,
     // place_recipe,
     // player_abilities,
     // player_action,
