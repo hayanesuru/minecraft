@@ -242,3 +242,11 @@ pub struct MovePlayerRot {
 pub struct MovePlayerStatusOnly {
     pub flags: MovePlayerFlags,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MoveVehicle {
+    pub position: Vec3,
+    pub y_rot: f32,
+    pub x_rot: f32,
+    pub on_ground: bool,
+}
