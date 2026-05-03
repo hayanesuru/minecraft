@@ -149,7 +149,7 @@ packets! {
     set_command_minecart = game::SetCommandMinecart<'_>,
     set_creative_mode_slot = game::SetCreativeModeSlot<'_>,
     set_jigsaw_block = game::SetJigsawBlock<'_>,
-    // set_structure_block,
+    set_structure_block = game::SetStructureBlock<'_>,
     // set_test_block,
     // sign_update,
     // swing,

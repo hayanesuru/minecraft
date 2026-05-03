@@ -833,6 +833,77 @@ impl JointType {
     }
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum StructureUpdateType {
+    UpdateData,
+    SaveArea,
+    LoadArea,
+    ScanArea,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum StructureMode {
+    Save,
+    Load,
+    Corner,
+    Data,
+}
+
+impl StructureMode {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Save => "save",
+            Self::Load => "load",
+            Self::Corner => "corner",
+            Self::Data => "data",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum Mirror {
+    None,
+    LeftRight,
+    FrontBack,
+}
+
+impl Mirror {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::LeftRight => "left_right",
+            Self::FrontBack => "front_back",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum Rotation {
+    None,
+    Clockwise90,
+    Clockwise180,
+    Counterclockwise90,
+}
+
+impl Rotation {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Clockwise90 => "clockwise_90",
+            Self::Clockwise180 => "180",
+            Self::Counterclockwise90 => "counterclockwise_90",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

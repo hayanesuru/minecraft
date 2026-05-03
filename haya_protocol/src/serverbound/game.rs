@@ -4,7 +4,7 @@ use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
     ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, JointTypeName,
-    MilliSeconds,
+    MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType,
 };
 use haya_collection::{List, Map};
 use haya_ident::Ident;
@@ -448,4 +448,35 @@ pub struct SetJigsawBlock<'a> {
     pub selection_priority: u32,
     #[mser(varint)]
     pub placement_priority: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetStructureBlock<'a> {
+    pub pos: BlockPosPacked,
+    pub update_type: StructureUpdateType,
+    pub mode: StructureMode,
+    pub name: Utf8<'a>,
+    pub offset_x: i8,
+    pub offset_y: i8,
+    pub offset_z: i8,
+    pub size_x: i8,
+    pub size_y: i8,
+    pub size_z: i8,
+    pub mirror: Mirror,
+    pub rotation: Rotation,
+    pub data: Utf8<'a, 128>,
+    pub integrity: f32,
+    #[mser(varint)]
+    pub seed: u64,
+    pub flags: SetStructureBlockFlags,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct SetStructureBlockFlags(pub u8);
+
+impl SetStructureBlockFlags {
+    pub const IGNORE_ENTITIES: u8 = 1;
+    pub const SHOW_AIR: u8 = 2;
+    pub const SHOW_BOUNDING_BOX: u8 = 4;
+    pub const STRICT: u8 = 8;
 }
