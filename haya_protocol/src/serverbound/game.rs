@@ -1,8 +1,9 @@
 use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::{ClickType, ContainerId, Difficulty, GameType, HashedStack, MilliSeconds};
-use haya_collection::Map;
+use haya_collection::{List, Map};
 use haya_math::BlockPosPacked;
+use minecraft_data::debug_subscription;
 use mser::Utf8;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -140,4 +141,9 @@ pub struct ContainerSlotStateChanged {
     pub slot_id: u32,
     pub container_id: ContainerId,
     pub new_state: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DebugSubscriptionRequest<'a> {
+    pub subscriptions: List<'a, debug_subscription>,
 }

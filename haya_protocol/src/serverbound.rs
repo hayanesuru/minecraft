@@ -114,7 +114,7 @@ packets! {
     container_slot_state_changed = game::ContainerSlotStateChanged,
     cookie_response = cookie::GameCookieResponse<'_>,
     custom_payload = common::GameCustomPayload<'_>,
-    // debug_subscription_request,
+    debug_subscription_request = game::DebugSubscriptionRequest<'_>,
     // edit_book,
     // entity_tag_query,
     // interact,
