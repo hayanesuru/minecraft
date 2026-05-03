@@ -203,3 +203,8 @@ pub struct JigsawGenerate {
     pub levels: u32,
     pub keep_jigsaws: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LockDifficulty {
+    pub locked: bool,
+}

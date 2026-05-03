@@ -120,7 +120,7 @@ packets! {
     interact = game::Interact,
     jigsaw_generate = game::JigsawGenerate,
     keep_alive = common::GameKeepAlive,
-    // lock_difficulty,
+    lock_difficulty = game::LockDifficulty,
     // move_player_pos,
     // move_player_pos_rot,
     // move_player_rot,
