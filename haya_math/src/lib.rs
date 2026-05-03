@@ -325,8 +325,8 @@ impl From<Vec3> for LpVec3 {
 pub struct ByteAngle(pub u8);
 
 impl ByteAngle {
-    pub fn new(f: f32) -> ByteAngle {
-        ByteAngle(libm::floorf(f * 256.0 / 360.0) as u8)
+    pub fn new(f: f32) -> Self {
+        Self(libm::floorf(f * 256.0 / 360.0) as u8)
     }
 
     pub fn to_degrees(self) -> f32 {
@@ -560,6 +560,32 @@ pub enum Direction {
     West,
     /// X
     East,
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct ByteDirection(pub Direction);
+
+impl<'a> Read<'a> for ByteDirection {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self(match buf.read_byte() {
+            1 => Direction::Up,
+            2 => Direction::North,
+            3 => Direction::South,
+            4 => Direction::West,
+            5 => Direction::East,
+            _ => Direction::Down,
+        }))
+    }
+}
+
+impl Write for ByteDirection {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe { w.write_byte(self.0 as u8) }
+    }
+
+    fn len_s(&self) -> usize {
+        1
+    }
 }
 
 impl<'a> Read<'a> for Direction {

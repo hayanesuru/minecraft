@@ -5,7 +5,7 @@ use crate::{
     ClickType, ContainerId, Difficulty, GameType, HashedStack, InteractionHand, MilliSeconds,
 };
 use haya_collection::{List, Map};
-use haya_math::{BlockPosPacked, FVec3, Vec3};
+use haya_math::{BlockPosPacked, ByteDirection, Direction, FVec3, Vec3};
 use minecraft_data::debug_subscription;
 use mser::Utf8;
 
@@ -292,4 +292,27 @@ impl PlayerAbilitiesFlags {
     pub const fn flying(self) -> bool {
         self.0 & Self::FLYING != 0
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerAction {
+    pub action: PlayerActionType,
+    pub pos: BlockPosPacked,
+    pub direction: ByteDirection,
+    #[mser(varint)]
+    pub sequence: u32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum PlayerActionType {
+    StartDestroyBlock,
+    AbortDestroyBlock,
+    StopDestroyBlock,
+    DropAllItems,
+    DropItem,
+    ReleaseUseItem,
+    SwapItemWithOffhand,
+    Stab,
 }

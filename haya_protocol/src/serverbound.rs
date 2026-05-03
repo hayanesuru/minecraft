@@ -132,7 +132,7 @@ packets! {
     ping_request = ping::GamePingRequest,
     place_recipe = game::PlaceRecipe,
     player_abilities = game::PlayerAbilities,
-    // player_action,
+    player_action = game::PlayerAction,
     // player_command,
     // player_input,
     // player_loaded,
