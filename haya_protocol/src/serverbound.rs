@@ -116,7 +116,7 @@ packets! {
     custom_payload = common::GameCustomPayload<'_>,
     debug_subscription_request = game::DebugSubscriptionRequest<'_>,
     edit_book = game::EditBook<'_>,
-    // entity_tag_query,
+    entity_tag_query = game::EntityTagQuery,
     // interact,
     // jigsaw_generate,
     // keep_alive,

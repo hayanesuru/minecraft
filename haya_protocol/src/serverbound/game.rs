@@ -155,3 +155,11 @@ pub struct EditBook<'a> {
     pub pages: List<'a, Utf8<'a, 1024>, 100>,
     pub title: Option<Utf8<'a, 32>>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct EntityTagQuery {
+    #[mser(varint)]
+    pub transaction_id: u32,
+    #[mser(varint)]
+    pub entity_id: u32,
+}
