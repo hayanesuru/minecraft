@@ -256,3 +256,9 @@ pub struct PaddleBoat {
     pub left: bool,
     pub right: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PickItemFromBlock {
+    pub pos: BlockPosPacked,
+    pub include_data: bool,
+}
