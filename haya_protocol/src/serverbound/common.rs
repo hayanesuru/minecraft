@@ -8,6 +8,12 @@ use uuid::Uuid;
 pub struct ConfigurationClientInformation<'a>(pub ClientInformation<'a>);
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationCustomPayload<'a>(pub CustomPayload<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameCustomPayload<'a>(pub CustomPayload<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CustomPayload<'a> {
     pub id: Ident<'a>,
     pub payload: Rest<'a, 32767>,
