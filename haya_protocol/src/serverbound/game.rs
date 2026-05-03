@@ -2,7 +2,7 @@ use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::{
-    ClickType, ContainerId, Difficulty, GameType, HashedStack, InteractionHand, MilliSeconds,
+    ClickType, ContainerId, Difficulty, GameType, HashedStack, Input, InteractionHand, MilliSeconds,
 };
 use haya_collection::{List, Map};
 use haya_math::{BlockPosPacked, ByteDirection, Direction, FVec3, Vec3};
@@ -337,4 +337,9 @@ pub enum PlayerCommandAction {
     StopRidingJump,
     OpenInventory,
     StartFallFlying,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PlayerInput {
+    pub input: Input,
 }

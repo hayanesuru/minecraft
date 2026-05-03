@@ -872,6 +872,19 @@ pub struct HashedStack<'a> {
     pub components: HashedPatchMap<'a>,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct Input(pub u8);
+
+impl Input {
+    pub const FORWARD: u8 = 1;
+    pub const BACKWARD: u8 = 2;
+    pub const LEFT: u8 = 4;
+    pub const RIGHT: u8 = 8;
+    pub const JUMP: u8 = 16;
+    pub const SHIFT: u8 = 32;
+    pub const SPRINT: u8 = 64;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

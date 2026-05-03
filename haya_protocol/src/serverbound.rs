@@ -134,7 +134,7 @@ packets! {
     player_abilities = game::PlayerAbilities,
     player_action = game::PlayerAction,
     player_command = game::PlayerCommand,
-    // player_input,
+    player_input = game::PlayerInput,
     // player_loaded,
     // pong,
     // recipe_book_change_settings,
