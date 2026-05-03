@@ -107,7 +107,7 @@ packets! {
     client_tick_end = game::ClientTickEnd,
     client_information = game::ClientInformation<'_>,
     command_suggestion = game::CommandSuggestion<'_>,
-    // configuration_acknowledged,
+    configuration_acknowledged = game::ConfigurationAcknowledged,
     // container_button_click,
     // container_click,
     // container_close,

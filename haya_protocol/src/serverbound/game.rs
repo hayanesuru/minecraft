@@ -107,3 +107,6 @@ pub struct CommandSuggestion<'a> {
     pub id: u32,
     pub command: Utf8<'a, 32500>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationAcknowledged {}
