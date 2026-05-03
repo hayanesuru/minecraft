@@ -145,7 +145,7 @@ packets! {
     select_trade = game::SelectTrade,
     set_beacon = game::SetBeacon,
     set_carried_item = game::SetCarriedItem,
-    // set_command_block,
+    set_command_block = game::SetCommandBlock<'_>,
     // set_command_minecart,
     // set_creative_mode_slot,
     // set_jigsaw_block,

@@ -780,6 +780,15 @@ impl Input {
     pub const SPRINT: u8 = 64;
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum CommandBlockEntityMode {
+    Sequence,
+    Auto,
+    Redstone,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

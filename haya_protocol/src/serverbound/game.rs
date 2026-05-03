@@ -2,7 +2,9 @@ use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
-use crate::{ClickType, Difficulty, GameType, HashedStack, Input, MilliSeconds};
+use crate::{
+    ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, MilliSeconds,
+};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
@@ -399,4 +401,21 @@ pub struct SetBeacon {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetCarriedItem {
     pub slot: u16,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCommandBlock<'a> {
+    pub pos: BlockPosPacked,
+    pub command: Utf8<'a>,
+    pub mode: CommandBlockEntityMode,
+    pub flags: SetCommandBlockFlags,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetCommandBlockFlags(pub u8);
+
+impl SetCommandBlockFlags {
+    pub const TRACK_OUTPUT: u8 = 1;
+    pub const CONDITIONAL: u8 = 2;
+    pub const AUTOMATIC: u8 = 4;
 }
