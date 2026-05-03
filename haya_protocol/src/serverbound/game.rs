@@ -6,7 +6,7 @@ use crate::{ClickType, Difficulty, GameType, HashedStack, Input, MilliSeconds};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
-use minecraft_data::debug_subscription;
+use minecraft_data::{debug_subscription, mob_effect};
 use mser::Utf8;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -388,4 +388,10 @@ pub enum SeenAdvancementsType {
 pub struct SelectTrade {
     #[mser(varint)]
     pub item: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetBeacon {
+    pub primary: Option<mob_effect>,
+    pub secondary: Option<mob_effect>,
 }

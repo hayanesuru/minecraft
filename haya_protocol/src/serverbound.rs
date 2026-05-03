@@ -143,7 +143,7 @@ packets! {
     resource_pack = common::GameResourcePack,
     seen_advancements = game::SeenAdvancements<'_>,
     select_trade = game::SelectTrade,
-    // set_beacon,
+    set_beacon = game::SetBeacon,
     // set_carried_item,
     // set_command_block,
     // set_command_minecart,
