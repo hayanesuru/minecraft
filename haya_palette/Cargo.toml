@@ -10,3 +10,5 @@ edition.workspace = true
 [dependencies]
 mser = { workspace = true }
 minecraft_data = { workspace = true }
+
+hashbrown = { version = "0", default-features = false }

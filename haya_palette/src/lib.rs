@@ -4,17 +4,14 @@ mod chunk;
 
 extern crate alloc;
 
-pub use self::chunk::{
-    ChunkCache, Direct, Indirect2, Indirect4, Int64Map, IntoIter, Iter, IterMut, Keys, Values,
-    ValuesMut,
-};
+pub use self::chunk::{ChunkCache, Direct, Indirect2, Indirect4};
 use alloc::alloc::{alloc, alloc_zeroed, dealloc, handle_alloc_error};
 use core::alloc::Layout;
 use core::array::from_fn;
 use core::mem::{align_of, size_of};
 use core::ptr::NonNull;
 use core::slice::from_raw_parts;
-use minecraft_data::block_state;
+use minecraft_data::{block, block_state};
 use mser::{Error, Read, Reader, V21, V32, Write, Writer};
 
 pub trait Palette: Copy {
@@ -23,6 +20,7 @@ pub trait Palette: Copy {
     /// `value` must be a valid id.
     unsafe fn from_id(value: u32) -> Self;
     fn to_id(self) -> u32;
+    fn default() -> Self;
 }
 
 impl Palette for block_state {
@@ -33,6 +31,10 @@ impl Palette for block_state {
     fn to_id(self) -> u32 {
         self.id() as u32
     }
+
+    fn default() -> Self {
+        block::void_air.state_default()
+    }
 }
 
 impl Palette for Biome {
@@ -42,6 +44,10 @@ impl Palette for Biome {
 
     fn to_id(self) -> u32 {
         self as u32
+    }
+
+    fn default() -> Self {
+        Biome::TheVoid
     }
 }
 
