@@ -11,7 +11,7 @@ use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
 use minecraft_data::{debug_subscription, mob_effect};
-use mser::{Rest, Utf8};
+use mser::{ByteArray, Rest, Utf8};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -545,4 +545,10 @@ pub struct UseItem {
     pub sequence: u32,
     pub y_rot: f32,
     pub x_rot: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CustomClickAction<'a> {
+    pub id: Ident<'a>,
+    pub payload: ByteArray<'a, 65536>,
 }

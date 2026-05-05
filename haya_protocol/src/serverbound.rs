@@ -157,5 +157,5 @@ packets! {
     test_instance_block_action = game::TestInstanceBlockAction<'_>,
     use_item_on = game::UseItemOn,
     use_item = game::UseItem,
-    // custom_click_action,
+    custom_click_action = game::CustomClickAction<'_>,
 }
