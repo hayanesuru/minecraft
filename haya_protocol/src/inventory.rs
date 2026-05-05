@@ -10,10 +10,7 @@ pub enum HumanoidArm {
 
 impl HumanoidArm {
     pub const fn translation_key(self) -> Translatable<'static> {
-        Translatable(match self {
-            Self::Left => "options.mainHand.left",
-            Self::Right => "options.mainHand.right",
-        })
+        Translatable("options.mainHand.", self.name())
     }
 
     pub const fn name(self) -> &'static str {

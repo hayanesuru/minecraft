@@ -33,12 +33,6 @@ impl Shape {
     }
 
     pub const fn translation_key(self) -> Translatable<'static> {
-        Translatable(match self {
-            Self::SmallBall => "item.minecraft.firework_star.shape.small_ball",
-            Self::LargeBall => "item.minecraft.firework_star.shape.large_ball",
-            Self::Star => "item.minecraft.firework_star.shape.star",
-            Self::Creeper => "item.minecraft.firework_star.shape.creeper",
-            Self::Burst => "item.minecraft.firework_star.shape.burst",
-        })
+        Translatable("item.minecraft.firework_star.shape.", self.name())
     }
 }

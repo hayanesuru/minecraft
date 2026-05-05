@@ -47,7 +47,7 @@ extern crate mser_macro;
 extern crate alloc;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Translatable<'a>(pub &'a str);
+pub struct Translatable<'a>(pub &'a str, pub &'a str);
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]
@@ -122,19 +122,23 @@ pub enum KnownLinkType {
 }
 
 impl KnownLinkType {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::ReportBug => "report_bug",
+            Self::CommunityGuidelines => "community_guidelines",
+            Self::Support => "support",
+            Self::Status => "status",
+            Self::Feedback => "feedback",
+            Self::Community => "community",
+            Self::Website => "website",
+            Self::Forums => "forums",
+            Self::News => "news",
+            Self::Announcements => "announcements",
+        }
+    }
+
     pub const fn translation_key(self) -> Translatable<'static> {
-        Translatable(match self {
-            Self::ReportBug => "known_server_link.report_bug",
-            Self::CommunityGuidelines => "known_server_link.community_guidelines",
-            Self::Support => "known_server_link.support",
-            Self::Status => "known_server_link.status",
-            Self::Feedback => "known_server_link.feedback",
-            Self::Community => "known_server_link.community",
-            Self::Website => "known_server_link.website",
-            Self::Forums => "known_server_link.forums",
-            Self::News => "known_server_link.news",
-            Self::Announcements => "known_server_link.announcements",
-        })
+        Translatable("known_server_link.", self.name())
     }
 }
 
@@ -161,12 +165,16 @@ pub enum ChatVisibility {
 }
 
 impl ChatVisibility {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Full => "full",
+            Self::System => "system",
+            Self::Hidden => "hidden",
+        }
+    }
+
     pub const fn translation_key(self) -> Translatable<'static> {
-        Translatable(match self {
-            Self::Full => "options.chat.visibility.full",
-            Self::System => "options.chat.visibility.system",
-            Self::Hidden => "options.chat.visibility.hidden",
-        })
+        Translatable("options.chat.visibility.", self.name())
     }
 }
 
@@ -180,12 +188,16 @@ pub enum ParticleStatus {
 }
 
 impl ParticleStatus {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::Decreased => "decreased",
+            Self::Minimal => "minimal",
+        }
+    }
+
     pub const fn translation_key(self) -> Translatable<'static> {
-        Translatable(match self {
-            Self::All => "options.particles.all",
-            Self::Decreased => "options.particles.decreased",
-            Self::Minimal => "options.particles.minimal",
-        })
+        Translatable("options.particles.", self.name())
     }
 }
 
@@ -210,12 +222,7 @@ impl Difficulty {
     }
 
     pub const fn translation_key(self) -> Translatable<'static> {
-        Translatable(match self {
-            Self::Peaceful => "options.difficulty.peaceful",
-            Self::Easy => "options.difficulty.easy",
-            Self::Normal => "options.difficulty.normal",
-            Self::Hard => "options.difficulty.hard",
-        })
+        Translatable("options.difficulty.", self.name())
     }
 
     pub const fn parse(n: &[u8]) -> Option<Self> {
