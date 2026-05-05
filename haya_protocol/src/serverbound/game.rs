@@ -5,6 +5,7 @@ use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
     ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, JointTypeName,
     MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType, TestBlockMode,
+    TestInstanceData,
 };
 use haya_collection::{List, Map};
 use haya_ident::Ident;
@@ -507,4 +508,24 @@ pub struct Swing {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TeleportToEntity {
     pub uuid: Uuid,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TestInstanceBlockAction<'a> {
+    pub pos: BlockPosPacked,
+    pub action: TestInstanceBlockActionType,
+    pub data: TestInstanceData<'a>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TestInstanceBlockActionType {
+    Init,
+    Query,
+    Set,
+    Reset,
+    Save,
+    Export,
+    Run,
 }

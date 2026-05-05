@@ -4,7 +4,7 @@ use crate::inventory::HumanoidArm;
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
-use haya_math::BlockPosPacked;
+use haya_math::{BlockPosPacked, IVec3};
 use haya_nbt::Tag;
 use minecraft_data::data_component_type;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -925,6 +925,34 @@ impl TestBlockMode {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct TestInstanceData<'a> {
+    pub test: Option<ResourceKey<'a>>,
+    pub size: IVec3,
+    pub rotation: Rotation,
+    pub ignore_entities: bool,
+    pub status: TestInstanceStatus,
+    pub error_message: Option<Component>,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TestInstanceStatus {
+    Cleared,
+    Running,
+    Finished,
+}
+
+impl TestInstanceStatus {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Cleared => "cleared",
+            Self::Running => "running",
+            Self::Finished => "finished",
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
