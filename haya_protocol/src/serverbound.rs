@@ -39,8 +39,6 @@ macro_rules! packets {
                             self.$variant(e);
                         }
                     )+
-                    #[allow(unreachable_patterns)]
-                    _ => todo!(),
                 }
                 Ok(())
             }
