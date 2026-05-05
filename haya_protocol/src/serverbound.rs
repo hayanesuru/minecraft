@@ -156,6 +156,6 @@ packets! {
     teleport_to_entity = game::TeleportToEntity,
     test_instance_block_action = game::TestInstanceBlockAction<'_>,
     use_item_on = game::UseItemOn,
-    // use_item,
+    use_item = game::UseItem,
     // custom_click_action,
 }

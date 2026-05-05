@@ -537,3 +537,12 @@ pub struct UseItemOn {
     #[mser(varint)]
     pub sequence: u32,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UseItem {
+    pub hand: InteractionHand,
+    #[mser(varint)]
+    pub sequence: u32,
+    pub y_rot: f32,
+    pub x_rot: f32,
+}
