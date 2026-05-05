@@ -155,7 +155,7 @@ packets! {
     swing = game::Swing,
     teleport_to_entity = game::TeleportToEntity,
     test_instance_block_action = game::TestInstanceBlockAction<'_>,
-    // use_item_on,
+    use_item_on = game::UseItemOn,
     // use_item,
     // custom_click_action,
 }

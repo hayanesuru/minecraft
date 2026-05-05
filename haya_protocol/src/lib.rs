@@ -4,7 +4,7 @@ use crate::inventory::HumanoidArm;
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
-use haya_math::{BlockPosPacked, IVec3};
+use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
 use haya_nbt::Tag;
 use minecraft_data::data_component_type;
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
@@ -953,6 +953,16 @@ impl TestInstanceStatus {
         }
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BlockHitResult {
+    pub block_pos: BlockPosPacked,
+    pub face: Direction,
+    pub click: FVec3,
+    pub inside: bool,
+    pub world_border_hit: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

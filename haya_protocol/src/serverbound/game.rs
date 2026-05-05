@@ -3,9 +3,9 @@ use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
-    ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input, JointTypeName,
-    MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType, TestBlockMode,
-    TestInstanceData,
+    BlockHitResult, ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input,
+    JointTypeName, MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType,
+    TestBlockMode, TestInstanceData,
 };
 use haya_collection::{List, Map};
 use haya_ident::Ident;
@@ -528,4 +528,12 @@ pub enum TestInstanceBlockActionType {
     Save,
     Export,
     Run,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UseItemOn {
+    pub hand: InteractionHand,
+    pub block_hit: BlockHitResult,
+    #[mser(varint)]
+    pub sequence: u32,
 }
