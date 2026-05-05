@@ -2,6 +2,7 @@
 
 use crate::inventory::HumanoidArm;
 use alloc::vec::Vec;
+use core::str::FromStr;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
@@ -224,15 +225,19 @@ impl Difficulty {
     pub const fn translation_key(self) -> Translatable<'static> {
         Translatable("options.difficulty.", self.name())
     }
+}
 
-    pub const fn parse(n: &[u8]) -> Option<Self> {
-        match n {
-            b"peaceful" => Some(Self::Peaceful),
-            b"easy" => Some(Self::Easy),
-            b"normal" => Some(Self::Normal),
-            b"hard" => Some(Self::Hard),
-            _ => None,
-        }
+// todo
+impl FromStr for Difficulty {
+    type Err = Error;
+    fn from_str(n: &str) -> Result<Self, Self::Err> {
+        Ok(match n {
+            "peaceful" => Self::Peaceful,
+            "easy" => Self::Easy,
+            "normal" => Self::Normal,
+            "hard" => Self::Hard,
+            _ => return Err(Error),
+        })
     }
 }
 

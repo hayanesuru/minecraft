@@ -1,5 +1,8 @@
 #![no_std]
 
+use core::str::FromStr;
+use mser::Error;
+
 extern crate alloc;
 
 pub mod json;
@@ -166,26 +169,31 @@ impl TextColorNamed {
             Self::White => "white",
         }
     }
+}
 
-    pub const fn parse(n: &[u8]) -> Option<Self> {
-        Some(match n {
-            b"black" => Self::Black,
-            b"dark_blue" => Self::DarkBlue,
-            b"dark_green" => Self::DarkGreen,
-            b"dark_aqua" => Self::DarkAqua,
-            b"dark_red" => Self::DarkRed,
-            b"dark_purple" => Self::DarkPurple,
-            b"gold" => Self::Gold,
-            b"gray" => Self::Gray,
-            b"dark_gray" => Self::DarkGray,
-            b"blue" => Self::Blue,
-            b"green" => Self::Green,
-            b"aqua" => Self::Aqua,
-            b"red" => Self::Red,
-            b"light_purple" => Self::LightPurple,
-            b"yellow" => Self::Yellow,
-            b"white" => Self::White,
-            _ => return None,
+// todo
+impl FromStr for TextColorNamed {
+    type Err = Error;
+
+    fn from_str(n: &str) -> Result<Self, Self::Err> {
+        Ok(match n {
+            "black" => Self::Black,
+            "dark_blue" => Self::DarkBlue,
+            "dark_green" => Self::DarkGreen,
+            "dark_aqua" => Self::DarkAqua,
+            "dark_red" => Self::DarkRed,
+            "dark_purple" => Self::DarkPurple,
+            "gold" => Self::Gold,
+            "gray" => Self::Gray,
+            "dark_gray" => Self::DarkGray,
+            "blue" => Self::Blue,
+            "green" => Self::Green,
+            "aqua" => Self::Aqua,
+            "red" => Self::Red,
+            "light_purple" => Self::LightPurple,
+            "yellow" => Self::Yellow,
+            "white" => Self::White,
+            _ => return Err(Error),
         })
     }
 }

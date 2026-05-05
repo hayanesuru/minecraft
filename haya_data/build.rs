@@ -1338,19 +1338,6 @@ fn impl_name(w: &mut String, g: &mut GenerateHash, repr: Repr, names: &[&str], n
     *w += "impl ";
     *w += name;
     *w += " {\n";
-    let state = g.generate_hash(names);
-    list_ty(w, "DISPS", Repr::U64, state.disps.len());
-    list(
-        w,
-        state
-            .disps
-            .iter()
-            .map(|&(h, l)| ((h as u64) << 32) | l as u64),
-    );
-    *w += ";\n";
-    list_ty(w, "VALS", repr, state.map.len());
-    list(w, state.map.iter().map(|&ele| ele.unwrap()));
-    *w += ";\n";
     *w += "const N: &[&str; ";
     *w += ib.format(names.len());
     *w += "] = &[\n";
@@ -1367,38 +1354,74 @@ unsafe {
 *Self::N.as_ptr().add(self as usize)
 }
 }
-#[inline]
-#[must_use]
-pub fn parse(name: &[u8]) -> ::core::option::Option<Self> {\n";
-    match repr {
-        Repr::U8 => {
-            *w += "match crate::name_u8::<";
-            *w += ib.format(state.key);
-            *w += ", ";
-            *w += ib.format(state.disps.len());
-            *w += ", ";
-            *w += ib.format(names.len());
-        }
-        Repr::U16 => {
-            *w += "match crate::name_u16::<";
-            *w += ib.format(state.key);
-            *w += ", ";
-            *w += ib.format(state.disps.len());
-            *w += ", ";
-            *w += ib.format(names.len());
-        }
-        _ => unimplemented!(),
-    }
-
-    *w += ">(Self::DISPS, Self::N.as_ptr(), Self::VALS, name) {\n";
-    *w += "::core::option::Option::Some(x) => unsafe { ::core::option::Option::Some(::core::mem::transmute::<";
-    *w += repr.to_int();
-    *w += ", Self>(x)) },
-::core::option::Option::None => ::core::option::Option::None,
-}
-}
 ";
+
+    let state = if names.len() <= 8 {
+        None
+    } else {
+        let state = g.generate_hash(names);
+        list_ty(w, "DISPS", Repr::U64, state.disps.len());
+        list(
+            w,
+            state
+                .disps
+                .iter()
+                .map(|&(h, l)| ((h as u64) << 32) | l as u64),
+        );
+        *w += ";\n";
+        list_ty(w, "VALS", repr, state.map.len());
+        list(w, state.map.iter().map(|&ele| ele.unwrap()));
+        *w += ";\n";
+        Some(state)
+    };
     *w += "}\n";
+    *w += "impl ::core::str::FromStr for ";
+    *w += name;
+    *w += " {
+type Err = ::mser::Error;
+fn from_str(n: &str) -> Result<Self, Self::Err> {
+";
+    if let Some(state) = state {
+        match repr {
+            Repr::U8 => {
+                *w += "match crate::name_u8::<";
+                *w += ib.format(state.key);
+                *w += ", ";
+                *w += ib.format(state.disps.len());
+                *w += ", ";
+                *w += ib.format(names.len());
+            }
+            Repr::U16 => {
+                *w += "match crate::name_u16::<";
+                *w += ib.format(state.key);
+                *w += ", ";
+                *w += ib.format(state.disps.len());
+                *w += ", ";
+                *w += ib.format(names.len());
+            }
+            _ => unimplemented!(),
+        }
+
+        *w += ">(Self::DISPS, Self::N.as_ptr(), Self::VALS, n) {\n";
+        *w += "::core::option::Option::Some(x) => unsafe { ::core::result::Result::Ok(::core::mem::transmute::<";
+        *w += repr.to_int();
+        *w += ", Self>(x)) },
+::core::option::Option::None => ::core::result::Result::Err(::mser::Error),
+}";
+    } else {
+        *w += "unsafe {\n";
+        *w += "::core::result::Result::Ok(::core::mem::transmute::<u8, Self>(match n {\n";
+        for (i, &val) in names.iter().enumerate() {
+            *w += "\"";
+            *w += val;
+            *w += "\" => ";
+            *w += ib.format(i);
+            *w += ",\n";
+        }
+        *w += "_ => return ::core::result::Result::Err(::mser::Error),\n";
+        *w += "}\n)\n)\n}";
+    }
+    *w += "\n}\n}\n";
     *w += "impl ::core::fmt::Display for ";
     *w += name;
     *w += " {

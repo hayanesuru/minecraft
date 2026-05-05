@@ -11,7 +11,7 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
     disps: &'static [u64; N],
     names: *const &'static str,
     vals: &'static [u8; M],
-    name: &[u8],
+    name: &str,
 ) -> Option<u8> {
     let [a, b] = hash128(name, K);
     let g = (a >> 32) as u32;
@@ -23,7 +23,7 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % (M as u32);
     let v = unsafe { *vals.get_unchecked(index as usize) };
     let k = unsafe { *names.add(v as usize) };
-    if name == k.as_bytes() { Some(v) } else { None }
+    if name == k { Some(v) } else { None }
 }
 
 #[inline]
@@ -31,7 +31,7 @@ fn name_u16<const K: u64, const N: usize, const M: usize>(
     disps: &'static [u64; N],
     names: *const &'static str,
     vals: &'static [u16; M],
-    name: &[u8],
+    name: &str,
 ) -> Option<u16> {
     let [a, b] = hash128(name, K);
     let g = (a >> 32) as u32;
@@ -44,7 +44,7 @@ fn name_u16<const K: u64, const N: usize, const M: usize>(
     let index = (index % (M as u32)) as usize;
     let v = unsafe { *vals.get_unchecked(index) };
     let k = unsafe { *names.add(v as usize) };
-    if name == k.as_bytes() { Some(v) } else { None }
+    if name == k { Some(v) } else { None }
 }
 
 fn make_block_state(
@@ -582,7 +582,7 @@ impl core::fmt::Debug for fluid_state {
     }
 }
 
-const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+const fn hash128(n: &str, seed: u64) -> [u64; 2] {
     const M: u64 = 0xc6a4a7935bd1e995;
     const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
     let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
@@ -610,7 +610,7 @@ mod tests {
         assert_eq!(game_event::block_activate.name(), "block_activate");
         assert_eq!(
             sound_event::block_bamboo_wood_pressure_plate_click_on,
-            sound_event::parse(b"block.bamboo_wood_pressure_plate.click_on").unwrap()
+            str::parse("block.bamboo_wood_pressure_plate.click_on").unwrap()
         );
     }
 
@@ -618,7 +618,7 @@ mod tests {
     fn test_air() {
         let air_bl = block::air;
         assert_eq!(air_bl.name(), "air");
-        assert_eq!(Some(air_bl), block::parse(air_bl.name().as_bytes()));
+        assert_eq!(air_bl, str::parse(air_bl.name()).unwrap());
 
         let air_bs = air_bl.state_default();
         assert_eq!(air_bs.side_solid_full(), Some(0));
@@ -650,7 +650,7 @@ mod tests {
 
         let b = white_concrete_bs.to_block();
         assert_eq!(b.name(), "white_concrete");
-        assert_eq!(Some(b), block::parse(b.name().as_bytes()));
+        assert_eq!(b, str::parse(b.name()).unwrap());
 
         let oak_sapling_bs = block_state::new(
             (oak_sapling::new()).encode() as raw_block_state + block::oak_sapling.state_index(),
@@ -658,7 +658,7 @@ mod tests {
         .unwrap();
         let b = oak_sapling_bs.to_block();
         assert_eq!(b.name(), "oak_sapling");
-        assert_eq!(Some(b), block::parse(b.name().as_bytes()));
+        assert_eq!(b, str::parse(b.name()).unwrap());
 
         assert_eq!(oak_sapling_bs.side_solid_full(), Some(0));
         assert_eq!(oak_sapling_bs.side_solid_rigid(), Some(0));
@@ -668,7 +668,7 @@ mod tests {
         let mud_bs = block::mud.state_default();
         let b = mud_bs.to_block();
         assert_eq!(b.name(), "mud");
-        assert_eq!(Some(b), block::parse(b"mud"));
+        assert_eq!(b, str::parse("mud").unwrap());
 
         assert_eq!(mud_bs.side_solid_full(), Some(0b111111));
         assert_eq!(mud_bs.side_solid_rigid(), Some(0b111111));
@@ -702,10 +702,7 @@ mod tests {
         assert_eq!(
             block_state::parse(
                 block::redstone_wire,
-                &mut [(
-                    block_state_property_key::parse(b"east").unwrap(),
-                    block_state_property_value::parse(b"side").unwrap()
-                )][..]
+                &mut [(str::parse("east").unwrap(), str::parse("side").unwrap())][..]
             ),
             a
         );
@@ -724,14 +721,8 @@ mod tests {
             block_state::parse(
                 block::redstone_wire,
                 &mut [
-                    (
-                        block_state_property_key::parse(b"east").unwrap(),
-                        block_state_property_value::parse(b"side").unwrap()
-                    ),
-                    (
-                        block_state_property_key::parse(b"power").unwrap(),
-                        block_state_property_value::parse(b"11").unwrap()
-                    )
+                    (str::parse("east").unwrap(), str::parse("side").unwrap()),
+                    (str::parse("power").unwrap(), str::parse("11").unwrap())
                 ][..]
             ),
             a
