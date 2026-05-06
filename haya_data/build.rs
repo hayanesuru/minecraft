@@ -1470,7 +1470,7 @@ fn hex_line(x: &str) -> impl Iterator<Item = u32> + Clone + '_ {
 
 struct GenerateHash {
     wy_rand: u64,
-    hashes: Vec<[u64; 2]>,
+    hashes: Vec<u64>,
     buckets: Vec<Bucket>,
     values_to_add: Vec<(usize, u32)>,
     map: Vec<Option<u32>>,
@@ -1496,7 +1496,7 @@ impl GenerateHash {
             let key = self.next();
             self.hashes.clear();
             self.hashes
-                .extend(entries.iter().map(|&x| hash128(x.as_bytes(), key)));
+                .extend(entries.iter().map(|&x| hash64(x.as_bytes(), key)));
             let table_len = self.hashes.len();
             let buckets_len = table_len.div_ceil(DEFAULT_LAMBDA);
 
@@ -1512,8 +1512,8 @@ impl GenerateHash {
                 bucket.idx = i;
                 bucket.keys.clear();
             }
-            for (i, [a, _]) in self.hashes.iter().enumerate() {
-                self.buckets[(((a >> 32) as u32) % buckets_len as u32) as usize]
+            for (i, a) in self.hashes.iter().enumerate() {
+                self.buckets[(((a >> 24) as u32) % buckets_len as u32) as usize]
                     .keys
                     .push(i as u32);
             }
@@ -1540,9 +1540,9 @@ impl GenerateHash {
                         generation += 1;
 
                         for &key in &bucket.keys {
-                            let [a, b] = (&mut self.hashes)[key as usize];
+                            let a = (&mut self.hashes)[key as usize];
                             let f1 = a as u32;
-                            let f2 = b as u32;
+                            let f2 = (a >> 32) as u32;
                             let x = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
                             let idx = (x % (table_len as u32)) as usize;
                             if self.map[idx].is_some() || self.try_map[idx] == generation {
@@ -1779,9 +1779,8 @@ fn parse_u64(n: &str) -> u64 {
     u64::from_str_radix(n.trim_ascii(), 16).expect("parse hex")
 }
 
-const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
+const fn hash64(n: &[u8], seed: u64) -> u64 {
     const M: u64 = 0xc6a4a7935bd1e995;
-    const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
     let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
     let mut i = 0;
     while i + 8 <= n.len() {
@@ -1792,10 +1791,7 @@ const fn hash128(n: &[u8], seed: u64) -> [u64; 2] {
         h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
         i += 1;
     }
-    let h = (h as u128).wrapping_mul(N);
-    let h = h ^ (h >> 64);
-    let h = h.wrapping_mul(N);
-    [(h >> 64) as u64, h as u64]
+    h.wrapping_mul(M)
 }
 
 fn impl_codec_struct(w: &mut String, name: &str, size: usize, repr: Repr) {

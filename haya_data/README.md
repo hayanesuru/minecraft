@@ -22,7 +22,7 @@ fn main() {
     let x = block::mud.state_default();
     let b = x.to_block();
     assert_eq!(b.name(), "mud");
-    assert_eq!(b, str::parse("mud").unwrap());
+    assert_eq!(b, "mud".parse().unwrap());
 
     assert_eq!(x.side_solid_full(), Some(0b111111));
     assert_eq!(x.side_solid_rigid(), Some(0b111111));

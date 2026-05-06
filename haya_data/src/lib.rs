@@ -13,10 +13,10 @@ fn name_u8<const K: u64, const N: usize, const M: usize>(
     vals: &'static [u8; M],
     name: &str,
 ) -> Option<u8> {
-    let [a, b] = hash128(name, K);
-    let g = (a >> 32) as u32;
+    let a = hash64(name, K);
+    let g = (a >> 24) as u32;
     let f1 = a as u32;
-    let f2 = b as u32;
+    let f2 = (a >> 32) as u32;
     let d = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
     let d1 = (d >> 32) as u32;
     let d2 = d as u32;
@@ -33,10 +33,10 @@ fn name_u16<const K: u64, const N: usize, const M: usize>(
     vals: &'static [u16; M],
     name: &str,
 ) -> Option<u16> {
-    let [a, b] = hash128(name, K);
-    let g = (a >> 32) as u32;
+    let a = hash64(name, K);
+    let g = (a >> 24) as u32;
     let f1 = a as u32;
-    let f2 = b as u32;
+    let f2 = (a >> 32) as u32;
     let d = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
     let d1 = (d >> 32) as u32;
     let d2 = d as u32;
@@ -582,9 +582,9 @@ impl core::fmt::Debug for fluid_state {
     }
 }
 
-const fn hash128(n: &str, seed: u64) -> [u64; 2] {
+#[inline]
+const fn hash64(n: &str, seed: u64) -> u64 {
     const M: u64 = 0xc6a4a7935bd1e995;
-    const N: u128 = 0xdbe6d5d5fe4cce213198a2e03707344u128;
     let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
     let mut i = 0;
     while i + 8 <= n.len() {
@@ -595,10 +595,7 @@ const fn hash128(n: &str, seed: u64) -> [u64; 2] {
         h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
         i += 1;
     }
-    let h = (h as u128).wrapping_mul(N);
-    let h = h ^ (h >> 64);
-    let h = h.wrapping_mul(N);
-    [(h >> 64) as u64, h as u64]
+    h.wrapping_mul(M)
 }
 
 #[cfg(test)]
@@ -610,7 +607,7 @@ mod tests {
         assert_eq!(game_event::block_activate.name(), "block_activate");
         assert_eq!(
             sound_event::block_bamboo_wood_pressure_plate_click_on,
-            str::parse("block.bamboo_wood_pressure_plate.click_on").unwrap()
+            "block.bamboo_wood_pressure_plate.click_on".parse().unwrap()
         );
     }
 
@@ -618,7 +615,7 @@ mod tests {
     fn test_air() {
         let air_bl = block::air;
         assert_eq!(air_bl.name(), "air");
-        assert_eq!(air_bl, str::parse(air_bl.name()).unwrap());
+        assert_eq!(air_bl, air_bl.name().parse().unwrap());
 
         let air_bs = air_bl.state_default();
         assert_eq!(air_bs.side_solid_full(), Some(0));
@@ -650,7 +647,7 @@ mod tests {
 
         let b = white_concrete_bs.to_block();
         assert_eq!(b.name(), "white_concrete");
-        assert_eq!(b, str::parse(b.name()).unwrap());
+        assert_eq!(b, b.name().parse().unwrap());
 
         let oak_sapling_bs = block_state::new(
             (oak_sapling::new()).encode() as raw_block_state + block::oak_sapling.state_index(),
@@ -658,7 +655,7 @@ mod tests {
         .unwrap();
         let b = oak_sapling_bs.to_block();
         assert_eq!(b.name(), "oak_sapling");
-        assert_eq!(b, str::parse(b.name()).unwrap());
+        assert_eq!(b, b.name().parse().unwrap());
 
         assert_eq!(oak_sapling_bs.side_solid_full(), Some(0));
         assert_eq!(oak_sapling_bs.side_solid_rigid(), Some(0));
@@ -668,7 +665,7 @@ mod tests {
         let mud_bs = block::mud.state_default();
         let b = mud_bs.to_block();
         assert_eq!(b.name(), "mud");
-        assert_eq!(b, str::parse("mud").unwrap());
+        assert_eq!(b, "mud".parse().unwrap());
 
         assert_eq!(mud_bs.side_solid_full(), Some(0b111111));
         assert_eq!(mud_bs.side_solid_rigid(), Some(0b111111));
@@ -702,7 +699,7 @@ mod tests {
         assert_eq!(
             block_state::parse(
                 block::redstone_wire,
-                &mut [(str::parse("east").unwrap(), str::parse("side").unwrap())][..]
+                &mut [("east".parse().unwrap(), "side".parse().unwrap())][..]
             ),
             a
         );
@@ -721,8 +718,8 @@ mod tests {
             block_state::parse(
                 block::redstone_wire,
                 &mut [
-                    (str::parse("east").unwrap(), str::parse("side").unwrap()),
-                    (str::parse("power").unwrap(), str::parse("11").unwrap())
+                    ("east".parse().unwrap(), "side".parse().unwrap()),
+                    ("power".parse().unwrap(), "11".parse().unwrap())
                 ][..]
             ),
             a
