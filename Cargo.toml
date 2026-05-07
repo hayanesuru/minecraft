@@ -35,7 +35,7 @@ haya_ecs = { path = "haya_ecs", version = "0.2" }
 haya_text = { path = "haya_text", version = "0.2" }
 haya_math = { path = "haya_math", version = "0.3" }
 haya_collection = { path = "haya_collection", version = "0.4" }
-
+haya_protocol = { path = "haya_protocol", version = "0.7" }
 uuid = { version = "1", default-features = false }
 
 [profile.dev.package."minecraft_data"]
