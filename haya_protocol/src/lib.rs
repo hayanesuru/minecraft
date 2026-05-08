@@ -948,7 +948,7 @@ pub struct BlockHitResult {
 mod tests {
     use super::*;
     use crate::clientbound::login::LoginFinished;
-    use crate::profile::{GameProfileRef, PropertyMap};
+    use crate::profile::{GameProfile, PropertyMap};
     use crate::types::Id as _;
     use haya_collection::{List, Map};
     use minecraft_data::clientbound__login;
@@ -957,7 +957,7 @@ mod tests {
     #[test]
     fn test_write() {
         let packet: LoginFinished = LoginFinished {
-            game_profile: GameProfileRef {
+            game_profile: GameProfile {
                 id: Uuid::nil(),
                 name: Utf8("abc"),
                 properties: PropertyMap(Map(List::Borrowed(&[]))),

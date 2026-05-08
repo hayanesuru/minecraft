@@ -1,5 +1,5 @@
 use crate::ComponentJson;
-use crate::profile::GameProfileRef;
+use crate::profile::GameProfile;
 use haya_ident::Ident;
 use mser::{ByteArray, Rest, Utf8};
 
@@ -18,7 +18,7 @@ pub struct Hello<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginFinished<'a> {
-    pub game_profile: GameProfileRef<'a>,
+    pub game_profile: GameProfile<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

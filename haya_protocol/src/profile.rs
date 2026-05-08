@@ -4,24 +4,24 @@ use mser::{Either, Read, Utf8, Write};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct GameProfileRef<'a> {
+pub struct GameProfile<'a> {
     pub id: Uuid,
     pub name: Utf8<'a, 16>,
     pub properties: PropertyMap<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct PropertyMap<'a>(pub Map<'a, Utf8<'a, 64>, PropertyRef<'a>, 16>);
+pub struct PropertyMap<'a>(pub Map<'a, Utf8<'a, 64>, Property<'a>, 16>);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct PropertyRef<'a> {
+pub struct Property<'a> {
     pub value: Utf8<'a, 32767>,
     pub signature: Option<Utf8<'a, 1024>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ResolvableProfile<'a> {
-    pub profile: Either<GameProfileRef<'a>, Partial<'a>>,
+    pub profile: Either<GameProfile<'a>, Partial<'a>>,
     pub skin_patch: PlayerSkinPatch<'a>,
 }
 
@@ -29,7 +29,7 @@ pub struct ResolvableProfile<'a> {
 pub struct Partial<'a> {
     pub name: Option<Utf8<'a, 16>>,
     pub id: Option<Uuid>,
-    pub properties: List<'a, PropertyRef<'a>, 16>,
+    pub properties: List<'a, Property<'a>, 16>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
