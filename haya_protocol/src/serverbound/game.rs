@@ -17,7 +17,7 @@ use uuid::Uuid;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AcceptTeleportation {
     #[mser(varint)]
-    id: u32,
+    pub id: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
