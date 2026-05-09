@@ -32,8 +32,8 @@ use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, ByteAngle, ChunkPos, ChunkSectionPosPacked, IVec3, LpVec3, Vec3};
 use haya_nbt::Tag;
 use minecraft_data::{
-    attribute, block, block_entity_type, block_state, data_component_type, entity_type, menu,
-    mob_effect, number_format_type, sound_event,
+    attribute, block, block_entity_type, block_state, entity_type, menu, mob_effect,
+    number_format_type, sound_event,
 };
 use mser::{ByteArray, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 use uuid::Uuid;
