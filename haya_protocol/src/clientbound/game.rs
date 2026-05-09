@@ -1205,6 +1205,7 @@ pub struct SetEntityMotion {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetEquipment<'a> {
+    #[mser(varint)]
     pub entity: u32,
     pub slots: SetEquipmentSlots<'a>,
 }
