@@ -173,7 +173,7 @@ pub struct CustomModelData<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TooltipDisplay<'a> {
     pub hide_tooltip: bool,
-    pub hidden_components: List<'a, TypedDataComponent<'a>>,
+    pub hidden_components: List<'a, data_component_type>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
