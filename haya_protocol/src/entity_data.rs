@@ -4,6 +4,7 @@ use crate::entity::{
 };
 use crate::inventory::HumanoidArm;
 use crate::item_stack::OptionalItemStack;
+use crate::particle::Particle;
 use crate::profile::ResolvableProfile;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef,
@@ -12,7 +13,7 @@ use crate::registry::{
 use crate::{Component, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
 use haya_collection::List;
 use haya_math::{BlockPosPacked, Direction, FQuat, FVec3};
-use minecraft_data::{block_state, particle_type};
+use minecraft_data::block_state;
 use mser::Utf8;
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -79,8 +80,8 @@ pub enum EntityDataSerializer<'a> {
     OptionalLivingEntityReference(Option<EntityReference>),
     BlockState(block_state),
     OptionalBlockState(block_state),
-    Particle(particle_type),
-    Particles(List<'a, particle_type>),
+    Particle(Particle<'a>),
+    Particles(List<'a, Particle<'a>>),
     VillagerData(VillagerData),
     OptionalUnsignedInt(OptionalV32),
     Pose(Pose),
