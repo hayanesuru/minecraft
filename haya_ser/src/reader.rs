@@ -148,7 +148,7 @@ impl<'a> Reader<'a> {
     /// [`self.ptr`]: Reader::ptr
     #[inline]
     pub unsafe fn offset_from(&self, origin: *const u8) -> usize {
-        unsafe { origin.offset_from_unsigned(self.ptr) }
+        unsafe { self.ptr.offset_from_unsigned(origin) }
     }
 
     /// # Safety
