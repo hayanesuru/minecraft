@@ -737,11 +737,14 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         continue;
                     }
                 };
+                blocks.push((Bl::C(x), index + 1));
+                if matches!(tag, Tag::End) {
+                    continue;
+                }
                 if index != 0 {
                     buf.push(b',');
                 }
                 buf.push(b'\n');
-                blocks.push((Bl::C(x), index + 1));
                 for _ in 0..blocks.len() {
                     buf.extend(SPACE);
                 }
@@ -829,6 +832,7 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
                         buf.push(b'{');
                         blocks.push((Bl::C(x.as_ref()), 0));
                     }
+                    Tag::End => {}
                 }
 
                 continue;

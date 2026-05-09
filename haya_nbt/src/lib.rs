@@ -138,7 +138,7 @@ impl TagType {
             Self::LongArray => Tag::from(LongArray::read(n)?.0),
             Self::List => Tag::List(ListTag::None),
             Self::Compound => Tag::Compound(Compound::new()),
-            Self::End => return Err(Error),
+            Self::End => Tag::End,
         })
     }
 }
@@ -347,6 +347,7 @@ unsafe fn write_no_rec(w: &mut Writer, t: &Tag) {
             }
             Tag::List(_) => {}
             Tag::Compound(_) => {}
+            Tag::End => {}
         }
     }
 }
@@ -365,6 +366,7 @@ fn len_no_rec(t: &Tag) -> usize {
         Tag::LongArray(x) => (x.len() as u32).len_s() + 8 * x.len(),
         Tag::List(_) => 0,
         Tag::Compound(_) => 0,
+        Tag::End => 0,
     }
 }
 
@@ -642,6 +644,7 @@ pub enum Tag {
     LongArray(Vec<i64>),
     List(ListTag),
     Compound(Compound),
+    End,
 }
 
 #[derive(Clone)]
@@ -738,6 +741,7 @@ impl Tag {
             Self::LongArray(_) => TagType::LongArray,
             Self::List(_) => TagType::List,
             Self::Compound(_) => TagType::Compound,
+            Self::End => TagType::End,
         }
     }
 }
