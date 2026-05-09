@@ -532,7 +532,6 @@ pub struct LightUpdate<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Login<'a> {
-    #[mser(varint)]
     pub player_id: u32,
     pub hardcore: bool,
     pub levels: List<'a, ResourceKey<'a>>,
