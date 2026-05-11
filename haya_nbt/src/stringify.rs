@@ -590,7 +590,7 @@ fn escape_quoted(n: &mut Reader) -> Result<char, Error> {
                 if !n.end_from(ptr) {
                     let name = from_utf8_unchecked(n.read_slice_from(ptr)).trim_ascii();
                     n.advance(1);
-                    if let Some(x) = unicode_names2::character(name) {
+                    if let Some(x) = crate::unicode::character(name) {
                         Ok(x)
                     } else {
                         Err(Error)

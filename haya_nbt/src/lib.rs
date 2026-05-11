@@ -10,6 +10,7 @@ mod long_array;
 mod number;
 mod string;
 mod stringify;
+mod unicode;
 
 use self::byte_array::ByteArray;
 use self::int_array::IntArray;
@@ -18,6 +19,7 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_str::HayaStr;
 use mser::{Error, Read, Reader, Write, Writer};
+pub use unicode::{character, name};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
