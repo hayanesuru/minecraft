@@ -19,8 +19,7 @@ impl Context {
             let mut text = format(e);
             text.push(',');
             if 1 + width + text.len() >= LINE_LIMIT {
-                w!(self, "\n    ");
-                width = 4;
+                w!(self, "\n");
             } else {
                 w!(self, " ");
                 width += 1
@@ -44,8 +43,8 @@ impl Context {
 
         w!(self, "pub const {}: &str = \"", name);
 
-        for chunk in data.as_bytes().chunks(LINE_LIMIT - 6) {
-            w!(self, "\\\n    ");
+        for chunk in data.as_bytes().chunks(LINE_LIMIT - 2) {
+            w!(self, "\\\n");
             self.out.write_all(chunk).unwrap();
         }
         w!(self, "\";\n");
