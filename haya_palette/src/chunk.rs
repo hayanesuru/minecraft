@@ -1,6 +1,7 @@
-use crate::Palette;
+use crate::Biome;
 use alloc::vec::Vec;
 use hashbrown::HashTable;
+use minecraft_data::{block, block_state};
 use mser::cold_path;
 
 const BLOCK_PER_CHUNK: usize = 4 * 4 * 4;
@@ -9,27 +10,28 @@ const INDIRECT2_PER_CHUNK: usize = BLOCK_PER_CHUNK / 4;
 const INDEX_MASK: u64 = 0x3FFF_FFFF_FFFF_FFFF;
 
 #[derive(Clone)]
-pub struct Direct<T: Palette> {
+pub struct Direct<T: Copy> {
     data: [T; BLOCK_PER_CHUNK],
 }
 
 #[derive(Clone)]
-pub struct Indirect4<T: Palette> {
+pub struct Indirect4<T: Copy> {
     palette: [T; 16],
     data: [u8; INDIRECT4_PER_CHUNK],
 }
 
 #[derive(Clone)]
-pub struct Indirect2<T: Palette> {
+pub struct Indirect2<T: Copy> {
     palette: [T; 4],
     data: [u8; INDIRECT2_PER_CHUNK],
 }
 
 #[derive(Clone)]
-pub struct ChunkCache<T: Palette> {
-    pub direct: Vec<Direct<T>>,
-    pub indirect2: Vec<Indirect2<T>>,
-    pub indirect4: Vec<Indirect4<T>>,
+pub struct ChunkCache {
+    pub direct: Vec<Direct<block_state>>,
+    pub indirect2: Vec<Indirect2<block_state>>,
+    pub indirect4: Vec<Indirect4<block_state>>,
+    pub biome: Vec<Biome>,
     pub chunks: HashTable<(u64, u64)>,
     pub direct_key: Vec<u32>,
     pub indirect4_key: Vec<u32>,
@@ -37,18 +39,19 @@ pub struct ChunkCache<T: Palette> {
     pub single_key: Vec<u32>,
 }
 
-impl<T: Palette> Default for ChunkCache<T> {
+impl Default for ChunkCache {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Palette> ChunkCache<T> {
+impl ChunkCache {
     pub const fn new() -> Self {
         Self {
             direct: Vec::new(),
             indirect2: Vec::new(),
             indirect4: Vec::new(),
+            biome: Vec::new(),
             chunks: HashTable::new(),
             direct_key: Vec::new(),
             indirect4_key: Vec::new(),
@@ -57,21 +60,21 @@ impl<T: Palette> ChunkCache<T> {
         }
     }
 
-    pub fn get_block(&self, x: i32, y: i32, z: i32) -> T {
+    pub fn get_block(&self, x: i32, y: i32, z: i32) -> block_state {
         let j = ((x & 3) | ((y & 3) << 2) | ((z & 3) << 4)) as usize;
         let chunk = pack(x >> 2, y >> 2, z >> 2);
         let t = match self.chunks.find(mix(chunk), |x| x.0 == chunk) {
             Some(t) => t.1,
             None => {
                 cold_path();
-                return T::default();
+                return block::void_air.state_default();
             }
         };
         let n = (t & INDEX_MASK) as usize;
         let ty = t >> 62;
         unsafe {
             match ty {
-                3 => T::from_id(n as u32),
+                3 => block_state::new(n as u16).unwrap_unchecked(),
                 2 => self.indirect2.get_unchecked(n).get(j),
                 1 => self.indirect4.get_unchecked(n).get(j),
                 _ => *self.direct.get_unchecked(n).data.get_unchecked(j),
@@ -80,7 +83,7 @@ impl<T: Palette> ChunkCache<T> {
     }
 }
 
-impl<T: Palette> Indirect2<T> {
+impl<T: Copy> Indirect2<T> {
     unsafe fn get(&self, index: usize) -> T {
         unsafe {
             let b = *self.data.get_unchecked(index >> 2);
@@ -90,7 +93,7 @@ impl<T: Palette> Indirect2<T> {
     }
 }
 
-impl<T: Palette> Indirect4<T> {
+impl<T: Copy> Indirect4<T> {
     unsafe fn get(&self, index: usize) -> T {
         unsafe {
             let b = *self.data.get_unchecked(index >> 1);

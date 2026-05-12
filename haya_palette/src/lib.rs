@@ -11,45 +11,8 @@ use core::array::from_fn;
 use core::mem::{align_of, size_of};
 use core::ptr::NonNull;
 use core::slice::from_raw_parts;
-use minecraft_data::{block, block_state};
+use minecraft_data::block_state;
 use mser::{Error, Read, Reader, V21, V32, Write, Writer};
-
-pub trait Palette: Copy {
-    /// # Safety
-    ///
-    /// `value` must be a valid id.
-    unsafe fn from_id(value: u32) -> Self;
-    fn to_id(self) -> u32;
-    fn default() -> Self;
-}
-
-impl Palette for block_state {
-    unsafe fn from_id(value: u32) -> Self {
-        unsafe { block_state::new(value as u16).unwrap_unchecked() }
-    }
-
-    fn to_id(self) -> u32 {
-        self.id() as u32
-    }
-
-    fn default() -> Self {
-        block::void_air.state_default()
-    }
-}
-
-impl Palette for Biome {
-    unsafe fn from_id(value: u32) -> Self {
-        unsafe { core::mem::transmute::<u8, Self>(value as u8) }
-    }
-
-    fn to_id(self) -> u32 {
-        self as u32
-    }
-
-    fn default() -> Self {
-        Biome::TheVoid
-    }
-}
 
 #[derive(Clone, Default, Copy, PartialEq, Eq)]
 #[repr(u8)]
