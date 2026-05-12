@@ -194,7 +194,7 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "pub const MAX: ";
     *w += repr.to_int();
     *w += " = ";
-    *w += itoa::Buffer::new().format(size - 1);
+    write(w, size - 1);
     *w += ";\n";
 
     *w += "#[inline]\n#[must_use]\n";
@@ -233,7 +233,7 @@ fn impl_common(w: &mut String, name: &str, repr: Repr, size: usize, def: u32) {
     *w += "unsafe { ::core::mem::transmute::<";
     *w += repr.to_int();
     *w += ", Self>(";
-    *w += itoa::Buffer::new().format(def);
+    write(w, def);
     *w += ") }\n";
     *w += "}\n";
     *w += "}\n";
@@ -246,7 +246,6 @@ fn fluid_state(
     bl_props: &[u32],
     bs_size: &[NonZeroUsize],
 ) {
-    let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
     let (name, size, repr) = head(iter.next(), "fluid_state");
     struct_head(w, repr, name);
@@ -258,7 +257,7 @@ fn fluid_state(
         *w += "pub const ";
         *w += name;
         *w += ": Self = Self(";
-        *w += ib.format(index);
+        write(w, index);
         *w += ");\n";
     }
     *w += "}\n";
@@ -438,7 +437,6 @@ fn block_state(
     gen_hash: &mut GenerateHash,
     block_names: &[&str],
 ) -> (Repr, Vec<u32>, Vec<NonZeroUsize>) {
-    let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
     let (name_k, size_k, repr_k) = head(iter.next(), "block_state_property_key");
@@ -639,12 +637,12 @@ fn block_state(
     *w += "const V: &[&'static [";
     *w += repr_v.to_int();
     *w += "]; ";
-    *w += ib.format(size_kv);
+    write(w, size_kv);
     *w += "] = &[";
     for data in &kv {
         *w += "&[";
         for &v in &data[1..] {
-            *w += ib.format(v as usize);
+            write(w, v as usize);
             *w += ", ";
         }
         w.pop();
@@ -758,7 +756,7 @@ fn block_state(
                     name_.push('_');
                     let prop = &*kv[x as usize];
                     name_ += pk2[prop[0] as usize];
-                    name_ += ib.format(prop.len() - 1);
+                    write(&mut name_, prop.len() - 1);
                 }
             }
         }
@@ -800,7 +798,7 @@ fn block_state(
             *w += "#[inline]\n";
             *w += "pub const fn decode(n: u8) -> Self {\n";
             *w += "debug_assert!(n < ";
-            *w += ib.format(len);
+            write(w, len);
             *w += ");\n";
             *w += "Self\n";
             *w += "}\n";
@@ -857,7 +855,7 @@ fn block_state(
                 *w += repr.to_int();
                 if index != 1 {
                     *w += " *\n";
-                    *w += ib.format(index);
+                    write(w, index);
                 }
                 index *= v.len();
             }
@@ -869,7 +867,7 @@ fn block_state(
             *w += repr.to_int();
             *w += ") -> Self {\n";
             *w += "debug_assert!(n < ";
-            *w += ib.format(len);
+            write(w, len);
             *w += ");\n";
             *w += "Self(n)\n";
             *w += "}\n";
@@ -904,7 +902,7 @@ fn block_state(
             *w += repr.to_int();
             *w += ") -> Self {\n";
             *w += "debug_assert!(n < ";
-            *w += ib.format(len);
+            write(w, len);
             *w += ");\n";
             *w += "unsafe { Self(*Self::M.as_ptr().add(n as usize)) }\n";
             *w += "}\n";
@@ -947,11 +945,11 @@ fn block_state(
             *w += "self.0";
             if props.len() != 1 {
                 *w += " & ";
-                *w += ib.format(m);
+                write(w, m);
             }
             if index != 0 {
                 *w += ") >> ";
-                *w += ib.format(index);
+                write(w, index);
             }
             if repr != reprp {
                 *w += ") as ";
@@ -983,7 +981,7 @@ fn block_state(
                     m ^= 1 << n;
                 }
                 *w += "self.0 & ";
-                *w += ib.format(m);
+                write(w, m);
                 *w += ")";
                 *w += " | (";
             }
@@ -1000,7 +998,7 @@ fn block_state(
 
             if index != 0 {
                 *w += " << ";
-                *w += ib.format(index);
+                write(w, index);
             }
 
             if props.len() != 1 {
@@ -1054,12 +1052,12 @@ fn block_state(
     *w += "const PROPS: &[&[";
     *w += repr_kv.to_int();
     *w += "]; ";
-    *w += ib.format(bs_properties.len());
+    write(w, bs_properties.len());
     *w += "] = &[\n";
     for prop in &bs_properties {
         *w += "&[";
         for &x in &**prop {
-            *w += ib.format(x);
+            write(w, x);
             *w += ", ";
         }
         if !prop.is_empty() {
@@ -1136,10 +1134,9 @@ fn block_state(
     let (_, size, shape_repr) = head(iter.next(), "shape_table");
 
     *w += "const SHAPES: &[&[[f64; 6]]; ";
-    *w += ib.format(size);
+    write(w, size);
     *w += "] = &[";
     let mut shape = Vec::new();
-    let mut rb = ryu::Buffer::new();
     for _ in 0..size {
         let s = hex_line(iter.next().unwrap());
         for x in s {
@@ -1159,7 +1156,8 @@ fn block_state(
                     *w += ", ";
                 }
                 first = false;
-                *w += rb.format(x);
+                write(w, x);
+                *w += "f64";
             }
             *w += "\n]";
         }
@@ -1186,12 +1184,13 @@ fn block_state(
     *w += "const BLOCK_SETTINGS: &[";
     *w += "[f32; 5]";
     *w += "; ";
-    *w += ib.format(size);
+    write(w, size);
     *w += "] = &[";
     for &x in bs_ettings.iter() {
         *w += "[";
         for x in x {
-            *w += rb.format(f32::from_bits(x));
+            write(w, f32::from_bits(x));
+            *w += "f32";
             *w += ", ";
         }
         w.pop();
@@ -1293,26 +1292,25 @@ fn item(w: &mut String, data: &str) {
 }
 
 fn entity(w: &mut String, data: &str) {
-    let mut ib = itoa::Buffer::new();
     let mut iter = data.split('\n');
 
     let (_, size, _) = head(iter.next(), "entity_type_height");
     *w += "const ENTITY_HEIGHT: &[f32; ";
-    *w += ib.format(size);
+    write(w, size);
     *w += "] = ";
     list(w, read_rl(size, &mut iter).map(f32::from_bits));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_width");
     *w += "const ENTITY_WIDTH: &[f32; ";
-    *w += ib.format(size);
+    write(w, size);
     *w += "] = ";
     list(w, read_rl(size, &mut iter).map(f32::from_bits));
     *w += ";\n";
 
     let (_, size, _) = head(iter.next(), "entity_type_fixed");
     *w += "const ENTITY_FIXED: &[u8; ";
-    *w += ib.format(size);
+    write(w, size);
     *w += "] = ";
     list(w, read_rl(size, &mut iter));
     *w += ";\n";
@@ -1334,12 +1332,11 @@ fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
 }
 
 fn impl_name(w: &mut String, g: &mut GenerateHash, repr: Repr, names: &[&str], name: &str) {
-    let mut ib = itoa::Buffer::new();
     *w += "impl ";
     *w += name;
     *w += " {\n";
     *w += "const N: &[&str; ";
-    *w += ib.format(names.len());
+    write(w, names.len());
     *w += "] = &[\n";
     for &val in names {
         *w += "\"";
@@ -1385,19 +1382,19 @@ fn from_str(n: &str) -> Result<Self, Self::Err> {
         match repr {
             Repr::U8 => {
                 *w += "match crate::name_u8::<";
-                *w += ib.format(state.key);
+                write(w, state.key);
                 *w += ", ";
-                *w += ib.format(state.disps.len());
+                write(w, state.disps.len());
                 *w += ", ";
-                *w += ib.format(names.len());
+                write(w, names.len());
             }
             Repr::U16 => {
                 *w += "match crate::name_u16::<";
-                *w += ib.format(state.key);
+                write(w, state.key);
                 *w += ", ";
-                *w += ib.format(state.disps.len());
+                write(w, state.disps.len());
                 *w += ", ";
-                *w += ib.format(names.len());
+                write(w, names.len());
             }
             _ => unimplemented!(),
         }
@@ -1415,7 +1412,7 @@ fn from_str(n: &str) -> Result<Self, Self::Err> {
             *w += "\"";
             *w += val;
             *w += "\" => ";
-            *w += ib.format(i);
+            write(w, i);
             *w += ",\n";
         }
         *w += "_ => return ::core::result::Result::Err(::mser::Error),\n";
@@ -1642,7 +1639,7 @@ fn list_ty(w: &mut String, name: &str, repr: Repr, size: usize) {
     *w += ": &[";
     *w += repr.to_int();
     *w += "; ";
-    *w += itoa::Buffer::new().format(size);
+    write(w, size);
     *w += "] = ";
 }
 
@@ -1657,9 +1654,7 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     };
     let mut c = 0usize;
     *w += "&[\n";
-    let mut b = itoa::Buffer::new();
-    let mut r = ryu::Buffer::new();
-    first.format(w, &mut b, &mut r);
+    first.format(w);
     for x in iter {
         w.push(',');
         c += 1;
@@ -1669,7 +1664,7 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
         } else {
             w.push(' ');
         }
-        x.format(w, &mut b, &mut r);
+        x.format(w);
     }
     w.push(',');
     w.push('\n');
@@ -1685,19 +1680,17 @@ fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format> + C
             unimplemented!();
         }
     };
-    let mut b = itoa::Buffer::new();
-    let mut r = ryu::Buffer::new();
     if iter1.is_sorted_by(|a, b| a.is_next(b))
         && let Some(last) = iter.clone().last()
     {
-        first.format(w, &mut b, &mut r);
+        first.format(w);
         *w += "..=";
-        last.format(w, &mut b, &mut r);
+        last.format(w);
         return;
     }
 
     let mut c = 0usize;
-    first.format(w, &mut b, &mut r);
+    first.format(w);
     for x in iter {
         w.push(' ');
         w.push('|');
@@ -1708,26 +1701,26 @@ fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format> + C
         } else {
             w.push(' ');
         }
-        x.format(w, &mut b, &mut r);
+        x.format(w);
     }
 }
 
 trait Format {
-    fn format(&self, w: &mut String, b: &mut itoa::Buffer, r: &mut ryu::Buffer);
+    fn format(&self, w: &mut String);
     fn is_next(&self, _: &Self) -> bool {
         false
     }
 }
 
 impl Format for str {
-    fn format(&self, w: &mut String, _: &mut itoa::Buffer, _: &mut ryu::Buffer) {
+    fn format(&self, w: &mut String) {
         w.push_str(self);
     }
 }
 
 impl Format for usize {
-    fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
-        w.push_str(b.format(*self));
+    fn format(&self, w: &mut String) {
+        write(w, *self);
     }
 
     fn is_next(&self, other: &Self) -> bool {
@@ -1736,8 +1729,8 @@ impl Format for usize {
 }
 
 impl Format for u8 {
-    fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
-        w.push_str(b.format(*self));
+    fn format(&self, w: &mut String) {
+        write(w, *self);
     }
 
     fn is_next(&self, other: &Self) -> bool {
@@ -1746,8 +1739,8 @@ impl Format for u8 {
 }
 
 impl Format for u32 {
-    fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
-        w.push_str(b.format(*self));
+    fn format(&self, w: &mut String) {
+        write(w, *self);
     }
 
     fn is_next(&self, other: &Self) -> bool {
@@ -1756,8 +1749,8 @@ impl Format for u32 {
 }
 
 impl Format for u64 {
-    fn format(&self, w: &mut String, b: &mut itoa::Buffer, _: &mut ryu::Buffer) {
-        w.push_str(b.format(*self));
+    fn format(&self, w: &mut String) {
+        write(w, *self);
     }
 
     fn is_next(&self, other: &Self) -> bool {
@@ -1766,8 +1759,9 @@ impl Format for u64 {
 }
 
 impl Format for f32 {
-    fn format(&self, w: &mut String, _: &mut itoa::Buffer, b: &mut ryu::Buffer) {
-        w.push_str(b.format(*self));
+    fn format(&self, w: &mut String) {
+        write(w, *self);
+        *w += "f32";
     }
 }
 
@@ -1835,7 +1829,7 @@ fn impl_codec_struct(w: &mut String, name: &str, size: usize, repr: Repr) {
         *w += "if __x == 0 {\n";
     } else {
         *w += "if __x <= ";
-        *w += itoa::Buffer::new().format(size - 1);
+        write(w, size - 1);
         *w += " {\n";
     }
     *w += "::core::result::Result::Ok(Self(__x as ";
@@ -1887,7 +1881,7 @@ fn impl_codec(w: &mut String, name: &str, size: usize, repr: Repr) {
         *w += "if __x == 0 {\n";
     } else {
         *w += "if __x <= ";
-        *w += itoa::Buffer::new().format(size - 1);
+        write(w, size - 1);
         *w += " {\n";
     }
     *w += "unsafe { ::core::result::Result::Ok(::core::mem::transmute::<";
@@ -1898,4 +1892,8 @@ fn impl_codec(w: &mut String, name: &str, size: usize, repr: Repr) {
     *w += "} else {\n";
     *w += "::core::result::Result::Err(::mser::Error)\n";
     *w += "}\n}\n}\n";
+}
+
+fn write(w: &mut String, f: impl core::fmt::Display) {
+    core::fmt::Write::write_fmt(w, format_args!("{f}")).unwrap();
 }
