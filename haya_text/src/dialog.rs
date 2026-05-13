@@ -1,10 +1,9 @@
 use crate::chat::{ClickEvent, Component};
-use crate::item::ItemStack;
-use crate::nbt::CompoundTag;
-use crate::str::BoxStr;
-use crate::{HolderSet, Identifier};
+use crate::{HolderSetDialog, ItemStack};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use haya_ident::Identifier;
+use haya_nbt::Tag;
 
 #[derive(Clone)]
 pub struct Dialog {
@@ -32,7 +31,7 @@ pub enum DialogData {
         button_width: u32,
     },
     DialogList {
-        dialogs: HolderSet<Dialog>,
+        dialogs: HolderSetDialog,
         exit_action: Option<ActionButton>,
         columns: u32,
         button_width: u32,
@@ -79,7 +78,7 @@ pub enum Input {
         label: Box<Component>,
         width: u32,
         label_visible: bool,
-        initial: Option<BoxStr>,
+        initial: Option<Box<str>>,
         max_length: u32,
         multiline: Option<Multiline>,
     },
@@ -87,8 +86,8 @@ pub enum Input {
         key: ParsedTemplate,
         label: Component,
         initial: bool,
-        on_true: Option<BoxStr>,
-        on_false: Option<BoxStr>,
+        on_true: Option<Box<str>>,
+        on_false: Option<Box<str>>,
     },
     SingleOption {
         key: ParsedTemplate,
@@ -101,7 +100,7 @@ pub enum Input {
         key: ParsedTemplate,
         label: Component,
         width: u32,
-        label_format: Option<BoxStr>,
+        label_format: Option<Box<str>>,
         start: f32,
         end: f32,
         initial: Option<f32>,
@@ -117,7 +116,7 @@ pub struct Multiline {
 
 #[derive(Clone)]
 pub struct SingleOptionEntry {
-    pub id: BoxStr,
+    pub id: Box<str>,
     pub display: Component,
     pub initial: bool,
 }
@@ -149,7 +148,7 @@ pub enum Action {
     },
     CustomAll {
         id: Identifier,
-        additions: Option<CompoundTag>,
+        additions: Option<Tag>,
     },
     Static {
         value: ClickEvent,
@@ -158,5 +157,5 @@ pub enum Action {
 
 #[derive(Clone)]
 pub struct ParsedTemplate {
-    pub raw: BoxStr,
+    pub raw: Box<str>,
 }

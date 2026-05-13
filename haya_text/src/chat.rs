@@ -1,116 +1,67 @@
-mod nbt;
-
-use crate::dialog::Dialog;
-use crate::item::ItemStack;
-use crate::nbt::StringTagRaw;
 use crate::profile::ResolvableProfile;
-use crate::str::BoxStr;
-use crate::{Holder, Ident, Identifier};
+use crate::{HolderDialog, ItemStack};
 use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::vec::Vec;
+use core::str::FromStr;
+use haya_ident::{Ident, Identifier};
+use haya_str::u8_to_hex;
 use minecraft_data::entity_type;
 use mser::Error;
 use uuid::Uuid;
 
-const TYPE: &[u8] = b"type";
-const EXTRA: &[u8] = b"extra";
-const TEXT: &[u8] = b"text";
-const TRANSLATE: &[u8] = b"translate";
-const TRANSLATE_FALLBACK: &[u8] = b"fallback";
-const TRANSLATE_WITH: &[u8] = b"with";
-const SCORE: &[u8] = b"score";
-const SCORE_NAME: &[u8] = b"name";
-const SCORE_OBJECTIVE: &[u8] = b"objective";
-const SELECTOR: &[u8] = b"selector";
-const SEPARATOR: &[u8] = b"separator";
-const KEYBIND: &[u8] = b"keybind";
-const NBT_PATH: &[u8] = b"nbt";
-const NBT_INTERPRET: &[u8] = b"interpret";
-const NBT_SOURCE: &[u8] = b"source";
-const NBT_BLOCK: &[u8] = b"block";
-const NBT_ENTITY: &[u8] = b"entity";
-const NBT_STORAGE: &[u8] = b"storage";
-const OBJECT_TYPE: &[u8] = b"object";
-const OBJECT_ATLAS: &[u8] = b"atlas";
-const OBJECT_SPRITE: &[u8] = b"sprite";
-const OBJECT_PLAYER: &[u8] = b"player";
-const OBJECT_HAT: &[u8] = b"hat";
+pub const TYPE: &str = "type";
+pub const EXTRA: &str = "extra";
+pub const TEXT: &str = "text";
+pub const TRANSLATE: &str = "translate";
+pub const TRANSLATE_FALLBACK: &str = "fallback";
+pub const TRANSLATE_WITH: &str = "with";
+pub const SCORE: &str = "score";
+pub const SCORE_NAME: &str = "name";
+pub const SCORE_OBJECTIVE: &str = "objective";
+pub const SELECTOR: &str = "selector";
+pub const SEPARATOR: &str = "separator";
+pub const KEYBIND: &str = "keybind";
+pub const NBT_PATH: &str = "nbt";
+pub const NBT_INTERPRET: &str = "interpret";
+pub const NBT_SOURCE: &str = "source";
+pub const NBT_BLOCK: &str = "block";
+pub const NBT_ENTITY: &str = "entity";
+pub const NBT_STORAGE: &str = "storage";
+pub const OBJECT_TYPE: &str = "object";
+pub const OBJECT_ATLAS: &str = "atlas";
+pub const OBJECT_SPRITE: &str = "sprite";
+pub const OBJECT_PLAYER: &str = "player";
+pub const OBJECT_HAT: &str = "hat";
 
-pub const OBJECT_PLAYER_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
-pub const OBJECT_PLAYER_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
-pub const OBJECT_PLAYER_PROPERTIES: StringTagRaw = StringTagRaw::new_unchecked(b"properties");
-pub const OBJECT_PLAYER_TEXTURE: StringTagRaw = StringTagRaw::new_unchecked(b"texture");
-pub const PROFILE_PROPERTY_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
-pub const PROFILE_PROPERTY_VALUE: StringTagRaw = StringTagRaw::new_unchecked(b"value");
-pub const PROFILE_PROPERTY_SIGNATURE: StringTagRaw = StringTagRaw::new_unchecked(b"signature");
-pub const FONT: StringTagRaw = StringTagRaw::new_unchecked(b"font");
-const COLOR: &[u8] = b"color";
-pub const SHADOW_COLOR: StringTagRaw = StringTagRaw::new_unchecked(b"shadow_color");
-pub const INSERTION: StringTagRaw = StringTagRaw::new_unchecked(b"insertion");
-pub const CLICK_EVENT_SNAKE: StringTagRaw = StringTagRaw::new_unchecked(b"click_event");
-pub const CLICK_EVENT_ACTION: StringTagRaw = StringTagRaw::new_unchecked(b"action");
-pub const CLICK_EVENT_VALUE: StringTagRaw = StringTagRaw::new_unchecked(b"value");
-pub const CLICK_EVENT_URL: StringTagRaw = StringTagRaw::new_unchecked(b"url");
-pub const CLICK_EVENT_PATH: StringTagRaw = StringTagRaw::new_unchecked(b"path");
-pub const CLICK_EVENT_COMMAND: StringTagRaw = StringTagRaw::new_unchecked(b"command");
-pub const CLICK_EVENT_PAGE: StringTagRaw = StringTagRaw::new_unchecked(b"page");
-pub const CLICK_EVENT_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
-pub const CLICK_EVENT_PAYLOAD: StringTagRaw = StringTagRaw::new_unchecked(b"payload");
-pub const HOVER_EVENT_SNAKE: StringTagRaw = StringTagRaw::new_unchecked(b"hover_event");
-pub const HOVER_EVENT_ACTION: StringTagRaw = StringTagRaw::new_unchecked(b"action");
-pub const SHOW_ENTITY_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
-pub const SHOW_ENTITY_UUID: StringTagRaw = StringTagRaw::new_unchecked(b"uuid");
-pub const SHOW_ENTITY_NAME: StringTagRaw = StringTagRaw::new_unchecked(b"name");
-pub const SHOW_ITEM_ID: StringTagRaw = StringTagRaw::new_unchecked(b"id");
-pub const SHOW_ITEM_COUNT: StringTagRaw = StringTagRaw::new_unchecked(b"count");
-pub const SHOW_ITEM_COMPONENTS: StringTagRaw = StringTagRaw::new_unchecked(b"components");
-
-const TYPE_H: u128 = cast2(TYPE);
-const EXTRA_H: u128 = cast2(EXTRA);
-const TEXT_H: u128 = cast2(TEXT);
-const TRANSLATE_H: u128 = cast2(TRANSLATE);
-const TRANSLATE_FALLBACK_H: u128 = cast2(TRANSLATE_FALLBACK);
-const TRANSLATE_WITH_H: u128 = cast2(TRANSLATE_WITH);
-const SCORE_H: u128 = cast2(SCORE);
-const SELECTOR_H: u128 = cast2(SELECTOR);
-const SEPARATOR_H: u128 = cast2(SEPARATOR);
-const KEYBIND_H: u128 = cast2(KEYBIND);
-const NBT_PATH_H: u128 = cast2(NBT_PATH);
-const NBT_INTERPRET_H: u128 = cast2(NBT_INTERPRET);
-const NBT_SOURCE_H: u128 = cast2(NBT_SOURCE);
-const NBT_BLOCK_H: u128 = cast2(NBT_BLOCK);
-const NBT_ENTITY_H: u128 = cast2(NBT_ENTITY);
-const NBT_STORAGE_H: u128 = cast2(NBT_STORAGE);
-const OBJECT_TYPE_H: u128 = cast2(OBJECT_TYPE);
-const OBJECT_ATLAS_H: u128 = cast2(OBJECT_ATLAS);
-const OBJECT_SPRITE_H: u128 = cast2(OBJECT_SPRITE);
-const OBJECT_PLAYER_H: u128 = cast2(OBJECT_PLAYER);
-const OBJECT_HAT_H: u128 = cast2(OBJECT_HAT);
-
-const COLOR_H: u128 = cast2(COLOR);
-
-const HEX_PREFIX: u8 = b'#';
-
-const fn cast128(n: &[u8]) -> Result<u128, Error> {
-    if n.len() <= 16 {
-        Ok(cast2(n))
-    } else {
-        Err(Error)
-    }
-}
-
-const fn cast2(n: &[u8]) -> u128 {
-    debug_assert!(n.len() <= 16);
-    let len = n.len();
-    let mut dest = [0u8; 16];
-    if len > 16 {
-        unsafe { core::hint::unreachable_unchecked() }
-    }
-    unsafe {
-        core::ptr::copy_nonoverlapping(n.as_ptr(), dest.as_mut_ptr(), len);
-    }
-    u128::from_le_bytes(dest)
-}
+pub const OBJECT_PLAYER_NAME: &str = "name";
+pub const OBJECT_PLAYER_ID: &str = "id";
+pub const OBJECT_PLAYER_PROPERTIES: &str = "properties";
+pub const OBJECT_PLAYER_TEXTURE: &str = "texture";
+pub const PROFILE_PROPERTY_NAME: &str = "name";
+pub const PROFILE_PROPERTY_VALUE: &str = "value";
+pub const PROFILE_PROPERTY_SIGNATURE: &str = "signature";
+pub const FONT: &str = "font";
+pub const COLOR: &str = "color";
+pub const SHADOW_COLOR: &str = "shadow_color";
+pub const INSERTION: &str = "insertion";
+pub const CLICK_EVENT_SNAKE: &str = "click_event";
+pub const CLICK_EVENT_ACTION: &str = "action";
+pub const CLICK_EVENT_VALUE: &str = "value";
+pub const CLICK_EVENT_URL: &str = "url";
+pub const CLICK_EVENT_PATH: &str = "path";
+pub const CLICK_EVENT_COMMAND: &str = "command";
+pub const CLICK_EVENT_PAGE: &str = "page";
+pub const CLICK_EVENT_ID: &str = "id";
+pub const CLICK_EVENT_PAYLOAD: &str = "payload";
+pub const HOVER_EVENT_SNAKE: &str = "hover_event";
+pub const HOVER_EVENT_ACTION: &str = "action";
+pub const SHOW_ENTITY_ID: &str = "id";
+pub const SHOW_ENTITY_UUID: &str = "uuid";
+pub const SHOW_ENTITY_NAME: &str = "name";
+pub const SHOW_ITEM_ID: &str = "id";
+pub const SHOW_ITEM_COUNT: &str = "count";
+pub const SHOW_ITEM_COMPONENTS: &str = "components";
 
 #[derive(Clone)]
 pub struct Component {
@@ -122,26 +73,26 @@ pub struct Component {
 #[derive(Clone)]
 pub enum Content {
     Literal {
-        content: BoxStr,
+        content: Box<str>,
     },
     Translatable {
-        key: BoxStr,
-        fallback: Option<BoxStr>,
+        key: Box<str>,
+        fallback: Option<Box<str>>,
         args: Vec<Component>,
     },
     Score {
-        name: BoxStr,
-        objective: BoxStr,
+        name: Box<str>,
+        objective: Box<str>,
     },
     Selector {
-        pattern: BoxStr,
+        pattern: Box<str>,
         separator: Option<Box<Component>>,
     },
     Keybind {
-        keybind: BoxStr,
+        keybind: Box<str>,
     },
     Nbt {
-        nbt_path: BoxStr,
+        nbt_path: Box<str>,
         interpret: bool,
         separator: Option<Box<Component>>,
         content: NbtContent,
@@ -153,25 +104,25 @@ pub enum Content {
 
 pub enum ContentB {
     Literal {
-        content: BoxStr,
+        content: Box<str>,
     },
     Translatable {
-        key: Option<BoxStr>,
-        fallback: Option<BoxStr>,
+        key: Option<Box<str>>,
+        fallback: Option<Box<str>>,
         args: Vec<Component>,
     },
     Score {
-        name: BoxStr,
-        objective: BoxStr,
+        name: Box<str>,
+        objective: Box<str>,
     },
     Selector {
-        pattern: BoxStr,
+        pattern: Box<str>,
     },
     Keybind {
-        keybind: BoxStr,
+        keybind: Box<str>,
     },
     Nbt {
-        nbt_path: Option<BoxStr>,
+        nbt_path: Option<Box<str>>,
         interpret: bool,
         content: Option<NbtContent>,
     },
@@ -239,7 +190,7 @@ impl Component {
     pub fn empty() -> Self {
         Self {
             content: Content::Literal {
-                content: BoxStr::empty(),
+                content: String::new().into_boxed_str(),
             },
             children: Vec::new(),
             style: Style {
@@ -257,13 +208,13 @@ impl Component {
 
 #[derive(Clone)]
 pub struct Style {
-    pub font: Option<BoxStr>,
+    pub font: Option<Box<str>>,
     pub color: Option<TextColor>,
     pub shadow_color: Option<ShadowColor>,
     pub decorations: DecorationMap,
     pub click_event: Option<ClickEvent>,
     pub hover_event: Option<HoverEvent>,
-    pub insertion: Option<BoxStr>,
+    pub insertion: Option<Box<str>>,
 }
 
 impl Default for Style {
@@ -309,39 +260,49 @@ impl TextColor {
         match self {
             TextColor::Named(named) => named.name(),
             TextColor::Rgb(rgb) => {
-                let (a, b) = mser::u8_to_hex(rgb.red);
-                let (c, d) = mser::u8_to_hex(rgb.green);
-                let (e, f) = mser::u8_to_hex(rgb.blue);
-                *buf = [HEX_PREFIX, a, b, c, d, e, f];
+                let (a, b) = u8_to_hex(rgb.red);
+                let (c, d) = u8_to_hex(rgb.green);
+                let (e, f) = u8_to_hex(rgb.blue);
+                *buf = [b'#', a, b, c, d, e, f];
                 unsafe { core::str::from_utf8_unchecked(buf) }
-            }
-        }
-    }
-
-    pub fn parse(n: &[u8]) -> Option<Self> {
-        match TextColorNamed::parse(n) {
-            Some(x) => Some(Self::Named(x)),
-            None => {
-                let hex = match n {
-                    [HEX_PREFIX, rest @ ..] => rest,
-                    _ => return None,
-                };
-                let (a, b) = mser::parse_hex::<u32>(hex);
-                if b == hex.len() && a <= 0xffffff {
-                    Some(Self::Rgb(TextColorRgb {
-                        red: (a >> 16) as u8,
-                        green: ((a >> 8) & 0xff) as u8,
-                        blue: (a & 0xff) as u8,
-                    }))
-                } else {
-                    None
-                }
             }
         }
     }
 }
 
-#[derive(Clone, Copy)]
+impl FromStr for TextColor {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(x) = s.parse() {
+            return Ok(Self::Named(x));
+        }
+        let hex = match s.strip_prefix('#') {
+            Some(rest) => rest,
+            None => return Err(Error),
+        };
+        let a = match u32::from_str_radix(hex, 16) {
+            Ok(x) => x,
+            Err(_) => return Err(Error),
+        };
+        if a <= 0xffffff {
+            Ok(Self::Rgb(TextColorRgb {
+                red: (a >> 16) as u8,
+                green: ((a >> 8) & 0xff) as u8,
+                blue: (a & 0xff) as u8,
+            }))
+        } else {
+            Err(Error)
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextColorRgb {
+    pub red: u8,
+    pub green: u8,
+    pub blue: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextColorNamed {
     Black,
     DarkBlue,
@@ -359,6 +320,34 @@ pub enum TextColorNamed {
     LightPurple,
     Yellow,
     White,
+}
+
+impl TextColorRgb {
+    pub const fn to_u32(self) -> u32 {
+        ((self.red as u32) << 16) | ((self.green as u32) << 8) | (self.blue as u32)
+    }
+
+    pub const fn to_named(self) -> Option<TextColorNamed> {
+        match self.to_u32() {
+            0x000000 => Some(TextColorNamed::Black),
+            0x0000aa => Some(TextColorNamed::DarkBlue),
+            0x00aa00 => Some(TextColorNamed::DarkGreen),
+            0x00aaaa => Some(TextColorNamed::DarkAqua),
+            0xaa0000 => Some(TextColorNamed::DarkRed),
+            0xaa00aa => Some(TextColorNamed::DarkPurple),
+            0xffaa00 => Some(TextColorNamed::Gold),
+            0xaaaaaa => Some(TextColorNamed::Gray),
+            0x555555 => Some(TextColorNamed::DarkGray),
+            0x5555ff => Some(TextColorNamed::Blue),
+            0x55ff55 => Some(TextColorNamed::Green),
+            0x55ffff => Some(TextColorNamed::Aqua),
+            0xff5555 => Some(TextColorNamed::Red),
+            0xff55ff => Some(TextColorNamed::LightPurple),
+            0xffff55 => Some(TextColorNamed::Yellow),
+            0xffffff => Some(TextColorNamed::White),
+            _ => None,
+        }
+    }
 }
 
 impl TextColorNamed {
@@ -467,62 +456,31 @@ impl TextColorNamed {
             Self::White => "white",
         }
     }
+}
 
-    pub const fn parse(n: &[u8]) -> Option<Self> {
-        Some(match n {
-            b"black" => Self::Black,
-            b"dark_blue" => Self::DarkBlue,
-            b"dark_green" => Self::DarkGreen,
-            b"dark_aqua" => Self::DarkAqua,
-            b"dark_red" => Self::DarkRed,
-            b"dark_purple" => Self::DarkPurple,
-            b"gold" => Self::Gold,
-            b"gray" => Self::Gray,
-            b"dark_gray" => Self::DarkGray,
-            b"blue" => Self::Blue,
-            b"green" => Self::Green,
-            b"aqua" => Self::Aqua,
-            b"red" => Self::Red,
-            b"light_purple" => Self::LightPurple,
-            b"yellow" => Self::Yellow,
-            b"white" => Self::White,
-            _ => return None,
+impl FromStr for TextColorNamed {
+    type Err = Error;
+
+    fn from_str(n: &str) -> Result<Self, Self::Err> {
+        Ok(match n {
+            "black" => Self::Black,
+            "dark_blue" => Self::DarkBlue,
+            "dark_green" => Self::DarkGreen,
+            "dark_aqua" => Self::DarkAqua,
+            "dark_red" => Self::DarkRed,
+            "dark_purple" => Self::DarkPurple,
+            "gold" => Self::Gold,
+            "gray" => Self::Gray,
+            "dark_gray" => Self::DarkGray,
+            "blue" => Self::Blue,
+            "green" => Self::Green,
+            "aqua" => Self::Aqua,
+            "red" => Self::Red,
+            "light_purple" => Self::LightPurple,
+            "yellow" => Self::Yellow,
+            "white" => Self::White,
+            _ => return Err(Error),
         })
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct TextColorRgb {
-    pub red: u8,
-    pub green: u8,
-    pub blue: u8,
-}
-
-impl TextColorRgb {
-    pub const fn to_u32(self) -> u32 {
-        ((self.red as u32) << 16) | ((self.green as u32) << 8) | (self.blue as u32)
-    }
-
-    pub const fn to_named(self) -> Option<TextColorNamed> {
-        match self.to_u32() {
-            0x000000 => Some(TextColorNamed::Black),
-            0x0000aa => Some(TextColorNamed::DarkBlue),
-            0x00aa00 => Some(TextColorNamed::DarkGreen),
-            0x00aaaa => Some(TextColorNamed::DarkAqua),
-            0xaa0000 => Some(TextColorNamed::DarkRed),
-            0xaa00aa => Some(TextColorNamed::DarkPurple),
-            0xffaa00 => Some(TextColorNamed::Gold),
-            0xaaaaaa => Some(TextColorNamed::Gray),
-            0x555555 => Some(TextColorNamed::DarkGray),
-            0x5555ff => Some(TextColorNamed::Blue),
-            0x55ff55 => Some(TextColorNamed::Green),
-            0x55ffff => Some(TextColorNamed::Aqua),
-            0xff5555 => Some(TextColorNamed::Red),
-            0xff55ff => Some(TextColorNamed::LightPurple),
-            0xffff55 => Some(TextColorNamed::Yellow),
-            0xffffff => Some(TextColorNamed::White),
-            _ => None,
-        }
     }
 }
 
@@ -535,7 +493,7 @@ impl ShadowColor {
     pub const NONE: Self = Self { value: 0 };
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct DecorationMap {
     pub value: u16,
 }
@@ -653,14 +611,14 @@ impl DecorationMap {
 
 #[derive(Clone)]
 pub enum ClickEvent {
-    OpenUrl(BoxStr),
-    OpenFile(BoxStr),
-    RunCommand(BoxStr),
-    SuggestCommand(BoxStr),
+    OpenUrl(Box<str>),
+    OpenFile(Box<str>),
+    RunCommand(Box<str>),
+    SuggestCommand(Box<str>),
     ChangePage(u32),
-    CopyToClipboard(BoxStr),
-    ShowDialog(Holder<Box<Dialog>>),
-    Custom(Identifier, BoxStr),
+    CopyToClipboard(Box<str>),
+    ShowDialog(HolderDialog),
+    Custom(Identifier, Box<str>),
 }
 
 #[derive(Clone)]
@@ -678,10 +636,7 @@ pub enum HoverEvent {
     },
 }
 
-pub const DEFAULT_ATLAS: Ident = Ident {
-    namespace: Ident::MINECRAFT,
-    path: "blocks",
-};
+pub const DEFAULT_ATLAS: Ident = unsafe { Ident::new_unchecked(None, "blocks") };
 
 #[derive(Clone)]
 pub enum ObjectContents {
@@ -697,7 +652,7 @@ pub enum ObjectContents {
 
 #[derive(Clone)]
 pub enum NbtContent {
-    Block { pos: BoxStr },
-    Entity { selector: BoxStr },
+    Block { pos: Box<str> },
+    Entity { selector: Box<str> },
     Storage { storage: Identifier },
 }

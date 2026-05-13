@@ -99,6 +99,8 @@ impl<'a> Ident<'a> {
     /// # Safety
     ///
     /// The namespace and path must be valid.
+    ///
+    /// namespace != [MINECRAFT]
     pub const unsafe fn new_unchecked(namespace: Option<&'a str>, path: &'a str) -> Self {
         Self { namespace, path }
     }
