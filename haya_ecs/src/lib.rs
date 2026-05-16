@@ -26,6 +26,13 @@ impl EntityAllocator {
         }
     }
 
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            next: 0,
+            free: VecDeque::with_capacity(capacity),
+        }
+    }
+
     pub fn alloc(&mut self) -> Entity {
         if let Some(entity) = self.free.pop_front() {
             entity
@@ -81,11 +88,17 @@ pub struct SparseSet {
 }
 
 impl SparseSet {
-    #[inline]
     pub const fn new() -> Self {
         Self {
             entities: Vec::new(),
             sparse: Vec::new(),
+        }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            entities: Vec::with_capacity(capacity),
+            sparse: Vec::with_capacity(capacity),
         }
     }
 
@@ -197,9 +210,12 @@ impl SparseSet {
 pub struct Component<T>(Vec<T>);
 
 impl<T> Component<T> {
-    #[inline]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self(Vec::new())
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
     }
 
     #[inline]
@@ -300,9 +316,8 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.comp
-            .next()
-            .map(|x| unsafe { (x, self.sparse.next().copied().unwrap_unchecked()) })
+        let x = self.comp.next()?;
+        unsafe { Some((x, self.sparse.next().copied().unwrap_unchecked())) }
     }
 
     #[inline]
@@ -314,9 +329,8 @@ impl<'a, T> Iterator for IterMut<'a, T> {
 impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.comp
-            .next_back()
-            .map(|x| unsafe { (x, self.sparse.next_back().copied().unwrap_unchecked()) })
+        let x = self.comp.next_back()?;
+        unsafe { Some((x, self.sparse.next_back().copied().unwrap_unchecked())) }
     }
 }
 
@@ -325,9 +339,8 @@ impl<'a, T> Iterator for Iter<'a, T> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.comp
-            .next()
-            .map(|x| unsafe { (x, self.sparse.next().copied().unwrap_unchecked()) })
+        let x = self.comp.next()?;
+        unsafe { Some((x, self.sparse.next().copied().unwrap_unchecked())) }
     }
 
     #[inline]
@@ -339,9 +352,8 @@ impl<'a, T> Iterator for Iter<'a, T> {
 impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.comp
-            .next_back()
-            .map(|x| unsafe { (x, self.sparse.next_back().copied().unwrap_unchecked()) })
+        let x = self.comp.next_back()?;
+        unsafe { Some((x, self.sparse.next_back().copied().unwrap_unchecked())) }
     }
 }
 
