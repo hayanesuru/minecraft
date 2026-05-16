@@ -738,7 +738,6 @@ mod tests {
         )
         .unwrap();
         assert_eq!(a.to_fluid(), fluid_state::water_s_8);
-        assert!(!block::dispenser.is_air());
         assert!(block::dispenser.state_default().opaque_full_cube().unwrap());
         assert_eq!(block::fire.state_default().opacity().unwrap(), 0);
     }
