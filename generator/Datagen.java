@@ -151,23 +151,23 @@ public final class Datagen {
         item(b);
         Files.writeString(Path.of("item.txt"), b.toString());
 
-        var access = worldStem.registries().compositeAccess();
+        // var access = worldStem.registries().compositeAccess();
 
-        b.setLength(0);
-        tags(b, access.lookupOrThrow(Registries.BLOCK));
-        Files.writeString(Path.of("block_tags.txt"), b.toString());
+        // b.setLength(0);
+        // tags(b, access.lookupOrThrow(Registries.BLOCK));
+        // Files.writeString(Path.of("block_tags.txt"), b.toString());
 
-        b.setLength(0);
-        tags(b, access.lookupOrThrow(Registries.ITEM));
-        Files.writeString(Path.of("item_tags.txt"), b.toString());
+        // b.setLength(0);
+        // tags(b, access.lookupOrThrow(Registries.ITEM));
+        // Files.writeString(Path.of("item_tags.txt"), b.toString());
 
-        b.setLength(0);
-        tags(b, access.lookupOrThrow(Registries.ENTITY_TYPE));
-        Files.writeString(Path.of("entity_tags.txt"), b.toString());
+        // b.setLength(0);
+        // tags(b, access.lookupOrThrow(Registries.ENTITY_TYPE));
+        // Files.writeString(Path.of("entity_tags.txt"), b.toString());
 
-        b.setLength(0);
-        tags(b, access.lookupOrThrow(Registries.GAME_EVENT));
-        Files.writeString(Path.of("game_event_tags.txt"), b.toString());
+        // b.setLength(0);
+        // tags(b, access.lookupOrThrow(Registries.GAME_EVENT));
+        // Files.writeString(Path.of("game_event_tags.txt"), b.toString());
     }
 
     private static <E> void tags(final StringBuilder b, final Registry<E> registryLookup) {

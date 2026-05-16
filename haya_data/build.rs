@@ -83,18 +83,6 @@ fn main() {
     let pac = read(&mut data, path.join("packet.txt"));
     let pac = ent.end..ent.end + pac;
 
-    let blt = read(&mut data, path.join("block_tags.txt"));
-    let blt = pac.end..pac.end + blt;
-
-    let itt = read(&mut data, path.join("item_tags.txt"));
-    let itt = blt.end..blt.end + itt;
-
-    let ett = read(&mut data, path.join("entity_tags.txt"));
-    let ett = itt.end..itt.end + ett;
-
-    let gat = read(&mut data, path.join("game_event_tags.txt"));
-    let gat = ett.end..ett.end + gat;
-
     let data = core::str::from_utf8(&data).unwrap();
     let block_names = registries(&mut w, &data[reg], &mut gen_hash);
     registries(&mut w, &data[pac], &mut gen_hash);
@@ -104,11 +92,6 @@ fn main() {
 
     let (bs_repr, bl_props, bs_size) = block_state(&mut w, &data[blo], &mut gen_hash, &block_names);
     fluid_state(&mut w, &data[flu], bs_repr, &bl_props, &bs_size);
-
-    block_tags(&mut w, &data[blt]);
-    item_tags(&mut w, &data[itt]);
-    entity_tags(&mut w, &data[ett]);
-    game_event_tags(&mut w, &data[gat]);
 
     std::fs::write(out.join("data.rs"), w).unwrap();
 }
@@ -309,126 +292,6 @@ fn fluid_state(
     list_ty(w, "FLUID_STATE_INDEX", fs_repr, out.len());
     list(w, out.into_iter());
     *w += ";\n";
-}
-
-fn block_tags(w: &mut String, data: &str) {
-    let mut iter = data.split('\n');
-    *w += "impl block {\n";
-    while let Some(tag) = iter.next() {
-        let tag = tag.trim_ascii();
-        if tag.is_empty() {
-            break;
-        }
-        let list = iter.next().unwrap();
-        *w += "#[inline]\n#[must_use]\npub const fn is_";
-        let mut last_end = 0;
-        for (start, part) in tag.match_indices(['.', '/']) {
-            *w += unsafe { tag.get_unchecked(last_end..start) };
-            w.push('_');
-            last_end = start + part.len();
-        }
-        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
-        *w += "(self) -> bool {\n";
-        if list.split_ascii_whitespace().next().is_some() {
-            *w += "matches!(self as raw_block,\n";
-            list_match_or(w, hex_line(list));
-            *w += "\n)";
-        } else {
-            *w += "false";
-        }
-        *w += "\n}\n";
-    }
-    *w += "}\n";
-}
-
-fn item_tags(w: &mut String, data: &str) {
-    let mut iter = data.split('\n');
-    *w += "impl item {\n";
-    while let Some(tag) = iter.next() {
-        let tag = tag.trim_ascii();
-        if tag.is_empty() {
-            break;
-        }
-        let list = iter.next().unwrap();
-        *w += "#[inline]\n#[must_use]\npub const fn is_";
-        let mut last_end = 0;
-        for (start, part) in tag.match_indices(['.', '/']) {
-            *w += unsafe { tag.get_unchecked(last_end..start) };
-            w.push('_');
-            last_end = start + part.len();
-        }
-        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
-        *w += "(self) -> bool {\n";
-        if list.split_ascii_whitespace().next().is_some() {
-            *w += "matches!(self as raw_item,\n";
-            list_match_or(w, hex_line(list));
-            *w += "\n)";
-        } else {
-            *w += "false";
-        }
-        *w += "\n}\n";
-    }
-    *w += "}\n";
-}
-
-fn entity_tags(w: &mut String, data: &str) {
-    let mut iter = data.split('\n');
-    *w += "impl entity_type {\n";
-    while let Some(tag) = iter.next() {
-        let tag = tag.trim_ascii();
-        if tag.is_empty() {
-            break;
-        }
-        let list = iter.next().unwrap();
-        *w += "#[inline]\n#[must_use]\npub const fn is_";
-        let mut last_end = 0;
-        for (start, part) in tag.match_indices(['.', '/']) {
-            *w += unsafe { tag.get_unchecked(last_end..start) };
-            w.push('_');
-            last_end = start + part.len();
-        }
-        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
-        *w += "(self) -> bool {\n";
-        if list.split_ascii_whitespace().next().is_some() {
-            *w += "matches!(self as raw_entity_type,\n";
-            list_match_or(w, hex_line(list));
-            *w += "\n)";
-        } else {
-            *w += "false";
-        }
-        *w += "\n}\n";
-    }
-    *w += "}\n";
-}
-
-fn game_event_tags(w: &mut String, data: &str) {
-    let mut iter = data.split('\n');
-    *w += "impl game_event {\n";
-    while let Some(tag) = iter.next() {
-        let tag = tag.trim_ascii();
-        if tag.is_empty() {
-            break;
-        }
-        let list = iter.next().unwrap();
-        *w += "#[inline]\n#[must_use]\npub const fn is_";
-        let mut last_end = 0;
-        for (start, part) in tag.match_indices(['.', '/']) {
-            *w += unsafe { tag.get_unchecked(last_end..start) };
-            w.push('_');
-            last_end = start + part.len();
-        }
-        *w += unsafe { tag.get_unchecked(last_end..tag.len()) };
-        *w += "(self) -> bool {\n";
-        if list.split_ascii_whitespace().next().is_some() {
-            *w += "matches!(self as raw_game_event,\n";
-            list_match_or(w, hex_line(list));
-            *w += "\n)";
-        } else {
-            *w += "false";
-        }
-        *w += "\n}\n";
-    }
-    *w += "}\n";
 }
 
 fn block_state(
@@ -1671,45 +1534,8 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     w.push(']');
 }
 
-fn list_match_or(w: &mut String, mut iter: impl Iterator<Item = impl Format> + Clone) {
-    let iter1 = iter.clone();
-    let first = iter.next();
-    let first = match first {
-        Some(x) => x,
-        None => {
-            unimplemented!();
-        }
-    };
-    if iter1.is_sorted_by(|a, b| a.is_next(b))
-        && let Some(last) = iter.clone().last()
-    {
-        first.format(w);
-        *w += "..=";
-        last.format(w);
-        return;
-    }
-
-    let mut c = 0usize;
-    first.format(w);
-    for x in iter {
-        w.push(' ');
-        w.push('|');
-        c += 1;
-        if c == 8 {
-            w.push('\n');
-            c = 0;
-        } else {
-            w.push(' ');
-        }
-        x.format(w);
-    }
-}
-
 trait Format {
     fn format(&self, w: &mut String);
-    fn is_next(&self, _: &Self) -> bool {
-        false
-    }
 }
 
 impl Format for str {
@@ -1722,19 +1548,11 @@ impl Format for usize {
     fn format(&self, w: &mut String) {
         write(w, *self);
     }
-
-    fn is_next(&self, other: &Self) -> bool {
-        self.wrapping_add(1) == *other
-    }
 }
 
 impl Format for u8 {
     fn format(&self, w: &mut String) {
         write(w, *self);
-    }
-
-    fn is_next(&self, other: &Self) -> bool {
-        self.wrapping_add(1) == *other
     }
 }
 
@@ -1742,19 +1560,11 @@ impl Format for u32 {
     fn format(&self, w: &mut String) {
         write(w, *self);
     }
-
-    fn is_next(&self, other: &Self) -> bool {
-        self.wrapping_add(1) == *other
-    }
 }
 
 impl Format for u64 {
     fn format(&self, w: &mut String) {
         write(w, *self);
-    }
-
-    fn is_next(&self, other: &Self) -> bool {
-        self.wrapping_add(1) == *other
     }
 }
 
