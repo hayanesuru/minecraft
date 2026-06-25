@@ -1,5 +1,5 @@
-use crate::sound::SoundEvent;
 use crate::Holder;
+use crate::sound::SoundEvent;
 use minecraft_data::sound_event;
 
 #[derive(Clone, Serialize, Deserialize)]

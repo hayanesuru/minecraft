@@ -2,7 +2,7 @@ use crate::chat::MessageSignature;
 use haya_collection::List;
 use haya_ident::{Ident, ResourceKey};
 use minecraft_data::command_argument_type;
-use mser::{Error, Read, Reader, Utf8, Write, Writer, V21};
+use mser::{Error, Read, Reader, Utf8, V21, Write, Writer};
 use mser_macro::{Deserialize, Serialize};
 
 const MASK_NODE: u8 = 0x03;
