@@ -1,6 +1,6 @@
 [package]
 name = "minecraft_data"
-version = "3.1.0"
+version = "4.0.0+1.21.11"
 description = "minecraft data"
 edition.workspace = true
 authors.workspace = true
@@ -10,6 +10,7 @@ repository.workspace = true
 categories = ["game-engines", "no-std"]
 keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_data"
+publish = ["crates.io"]
 
 [features]
 default = []

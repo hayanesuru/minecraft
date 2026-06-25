@@ -1,6 +1,6 @@
 use minecraft_data::{
-    serverbound__configuration, serverbound__handshake, serverbound__login, serverbound__play,
-    serverbound__status,
+    serverbound_configuration, serverbound_handshake, serverbound_login, serverbound_play,
+    serverbound_status,
 };
 
 pub mod common;
@@ -49,20 +49,20 @@ macro_rules! packets {
     };
 }
 packets! {
-    serverbound__handshake,
+    serverbound_handshake,
     HandshakeHandler,
     handle,
     intention = handshake::Intention<'_>,
 }
 packets! {
-    serverbound__status,
+    serverbound_status,
     StatusHandler,
     handle,
     status_request = status::StatusRequest,
     ping_request = ping::StatusPingRequest,
 }
 packets! {
-    serverbound__login,
+    serverbound_login,
     LoginHandler,
     handle,
     hello = login::Hello<'_>,
@@ -72,7 +72,7 @@ packets! {
     cookie_response = cookie::LoginCookieResponse<'_>,
 }
 packets! {
-    serverbound__configuration,
+    serverbound_configuration,
     ConfigurationHandler,
     handle,
     client_information = common::ConfigurationClientInformation<'_>,
@@ -87,7 +87,7 @@ packets! {
     accept_code_of_conduct = configuration::AcceptCodeOfConduct,
 }
 packets! {
-    serverbound__play,
+    serverbound_play,
     GameHandler,
     handle,
     accept_teleportation = game::AcceptTeleportation,

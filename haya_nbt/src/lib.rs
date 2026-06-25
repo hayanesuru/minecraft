@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 extern crate alloc;
 
@@ -15,11 +16,249 @@ mod unicode;
 use self::byte_array::ByteArray;
 use self::int_array::IntArray;
 use self::long_array::LongArray;
+pub use self::unicode::{character, name};
 use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec;
 use alloc::vec::Vec;
+use haya_ident::{Identifier, parse_ident};
 use haya_str::HayaStr;
 use mser::{Error, Read, Reader, Write, Writer};
-pub use unicode::{character, name};
+use uuid::Uuid;
+
+pub trait Deserialize: Sized {
+    fn deserialize(nbt: Tag) -> Result<Self, Error>;
+}
+
+pub trait Serialize {
+    fn serialize(&self) -> Tag;
+}
+
+impl Serialize for StringTag {
+    fn serialize(&self) -> Tag {
+        Tag::String(self.clone())
+    }
+}
+
+impl Deserialize for StringTag {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::String(string_tag) => Ok(string_tag),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Serialize for bool {
+    fn serialize(&self) -> Tag {
+        Tag::Byte(if *self { 1 } else { 0 })
+    }
+}
+
+impl Deserialize for bool {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::Byte(x) => Ok(x != 0),
+            Tag::Short(x) => Ok(x != 0),
+            Tag::Int(x) => Ok(x != 0),
+            Tag::Long(x) => Ok(x != 0),
+            Tag::Float(x) => Ok(x != 0.0),
+            Tag::Double(x) => Ok(x != 0.0),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Serialize for Identifier {
+    fn serialize(&self) -> Tag {
+        let namespace = match self.namespace() {
+            Some(x) => x,
+            None => haya_ident::MINECRAFT,
+        };
+        let path = self.path();
+        let s = match HayaStr::copy_from(namespace) {
+            Ok(mut x) => match x.try_extend(":") {
+                Ok(_) => match x.try_extend(path) {
+                    Ok(_) => Some(StringTag(Inner::Thin(x))),
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            },
+            Err(_) => None,
+        };
+        match s {
+            Some(x) => Tag::String(x),
+            None => {
+                let l = namespace.len() + 1 + path.len();
+                let mut s = String::with_capacity(l);
+                s.push_str(namespace);
+                s.push(':');
+                s.push_str(path);
+                Tag::String(StringTag(Inner::Heap(s.into_boxed_str())))
+            }
+        }
+    }
+}
+
+impl Deserialize for Identifier {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::String(s) => match parse_ident(s.as_bytes()) {
+                Some(x) => Ok(x.to_identifier()),
+                None => Err(Error),
+            },
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Serialize for ListTag {
+    fn serialize(&self) -> Tag {
+        Tag::List(self.clone())
+    }
+}
+
+impl Deserialize for ListTag {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::List(x) => Ok(x),
+            Tag::ByteArray(x) => Ok(Self::Byte(x)),
+            Tag::IntArray(x) => Ok(Self::Int(x)),
+            Tag::LongArray(x) => Ok(Self::Long(x)),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Serialize for Vec<i8> {
+    fn serialize(&self) -> Tag {
+        Tag::ByteArray(self.clone())
+    }
+}
+
+impl Serialize for Vec<i32> {
+    fn serialize(&self) -> Tag {
+        Tag::IntArray(self.clone())
+    }
+}
+
+impl Serialize for Vec<i64> {
+    fn serialize(&self) -> Tag {
+        Tag::LongArray(self.clone())
+    }
+}
+
+impl Deserialize for Vec<i8> {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::ByteArray(x) => Ok(x),
+            Tag::List(ListTag::Byte(x)) => Ok(x),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Deserialize for Vec<i32> {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::IntArray(x) => Ok(x),
+            Tag::List(ListTag::Int(x)) => Ok(x),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Deserialize for Vec<i64> {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::LongArray(x) => Ok(x),
+            Tag::List(ListTag::Long(x)) => Ok(x),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Serialize for Uuid {
+    fn serialize(&self) -> Tag {
+        let [
+            b1,
+            b2,
+            b3,
+            b4,
+            b5,
+            b6,
+            b7,
+            b8,
+            b9,
+            b10,
+            b11,
+            b12,
+            b13,
+            b14,
+            b15,
+            b16,
+        ] = self.into_bytes();
+        let i1 = i32::from_be_bytes([b1, b2, b3, b4]);
+        let i2 = i32::from_be_bytes([b5, b6, b7, b8]);
+        let i3 = i32::from_be_bytes([b9, b10, b11, b12]);
+        let i4 = i32::from_be_bytes([b13, b14, b15, b16]);
+        Tag::IntArray(vec![i1, i2, i3, i4])
+    }
+}
+
+impl Deserialize for Uuid {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        let vec = match nbt {
+            Tag::IntArray(x) => x,
+            Tag::List(ListTag::Int(x)) => x,
+            _ => return Err(Error),
+        };
+        match vec[..] {
+            [a, b, c, d] => {
+                let [b1, b2, b3, b4] = a.to_be_bytes();
+                let [b5, b6, b7, b8] = b.to_be_bytes();
+                let [b9, b10, b11, b12] = c.to_be_bytes();
+                let [b13, b14, b15, b16] = d.to_be_bytes();
+                Ok(Self::from_bytes([
+                    b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16,
+                ]))
+            }
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Deserialize for i32 {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::Byte(x) => Ok(x as Self),
+            Tag::Short(x) => Ok(x as Self),
+            Tag::Int(x) => Ok(x),
+            Tag::Long(x) => Ok(x as Self),
+            Tag::Float(x) => Ok(x as Self),
+            Tag::Double(x) => Ok(x as Self),
+            _ => Err(Error),
+        }
+    }
+}
+
+impl Serialize for i32 {
+    fn serialize(&self) -> Tag {
+        Tag::Int(*self)
+    }
+}
+
+impl Serialize for Tag {
+    fn serialize(&self) -> Tag {
+        self.clone()
+    }
+}
+
+impl Deserialize for Tag {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        Ok(nbt)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -39,9 +278,6 @@ pub enum TagType {
     LongArray,
 }
 
-#[derive(Clone)]
-pub struct StringTag(pub Box<str>);
-
 #[derive(Clone, Copy)]
 pub struct RefStringTag<'a>(pub &'a str);
 
@@ -49,13 +285,13 @@ pub struct RefStringTag<'a>(pub &'a str);
 pub struct RawStringTag<'a>(&'a str);
 
 #[derive(Clone, Debug)]
-pub struct Compound(Vec<(Name, Tag)>);
+pub struct CompoundTag(Vec<(StringTag, Tag)>);
 
 #[derive(Clone)]
-pub struct CompoundStringify(pub Compound);
+pub struct CompoundStringify(pub CompoundTag);
 
 #[derive(Clone, Debug)]
-pub struct Name(Inner);
+pub struct StringTag(Inner);
 
 #[derive(Clone, Debug)]
 enum Inner {
@@ -75,12 +311,12 @@ pub enum ListTag {
     Long(Vec<i64>),
     Float(Vec<f32>),
     Double(Vec<f64>),
-    String(Vec<Box<str>>),
+    String(Vec<StringTag>),
     ByteArray(Vec<Vec<i8>>),
     IntArray(Vec<Vec<i32>>),
     LongArray(Vec<Vec<i64>>),
-    List(Vec<ListTag>),
-    Compound(Vec<Compound>),
+    List(Vec<Self>),
+    Compound(Vec<CompoundTag>),
 }
 
 impl TagType {
@@ -96,10 +332,10 @@ impl TagType {
         }
     }
 
-    pub fn string(self, buf: &mut Reader) -> Result<Box<str>, Error> {
+    pub fn string(self, buf: &mut Reader) -> Result<StringTag, Error> {
         match self {
             Self::String => match StringTag::read(buf) {
-                Ok(x) => Ok(x.0),
+                Ok(x) => Ok(x),
                 Err(e) => Err(e),
             },
             _ => Err(Error),
@@ -111,12 +347,12 @@ impl TagType {
             Self::IntArray => Ok(IntArray::read(buf)?.0),
             Self::List => {
                 let ListInfo(tag, len) = ListInfo::read(buf)?;
-                let len = len as usize;
+                let len2 = len as usize;
                 match tag {
-                    TagType::Int => unsafe {
+                    Self::Int => unsafe {
                         Ok(list::int_list(
-                            len,
-                            buf.read_slice(len.checked_mul(4).ok_or(Error)?)?,
+                            len2,
+                            buf.read_slice(len2.checked_mul(4).ok_or(Error)?)?,
                         ))
                     },
                     _ => Err(Error),
@@ -135,11 +371,11 @@ impl TagType {
             Self::Float => Tag::from(f32::read(n)?),
             Self::Double => Tag::from(f64::read(n)?),
             Self::ByteArray => Tag::from(ByteArray::read(n)?.0),
-            Self::String => Tag::from(StringTag::read(n)?.0),
+            Self::String => Tag::from(StringTag::read(n)?),
             Self::IntArray => Tag::from(IntArray::read(n)?.0),
             Self::LongArray => Tag::from(LongArray::read(n)?.0),
             Self::List => Tag::List(ListTag::None),
-            Self::Compound => Tag::Compound(Compound::new()),
+            Self::Compound => Tag::Compound(CompoundTag::new()),
             Self::End => Tag::End,
         })
     }
@@ -165,20 +401,19 @@ impl TagType {
 
 #[derive(Clone)]
 enum ReadEntry {
-    Compound(Compound),
-    ListCompound(Vec<Compound>, u32),
+    Compound(CompoundTag),
+    ListCompound(Vec<CompoundTag>, u32),
     ListList(Vec<ListTag>, u32),
 }
 
 fn read_tag(buf: &mut Reader, next: ReadEntry, max_depth: usize) -> Result<Tag, Error> {
     let mut blocks = Vec::<ReadEntry>::with_capacity(4);
-    let mut names = Vec::<Name>::with_capacity(4);
+    let mut names = Vec::<StringTag>::with_capacity(4);
     blocks.push(next);
     loop {
         blocks.reserve(1);
         names.reserve(1);
-        let next = unsafe { blocks.pop().unwrap_unchecked() };
-        let next = match next {
+        let next = match unsafe { blocks.pop().unwrap_unchecked() } {
             ReadEntry::Compound(mut compound) => match TagType::read(buf)? {
                 TagType::End => match blocks.pop() {
                     Some(ReadEntry::Compound(mut c)) => {
@@ -197,7 +432,7 @@ fn read_tag(buf: &mut Reader, next: ReadEntry, max_depth: usize) -> Result<Tag, 
                     None => return Ok(Tag::Compound(compound)),
                 },
                 ty => {
-                    let name = Name::read(buf)?;
+                    let name = StringTag::read(buf)?;
                     match ty.tag_no_rec(buf)? {
                         Tag::Compound(c) => {
                             names.push(name);
@@ -217,7 +452,7 @@ fn read_tag(buf: &mut Reader, next: ReadEntry, max_depth: usize) -> Result<Tag, 
             ReadEntry::ListCompound(compounds, len) => {
                 if len != 0 {
                     blocks.push(ReadEntry::ListCompound(compounds, len - 1));
-                    ReadEntry::Compound(Compound::new())
+                    ReadEntry::Compound(CompoundTag::new())
                 } else {
                     match blocks.pop() {
                         Some(ReadEntry::Compound(mut x)) => {
@@ -295,9 +530,9 @@ fn read_list2(
 fn read_list1(
     buf: &mut Reader<'_>,
     blocks: &mut Vec<ReadEntry>,
-    names: &mut Vec<Name>,
-    mut compound: Compound,
-    name: Name,
+    names: &mut Vec<StringTag>,
+    mut compound: CompoundTag,
+    name: StringTag,
 ) -> Result<ReadEntry, Error> {
     let l = ListInfo::read(buf)?;
     Ok(match l.list_no_rec(buf)? {
@@ -320,8 +555,8 @@ fn read_list1(
 
 #[derive(Clone, Copy)]
 enum WriteEntry<'a> {
-    Compound(&'a [(Name, Tag)]),
-    ListCompound(&'a [Compound]),
+    Compound(&'a [(StringTag, Tag)]),
+    ListCompound(&'a [CompoundTag]),
     ListList(&'a [ListTag]),
 }
 
@@ -382,10 +617,10 @@ fn len_list_no_rec(list: &ListTag) -> usize {
             ListTag::Long(x) => x.len() * 8,
             ListTag::Float(x) => x.len() * 4,
             ListTag::Double(x) => x.len() * 8,
-            ListTag::String(x) => x.iter().map(|x| RefStringTag(x).len_s()).sum::<usize>(),
-            ListTag::ByteArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>(),
-            ListTag::IntArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 4,
-            ListTag::LongArray(x) => x.len() * 4 + x.iter().map(|x| x.len()).sum::<usize>() * 8,
+            ListTag::String(x) => x.iter().map(|y| RefStringTag(y).len_s()).sum::<usize>(),
+            ListTag::ByteArray(x) => x.len() * 4 + x.iter().map(|y| y.len()).sum::<usize>(),
+            ListTag::IntArray(x) => x.len() * 4 + x.iter().map(|y| y.len()).sum::<usize>() * 4,
+            ListTag::LongArray(x) => x.len() * 4 + x.iter().map(|y| y.len()).sum::<usize>() * 8,
             ListTag::List(_) => 0,
             ListTag::Compound(_) => 0,
         }
@@ -400,22 +635,22 @@ unsafe fn write_list_no_rec(w: &mut Writer, list: &ListTag) {
                 w.write(crate::byte_array::i8_to_u8_slice(x));
             }
             ListTag::Short(x) => {
-                x.iter().for_each(|x| x.write(w));
+                x.iter().for_each(|y| y.write(w));
             }
             ListTag::Int(x) => {
-                x.iter().for_each(|x| x.write(w));
+                x.iter().for_each(|y| y.write(w));
             }
             ListTag::Long(x) => {
-                x.iter().for_each(|x| x.write(w));
+                x.iter().for_each(|y| y.write(w));
             }
             ListTag::Float(x) => {
-                x.iter().for_each(|x| x.write(w));
+                x.iter().for_each(|y| y.write(w));
             }
             ListTag::Double(x) => {
-                x.iter().for_each(|x| x.write(w));
+                x.iter().for_each(|y| y.write(w));
             }
             ListTag::String(x) => {
-                x.iter().for_each(|x| RefStringTag(x).write(w));
+                x.iter().for_each(|y| RefStringTag(y).write(w));
             }
             ListTag::ByteArray(x) => {
                 x.iter().for_each(|y| {
@@ -447,8 +682,7 @@ fn write_tag(w: &mut Writer, next: WriteEntry) {
     loop {
         unsafe {
             blocks.reserve(1);
-            let next = blocks.pop().unwrap_unchecked();
-            let next = match next {
+            let next = match blocks.pop().unwrap_unchecked() {
                 WriteEntry::Compound(compound) => match compound.split_first() {
                     Some((x, y)) => {
                         x.0.write(w);
@@ -498,13 +732,13 @@ fn write_tag(w: &mut Writer, next: WriteEntry) {
                     if let Some((x, y)) = lists.split_first() {
                         x.list_info().write(w);
                         match x {
-                            ListTag::List(x) => {
+                            ListTag::List(tag) => {
                                 blocks.push(WriteEntry::ListList(y));
-                                WriteEntry::ListList(x)
+                                WriteEntry::ListList(tag)
                             }
-                            ListTag::Compound(x) => {
+                            ListTag::Compound(tag) => {
                                 blocks.push(WriteEntry::ListList(y));
-                                WriteEntry::ListCompound(x)
+                                WriteEntry::ListCompound(tag)
                             }
                             x => {
                                 write_list_no_rec(w, x);
@@ -531,8 +765,7 @@ fn len_tag(next: WriteEntry) -> usize {
     loop {
         unsafe {
             blocks.reserve(1);
-            let next = blocks.pop().unwrap_unchecked();
-            let next = match next {
+            let next = match blocks.pop().unwrap_unchecked() {
                 WriteEntry::Compound(compound) => match compound.split_first() {
                     Some((x, y)) => {
                         w += x.0.len_s();
@@ -582,13 +815,13 @@ fn len_tag(next: WriteEntry) -> usize {
                     if let Some((x, y)) = lists.split_first() {
                         w += x.list_info().len_s();
                         match x {
-                            ListTag::List(x) => {
+                            ListTag::List(tag) => {
                                 blocks.push(WriteEntry::ListList(y));
-                                WriteEntry::ListList(x)
+                                WriteEntry::ListList(tag)
                             }
-                            ListTag::Compound(x) => {
+                            ListTag::Compound(tag) => {
                                 blocks.push(WriteEntry::ListList(y));
-                                WriteEntry::ListCompound(x)
+                                WriteEntry::ListCompound(tag)
                             }
                             x => {
                                 w += len_list_no_rec(x);
@@ -640,12 +873,12 @@ pub enum Tag {
     Long(i64),
     Float(f32),
     Double(f64),
-    String(Box<str>),
+    String(StringTag),
     ByteArray(Vec<i8>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
     List(ListTag),
-    Compound(Compound),
+    Compound(CompoundTag),
     End,
 }
 
@@ -812,20 +1045,27 @@ impl From<Vec<i8>> for Tag {
 impl<'a> From<&'a str> for Tag {
     #[inline]
     fn from(value: &'a str) -> Self {
-        Self::String(Box::from(value))
+        Self::String(StringTag::from_utf8(value))
     }
 }
 
 impl<'a> From<&'a mut str> for Tag {
     #[inline]
     fn from(value: &'a mut str) -> Self {
-        Self::String(Box::from(value))
+        Self::String(StringTag::from_utf8(value))
     }
 }
 
 impl From<Box<str>> for Tag {
     #[inline]
     fn from(value: Box<str>) -> Self {
+        Self::String(StringTag::from_owned(value))
+    }
+}
+
+impl From<StringTag> for Tag {
+    #[inline]
+    fn from(value: StringTag) -> Self {
         Self::String(value)
     }
 }
@@ -837,9 +1077,9 @@ impl From<ListTag> for Tag {
     }
 }
 
-impl From<Compound> for Tag {
+impl From<CompoundTag> for Tag {
     #[inline]
-    fn from(value: Compound) -> Self {
+    fn from(value: CompoundTag) -> Self {
         Self::Compound(value)
     }
 }
@@ -865,13 +1105,13 @@ impl<'a> Read<'a> for Tag {
 }
 
 #[derive(Clone)]
-pub struct CompoundNamed(pub Name, pub Compound);
+pub struct CompoundNamed(pub StringTag, pub CompoundTag);
 
 impl Read<'_> for CompoundNamed {
     #[inline]
     fn read(n: &mut Reader) -> Result<Self, Error> {
         if matches!(TagType::read(n)?, TagType::Compound) {
-            Ok(Self(Name::read(n)?, Compound::read(n)?))
+            Ok(Self(StringTag::read(n)?, CompoundTag::read(n)?))
         } else {
             Err(Error)
         }

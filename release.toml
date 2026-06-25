@@ -1,5 +1,4 @@
 allow-branch = ["main"]
 
-publish = false
 sign-commit = true
 sign-tag = true

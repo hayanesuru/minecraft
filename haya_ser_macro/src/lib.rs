@@ -1,5 +1,6 @@
 #![recursion_limit = "128"]
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 extern crate alloc;
 
@@ -83,42 +84,42 @@ fn crate_name(input: &DeriveInput) -> Result<(Attrs, syn::Path), syn::Error> {
 
 #[proc_macro_derive(Serialize, attributes(mser))]
 pub fn serialize(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::DeriveInput);
-    let (attr, cratename) = match crate_name(&input) {
+    let i = parse_macro_input!(input as syn::DeriveInput);
+    let (attr, cratename) = match crate_name(&i) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();
         }
     };
 
-    let x = match input.data {
-        syn::Data::Struct(_) => serialize::serialize_struct(input, cratename),
-        syn::Data::Enum(_) => serialize::serialize_enum(input, cratename, attr),
-        syn::Data::Union(_) => Err(syn::Error::new_spanned(input, "unions are not supported")),
+    let x = match i.data {
+        syn::Data::Struct(_) => serialize::serialize_struct(i, cratename),
+        syn::Data::Enum(_) => serialize::serialize_enum(i, cratename, attr),
+        syn::Data::Union(_) => Err(syn::Error::new_spanned(i, "unions are not supported")),
     };
     match x {
-        Ok(x) => x.into(),
+        Ok(token) => token.into(),
         Err(err) => err.to_compile_error().into(),
     }
 }
 
 #[proc_macro_derive(Deserialize, attributes(mser))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::DeriveInput);
-    let (attrs, cratename) = match crate_name(&input) {
+    let i = parse_macro_input!(input as syn::DeriveInput);
+    let (attrs, cratename) = match crate_name(&i) {
         Ok(cratename) => cratename,
         Err(err) => {
             return err.to_compile_error().into();
         }
     };
 
-    let x = match input.data {
-        syn::Data::Struct(_) => deserialize::deserialize_struct(input, cratename, attrs),
-        syn::Data::Enum(_) => deserialize::deserialize_enum(input, cratename, attrs),
-        syn::Data::Union(_) => Err(syn::Error::new_spanned(input, "unions are not supported")),
+    let x = match i.data {
+        syn::Data::Struct(_) => deserialize::deserialize_struct(i, cratename, attrs),
+        syn::Data::Enum(_) => deserialize::deserialize_enum(i, cratename, attrs),
+        syn::Data::Union(_) => Err(syn::Error::new_spanned(i, "unions are not supported")),
     };
     match x {
-        Ok(x) => x.into(),
+        Ok(token) => token.into(),
         Err(err) => err.to_compile_error().into(),
     }
 }
@@ -149,7 +150,7 @@ impl syn::parse::Parse for FieldAttrs {
                 let _: syn::Token![,] = input.parse()?;
             }
         }
-        Ok(FieldAttrs { filter, varint })
+        Ok(Self { filter, varint })
     }
 }
 
@@ -236,8 +237,8 @@ fn ty(ty: &syn::Type) -> Ty {
     }
 }
 
-fn ident_case(a: &Attrs, s: &syn::Ident) -> String {
-    let s = s.to_string();
+fn ident_case(a: &Attrs, ident: &syn::Ident) -> String {
+    let s = ident.to_string();
     if a.camel_case {
         return s;
     }

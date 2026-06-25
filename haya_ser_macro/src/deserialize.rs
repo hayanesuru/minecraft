@@ -24,15 +24,15 @@ pub fn deserialize_struct(
         syn::Data::Struct(data) => parse_fields(&data.fields)?,
         _ => unreachable!(),
     };
-    let read = fields
+    let read1 = fields
         .iter()
         .map(|(field, attrs, m)| read_field(&cratename, field, attrs, m));
-    let read = quote!(Self {
-        #(#read,)*
+    let read2 = quote!(Self {
+        #(#read1,)*
     });
     let read = if let Some(filter) = attrs.filter {
         quote! {
-            let __v = #read;
+            let __v = #read2;
             if #filter(&__v) {
                 ::core::result::Result::Ok(__v)
             } else {
@@ -40,7 +40,7 @@ pub fn deserialize_struct(
             }
         }
     } else {
-        quote!(::core::result::Result::Ok(#read))
+        quote!(::core::result::Result::Ok(#read2))
     };
     Ok(quote! {
         #[automatically_derived]
@@ -118,7 +118,7 @@ pub fn deserialize_enum(
         });
     }
 
-    let read = match read {
+    let read1 = match read {
         Some(x) => x,
         None => {
             return Err(syn::Error::new_spanned(
@@ -127,9 +127,9 @@ pub fn deserialize_enum(
             ));
         }
     };
-    let read = if let Some(filter) = attrs.filter {
+    let read2 = if let Some(filter) = attrs.filter {
         quote! {
-            let __v = #read;
+            let __v = #read1;
             if #filter(&__v) {
                 ::core::result::Result::Ok(__v)
             } else {
@@ -137,7 +137,7 @@ pub fn deserialize_enum(
             }
         }
     } else {
-        quote!(::core::result::Result::Ok(#read))
+        quote!(::core::result::Result::Ok(#read1))
     };
 
     let generics = &input.generics;
@@ -155,7 +155,7 @@ pub fn deserialize_enum(
         impl <'__a #impl_generics ::#cratename::Read<'__a> for #name #tok {
             #[inline]
             fn read(__r: &mut ::#cratename::Reader<'__a>) -> ::core::result::Result<Self, ::mser::Error> {
-                #read
+                #read2
             }
         }
     })
@@ -267,9 +267,9 @@ impl<'a> ToTokens for ImplGenerics<'a> {
             }
             match param.value() {
                 syn::GenericParam::Lifetime(_) => unreachable!(),
-                syn::GenericParam::Type(param) => {
-                    if param.bounds.len() == 1
-                        && let Some(syn::TypeParamBound::Trait(t)) = param.bounds.first()
+                syn::GenericParam::Type(p) => {
+                    if p.bounds.len() == 1
+                        && let Some(syn::TypeParamBound::Trait(t)) = p.bounds.first()
                         && let Some(ident) = t.path.get_ident()
                         && ident == "Allocator"
                     {
@@ -278,29 +278,27 @@ impl<'a> ToTokens for ImplGenerics<'a> {
 
                     // Leave off the type parameter defaults
                     tokens.append_all(
-                        param
-                            .attrs
+                        p.attrs
                             .iter()
                             .filter(|x| matches!(x.style, syn::AttrStyle::Outer)),
                     );
-                    param.ident.to_tokens(tokens);
-                    if !param.bounds.is_empty() {
-                        TokensOrDefault(&param.colon_token).to_tokens(tokens);
-                        param.bounds.to_tokens(tokens);
+                    p.ident.to_tokens(tokens);
+                    if !p.bounds.is_empty() {
+                        TokensOrDefault(&p.colon_token).to_tokens(tokens);
+                        p.bounds.to_tokens(tokens);
                     }
                 }
-                syn::GenericParam::Const(param) => {
+                syn::GenericParam::Const(p) => {
                     // Leave off the const parameter defaults
                     tokens.append_all(
-                        param
-                            .attrs
+                        p.attrs
                             .iter()
                             .filter(|x| matches!(x.style, syn::AttrStyle::Outer)),
                     );
-                    param.const_token.to_tokens(tokens);
-                    param.ident.to_tokens(tokens);
-                    param.colon_token.to_tokens(tokens);
-                    param.ty.to_tokens(tokens);
+                    p.const_token.to_tokens(tokens);
+                    p.ident.to_tokens(tokens);
+                    p.colon_token.to_tokens(tokens);
+                    p.ty.to_tokens(tokens);
                 }
             }
             param.punct().to_tokens(tokens);
@@ -354,9 +352,9 @@ impl<'a> ToTokens for TypeGenerics<'a> {
             }
             match param.value() {
                 syn::GenericParam::Lifetime(_) => unreachable!(),
-                syn::GenericParam::Type(param) => {
-                    if param.bounds.len() == 1
-                        && let Some(syn::TypeParamBound::Trait(t)) = param.bounds.first()
+                syn::GenericParam::Type(p) => {
+                    if p.bounds.len() == 1
+                        && let Some(syn::TypeParamBound::Trait(t)) = p.bounds.first()
                         && let Some(ident) = t.path.get_ident()
                         && ident == "Allocator"
                     {
@@ -364,11 +362,11 @@ impl<'a> ToTokens for TypeGenerics<'a> {
                     }
 
                     // Leave off the type parameter defaults
-                    param.ident.to_tokens(tokens);
+                    p.ident.to_tokens(tokens);
                 }
-                syn::GenericParam::Const(param) => {
+                syn::GenericParam::Const(p) => {
                     // Leave off the const parameter defaults
-                    param.ident.to_tokens(tokens);
+                    p.ident.to_tokens(tokens);
                 }
             }
             param.punct().to_tokens(tokens);

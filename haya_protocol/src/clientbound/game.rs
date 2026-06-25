@@ -15,7 +15,7 @@ use crate::item_stack::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
-use crate::profile::PropertyMap;
+use crate::profile::PropertyMapRef;
 use crate::registry::{DamageTypeRef, DimensionTypeRef};
 use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
 use crate::sound::{SoundEvent, SoundSource};
@@ -23,7 +23,7 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::waypoint::TrackedWaypoint;
 use crate::{
-    BitSet, ChatFormatting, Component, Difficulty, EntityAnchor, GameType, GlobalPos,
+    BitSet, ChatFormatting, ComponentRaw, Difficulty, EntityAnchor, GameType, GlobalPos,
     HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, V32List, WeightedList,
 };
 use alloc::vec::Vec;
@@ -127,7 +127,7 @@ pub struct BossEvent {
 #[mser(header = BossEventOperationType, camel_case)]
 pub enum BossEventOperation {
     Add {
-        name: Component,
+        name: ComponentRaw,
         progress: f32,
         color: BossEventColor,
         overlay: BossEventOverlay,
@@ -138,7 +138,7 @@ pub enum BossEventOperation {
         progress: f32,
     },
     UpdateName {
-        name: Component,
+        name: ComponentRaw,
     },
     UpdateStyle {
         color: BossEventColor,
@@ -239,7 +239,7 @@ pub struct CommandSuggestions<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SuggestionEntry<'a> {
     pub text: Utf8<'a>,
-    pub tooltip: Option<Component>,
+    pub tooltip: Option<ComponentRaw>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -364,7 +364,7 @@ pub struct DeleteChat<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DisguisedChat<'a> {
-    pub message: Component,
+    pub message: ComponentRaw,
     pub chat_type: Bound<'a>,
 }
 
@@ -633,7 +633,7 @@ pub struct OpenBook {
 pub struct OpenScreen {
     pub container_id: ContainerId,
     pub ty: menu,
-    pub title: Component,
+    pub title: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -674,7 +674,7 @@ pub struct PlayerChat<'a> {
     pub index: u32,
     pub signature: Option<MessageSignature<'a>>,
     pub body: SignedMessageBodyPacked<'a>,
-    pub unsigned_content: Option<Component>,
+    pub unsigned_content: Option<ComponentRaw>,
     pub filter_mask: FilterMask<'a>,
     pub chat_type: Bound<'a>,
 }
@@ -692,7 +692,7 @@ pub struct PlayerCombatEnter {}
 pub struct PlayerCombatKill {
     #[mser(varint)]
     pub player_id: u32,
-    pub message: Component,
+    pub message: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -789,12 +789,12 @@ impl PlayerInfoUpdateActions {
 pub struct PlayerInfoUpdateEntry<'a> {
     pub profile_id: Uuid,
     pub name: Utf8<'a, 16>,
-    pub properties: PropertyMap<'a>,
+    pub properties: PropertyMapRef<'a>,
     pub chat_session: Option<RemoteChatSession<'a>>,
     pub game_mode: GameType,
     pub listed: bool,
     pub latency: u32,
-    pub display_name: Option<Component>,
+    pub display_name: Option<ComponentRaw>,
     pub list_order: u32,
     pub show_hat: bool,
 }
@@ -873,9 +873,9 @@ impl<'a> PlayerInfoUpdateEntry<'a> {
                 Utf8("")
             },
             properties: if actions.add_player() {
-                PropertyMap::read(buf)?
+                PropertyMapRef::read(buf)?
             } else {
-                PropertyMap(Map(List::Borrowed(&[])))
+                PropertyMapRef(List::Borrowed(&[]))
             },
             chat_session: if actions.initialize_chat() {
                 Read::read(buf)?
@@ -1013,7 +1013,7 @@ pub struct ResourcePackPush<'a> {
     pub url: Utf8<'a>,
     pub hash: Utf8<'a, 40>,
     pub required: bool,
-    pub prompt: Option<Component>,
+    pub prompt: Option<ComponentRaw>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1069,13 +1069,13 @@ pub struct SelectAdvancementsTab<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ServerData<'a> {
-    pub motd: Component,
+    pub motd: ComponentRaw,
     pub icon_bytes: Option<ByteArray<'a>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetActionBarText {
-    pub text: Component,
+    pub text: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1294,13 +1294,13 @@ pub struct SetObjective<'a> {
 #[mser(header = SetObjectiveMethodType, camel_case)]
 pub enum SetObjectiveMethod {
     Add {
-        display_name: Component,
+        display_name: ComponentRaw,
         render_type: ObjectiveCriteriaRenderType,
         number_format: Option<number_format_type>,
     },
     Remove,
     Change {
-        display_name: Component,
+        display_name: ComponentRaw,
         render_type: ObjectiveCriteriaRenderType,
         number_format: Option<number_format_type>,
     },
@@ -1364,13 +1364,13 @@ pub enum SetPlayerTeamMethod<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetPlayerTeamParameters {
-    pub display_name: Component,
+    pub display_name: ComponentRaw,
     pub options: u8,
     pub nametag_visibility: TeamVisibility,
     pub collision_rule: TeamCollisionRule,
     pub color: ChatFormatting,
-    pub player_prefix: Component,
-    pub player_suffix: Component,
+    pub player_prefix: ComponentRaw,
+    pub player_suffix: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1379,7 +1379,7 @@ pub struct SetScore<'a> {
     pub objective_name: Utf8<'a>,
     #[mser(varint)]
     pub score: u32,
-    pub display: Option<Component>,
+    pub display: Option<ComponentRaw>,
     pub number_format: Option<number_format_type>,
 }
 
@@ -1391,7 +1391,7 @@ pub struct SetSimulationDistance {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetSubtitleText {
-    pub text: Component,
+    pub text: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1403,7 +1403,7 @@ pub struct SetTime {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetTitleText {
-    pub text: Component,
+    pub text: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1492,14 +1492,14 @@ impl<'a> Read<'a> for StopSound<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SystemChat {
-    pub content: Component,
+    pub content: ComponentRaw,
     pub overlay: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TabList {
-    pub header: Component,
-    pub footer: Component,
+    pub header: ComponentRaw,
+    pub footer: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1530,7 +1530,7 @@ pub struct TeleportEntity {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TestInstanceBlockStatus {
-    pub status: Component,
+    pub status: ComponentRaw,
     pub size: Option<IVec3>,
 }
 

@@ -36,8 +36,8 @@ pub struct BundleItemSelected {
 }
 
 fn valicate_bundle_item_selected(x: &u32) -> bool {
-    let x = *x as i32;
-    x >= 0 || x == -1
+    let y = *x as i32;
+    y >= 0 || y == -1
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -153,7 +153,7 @@ pub struct ContainerSlotStateChanged {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DebugSubscriptionRequest<'a> {
-    pub subscriptions: List<'a, debug_subscription>,
+    pub subscriptions: List<'a, debug_subscription, 64>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

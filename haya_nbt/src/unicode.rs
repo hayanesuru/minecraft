@@ -57,12 +57,12 @@ struct Hangul {
     data: [u8; 3],
 }
 impl Clone for CJK {
-    fn clone(&self) -> CJK {
+    fn clone(&self) -> Self {
         *self
     }
 }
 impl Clone for Hangul {
-    fn clone(&self) -> Hangul {
+    fn clone(&self) -> Self {
         *self
     }
 }
@@ -166,8 +166,8 @@ pub fn name(c: char) -> Option<Name> {
         (PHRASEBOOK_OFFSETS1[cc >> PHRASEBOOK_OFFSET_SHIFT] as usize) << PHRASEBOOK_OFFSET_SHIFT;
 
     let mask = (1 << PHRASEBOOK_OFFSET_SHIFT) - 1;
-    let offset = PHRASEBOOK_OFFSETS2[offset + (cc & mask)];
-    if offset == 0 {
+    let offset2 = PHRASEBOOK_OFFSETS2[offset + (cc & mask)];
+    if offset2 == 0 {
         if is_cjk_unified_ideograph(c) {
             // write the hex number out right aligned in this array.
             let mut data = [b'0'; 6];
@@ -202,7 +202,7 @@ pub fn name(c: char) -> Option<Name> {
         }
     } else {
         Some(Name {
-            data: Name_::Plain(IterStr::new(offset)),
+            data: Name_::Plain(IterStr::new(offset2)),
         })
     }
 }
@@ -228,12 +228,6 @@ fn split(hash: u64) -> (u32, u32, u32) {
         ((hash >> bits) & mask) as u32,
         ((hash >> (2 * bits)) & mask) as u32,
     )
-}
-
-/// Get alias value from alias name, returns `None` if the alias is not found.
-fn character_by_alias(name: &[u8]) -> Option<char> {
-    let name = unsafe { core::str::from_utf8_unchecked(name) };
-    get(name)
 }
 
 /// Find the character called `name`, or `None` if no such character
@@ -264,14 +258,13 @@ pub fn character(search_name: &str) -> Option<char> {
     let search_name = &buf[..len];
 
     // try `HANGUL SYLLABLE <choseong><jungseong><jongseong>`
-    if let Some(remaining) = search_name.strip_prefix(NORMALISED_HANGUL_SYLLABLE_PREFIX.as_bytes())
-    {
-        let (choseong, remaining) = slice_shift_choseong(remaining);
-        let (jungseong, remaining) = slice_shift_jungseong(remaining);
-        let (jongseong, remaining) = slice_shift_jongseong(remaining);
-        match (choseong, jungseong, jongseong, remaining) {
-            (Some(choseong), Some(jungseong), Some(jongseong), b"") => {
-                let c = 0xac00 + (choseong * 21 + jungseong) * 28 + jongseong;
+    if let Some(rest) = search_name.strip_prefix(NORMALISED_HANGUL_SYLLABLE_PREFIX.as_bytes()) {
+        let (choseong, rest1) = slice_shift_choseong(rest);
+        let (jungseong, rest2) = slice_shift_jungseong(rest1);
+        let (jongseong, rest3) = slice_shift_jongseong(rest2);
+        match (choseong, jungseong, jongseong, rest3) {
+            (Some(choseong2), Some(jungseong2), Some(jongseong2), b"") => {
+                let c = 0xac00 + (choseong2 * 21 + jungseong2) * 28 + jongseong2;
                 return char::from_u32(c);
             }
             (_, _, _, _) => {
@@ -338,14 +331,14 @@ pub fn character(search_name: &str) -> Option<char> {
     // space and the hyphen.
     let mut cmp_name = search_name;
     for part in maybe_name {
-        let part = match part {
+        let part2 = match part {
             "" => "-",       // Non-medial hyphens are preserved by `normalise_name`, check them.
             " " => continue, // Spaces and medial hyphens are removed, ignore them.
             "-" if codepoint != '\u{1180}' => continue, // But the hyphen in U+1180 is preserved.
             word => word,
         };
 
-        if let Some(rest) = cmp_name.strip_prefix(part.as_bytes()) {
+        if let Some(rest) = cmp_name.strip_prefix(part2.as_bytes()) {
             cmp_name = rest;
         } else {
             return character_by_alias(search_name);
@@ -456,124 +449,124 @@ fn slice_shift_byte(a: &[u8]) -> (Option<u8>, &[u8]) {
 
 pub fn slice_shift_choseong(name: &[u8]) -> (Option<u32>, &[u8]) {
     match slice_shift_byte(name) {
-        (Some(b'G'), name) => match slice_shift_byte(name) {
-            (Some(b'G'), name) => (Some(1), name),
-            (_, _) => (Some(0), name),
+        (Some(b'G'), n) => match slice_shift_byte(n) {
+            (Some(b'G'), m) => (Some(1), m),
+            (_, _) => (Some(0), n),
         },
-        (Some(b'N'), name) => (Some(2), name),
-        (Some(b'D'), name) => match slice_shift_byte(name) {
-            (Some(b'D'), name) => (Some(4), name),
-            (_, _) => (Some(3), name),
+        (Some(b'N'), n) => (Some(2), n),
+        (Some(b'D'), n) => match slice_shift_byte(n) {
+            (Some(b'D'), m) => (Some(4), m),
+            (_, _) => (Some(3), n),
         },
-        (Some(b'R'), name) => (Some(5), name),
-        (Some(b'M'), name) => (Some(6), name),
-        (Some(b'B'), name) => match slice_shift_byte(name) {
-            (Some(b'B'), name) => (Some(8), name),
-            (_, _) => (Some(7), name),
+        (Some(b'R'), n) => (Some(5), n),
+        (Some(b'M'), n) => (Some(6), n),
+        (Some(b'B'), n) => match slice_shift_byte(n) {
+            (Some(b'B'), m) => (Some(8), m),
+            (_, _) => (Some(7), n),
         },
-        (Some(b'S'), name) => match slice_shift_byte(name) {
-            (Some(b'S'), name) => (Some(10), name),
-            (_, _) => (Some(9), name),
+        (Some(b'S'), n) => match slice_shift_byte(n) {
+            (Some(b'S'), m) => (Some(10), m),
+            (_, _) => (Some(9), n),
         },
-        (Some(b'J'), name) => match slice_shift_byte(name) {
-            (Some(b'J'), name) => (Some(13), name),
-            (_, _) => (Some(12), name),
+        (Some(b'J'), n) => match slice_shift_byte(n) {
+            (Some(b'J'), m) => (Some(13), m),
+            (_, _) => (Some(12), n),
         },
-        (Some(b'C'), name) => (Some(14), name),
-        (Some(b'K'), name) => (Some(15), name),
-        (Some(b'T'), name) => (Some(16), name),
-        (Some(b'P'), name) => (Some(17), name),
-        (Some(b'H'), name) => (Some(18), name),
+        (Some(b'C'), n) => (Some(14), n),
+        (Some(b'K'), n) => (Some(15), n),
+        (Some(b'T'), n) => (Some(16), n),
+        (Some(b'P'), n) => (Some(17), n),
+        (Some(b'H'), n) => (Some(18), n),
         (_, _) => (Some(11), name),
     }
 }
 
 pub fn slice_shift_jungseong(name: &[u8]) -> (Option<u32>, &[u8]) {
     match slice_shift_byte(name) {
-        (Some(b'A'), name) => match slice_shift_byte(name) {
-            (Some(b'E'), name) => (Some(1), name),
-            (_, _) => (Some(0), name),
+        (Some(b'A'), n) => match slice_shift_byte(n) {
+            (Some(b'E'), m) => (Some(1), m),
+            (_, _) => (Some(0), n),
         },
-        (Some(b'Y'), name) => match slice_shift_byte(name) {
-            (Some(b'A'), name) => match slice_shift_byte(name) {
-                (Some(b'E'), name) => (Some(3), name),
-                (_, _) => (Some(2), name),
+        (Some(b'Y'), n) => match slice_shift_byte(n) {
+            (Some(b'A'), m) => match slice_shift_byte(m) {
+                (Some(b'E'), x) => (Some(3), x),
+                (_, _) => (Some(2), m),
             },
-            (Some(b'E'), name) => match slice_shift_byte(name) {
-                (Some(b'O'), name) => (Some(6), name),
-                (_, _) => (Some(7), name),
+            (Some(b'E'), m) => match slice_shift_byte(m) {
+                (Some(b'O'), x) => (Some(6), x),
+                (_, _) => (Some(7), m),
             },
-            (Some(b'O'), name) => (Some(12), name),
-            (Some(b'U'), name) => (Some(17), name),
-            (Some(b'I'), name) => (Some(19), name),
-            (_, _) => (None, name),
+            (Some(b'O'), m) => (Some(12), m),
+            (Some(b'U'), m) => (Some(17), m),
+            (Some(b'I'), m) => (Some(19), m),
+            (_, _) => (None, n),
         },
-        (Some(b'E'), name) => match slice_shift_byte(name) {
-            (Some(b'O'), name) => (Some(4), name),
-            (Some(b'U'), name) => (Some(18), name),
-            (_, _) => (Some(5), name),
+        (Some(b'E'), n) => match slice_shift_byte(n) {
+            (Some(b'O'), m) => (Some(4), m),
+            (Some(b'U'), m) => (Some(18), m),
+            (_, _) => (Some(5), n),
         },
-        (Some(b'O'), name) => match slice_shift_byte(name) {
-            (Some(b'E'), name) => (Some(11), name),
-            (_, _) => (Some(8), name),
+        (Some(b'O'), n) => match slice_shift_byte(n) {
+            (Some(b'E'), m) => (Some(11), m),
+            (_, _) => (Some(8), n),
         },
-        (Some(b'W'), name) => match slice_shift_byte(name) {
-            (Some(b'A'), name) => match slice_shift_byte(name) {
-                (Some(b'E'), name) => (Some(10), name),
-                (_, _) => (Some(9), name),
+        (Some(b'W'), n) => match slice_shift_byte(n) {
+            (Some(b'A'), m) => match slice_shift_byte(m) {
+                (Some(b'E'), x) => (Some(10), x),
+                (_, _) => (Some(9), m),
             },
-            (Some(b'E'), name) => match slice_shift_byte(name) {
-                (Some(b'O'), name) => (Some(14), name),
-                (_, _) => (Some(15), name),
+            (Some(b'E'), m) => match slice_shift_byte(m) {
+                (Some(b'O'), x) => (Some(14), x),
+                (_, _) => (Some(15), m),
             },
-            (Some(b'I'), name) => (Some(16), name),
-            (_, _) => (None, name),
+            (Some(b'I'), m) => (Some(16), m),
+            (_, _) => (None, n),
         },
-        (Some(b'U'), name) => (Some(13), name),
-        (Some(b'I'), name) => (Some(20), name),
+        (Some(b'U'), n) => (Some(13), n),
+        (Some(b'I'), n) => (Some(20), n),
         (_, _) => (None, name),
     }
 }
 
 pub fn slice_shift_jongseong(name: &[u8]) -> (Option<u32>, &[u8]) {
     match slice_shift_byte(name) {
-        (Some(b'G'), name) => match slice_shift_byte(name) {
-            (Some(b'G'), name) => (Some(2), name),
-            (Some(b'S'), name) => (Some(3), name),
-            (_, _) => (Some(1), name),
+        (Some(b'G'), n) => match slice_shift_byte(n) {
+            (Some(b'G'), m) => (Some(2), m),
+            (Some(b'S'), m) => (Some(3), m),
+            (_, _) => (Some(1), n),
         },
-        (Some(b'N'), name) => match slice_shift_byte(name) {
-            (Some(b'J'), name) => (Some(5), name),
-            (Some(b'H'), name) => (Some(6), name),
-            (Some(b'G'), name) => (Some(21), name),
-            (_, _) => (Some(4), name),
+        (Some(b'N'), n) => match slice_shift_byte(n) {
+            (Some(b'J'), m) => (Some(5), m),
+            (Some(b'H'), m) => (Some(6), m),
+            (Some(b'G'), m) => (Some(21), m),
+            (_, _) => (Some(4), n),
         },
-        (Some(b'D'), name) => (Some(7), name),
-        (Some(b'L'), name) => match slice_shift_byte(name) {
-            (Some(b'G'), name) => (Some(9), name),
-            (Some(b'M'), name) => (Some(10), name),
-            (Some(b'B'), name) => (Some(11), name),
-            (Some(b'S'), name) => (Some(12), name),
-            (Some(b'T'), name) => (Some(13), name),
-            (Some(b'P'), name) => (Some(14), name),
-            (Some(b'H'), name) => (Some(15), name),
-            (_, _) => (Some(8), name),
+        (Some(b'D'), n) => (Some(7), n),
+        (Some(b'L'), n) => match slice_shift_byte(n) {
+            (Some(b'G'), m) => (Some(9), m),
+            (Some(b'M'), m) => (Some(10), m),
+            (Some(b'B'), m) => (Some(11), m),
+            (Some(b'S'), m) => (Some(12), m),
+            (Some(b'T'), m) => (Some(13), m),
+            (Some(b'P'), m) => (Some(14), m),
+            (Some(b'H'), m) => (Some(15), m),
+            (_, _) => (Some(8), n),
         },
-        (Some(b'M'), name) => (Some(16), name),
-        (Some(b'B'), name) => match slice_shift_byte(name) {
-            (Some(b'S'), name) => (Some(18), name),
-            (_, _) => (Some(17), name),
+        (Some(b'M'), n) => (Some(16), n),
+        (Some(b'B'), n) => match slice_shift_byte(n) {
+            (Some(b'S'), m) => (Some(18), m),
+            (_, _) => (Some(17), n),
         },
-        (Some(b'S'), name) => match slice_shift_byte(name) {
-            (Some(b'S'), name) => (Some(20), name),
-            (_, _) => (Some(19), name),
+        (Some(b'S'), n) => match slice_shift_byte(n) {
+            (Some(b'S'), m) => (Some(20), m),
+            (_, _) => (Some(19), n),
         },
-        (Some(b'J'), name) => (Some(22), name),
-        (Some(b'C'), name) => (Some(23), name),
-        (Some(b'K'), name) => (Some(24), name),
-        (Some(b'T'), name) => (Some(25), name),
-        (Some(b'P'), name) => (Some(26), name),
-        (Some(b'H'), name) => (Some(27), name),
+        (Some(b'J'), n) => (Some(22), n),
+        (Some(b'C'), n) => (Some(23), n),
+        (Some(b'K'), n) => (Some(24), n),
+        (Some(b'T'), n) => (Some(25), n),
+        (Some(b'P'), n) => (Some(26), n),
+        (Some(b'H'), n) => (Some(27), n),
         (_, _) => (Some(0), name),
     }
 }
@@ -607,8 +600,8 @@ pub struct IterStr {
 }
 
 impl IterStr {
-    pub fn new(start_index: u32) -> IterStr {
-        IterStr {
+    pub fn new(start_index: u32) -> Self {
+        Self {
             phrasebook: PhrasebookIter { index: start_index },
             last_was_word: false,
         }
@@ -628,8 +621,8 @@ const LEXICON_ORDERED_LENGTH_INDICES: [u16; LEXICON_ORDERED_LENGTHS_LEN] = {
 
         // make sure this is contiguous - that there are no gaps where e.g. there
         // are words of length 15 and of length 17 but none of length 16.
-        if let Some(prev_len) = prev_len {
-            assert!(length == prev_len + 1);
+        if let Some(l) = prev_len {
+            assert!(length == l + 1);
         }
         prev_len = Some(length);
 

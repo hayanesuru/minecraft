@@ -83,18 +83,18 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "haya_collection"
-version = "0.4.0"
+version = "1.0.0"
 dependencies = [
  "mser",
 ]
 
 [[package]]
 name = "haya_ecs"
-version = "0.2.0"
+version = "1.0.0"
 
 [[package]]
 name = "haya_ident"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "haya_str",
  "mser",
@@ -102,7 +102,7 @@ dependencies = [
 
 [[package]]
 name = "haya_math"
-version = "0.3.0"
+version = "1.0.0"
 dependencies = [
  "libm",
  "mser",
@@ -110,27 +110,29 @@ dependencies = [
 
 [[package]]
 name = "haya_mutf8"
-version = "0.2.0"
+version = "1.0.0"
 dependencies = [
  "mser",
 ]
 
 [[package]]
 name = "haya_nbt"
-version = "0.4.0"
+version = "1.0.0"
 dependencies = [
  "haya_collection",
+ "haya_ident",
  "haya_mutf8",
  "haya_str",
  "itoa",
  "mser",
  "rand",
  "ryu",
+ "uuid",
 ]
 
 [[package]]
 name = "haya_palette"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "hashbrown 0.17.1",
  "minecraft_data",
@@ -139,7 +141,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "0.7.0"
+version = "1.0.1+1.21.11"
 dependencies = [
  "haya_collection",
  "haya_ident",
@@ -153,16 +155,16 @@ dependencies = [
 
 [[package]]
 name = "haya_str"
-version = "0.3.0"
+version = "1.0.0"
 
 [[package]]
 name = "haya_text"
-version = "0.2.0"
+version = "1.0.0+1.21.11"
 dependencies = [
  "haya_ident",
+ "haya_math",
  "haya_nbt",
  "haya_str",
- "minecraft_data",
  "mser",
  "uuid",
 ]
@@ -229,7 +231,7 @@ checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 
 [[package]]
 name = "minecraft_data"
-version = "3.1.0"
+version = "4.0.0+1.21.11"
 dependencies = [
  "mser",
  "nested",
@@ -237,14 +239,14 @@ dependencies = [
 
 [[package]]
 name = "mser"
-version = "3.1.0"
+version = "4.0.0"
 dependencies = [
  "uuid",
 ]
 
 [[package]]
 name = "mser_macro"
-version = "3.2.0"
+version = "4.0.0"
 dependencies = [
  "itoa",
  "proc-macro2",
@@ -352,9 +354,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.149"
+version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
  "itoa",
  "memchr",

@@ -140,7 +140,7 @@ impl Write for str {
 
     #[inline(always)]
     fn len_s(&self) -> usize {
-        str::len(self)
+        Self::len(self)
     }
 }
 

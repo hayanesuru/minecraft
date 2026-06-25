@@ -4,7 +4,7 @@ use crate::entity::PaintingVariant;
 use crate::item_stack::{Instrument, JukeboxSong};
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
-use crate::{Dialog, Holder};
+use crate::{DialogRaw, Holder};
 use minecraft_data::sound_event;
 use mser::{Error, Read, Reader, V32, Write, Writer};
 
@@ -385,11 +385,11 @@ impl<'a> Write for Holder<ChatType<'a>, ChatTypeRef> {
     }
 }
 
-impl<'a> Read<'a> for Holder<Dialog, DialogRef> {
+impl<'a> Read<'a> for Holder<DialogRaw, DialogRef> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let id = V32::read(buf)?.0;
         if id == 0 {
-            Ok(Self::Direct(Dialog::read(buf)?))
+            Ok(Self::Direct(DialogRaw::read(buf)?))
         } else {
             let x = id - 1;
             Ok(Self::Reference(DialogRef(x)))
@@ -397,7 +397,7 @@ impl<'a> Read<'a> for Holder<Dialog, DialogRef> {
     }
 }
 
-impl Write for Holder<Dialog, DialogRef> {
+impl Write for Holder<DialogRaw, DialogRef> {
     unsafe fn write(&self, w: &mut Writer) {
         unsafe {
             match self {

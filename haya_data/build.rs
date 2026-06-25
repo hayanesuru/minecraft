@@ -1,3 +1,5 @@
+#![warn(clippy::shadow_reuse, clippy::use_self)]
+
 use core::iter::repeat_n;
 use core::num::NonZeroUsize;
 use nested::ZString;
@@ -65,41 +67,41 @@ fn main() {
     version(&mut w, core::str::from_utf8(&data).unwrap());
     data.clear();
 
-    let reg = read(&mut data, path.join("registries.txt"));
-    let reg = 0..reg;
+    let reg_len = read(&mut data, path.join("registries.txt"));
+    let reg = 0..reg_len;
 
-    let flu = read(&mut data, path.join("fluid_state.txt"));
-    let flu = reg.end..reg.end + flu;
+    let flu_len = read(&mut data, path.join("fluid_state.txt"));
+    let flu = reg.end..reg.end + flu_len;
 
-    let blo = read(&mut data, path.join("block_state.txt"));
-    let blo = flu.end..flu.end + blo;
+    let blo_len = read(&mut data, path.join("block_state.txt"));
+    let blo = flu.end..flu.end + blo_len;
 
-    let ite = read(&mut data, path.join("item.txt"));
-    let ite = blo.end..blo.end + ite;
+    let ite_len = read(&mut data, path.join("item.txt"));
+    let ite = blo.end..blo.end + ite_len;
 
-    let ent = read(&mut data, path.join("entity.txt"));
-    let ent = ite.end..ite.end + ent;
+    let ent_len = read(&mut data, path.join("entity.txt"));
+    let ent = ite.end..ite.end + ent_len;
 
-    let pac = read(&mut data, path.join("packet.txt"));
-    let pac = ent.end..ent.end + pac;
+    let pac_len = read(&mut data, path.join("packet.txt"));
+    let pac = ent.end..ent.end + pac_len;
 
-    let data = core::str::from_utf8(&data).unwrap();
-    let block_names = registries(&mut w, &data[reg], &mut gen_hash);
-    registries(&mut w, &data[pac], &mut gen_hash);
+    let s = core::str::from_utf8(&data).unwrap();
+    let block_names = registries(&mut w, &s[reg], &mut gen_hash);
+    registries(&mut w, &s[pac], &mut gen_hash);
 
-    item(&mut w, &data[ite]);
-    entity(&mut w, &data[ent]);
+    item(&mut w, &s[ite]);
+    entity(&mut w, &s[ent]);
 
-    let (bs_repr, bl_props, bs_size) = block_state(&mut w, &data[blo], &mut gen_hash, &block_names);
-    fluid_state(&mut w, &data[flu], bs_repr, &bl_props, &bs_size);
+    let (bs_repr, bl_props, bs_size) = block_state(&mut w, &s[blo], &mut gen_hash, &block_names);
+    fluid_state(&mut w, &s[flu], bs_repr, &bl_props, &bs_size);
 
     std::fs::write(out.join("data.rs"), w).unwrap();
 }
 
 fn version(w: &mut String, data: &str) {
-    let mut data = data.split('\n');
-    let name = data.next().unwrap();
-    let proto = data.next().unwrap();
+    let mut iter = data.split('\n');
+    let name = iter.next().unwrap();
+    let proto = iter.next().unwrap();
 
     *w += "pub const NAME_VERSION: &str = \"";
     *w += name;
@@ -119,7 +121,6 @@ fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) ->
             break;
         }
         let (name, size, repr) = head(Some(x), "");
-        let name = name.replace('/', "__");
         zhash.clear();
         zhash.reserve(size);
         for _ in 0..size {
@@ -129,7 +130,8 @@ fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) ->
         if name == "block" {
             block_names.clone_from(&zhash);
         }
-        enum_head(w, repr, &name);
+        let name2 = name.replace('/', "_");
+        enum_head(w, repr, &name2);
 
         for &location in &zhash {
             kw_prefix(w, location);
@@ -137,9 +139,9 @@ fn registries<'a>(w: &mut String, data: &'a str, gen_hash: &mut GenerateHash) ->
         }
 
         *w += "}\n";
-        impl_codec(w, &name, size, repr);
-        impl_name(w, gen_hash, repr, &zhash, &name);
-        impl_common(w, &name, repr, size, 0);
+        impl_codec(w, &name2, size, repr);
+        impl_name(w, gen_hash, repr, &zhash, &name2);
+        impl_common(w, &name2, repr, size, 0);
     }
     block_names
 }
@@ -283,9 +285,9 @@ fn fluid_state(
             [b] => {
                 out.extend(repeat_n(b, len));
             }
-            ref bounds => {
-                assert_eq!(len, bounds.len());
-                out.extend(bounds.iter().copied());
+            ref bounds2 => {
+                assert_eq!(len, bounds2.len());
+                out.extend(bounds2.iter().copied());
             }
         }
     }
@@ -337,11 +339,11 @@ fn block_state(
 
     let kv = (0..size_kv)
         .map(|_| {
-            let mut x = hex_line(iter.next().unwrap());
-            let k = x.next().unwrap();
+            let mut line = hex_line(iter.next().unwrap());
+            let k = line.next().unwrap();
             let mut vec = Vec::with_capacity(4);
             vec.push(pk3[k as usize] as u32);
-            vec.extend(x.map(|x| pv3[x as usize] as u32));
+            vec.extend(line.map(|x| pv3[x as usize] as u32));
             vec.into_boxed_slice()
         })
         .collect::<Vec<_>>();
@@ -380,21 +382,21 @@ fn block_state(
     vals.sort_unstable_by(|(x, _), (y, _)| (*x).cmp(*y));
     let mut val_names = ZString::with_capacity(vals.len(), vals.len() * 4);
     let mut name_ = "val_".to_owned();
-    for (_, x) in vals {
+    for (_, names) in vals {
         name_.truncate(4);
-        let is_digit = x
+        let is_digit = names
             .iter()
-            .all(|x| x.as_bytes().iter().all(|x| x.is_ascii_digit()));
+            .all(|x| x.as_bytes().iter().all(|y| y.is_ascii_digit()));
         if is_digit {
-            name_.push_str(x[0]);
+            name_.push_str(names[0]);
             name_.push('_');
-            name_.push_str(x[x.len() - 1]);
+            name_.push_str(names[names.len() - 1]);
         } else {
-            if let ["true", "false"] = x[..] {
+            if let ["true", "false"] = names[..] {
                 name_.push_str("bool");
             } else {
                 let mut first = true;
-                for &n in &**x {
+                for &n in &**names {
                     if first {
                         first = false;
                     } else {
@@ -406,15 +408,15 @@ fn block_state(
         }
 
         let name = name_.as_str();
-        let repr = Repr::new(x.len() - 1);
+        let repr = Repr::new(names.len() - 1);
         enum_head(w, repr, name);
-        for &n in &**x {
+        for &n in &**names {
             kw_prefix(w, n);
             *w += ",\n";
         }
         *w += "}\n";
-        impl_common(w, name, repr, x.len(), 0);
-        impl_name(w, gen_hash, repr, x, name);
+        impl_common(w, name, repr, names.len(), 0);
+        impl_name(w, gen_hash, repr, names, name);
 
         val_names.push(name);
     }
@@ -429,9 +431,9 @@ fn block_state(
                 x.insert((idx, false));
             }
             Entry::Occupied(x) => {
-                let x = x.into_mut();
-                if x.0 != idx {
-                    x.1 = true;
+                let y = x.into_mut();
+                if y.0 != idx {
+                    y.1 = true;
                 }
             }
         }
@@ -448,7 +450,7 @@ fn block_state(
             let is_digit = arr[1..]
                 .iter()
                 .map(|&x| pv2[x as usize])
-                .all(|x| x.as_bytes().iter().all(|x| x.is_ascii_digit()));
+                .all(|x| x.as_bytes().iter().all(|y| y.is_ascii_digit()));
             if is_digit {
                 name_.push_str(pv2[arr[1] as usize]);
                 name_.push('_');
@@ -547,15 +549,15 @@ fn block_state(
             bs_properties.push(Box::<[u32]>::from([]));
             continue;
         }
-        let props = hex_line(props).collect::<Box<_>>();
+        let props2 = hex_line(props).collect::<Box<_>>();
 
         let mut len = 1;
-        for &prop in &*props {
-            let prop = &*kv[prop as usize];
-            len *= prop.len() - 1;
+        for &prop in &*props2 {
+            let prop2 = &*kv[prop as usize];
+            len *= prop2.len() - 1;
         }
         bs_prop_size.push(NonZeroUsize::new(len).unwrap());
-        bs_properties.push(props);
+        bs_properties.push(props2);
     }
 
     let mut psn = ZString::with_capacity(bs_properties.len(), bs_properties.len() * 10);
@@ -634,12 +636,12 @@ fn block_state(
         let mut size = 1;
         let mut len = 1;
         for &prop in &**props {
-            let prop = &*kv[prop as usize];
+            let prop2 = &*kv[prop as usize];
 
-            let x = prop.len() - 2;
-            let x = usize::BITS - x.leading_zeros();
-            size *= 1 << x;
-            len *= prop.len() - 1;
+            let x = prop2.len() - 2;
+            let y = usize::BITS - x.leading_zeros();
+            size *= 1 << y;
+            len *= prop2.len() - 1;
         }
         if props.is_empty() {
             *w += "#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]\n";
@@ -703,16 +705,16 @@ fn block_state(
             let mut index = 1;
             let mut flag = true;
             for &prop in props.iter().rev() {
-                let prop = &*kv[prop as usize];
+                let prop2 = &*kv[prop as usize];
 
-                let (k, v) = prop.split_first().unwrap();
-                let k = pk2[*k as usize];
+                let (k, v) = prop2.split_first().unwrap();
+                let s = pk2[*k as usize];
                 if !flag {
                     *w += " +\n";
                 }
                 flag = false;
                 *w += "self.";
-                kw_prefix(w, k);
+                kw_prefix(w, s);
                 *w += "()";
                 *w += " as ";
                 *w += repr.to_int();
@@ -740,9 +742,9 @@ fn block_state(
             vec2.clear();
             let mut index = 0;
             for &prop in props.iter().rev() {
-                let prop = &*kv[prop as usize];
+                let prop2 = &*kv[prop as usize];
 
-                let (_, v) = prop.split_first().unwrap();
+                let (_, v) = prop2.split_first().unwrap();
                 let x = usize::BITS - (v.len() - 1).leading_zeros();
 
                 if index == 0 {
@@ -826,13 +828,13 @@ fn block_state(
         for &prop1 in props.iter().rev() {
             let prop = &*kv[prop1 as usize];
             let (k, v) = prop.split_first().unwrap();
-            let k = pk2[*k as usize];
+            let s = pk2[*k as usize];
             let x = usize::BITS - (v.len() - 1).leading_zeros();
             *w += "#[inline]\n";
             *w += "pub const fn with_";
-            *w += k;
+            *w += s;
             *w += "(self, ";
-            kw_prefix(w, k);
+            kw_prefix(w, s);
             *w += ": ";
             *w += &kvn[prop1 as usize];
             *w += ") -> Self {\n";
@@ -852,7 +854,7 @@ fn block_state(
             if index != 0 {
                 *w += "(";
             }
-            kw_prefix(w, k);
+            kw_prefix(w, s);
             *w += " as ";
             *w += repr.to_int();
             if index != 0 {
@@ -991,8 +993,8 @@ fn block_state(
     let mut f64t = Vec::with_capacity(size);
     for _ in 0..size {
         let x = parse_u64(iter.next().unwrap());
-        let x = f64::from_be_bytes(x.to_be_bytes());
-        f64t.push(x);
+        let y = f64::from_be_bytes(x.to_be_bytes());
+        f64t.push(y);
     }
     let (_, size, shape_repr) = head(iter.next(), "shape_table");
 
@@ -1124,18 +1126,18 @@ fn block_state(
     let mut out = Vec::with_capacity(bs_size);
     assert_eq!(size, bl_props.len());
     for (bounds, prop) in read_rl(size, &mut iter).zip(bl_props.iter().copied()) {
-        let bounds = &*prop_bounds[bounds as usize];
+        let bounds2 = &*prop_bounds[bounds as usize];
         let len = bs_prop_size[prop as usize].get();
-        match bounds[..] {
+        match bounds2[..] {
             [] => {
                 out.extend(repeat_n(0, len));
             }
             [b] => {
                 out.extend(repeat_n(b, len));
             }
-            ref bounds => {
-                assert_eq!(len, bounds.len());
-                out.extend(bounds.iter().copied());
+            ref bounds3 => {
+                assert_eq!(len, bounds3.len());
+                out.extend(bounds3.iter().copied());
             }
         }
     }
@@ -1180,18 +1182,18 @@ fn entity(w: &mut String, data: &str) {
 }
 
 fn head<'a>(raw: Option<&'a str>, expected: &str) -> (&'a str, usize, Repr) {
-    let raw = raw.expect("EOF");
-    let Some(first) = raw.strip_prefix(';') else {
-        panic!("invalid head: {raw}");
+    let raw2 = raw.expect("EOF");
+    let Some(first) = raw2.strip_prefix(';') else {
+        panic!("invalid head: {raw2}");
     };
     let (name, rest) = first.split_once(';').unwrap();
     let (_ty, size) = rest.split_once(';').unwrap();
-    let size = parse_u32(size);
-    let size = size as usize;
+    let size2 = parse_u32(size);
+    let size3 = size2 as usize;
     if !expected.is_empty() {
         assert_eq!(expected, name);
     }
-    (name, size, Repr::new(size))
+    (name, size3, Repr::new(size3))
 }
 
 fn impl_name(w: &mut String, g: &mut GenerateHash, repr: Repr, names: &[&str], name: &str) {
@@ -1241,21 +1243,21 @@ unsafe {
 type Err = ::mser::Error;
 fn from_str(n: &str) -> Result<Self, Self::Err> {
 ";
-    if let Some(state) = state {
+    if let Some(state1) = state {
         match repr {
             Repr::U8 => {
                 *w += "match crate::name_u8::<";
-                write(w, state.key);
+                write(w, state1.key);
                 *w += ", ";
-                write(w, state.disps.len());
+                write(w, state1.disps.len());
                 *w += ", ";
                 write(w, names.len());
             }
             Repr::U16 => {
                 *w += "match crate::name_u16::<";
-                write(w, state.key);
+                write(w, state1.key);
                 *w += ", ";
-                write(w, state.disps.len());
+                write(w, state1.disps.len());
                 *w += ", ";
                 write(w, names.len());
             }
@@ -1469,9 +1471,9 @@ impl<'a, T: Iterator<Item = &'a str>> Iterator for RunLength<T> {
             self.take -= 1;
             match next.strip_prefix('~') {
                 Some(rest) => {
-                    let mut rest = hex_line(rest);
-                    let a = rest.next().unwrap();
-                    let ctx = rest.next().unwrap();
+                    let mut r = hex_line(rest);
+                    let a = r.next().unwrap();
+                    let ctx = r.next().unwrap();
                     self.count = a as usize - 1;
                     self.prev = ctx;
                     Some(ctx)
@@ -1508,7 +1510,7 @@ fn list_ty(w: &mut String, name: &str, repr: Repr, size: usize) {
 
 fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     let first = iter.next();
-    let first = match first {
+    let f = match first {
         Some(x) => x,
         None => {
             *w += "&[]";
@@ -1517,7 +1519,7 @@ fn list(w: &mut String, mut iter: impl Iterator<Item = impl Format>) {
     };
     let mut c = 0usize;
     *w += "&[\n";
-    first.format(w);
+    f.format(w);
     for x in iter {
         w.push(',');
         c += 1;
@@ -1584,14 +1586,14 @@ fn parse_u64(n: &str) -> u64 {
 }
 
 const fn hash64(n: &[u8], seed: u64) -> u64 {
-    const M: u64 = 0xc6a4a7935bd1e995;
-    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut h: u64 = seed ^ (n.len() as u64);
     let mut i = 0;
     while i < n.len() {
-        h ^= (n[i] as u64) << ((i & 7) * 8);
+        h ^= n[i] as u64;
+        h = h.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    h.wrapping_mul(M)
+    h
 }
 
 fn impl_codec_struct(w: &mut String, name: &str, size: usize, repr: Repr) {

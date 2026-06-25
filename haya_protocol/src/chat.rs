@@ -1,5 +1,5 @@
 use crate::registry::ChatTypeRef;
-use crate::{BitSet, Component, Holder, MilliSeconds, Style};
+use crate::{BitSet, ComponentRaw, Holder, MilliSeconds, StyleRaw};
 use haya_collection::List;
 use mser::{ByteArray, FixedByteArray, Read, Utf8, V32, Write};
 use uuid::Uuid;
@@ -52,8 +52,8 @@ impl<'a> Read<'a> for MessageSignaturePacked<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Bound<'a> {
     pub chat_type: Holder<ChatType<'a>, ChatTypeRef>,
-    pub name: Component,
-    pub target_name: Option<Component>,
+    pub name: ComponentRaw,
+    pub target_name: Option<ComponentRaw>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -66,7 +66,7 @@ pub struct ChatType<'a> {
 pub struct ChatTypeDecoration<'a> {
     pub translation_key: Utf8<'a>,
     pub parameters: List<'a, Parameter>,
-    pub style: Style,
+    pub style: StyleRaw,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

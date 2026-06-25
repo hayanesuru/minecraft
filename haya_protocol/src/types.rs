@@ -6,16 +6,17 @@ pub trait Id {
     const ID: Self::T;
 }
 
-impl PacketType for minecraft_data::clientbound__status {}
-impl PacketType for minecraft_data::clientbound__configuration {}
-impl PacketType for minecraft_data::clientbound__login {}
-impl PacketType for minecraft_data::clientbound__play {}
-impl PacketType for minecraft_data::serverbound__handshake {}
-impl PacketType for minecraft_data::serverbound__status {}
-impl PacketType for minecraft_data::serverbound__configuration {}
-impl PacketType for minecraft_data::serverbound__login {}
-impl PacketType for minecraft_data::serverbound__play {}
+impl PacketType for minecraft_data::clientbound_status {}
+impl PacketType for minecraft_data::clientbound_configuration {}
+impl PacketType for minecraft_data::clientbound_login {}
+impl PacketType for minecraft_data::clientbound_play {}
+impl PacketType for minecraft_data::serverbound_handshake {}
+impl PacketType for minecraft_data::serverbound_status {}
+impl PacketType for minecraft_data::serverbound_configuration {}
+impl PacketType for minecraft_data::serverbound_login {}
+impl PacketType for minecraft_data::serverbound_play {}
 
+#[inline]
 pub fn packet_id<R: PacketType, T: Id<T = R> + ?Sized>(_: &T) -> R {
     T::ID
 }

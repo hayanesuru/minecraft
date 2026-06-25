@@ -1,13 +1,15 @@
 [package]
 name = "mser_macro"
-version = "3.2.0"
-description = "mser_macro"
+version = "4.0.0"
+description = "ser macro"
 authors.workspace = true
-readme.workspace = true
 license.workspace = true
 repository.workspace = true
 edition.workspace = true
+documentation = "https://docs.rs/mser_macro"
 categories = ["no-std"]
+publish = ["crates.io"]
+readme = "README.md"
 
 [lib]
 proc-macro = true

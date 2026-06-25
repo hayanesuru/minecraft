@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::ComponentRaw;
 use crate::attribute::AttributeModifier;
 use crate::inventory::EquipmentSlotGroup;
 use haya_collection::List;
@@ -22,14 +22,14 @@ pub struct Entry<'a> {
 pub enum Display {
     Default,
     Hidden,
-    Override(Component),
+    Override(ComponentRaw),
 }
 
 impl<'a> Read<'a> for Display {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         Ok(match V21::read(buf)?.0 {
             1 => Self::Hidden,
-            2 => Self::Override(Component::read(buf)?),
+            2 => Self::Override(ComponentRaw::read(buf)?),
             _ => Self::Default,
         })
     }

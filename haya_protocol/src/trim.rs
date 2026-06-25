@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::ComponentRaw;
 use haya_collection::Map;
 use haya_ident::{Ident, ResourceKey};
 use mser::Utf8;
@@ -6,7 +6,7 @@ use mser::Utf8;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TrimMaterial<'a> {
     pub assets: MaterialAssetGroup<'a>,
-    pub description: Component,
+    pub description: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -23,6 +23,6 @@ pub struct AssetInfo<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TrimPattern<'a> {
     pub asset_id: Ident<'a>,
-    pub description: Component,
+    pub description: ComponentRaw,
     pub decal: bool,
 }

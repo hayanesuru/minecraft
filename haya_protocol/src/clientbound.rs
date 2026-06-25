@@ -1,5 +1,5 @@
 use minecraft_data::{
-    clientbound__configuration, clientbound__login, clientbound__play, clientbound__status,
+    clientbound_configuration, clientbound_login, clientbound_play, clientbound_status,
 };
 
 pub mod common;
@@ -47,14 +47,14 @@ macro_rules! packets {
     };
 }
 packets! {
-    clientbound__status,
+    clientbound_status,
     StatusHandler,
     handle,
     status_response = status::StatusResponse<'_>,
     pong_response = ping::StatusPongResponse,
 }
 packets! {
-    clientbound__login,
+    clientbound_login,
     LoginHandler,
     handle,
     login_disconnect = login::LoginDisconnect<'_>,
@@ -65,7 +65,7 @@ packets! {
     cookie_request = cookie::LoginCookieRequest<'_>,
 }
 packets! {
-    clientbound__configuration,
+    clientbound_configuration,
     ConfigurationHandler,
     handle,
     cookie_request = cookie::ConfigurationCookieRequest<'_>,
@@ -90,7 +90,7 @@ packets! {
     code_of_conduct = configuration::CodeOfConduct<'_>,
 }
 packets! {
-    clientbound__play,
+    clientbound_play,
     GameHandler,
     handle,
     bundle_delimiter = game::BundleDelimiter,

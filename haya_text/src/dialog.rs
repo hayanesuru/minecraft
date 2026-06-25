@@ -1,9 +1,9 @@
-use crate::chat::{ClickEvent, Component};
-use crate::{HolderSetDialog, ItemStack};
+use crate::chat::TextComponent;
+use crate::click_event::ClickEvent;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_ident::Identifier;
-use haya_nbt::Tag;
+use haya_nbt::{StringTag, Tag};
 
 #[derive(Clone)]
 pub struct Dialog {
@@ -31,7 +31,7 @@ pub enum DialogData {
         button_width: u32,
     },
     DialogList {
-        dialogs: HolderSetDialog,
+        dialogs: Tag,
         exit_action: Option<ActionButton>,
         columns: u32,
         button_width: u32,
@@ -40,8 +40,8 @@ pub enum DialogData {
 
 #[derive(Clone)]
 pub struct CommonDialog {
-    pub title: Component,
-    pub external_title: Option<Component>,
+    pub title: TextComponent,
+    pub external_title: Option<TextComponent>,
     pub body: Vec<DialogBody>,
     pub inputs: Vec<Input>,
     pub can_close_with_escape: bool,
@@ -52,11 +52,13 @@ pub struct CommonDialog {
 #[derive(Clone)]
 pub enum DialogBody {
     PlainMessage {
-        contents: Component,
+        contents: TextComponent,
         width: u32,
     },
     Item {
-        item: ItemStack,
+        id: Identifier,
+        count: Option<i32>,
+        components: Option<Tag>,
         description: Description,
         show_decoration: bool,
         show_tooltip: bool,
@@ -67,7 +69,7 @@ pub enum DialogBody {
 
 #[derive(Clone)]
 pub struct Description {
-    pub contents: Option<Component>,
+    pub contents: Option<TextComponent>,
     pub width: Option<u32>,
 }
 
@@ -75,32 +77,32 @@ pub struct Description {
 pub enum Input {
     Text {
         key: ParsedTemplate,
-        label: Box<Component>,
+        label: Box<TextComponent>,
         width: u32,
         label_visible: bool,
-        initial: Option<Box<str>>,
+        initial: Option<StringTag>,
         max_length: u32,
         multiline: Option<Multiline>,
     },
     Boolean {
         key: ParsedTemplate,
-        label: Component,
+        label: TextComponent,
         initial: bool,
-        on_true: Option<Box<str>>,
-        on_false: Option<Box<str>>,
+        on_true: Option<StringTag>,
+        on_false: Option<StringTag>,
     },
     SingleOption {
         key: ParsedTemplate,
-        label: Component,
+        label: TextComponent,
         width: u32,
         label_visible: bool,
         options: Vec<SingleOptionEntry>,
     },
     NumberRange {
         key: ParsedTemplate,
-        label: Component,
+        label: TextComponent,
         width: u32,
-        label_format: Option<Box<str>>,
+        label_format: Option<StringTag>,
         start: f32,
         end: f32,
         initial: Option<f32>,
@@ -116,8 +118,8 @@ pub struct Multiline {
 
 #[derive(Clone)]
 pub struct SingleOptionEntry {
-    pub id: Box<str>,
-    pub display: Component,
+    pub id: StringTag,
+    pub display: TextComponent,
     pub initial: bool,
 }
 
@@ -136,8 +138,8 @@ pub struct ActionButton {
 
 #[derive(Clone)]
 pub struct Button {
-    pub label: Box<Component>,
-    pub tooltip: Option<Box<Component>>,
+    pub label: Box<TextComponent>,
+    pub tooltip: Option<Box<TextComponent>>,
     pub width: u32,
 }
 
@@ -157,5 +159,5 @@ pub enum Action {
 
 #[derive(Clone)]
 pub struct ParsedTemplate {
-    pub raw: Box<str>,
+    pub raw: StringTag,
 }

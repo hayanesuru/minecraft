@@ -89,14 +89,20 @@ impl<'a> Reader<'a> {
         }
     }
 
+    /// # Safety
+    ///
+    /// `L` must not out of bounds.
     #[inline]
-    pub fn peek_array_unchecked<const L: usize>(&self) -> Result<&'a [u8; L], Error> {
+    pub unsafe fn peek_array_unchecked<const L: usize>(&self) -> Result<&'a [u8; L], Error> {
         debug_assert!(unsafe { self.ptr.add(L) <= self.end });
         unsafe { Ok(&*(self.ptr as *const [u8; L])) }
     }
 
+    /// # Safety
+    ///
+    /// `len` must not out of bounds.
     #[inline]
-    pub fn peek_slice_unchecked(&self, len: usize) -> &'a [u8] {
+    pub unsafe fn peek_slice_unchecked(&self, len: usize) -> &'a [u8] {
         debug_assert!(unsafe { self.ptr.add(len) <= self.end });
         unsafe { core::slice::from_raw_parts(self.ptr, len) }
     }

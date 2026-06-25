@@ -1,9 +1,10 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 use core::mem::transmute;
 use core::ptr::copy_nonoverlapping;
 
-pub const MAX: usize = 31;
+const MAX: usize = 31;
 
 #[derive(Clone, Copy)]
 pub struct HayaStr {
@@ -142,6 +143,10 @@ impl HayaStr {
     #[must_use]
     pub const fn len(&self) -> usize {
         self.len as usize
+    }
+
+    pub const fn as_mut_str(&mut self) -> &mut str {
+        unsafe { core::str::from_utf8_unchecked_mut(&mut self.data) }
     }
 
     pub const fn try_push(&mut self, ch: char) -> Result<(), OutOfBoundsError> {

@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 extern crate alloc;
 
@@ -77,7 +78,7 @@ impl Dense {
 impl From<Dense> for usize {
     #[inline]
     fn from(value: Dense) -> Self {
-        value.index as usize
+        value.index as Self
     }
 }
 

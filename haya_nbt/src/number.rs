@@ -86,12 +86,12 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
     };
     let suffix = match last {
         b'B' | b'b' => match rest[..] {
-            [ref rest @ .., b'U' | b'u'] => {
-                n = rest;
+            [ref r @ .., b'U' | b'u'] => {
+                n = r;
                 Suffix::UnsignedByte
             }
-            [ref rest @ .., b'S' | b's'] => {
-                n = rest;
+            [ref r @ .., b'S' | b's'] => {
+                n = r;
                 Suffix::SignedByte
             }
             _ => match radix {
@@ -103,12 +103,12 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
             },
         },
         b'S' | b's' => match rest[..] {
-            [ref rest @ .., b'U' | b'u'] => {
-                n = rest;
+            [ref r @ .., b'U' | b'u'] => {
+                n = r;
                 Suffix::UnsignedShort
             }
-            [ref rest @ .., b'S' | b's'] => {
-                n = rest;
+            [ref r @ .., b'S' | b's'] => {
+                n = r;
                 Suffix::SignedShort
             }
             _ => {
@@ -117,12 +117,12 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
             }
         },
         b'I' | b'i' => match rest[..] {
-            [ref rest @ .., b'U' | b'u'] => {
-                n = rest;
+            [ref r @ .., b'U' | b'u'] => {
+                n = r;
                 Suffix::UnsignedInt
             }
-            [ref rest @ .., b'S' | b's'] => {
-                n = rest;
+            [ref r @ .., b'S' | b's'] => {
+                n = r;
                 Suffix::SignedInt
             }
             _ => {
@@ -131,12 +131,12 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
             }
         },
         b'L' | b'l' => match rest[..] {
-            [ref rest @ .., b'U' | b'u'] => {
-                n = rest;
+            [ref r @ .., b'U' | b'u'] => {
+                n = r;
                 Suffix::UnsignedLong
             }
-            [ref rest @ .., b'S' | b's'] => {
-                n = rest;
+            [ref r @ .., b'S' | b's'] => {
+                n = r;
                 Suffix::SignedLong
             }
             _ => {
@@ -163,7 +163,7 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
     } else {
         FloatParser::None
     };
-    let radix = if let FloatParser::None = parser
+    let radix2 = if let FloatParser::None = parser
         && let Radix::Decimal = radix
     {
         let p = match n.split_first() {
@@ -215,7 +215,7 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
         cur += 1;
         start = cur;
     }
-    let mut n = if start != 0 {
+    let mut m = if start != 0 {
         tmp.extend(unsafe { n.get_unchecked(start..) });
         &tmp[..]
     } else {
@@ -224,13 +224,13 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
 
     match parser {
         FloatParser::Double => unsafe {
-            return match from_utf8_unchecked(n).parse() {
+            return match from_utf8_unchecked(m).parse() {
                 Ok(x) => Ok(TagPrimitive::Double(x)),
                 Err(_) => Err(Error),
             };
         },
         FloatParser::Float => unsafe {
-            return match from_utf8_unchecked(n).parse() {
+            return match from_utf8_unchecked(m).parse() {
                 Ok(x) => Ok(TagPrimitive::Float(x)),
                 Err(_) => Err(Error),
             };
@@ -238,9 +238,9 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
         FloatParser::None => {}
     }
 
-    while let [first, rest @ ..] = n {
+    while let [first, rest @ ..] = m {
         if *first == b'0' {
-            n = rest;
+            m = rest;
         } else {
             break;
         }
@@ -251,27 +251,27 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
         | Suffix::UnsignedInt
         | Suffix::UnsignedLong => {
             let mut out: u64 = 0;
-            match radix {
+            match radix2 {
                 Radix::Binary => {
-                    while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
-                        n = y;
+                    while let [dig @ b'0'..=b'1', ref y @ ..] = m[..] {
+                        m = y;
                         out = out.wrapping_mul(2).wrapping_add((dig - b'0') as u64);
                     }
                 }
                 Radix::Decimal => {
-                    while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
-                        n = y;
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = m[..] {
+                        m = y;
                         out = out.wrapping_mul(10).wrapping_add((dig - b'0') as u64);
                     }
                 }
                 Radix::Hexadecimal => {
-                    while let [dig, ref y @ ..] = n[..] {
-                        let dig = match hex_to_u8(dig) {
+                    while let [dig, ref y @ ..] = m[..] {
+                        let d = match hex_to_u8(dig) {
                             Some(x) => x,
                             None => break,
                         };
-                        n = y;
-                        out = out.wrapping_mul(16).wrapping_add(dig as u64);
+                        m = y;
+                        out = out.wrapping_mul(16).wrapping_add(d as u64);
                     }
                 }
                 _ => return Err(Error),
@@ -285,49 +285,49 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
         }
         _ => {
             let mut out: i64 = 0;
-            match radix {
+            match radix2 {
                 Radix::Binary => {
-                    while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
-                        n = y;
+                    while let [dig @ b'0'..=b'1', ref y @ ..] = m[..] {
+                        m = y;
                         out = out.wrapping_mul(2).wrapping_add((dig - b'0') as i64);
                     }
                 }
                 Radix::NegativeBinary => {
-                    while let [dig @ b'0'..=b'1', ref y @ ..] = n[..] {
-                        n = y;
+                    while let [dig @ b'0'..=b'1', ref y @ ..] = m[..] {
+                        m = y;
                         out = out.wrapping_mul(2).wrapping_sub((dig - b'0') as i64);
                     }
                 }
                 Radix::Decimal => {
-                    while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
-                        n = y;
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = m[..] {
+                        m = y;
                         out = out.wrapping_mul(10).wrapping_add((dig - b'0') as i64);
                     }
                 }
                 Radix::NegativeDecimal => {
-                    while let [dig @ b'0'..=b'9', ref y @ ..] = n[..] {
-                        n = y;
+                    while let [dig @ b'0'..=b'9', ref y @ ..] = m[..] {
+                        m = y;
                         out = out.wrapping_mul(10).wrapping_sub((dig - b'0') as i64);
                     }
                 }
                 Radix::Hexadecimal => {
-                    while let [dig, ref y @ ..] = n[..] {
-                        let dig = match hex_to_u8(dig) {
+                    while let [dig, ref y @ ..] = m[..] {
+                        let d = match hex_to_u8(dig) {
                             Some(x) => x,
                             None => break,
                         };
-                        n = y;
-                        out = out.wrapping_mul(16).wrapping_add(dig as i64);
+                        m = y;
+                        out = out.wrapping_mul(16).wrapping_add(d as i64);
                     }
                 }
                 Radix::NegativeHexadecimal => {
-                    while let [dig, ref y @ ..] = n[..] {
-                        let dig = match hex_to_u8(dig) {
+                    while let [dig, ref y @ ..] = m[..] {
+                        let d = match hex_to_u8(dig) {
                             Some(x) => x,
                             None => break,
                         };
-                        n = y;
-                        out = out.wrapping_mul(16).wrapping_sub(dig as i64);
+                        m = y;
+                        out = out.wrapping_mul(16).wrapping_sub(d as i64);
                     }
                 }
             }
@@ -339,7 +339,7 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
             }
         }
     };
-    if n.is_empty() { ret } else { Err(Error) }
+    if m.is_empty() { ret } else { Err(Error) }
 }
 
 fn dec_true_peek(n: &[u8]) -> Result<&[u8], Error> {

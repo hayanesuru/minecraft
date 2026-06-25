@@ -1,5 +1,5 @@
 use crate::item_stack::{ItemStack, TypedDataComponent};
-use crate::{Component, HolderSet, MilliSeconds, ResourceTexture};
+use crate::{ComponentRaw, HolderSet, MilliSeconds};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_nbt::Tag;
@@ -65,11 +65,11 @@ pub struct Advancement<'a> {
 
 #[derive(Clone)]
 pub struct DisplayInfo<'a> {
-    pub title: Component,
-    pub description: Component,
+    pub title: ComponentRaw,
+    pub description: ComponentRaw,
     pub icon: ItemStack<'a>,
     pub ty: AdvancementType,
-    pub background: Option<ResourceTexture<'a>>,
+    pub background: Option<Ident<'a>>,
     pub show_toast: bool,
     pub hidden: bool,
     pub x: f32,
@@ -78,13 +78,13 @@ pub struct DisplayInfo<'a> {
 
 impl<'a> Read<'a> for DisplayInfo<'a> {
     fn read(buf: &mut mser::Reader<'a>) -> Result<Self, mser::Error> {
-        let title = Component::read(buf)?;
-        let description = Component::read(buf)?;
+        let title = ComponentRaw::read(buf)?;
+        let description = ComponentRaw::read(buf)?;
         let icon = ItemStack::read(buf)?;
         let ty = AdvancementType::read(buf)?;
         let flags = u32::read(buf)?;
         let background = if flags & 1 != 0 {
-            Some(ResourceTexture::read(buf)?)
+            Some(Ident::read(buf)?)
         } else {
             None
         };

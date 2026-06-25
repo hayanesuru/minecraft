@@ -1,9 +1,9 @@
 use crate::list::ListPrimitive;
 use crate::number::dec_num;
 use crate::{
-    Compound, CompoundStringify, Error, ListTag, Name, Read as _, Tag, TagArray, TagPrimitive,
+    CompoundStringify, CompoundTag, Error, ListTag, Read as _, StringTag, Tag, TagArray,
+    TagPrimitive,
 };
-use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::str::from_utf8_unchecked;
@@ -14,9 +14,9 @@ const BYTE_ARRAY_PREFIX: &[u8; 3] = b"[B;";
 const INT_ARRAY_PREFIX: &[u8; 3] = b"[I;";
 const LONG_ARRAY_PREFIX: &[u8; 3] = b"[L;";
 
-impl From<Compound> for CompoundStringify {
+impl From<CompoundTag> for CompoundStringify {
     #[inline]
-    fn from(value: Compound) -> Self {
+    fn from(value: CompoundTag) -> Self {
         Self(value)
     }
 }
@@ -137,15 +137,15 @@ impl TBuf {
     }
 }
 
-unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
+unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error> {
     enum Bl {
-        C(Compound),
+        C(CompoundTag),
         L(ListTag),
     }
 
     let mut tmp = TBuf(Vec::new());
     let mut names = Vec::<u8>::new();
-    let mut blocks = vec![Bl::C(Compound::new())];
+    let mut blocks = vec![Bl::C(CompoundTag::new())];
     let mut on_start = true;
     let mut on_end = false;
 
@@ -214,8 +214,8 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
         if on_end {
             on_end = false;
             match &mut bl {
-                Bl::C(x) => x.shrink_to_fit(),
-                Bl::L(x) => match x {
+                Bl::C(compound) => compound.shrink_to_fit(),
+                Bl::L(list) => match list {
                     ListTag::List(x) => x.shrink_to_fit(),
                     ListTag::Compound(x) => x.shrink_to_fit(),
                     ListTag::String(x) => x.shrink_to_fit(),
@@ -238,7 +238,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                         let new_len = rest.len() - len;
                         c.push(
                             unsafe {
-                                Name::new(from_utf8_unchecked(
+                                StringTag::from_utf8(from_utf8_unchecked(
                                     rest.get_unchecked(rest.len() - len..rest.len()),
                                 ))
                             },
@@ -256,8 +256,8 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                     if let ListTag::None = l {
                         *l = ListTag::Compound(Vec::new())
                     }
-                    if let ListTag::Compound(l) = l {
-                        l.push(x);
+                    if let ListTag::Compound(vec) = l {
+                        vec.push(x);
                         continue;
                     } else {
                         return Err(Error);
@@ -267,8 +267,8 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                     if let ListTag::None = l {
                         *l = ListTag::List(Vec::new())
                     }
-                    if let ListTag::List(l) = l {
-                        l.push(x);
+                    if let ListTag::List(vec) = l {
+                        vec.push(x);
                         continue;
                     } else {
                         return Err(Error);
@@ -313,7 +313,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                         unsafe { n.advance(1) }
                         names.extend(kl);
                         blocks.push(Bl::C(c));
-                        blocks.push(Bl::C(Compound::new()));
+                        blocks.push(Bl::C(CompoundTag::new()));
                         on_start = true;
                         continue;
                     }
@@ -335,23 +335,23 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                     b'"' => unsafe {
                         n.advance(1);
                         let s = dec_quoted_str(n, tmp.next(), b'"')?;
-                        Tag::String(Box::from(from_utf8_unchecked(s)))
+                        Tag::from(from_utf8_unchecked(s))
                     },
                     b'\'' => unsafe {
                         n.advance(1);
                         let s = dec_quoted_str(n, tmp.next(), b'\'')?;
-                        Tag::String(Box::from(from_utf8_unchecked(s)))
+                        Tag::from(from_utf8_unchecked(s))
                     },
                     _ => unsafe {
                         let value = find_next_value(n)?;
                         match dec_num(value, tmp.next()) {
                             Ok(x) => Tag::from(x),
-                            Err(_) => Tag::String(Box::from(from_utf8_unchecked(value))),
+                            Err(_) => Tag::from(from_utf8_unchecked(value)),
                         }
                     },
                 };
                 unsafe {
-                    c.push(Name::new(from_utf8_unchecked(k)), t);
+                    c.push(StringTag::from_utf8(from_utf8_unchecked(k)), t);
                 }
             }
             Bl::L(mut l) => match n.peek_byte()? {
@@ -361,7 +361,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                         l = ListTag::Compound(Vec::new());
                     }
                     blocks.push(Bl::L(l));
-                    blocks.push(Bl::C(Compound::new()));
+                    blocks.push(Bl::C(CompoundTag::new()));
                     on_start = true;
                 },
                 b'[' => unsafe {
@@ -418,25 +418,25 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
                         b'"' => {
                             n.advance(1);
                             let s = dec_quoted_str(n, tmp.next(), b'"')?;
-                            Err(Box::from(from_utf8_unchecked(s)))
+                            Err(from_utf8_unchecked(s))
                         }
                         b'\'' => {
                             n.advance(1);
                             let s = dec_quoted_str(n, tmp.next(), b'\'')?;
-                            Err(Box::from(from_utf8_unchecked(s)))
+                            Err(from_utf8_unchecked(s))
                         }
                         _ => {
                             let value = find_next_value(n)?;
                             match dec_num(value, tmp.next()) {
                                 Ok(x) => Ok(x),
-                                Err(_) => Err(Box::from(from_utf8_unchecked(value))),
+                                Err(_) => Err(from_utf8_unchecked(value)),
                             }
                         }
                     };
                     let l = match tag {
                         Ok(x) => ListTag::from(dec_list_primitive(n, &mut tmp, x)?),
                         Err(e) => {
-                            let mut list = vec![e];
+                            let mut list = vec![StringTag::from_utf8(e)];
                             dec_list_string(n, &mut tmp, &mut list)?;
                             ListTag::String(list)
                         }
@@ -451,7 +451,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<Compound, Error> {
 unsafe fn dec_list_string(
     n: &mut Reader,
     tmp: &mut TBuf,
-    list: &mut Vec<Box<str>>,
+    list: &mut Vec<StringTag>,
 ) -> Result<(), Error> {
     loop {
         skip_ws(n);
@@ -461,15 +461,15 @@ unsafe fn dec_list_string(
                 let x = match n.peek_byte()? {
                     b'\"' => unsafe {
                         n.advance(1);
-                        Box::from(from_utf8_unchecked(dec_quoted_str(n, tmp.next(), b'\"')?))
+                        dec_quoted_str(n, tmp.next(), b'\"')?
                     },
                     b'\'' => unsafe {
                         n.advance(1);
-                        Box::from(from_utf8_unchecked(dec_quoted_str(n, tmp.next(), b'\'')?))
+                        dec_quoted_str(n, tmp.next(), b'\'')?
                     },
-                    _ => unsafe { Box::from(from_utf8_unchecked(find_next_value(n)?)) },
+                    _ => find_next_value(n)?,
                 };
-                list.push(x);
+                unsafe { list.push(StringTag::from_utf8(from_utf8_unchecked(x))) }
             }
             b']' => return Ok(()),
             _ => return Err(Error),
@@ -554,9 +554,9 @@ fn dec_quoted_str<'a>(n: &mut Reader, buf: &'a mut Vec<u8>, quote: u8) -> Result
         }
         let ch = escape_quoted(n)?;
         buf.reserve(ch.len_utf8());
-        let ch =
+        let s =
             ch.encode_utf8(unsafe { core::slice::from_raw_parts_mut(buf.as_mut_ptr(), buf.len()) });
-        unsafe { buf.set_len(buf.len() + ch.len()) }
+        unsafe { buf.set_len(buf.len() + s.len()) }
     }
     unsafe { Ok(buf.get_unchecked(begin..)) }
 }
@@ -675,10 +675,10 @@ fn skip_ws(n: &mut Reader) {
 const SPACE: &[u8] = b"    ";
 const DELIMITER: &[u8] = b", ";
 
-fn encode(buf: &mut Vec<u8>, n: &Compound) {
+fn encode(buf: &mut Vec<u8>, n: &CompoundTag) {
     #[derive(Clone, Copy)]
     enum Bl<'a> {
-        C(&'a [(Name, Tag)]),
+        C(&'a [(StringTag, Tag)]),
         None,
         Byte(&'a [i8]),
         Short(&'a [i16]),
@@ -686,12 +686,12 @@ fn encode(buf: &mut Vec<u8>, n: &Compound) {
         Long(&'a [i64]),
         Float(&'a [f32]),
         Double(&'a [f64]),
-        String(&'a [Box<str>]),
+        String(&'a [StringTag]),
         ByteArray(&'a [Vec<i8>]),
         IntArray(&'a [Vec<i32>]),
         LongArray(&'a [Vec<i64>]),
         List(&'a [ListTag]),
-        Compound(&'a [Compound]),
+        Compound(&'a [CompoundTag]),
     }
     impl<'a> From<&'a ListTag> for Bl<'a> {
         fn from(value: &'a ListTag) -> Self {
