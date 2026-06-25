@@ -974,12 +974,12 @@ mod tests {
             data.set_len(len2);
             data.into_boxed_slice()
         };
-        let mut data = Reader::new(&data);
-        let id = V32::read(&mut data).unwrap().0;
+        let mut reader = Reader::new(&data);
+        let id = V32::read(&mut reader).unwrap().0;
         assert_eq!(clientbound_login::new(id as _).unwrap(), LoginFinished::ID);
-        assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
-        assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");
-        assert_eq!(V32::read(&mut data).unwrap().0, 0);
-        assert!(data.is_empty());
+        assert_eq!(Uuid::read(&mut reader).unwrap(), Uuid::nil());
+        assert_eq!(Utf8::<16>::read(&mut reader).unwrap().0, "abc");
+        assert_eq!(V32::read(&mut reader).unwrap().0, 0);
+        assert!(reader.is_empty());
     }
 }
