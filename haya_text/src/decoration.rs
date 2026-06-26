@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Copy)]
+#[must_use]
 pub struct DecorationMap {
     pub value: u16,
 }
@@ -30,7 +31,7 @@ impl DecorationMap {
         let n = match obfuscated {
             Some(true) => 0x0001,
             Some(false) => 0x0002,
-            None => 0x0003,
+            None => 0,
         };
         Self {
             value: (self.value & !0x0003) | n,
@@ -49,7 +50,7 @@ impl DecorationMap {
         let n = match bold {
             Some(true) => 0x0004,
             Some(false) => 0x0008,
-            None => 0x000C,
+            None => 0,
         };
         Self {
             value: (self.value & !0x000C) | n,
@@ -68,7 +69,7 @@ impl DecorationMap {
         let n = match strikethrough {
             Some(true) => 0x0010,
             Some(false) => 0x0020,
-            None => 0x0030,
+            None => 0,
         };
         Self {
             value: (self.value & !0x0030) | n,
@@ -87,7 +88,7 @@ impl DecorationMap {
         let n = match underlined {
             Some(true) => 0x0040,
             Some(false) => 0x0080,
-            None => 0x00C0,
+            None => 0,
         };
         Self {
             value: (self.value & !0x00C0) | n,
@@ -106,7 +107,7 @@ impl DecorationMap {
         let n = match italic {
             Some(true) => 0x0100,
             Some(false) => 0x0200,
-            None => 0x0300,
+            None => 0,
         };
         Self {
             value: (self.value & !0x0300) | n,

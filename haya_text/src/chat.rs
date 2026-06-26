@@ -844,23 +844,23 @@ impl Deserialize for TextComponent {
                     style.color = style.color.with_shadow(shadow_color);
                 }
                 BOLD => {
-                    style.decorations.with_bold(Some(bool::deserialize(v)?));
+                    style.decorations = style.decorations.with_bold(Some(bool::deserialize(v)?));
                 }
                 ITALIC => {
-                    style.decorations.with_italic(Some(bool::deserialize(v)?));
+                    style.decorations = style.decorations.with_italic(Some(bool::deserialize(v)?));
                 }
                 UNDERLINED => {
-                    style
+                    style.decorations = style
                         .decorations
                         .with_underlined(Some(bool::deserialize(v)?));
                 }
                 STRIKETHROUGH => {
-                    style
+                    style.decorations = style
                         .decorations
                         .with_strikethrough(Some(bool::deserialize(v)?));
                 }
                 OBFUSCATED => {
-                    style
+                    style.decorations = style
                         .decorations
                         .with_obfuscated(Some(bool::deserialize(v)?));
                 }
