@@ -68,22 +68,22 @@ fn main() {
     data.clear();
 
     let reg_len = read(&mut data, path.join("registries.txt"));
-    let reg = 0..reg_len;
+    let reg = data.len() - reg_len..data.len();
 
     let flu_len = read(&mut data, path.join("fluid_state.txt"));
-    let flu = reg.end..reg.end + flu_len;
+    let flu = data.len() - flu_len..data.len();
 
     let blo_len = read(&mut data, path.join("block_state.txt"));
-    let blo = flu.end..flu.end + blo_len;
+    let blo = data.len() - blo_len..data.len();
 
     let ite_len = read(&mut data, path.join("item.txt"));
-    let ite = blo.end..blo.end + ite_len;
+    let ite = data.len() - ite_len..data.len();
 
     let ent_len = read(&mut data, path.join("entity.txt"));
-    let ent = ite.end..ite.end + ent_len;
+    let ent = data.len() - ent_len..data.len();
 
     let pac_len = read(&mut data, path.join("packet.txt"));
-    let pac = ent.end..ent.end + pac_len;
+    let pac = data.len() - pac_len..data.len();
 
     let s = core::str::from_utf8(&data).unwrap();
     let block_names = registries(&mut w, &s[reg], &mut gen_hash);
