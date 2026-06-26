@@ -340,6 +340,9 @@ impl Deserialize for ShadowColor {
             Tag::Byte(value) => Ok(Self {
                 value: value as u32,
             }),
+            Tag::Short(value) => Ok(Self {
+                value: value as u32,
+            }),
             Tag::Long(value) => Ok(Self {
                 value: value as u32,
             }),
