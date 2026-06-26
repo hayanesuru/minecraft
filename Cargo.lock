@@ -141,7 +141,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "1.0.1+1.21.11"
+version = "1.0.0+1.21.11"
 dependencies = [
  "haya_collection",
  "haya_ident",
