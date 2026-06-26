@@ -569,6 +569,34 @@ impl Deserialize for TextComponent {
                 }
                 return Ok(c);
             }
+            Tag::List(ListTag::String(l)) => {
+                let mut iter = l.into_iter();
+                let first = match iter.next() {
+                    Some(x) => x,
+                    None => {
+                        return Ok(Self {
+                            content: Content::Literal {
+                                content: StringTag::new(),
+                            },
+                            style: Style::new(),
+                            siblings: Vec::new(),
+                        });
+                    }
+                };
+                let mut c = Self {
+                    content: Content::Literal { content: first },
+                    style: Style::new(),
+                    siblings: Vec::with_capacity(capacity_fix(iter.len())),
+                };
+                for sibling in iter {
+                    c.siblings.push(Self {
+                        content: Content::Literal { content: sibling },
+                        style: Style::new(),
+                        siblings: Vec::new(),
+                    });
+                }
+                return Ok(c);
+            }
             Tag::List(ListTag::None) => {
                 return Ok(Self {
                     content: Content::Literal {
@@ -625,8 +653,19 @@ impl Deserialize for TextComponent {
                     let w = match v {
                         Tag::List(ListTag::Compound(l)) => {
                             let mut vec = Vec::with_capacity(capacity_fix(l.len()));
-                            for ele in l {
-                                vec.push(Self::deserialize(Tag::Compound(ele))?);
+                            for nbt in l {
+                                vec.push(Self::deserialize(Tag::Compound(nbt))?);
+                            }
+                            vec
+                        }
+                        Tag::List(ListTag::String(l)) => {
+                            let mut vec = Vec::with_capacity(capacity_fix(l.len()));
+                            for nbt in l {
+                                vec.push(Self {
+                                    content: Content::Literal { content: nbt },
+                                    style: Style::new(),
+                                    siblings: Vec::new(),
+                                });
                             }
                             vec
                         }
@@ -844,6 +883,16 @@ impl Deserialize for TextComponent {
                         for nbt in l {
                             let c = Self::deserialize(Tag::Compound(nbt))?;
                             siblings.push(c);
+                        }
+                    }
+                    Tag::List(ListTag::String(l)) => {
+                        siblings.reserve_exact(capacity_fix(l.len()));
+                        for nbt in l {
+                            siblings.push(Self {
+                                content: Content::Literal { content: nbt },
+                                style: Style::new(),
+                                siblings: Vec::new(),
+                            });
                         }
                     }
                     Tag::List(ListTag::None) => {}
