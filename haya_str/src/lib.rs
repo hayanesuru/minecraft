@@ -146,7 +146,12 @@ impl HayaStr {
     }
 
     pub const fn as_mut_str(&mut self) -> &mut str {
-        unsafe { core::str::from_utf8_unchecked_mut(&mut self.data) }
+        unsafe {
+            core::str::from_utf8_unchecked_mut(core::slice::from_raw_parts_mut(
+                self.data.as_mut_ptr(),
+                self.len as usize,
+            ))
+        }
     }
 
     pub const fn try_push(&mut self, ch: char) -> Result<(), OutOfBoundsError> {
