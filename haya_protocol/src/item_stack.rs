@@ -161,7 +161,7 @@ unsafe fn write_item_stack(
     w: &mut Writer,
 ) {
     unsafe {
-        if count == 0 || id == item::air {
+        if count <= 0 || id == item::air {
             V32(0).write(w);
         } else {
             V32(count as u32).write(w);
@@ -186,7 +186,7 @@ fn len_item_stack(
     add: &[TypedDataComponent],
     remove: &[data_component_type],
 ) -> usize {
-    if count == 0 || id == item::air {
+    if count <= 0 || id == item::air {
         V32(0).len_s()
     } else {
         let mut l = 0;
