@@ -92,7 +92,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
         }
     };
 
-    let x = match i.data {
+    let x = match &i.data {
         syn::Data::Struct(_) => serialize::serialize_struct(i, cratename),
         syn::Data::Enum(_) => serialize::serialize_enum(i, cratename, attr),
         syn::Data::Union(_) => Err(syn::Error::new_spanned(i, "unions are not supported")),
@@ -113,7 +113,7 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
         }
     };
 
-    let x = match i.data {
+    let x = match &i.data {
         syn::Data::Struct(_) => deserialize::deserialize_struct(i, cratename, attrs),
         syn::Data::Enum(_) => deserialize::deserialize_enum(i, cratename, attrs),
         syn::Data::Union(_) => Err(syn::Error::new_spanned(i, "unions are not supported")),
