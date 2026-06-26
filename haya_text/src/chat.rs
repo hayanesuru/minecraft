@@ -37,6 +37,7 @@ const OBJECT_PLAYER: &str = "player";
 const OBJECT_HAT: &str = "hat";
 
 const TYPE_K: StringTag = key(TYPE);
+const EXTRA_K: StringTag = key(EXTRA);
 const TEXT_K: StringTag = key(TEXT);
 const TRANSLATE_K: StringTag = key(TRANSLATE);
 const TRANSLATE_FALLBACK_K: StringTag = key(TRANSLATE_FALLBACK);
@@ -425,10 +426,10 @@ impl Serialize for TextComponent {
                 if !args.is_empty() {
                     let mut vec = Vec::with_capacity(args.len());
                     for arg in args {
-                        vec.push(match arg.serialize() {
-                            Tag::Compound(x) => x,
-                            _ => unsafe { core::hint::unreachable_unchecked() },
-                        });
+                        match arg.serialize() {
+                            Tag::Compound(x) => vec.push(x),
+                            _ => unreachable!(),
+                        }
                     }
                     nbt.push(TRANSLATE_WITH_K, Tag::List(ListTag::Compound(vec)));
                 }
@@ -521,6 +522,16 @@ impl Serialize for TextComponent {
         }
         if let Some(font) = self.style.font.as_ref() {
             nbt.push(FONT_K, font.serialize());
+        }
+        if !self.siblings.is_empty() {
+            let mut vec = Vec::with_capacity(self.siblings.len());
+            for siblings in &self.siblings {
+                match siblings.serialize() {
+                    Tag::Compound(x) => vec.push(x),
+                    _ => unreachable!(),
+                }
+            }
+            nbt.push(EXTRA_K, Tag::List(ListTag::Compound(vec)));
         }
         Tag::Compound(nbt)
     }
