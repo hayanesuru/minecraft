@@ -376,7 +376,7 @@ impl Deserialize for ShadowColor {
     }
 }
 
-const DEFAULT_ATLAS: Identifier = Identifier::new("blocks").unwrap();
+const DEFAULT_ATLAS: Identifier = Identifier::new_const("blocks").unwrap();
 
 #[derive(Clone)]
 pub enum ObjectInfo {
@@ -813,7 +813,7 @@ impl Deserialize for TextComponent {
                             content = Content::Object {
                                 content: ObjectInfo::Atlas {
                                     atlas: atlas1,
-                                    sprite: Identifier::new("").unwrap(),
+                                    sprite: Identifier::new_const("").unwrap(),
                                 },
                             };
                         }

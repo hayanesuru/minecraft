@@ -204,7 +204,7 @@ impl Identifier {
         }
     }
 
-    pub const fn new(path: &str) -> Option<Self> {
+    pub const fn new_const(path: &str) -> Option<Self> {
         let b = path.as_bytes();
         let mut i = 0;
         while i < b.len() {
