@@ -1009,7 +1009,7 @@ fn block_state(
         }
         *w += "&[";
         let mut first2 = true;
-        for x in shape.chunks_exact(6) {
+        for x in shape.as_chunks::<6>().0 {
             if !first2 {
                 *w += ", ";
             }
