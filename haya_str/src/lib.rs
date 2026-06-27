@@ -60,9 +60,7 @@ impl AsRef<str> for HayaStr {
 impl AsMut<str> for HayaStr {
     #[inline]
     fn as_mut(&mut self) -> &mut str {
-        unsafe {
-            core::str::from_utf8_unchecked_mut(self.data.get_unchecked_mut(0..self.len as usize))
-        }
+        self.as_mut_str()
     }
 }
 
