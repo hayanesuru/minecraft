@@ -553,11 +553,12 @@ fn dec_quoted_str<'a>(n: &mut Reader, buf: &'a mut Vec<u8>, quote: u8) -> Result
             break;
         }
         let ch = escape_quoted(n)?;
-        buf.reserve(ch.len_utf8());
-        let s = ch.encode_utf8(unsafe {
-            core::slice::from_raw_parts_mut(buf.as_mut_ptr().add(buf.len()), buf.capacity())
+        let len = ch.len_utf8();
+        buf.reserve(len);
+        ch.encode_utf8(unsafe {
+            core::slice::from_raw_parts_mut(buf.as_mut_ptr().add(buf.len()), len)
         });
-        unsafe { buf.set_len(buf.len() + s.len()) }
+        unsafe { buf.set_len(buf.len() + len) }
     }
     unsafe { Ok(buf.get_unchecked(begin..)) }
 }
