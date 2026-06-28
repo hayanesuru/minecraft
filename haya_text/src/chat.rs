@@ -936,7 +936,18 @@ impl Deserialize for TextComponent {
                 _ => return Err(Error),
             }
         }
+        if atlas.is_some() && sprite.is_none() {
+            return Err(Error);
+        }
         if let Some(s) = sprite {
+            if matches!(
+                content,
+                Content::Object {
+                    content: ObjectInfo::Player { .. }
+                }
+            ) {
+                return Err(Error);
+            }
             content = Content::Object {
                 content: ObjectInfo::Atlas {
                     atlas: match atlas {
