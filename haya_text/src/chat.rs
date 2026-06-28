@@ -611,13 +611,18 @@ impl Deserialize for TextComponent {
         let mut content = Content::Literal {
             content: StringTag::new(),
         };
-        let mut style = Style::new();
-        let mut siblings = Vec::new();
+        let mut style: Style = Style::new();
+        let mut siblings: Vec<Self> = Vec::new();
         let mut separator: Option<Box<Self>> = None;
+        let mut sprite: Option<Identifier> = None;
+        let mut atlas: Option<Identifier> = None;
+        let mut ty: Option<StringTag> = None;
+        let mut object: Option<StringTag> = None;
+        let mut source: Option<StringTag> = None;
         for (k, v) in c {
             match &*k {
                 TYPE => {
-                    let _ty = StringTag::deserialize(v)?;
+                    ty = Some(StringTag::deserialize(v)?);
                 }
                 TEXT => {
                     let text = StringTag::deserialize(v)?;
@@ -750,7 +755,7 @@ impl Deserialize for TextComponent {
                     }
                 }
                 NBT_SOURCE => {
-                    let _source = StringTag::deserialize(v)?;
+                    source = Some(StringTag::deserialize(v)?);
                 }
                 NBT_BLOCK => {
                     let block = NbtContent::Block {
@@ -801,39 +806,13 @@ impl Deserialize for TextComponent {
                     }
                 }
                 OBJECT_TYPE => {
-                    let _object = StringTag::deserialize(v)?;
+                    object = Some(StringTag::deserialize(v)?);
                 }
                 OBJECT_ATLAS => {
-                    let atlas1 = Identifier::deserialize(v)?;
-                    match &mut content {
-                        Content::Object {
-                            content: ObjectInfo::Atlas { atlas, .. },
-                        } => *atlas = atlas1,
-                        _ => {
-                            content = Content::Object {
-                                content: ObjectInfo::Atlas {
-                                    atlas: atlas1,
-                                    sprite: Identifier::new_const("").unwrap(),
-                                },
-                            };
-                        }
-                    }
+                    atlas = Some(Identifier::deserialize(v)?);
                 }
                 OBJECT_SPRITE => {
-                    let sprite1 = Identifier::deserialize(v)?;
-                    match &mut content {
-                        Content::Object {
-                            content: ObjectInfo::Atlas { sprite, .. },
-                        } => *sprite = sprite1,
-                        _ => {
-                            content = Content::Object {
-                                content: ObjectInfo::Atlas {
-                                    atlas: DEFAULT_ATLAS,
-                                    sprite: sprite1,
-                                },
-                            };
-                        }
-                    }
+                    sprite = Some(Identifier::deserialize(v)?);
                 }
                 OBJECT_PLAYER => {
                     let pl = ResolvableProfile::deserialize(v)?;
@@ -957,6 +936,66 @@ impl Deserialize for TextComponent {
                 _ => return Err(Error),
             }
         }
+        if let Some(s) = sprite {
+            content = Content::Object {
+                content: ObjectInfo::Atlas {
+                    atlas: match atlas {
+                        Some(x) => x,
+                        None => DEFAULT_ATLAS,
+                    },
+                    sprite: s,
+                },
+            }
+        }
+        if let Some(ty1) = ty.as_deref() {
+            let ty2 = match &content {
+                Content::Literal { .. } => TEXT,
+                Content::Translatable { .. } => TRANSLATE,
+                Content::Score { .. } => SCORE,
+                Content::Selector { .. } => SELECTOR,
+                Content::Keybind { .. } => KEYBIND,
+                Content::Nbt { .. } => NBT_PATH,
+                Content::Object { .. } => OBJECT_TYPE,
+            };
+            if ty2 != ty1 {
+                return Err(Error);
+            }
+        }
+        if let Some(source1) = source.as_deref() {
+            let source2 = match content {
+                Content::Nbt {
+                    content: NbtContent::Block { .. },
+                    ..
+                } => NBT_BLOCK,
+                Content::Nbt {
+                    content: NbtContent::Entity { .. },
+                    ..
+                } => NBT_ENTITY,
+                Content::Nbt {
+                    content: NbtContent::Storage { .. },
+                    ..
+                } => NBT_STORAGE,
+                _ => return Err(Error),
+            };
+            if source2 != source1 {
+                return Err(Error);
+            }
+        }
+        if let Some(object1) = object.as_deref() {
+            let object2 = match content {
+                Content::Object {
+                    content: ObjectInfo::Atlas { .. },
+                } => OBJECT_ATLAS,
+                Content::Object {
+                    content: ObjectInfo::Player { .. },
+                } => OBJECT_PLAYER,
+                _ => return Err(Error),
+            };
+            if object2 != object1 {
+                return Err(Error);
+            }
+        }
+
         Ok(Self {
             content,
             style,
