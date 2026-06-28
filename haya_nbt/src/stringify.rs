@@ -543,6 +543,7 @@ const ESCAPE: u8 = b'\\';
 
 fn dec_quoted_str<'a>(n: &mut Reader, buf: &'a mut Vec<u8>, quote: u8) -> Result<&'a [u8], Error> {
     let begin = buf.len();
+    let mut tmp = [0u8; 4];
     loop {
         let cur = n.memchr2(ESCAPE, quote);
         if n.end_from(cur) {
@@ -553,12 +554,8 @@ fn dec_quoted_str<'a>(n: &mut Reader, buf: &'a mut Vec<u8>, quote: u8) -> Result
             break;
         }
         let ch = escape_quoted(n)?;
-        let len = ch.len_utf8();
-        buf.reserve(len);
-        ch.encode_utf8(unsafe {
-            core::slice::from_raw_parts_mut(buf.as_mut_ptr().add(buf.len()), len)
-        });
-        unsafe { buf.set_len(buf.len() + len) }
+        let s = ch.encode_utf8(&mut tmp);
+        buf.extend(s.as_bytes());
     }
     unsafe { Ok(buf.get_unchecked(begin..)) }
 }
