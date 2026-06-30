@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::ComponentRaw;
 use minecraft_data::map_decoration_type;
 use mser::{ByteArray, Read, Write};
 
@@ -11,7 +11,7 @@ pub struct MapDecoration {
     pub x: u8,
     pub y: u8,
     pub rot: u8,
-    pub name: Option<Component>,
+    pub name: Option<ComponentRaw>,
 }
 
 #[derive(Clone)]

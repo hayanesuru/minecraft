@@ -1,5 +1,5 @@
 use crate::registry::DialogRef;
-use crate::{Component, Dialog, Holder, ServerLinkUntrustedEntry, V32List};
+use crate::{ComponentRaw, DialogRaw, Holder, ServerLinkUntrustedEntry, V32List};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
 use mser::{ByteArray, Rest, Utf8};
@@ -25,7 +25,7 @@ pub struct GameDisconnect(pub Disconnect);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Disconnect {
-    pub reason: Component,
+    pub reason: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -64,7 +64,7 @@ pub struct ResourcePackPush<'a> {
     pub url: Utf8<'a>,
     pub hash: Utf8<'a, 40>,
     pub required: bool,
-    pub prompt: Option<Component>,
+    pub prompt: Option<ComponentRaw>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -133,10 +133,10 @@ pub struct GameClearDialog {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ConfigurationShowDialog {
-    pub dialog: Dialog,
+    pub dialog: DialogRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GameShowDialog {
-    pub dialog: Holder<Dialog, DialogRef>,
+    pub dialog: Holder<DialogRaw, DialogRef>,
 }

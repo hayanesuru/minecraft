@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::ComponentRaw;
 use haya_ident::Ident;
 use minecraft_data::{villager_profession, villager_type};
 use mser::{Read, V21, Write};
@@ -201,8 +201,8 @@ pub struct PaintingVariant<'a> {
     #[mser(varint)]
     pub height: u32,
     pub asset_id: Ident<'a>,
-    pub title: Option<Component>,
-    pub author: Option<Component>,
+    pub title: Option<ComponentRaw>,
+    pub author: Option<ComponentRaw>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

@@ -1,5 +1,4 @@
-use crate::{ByteArray, Compound, IntArray, ListInfo, ListTag, LongArray, StringTag, TagType};
-use alloc::boxed::Box;
+use crate::{ByteArray, CompoundTag, IntArray, ListInfo, ListTag, LongArray, StringTag, TagType};
 use alloc::vec::Vec;
 use haya_collection::capacity_fix;
 use mser::{Error, Read, Reader, Write, Writer};
@@ -101,9 +100,9 @@ impl From<Vec<f64>> for ListTag {
     }
 }
 
-impl From<Vec<Box<str>>> for ListTag {
+impl From<Vec<StringTag>> for ListTag {
     #[inline]
-    fn from(value: Vec<Box<str>>) -> Self {
+    fn from(value: Vec<StringTag>) -> Self {
         Self::String(value)
     }
 }
@@ -129,16 +128,16 @@ impl From<Vec<Vec<i64>>> for ListTag {
     }
 }
 
-impl From<Vec<ListTag>> for ListTag {
+impl From<Vec<Self>> for ListTag {
     #[inline]
-    fn from(value: Vec<ListTag>) -> Self {
+    fn from(value: Vec<Self>) -> Self {
         Self::List(value)
     }
 }
 
-impl From<Vec<Compound>> for ListTag {
+impl From<Vec<CompoundTag>> for ListTag {
     #[inline]
-    fn from(value: Vec<Compound>) -> Self {
+    fn from(value: Vec<CompoundTag>) -> Self {
         Self::Compound(value)
     }
 }
@@ -217,7 +216,7 @@ impl ListInfo {
                 }
                 let mut list = Vec::with_capacity(capacity_fix(len));
                 for _ in 0..len {
-                    list.push(StringTag::read(n)?.0);
+                    list.push(StringTag::read(n)?);
                 }
                 Ok(ListTag::String(list))
             }

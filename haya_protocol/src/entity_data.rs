@@ -5,12 +5,12 @@ use crate::entity::{
 use crate::inventory::HumanoidArm;
 use crate::item_stack::OptionalItemStack;
 use crate::particle::Particle;
-use crate::profile::ResolvableProfile;
+use crate::profile::ResolvableProfileRef;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef,
     PigVariantRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
-use crate::{Component, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
+use crate::{ComponentRaw, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
 use haya_collection::List;
 use haya_math::{BlockPosPacked, Direction, FQuat, FVec3};
 use minecraft_data::block_state;
@@ -69,8 +69,8 @@ pub enum EntityDataSerializer<'a> {
     Long(#[mser(varint)] u64),
     Float(f32),
     String(Utf8<'a>),
-    Component(Component),
-    OptionalComponent(Option<Component>),
+    Component(ComponentRaw),
+    OptionalComponent(Option<ComponentRaw>),
     ItemStack(OptionalItemStack<'a>),
     Boolean(bool),
     Rotations(Rotations),
@@ -101,6 +101,6 @@ pub enum EntityDataSerializer<'a> {
     WeatheringCopperState(WeatheringCopperState),
     Vector3(FVec3),
     Quaternion(FQuat),
-    ResolvableProfile(ResolvableProfile<'a>),
+    ResolvableProfile(ResolvableProfileRef<'a>),
     HumanoidArm(HumanoidArm),
 }

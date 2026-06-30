@@ -25,7 +25,7 @@ use crate::entity::{
 use crate::food::FoodProperties;
 use crate::inventory::EquipmentSlot;
 use crate::map::MapId;
-use crate::profile::ResolvableProfile;
+use crate::profile::ResolvableProfileRef;
 use crate::registry::{
     CatVariantRef, ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
     JukeboxSongRef, PaintingVariantRef, PigVariantRef, TrimMaterialRef, TrimPatternRef,
@@ -33,7 +33,7 @@ use crate::registry::{
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
-use crate::{Component, DyeColor, Filterable, Holder, HolderSet, LockCode, Rarity};
+use crate::{ComponentRaw, DyeColor, Filterable, Holder, HolderSet, LockCode, Rarity};
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, TagKey};
@@ -44,30 +44,79 @@ use minecraft_data::{
 };
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ItemStack<'a>(#[mser(filter = validate_item_stack)] pub OptionalItemStack<'a>);
+#[derive(Clone)]
+pub struct ItemStack<'a> {
+    pub id: item,
+    pub count: i32,
+    pub components: DataComponentPatch<'a>,
+}
 
-fn validate_item_stack(item_stack: &OptionalItemStack<'_>) -> bool {
-    !(item_stack.count == 0 || item_stack.id == item::air)
+#[derive(Clone)]
+pub struct DataComponentPatch<'a> {
+    pub patch_add: List<'a, TypedDataComponent<'a>>,
+    pub patch_remove: List<'a, data_component_type>,
+}
+
+impl<'a> Read<'a> for ItemStack<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let OptionalItemStack {
+            id,
+            count,
+            components,
+        } = Read::read(buf)?;
+        if count <= 0 || id == item::air {
+            Err(Error)
+        } else {
+            Ok(Self {
+                id,
+                count,
+                components,
+            })
+        }
+    }
+}
+
+impl<'a> Write for ItemStack<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            write_item_stack(
+                self.id,
+                self.count,
+                &self.components.patch_add,
+                &self.components.patch_remove,
+                w,
+            )
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        len_item_stack(
+            self.id,
+            self.count,
+            &self.components.patch_add,
+            &self.components.patch_remove,
+        )
+    }
 }
 
 #[derive(Clone)]
 pub struct OptionalItemStack<'a> {
     pub id: item,
-    pub count: u32,
-    pub patch_add: List<'a, TypedDataComponent<'a>>,
-    pub patch_remove: List<'a, data_component_type>,
+    pub count: i32,
+    pub components: DataComponentPatch<'a>,
 }
 
 impl<'a> Read<'a> for OptionalItemStack<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let count = V32::read(buf)?.0;
-        if count as i32 <= 0 {
+        let count = V32::read(buf)?.0 as i32;
+        if count <= 0 {
             Ok(Self {
                 id: item::air,
                 count: 0,
-                patch_add: List::Borrowed(&[]),
-                patch_remove: List::Borrowed(&[]),
+                components: DataComponentPatch {
+                    patch_add: List::Borrowed(&[]),
+                    patch_remove: List::Borrowed(&[]),
+                },
             })
         } else {
             let id = item::read(buf)?;
@@ -77,8 +126,10 @@ impl<'a> Read<'a> for OptionalItemStack<'a> {
                 Ok(Self {
                     id,
                     count,
-                    patch_add: List::Borrowed(&[]),
-                    patch_remove: List::Borrowed(&[]),
+                    components: DataComponentPatch {
+                        patch_add: List::Borrowed(&[]),
+                        patch_remove: List::Borrowed(&[]),
+                    },
                 })
             } else {
                 let mut patch_add = Vec::with_capacity(capacity_fix(positive));
@@ -92,55 +143,88 @@ impl<'a> Read<'a> for OptionalItemStack<'a> {
                 Ok(Self {
                     id,
                     count,
-                    patch_add: List::Owned(patch_add),
-                    patch_remove: List::Owned(patch_remove),
+                    components: DataComponentPatch {
+                        patch_add: List::Owned(patch_add),
+                        patch_remove: List::Owned(patch_remove),
+                    },
                 })
             }
         }
     }
 }
 
-impl<'a> Write for OptionalItemStack<'a> {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            if self.count == 0 || self.id == item::air {
-                V32(0).write(w);
-            } else {
-                V32(self.count).write(w);
-                self.id.write(w);
-                V21(self.patch_add.len() as u32).write(w);
-                V21(self.patch_remove.len() as u32).write(w);
-                if !self.patch_add.is_empty() || !self.patch_remove.is_empty() {
-                    for x in self.patch_add.as_slice() {
-                        x.write(w);
-                    }
-                    for x in self.patch_remove.as_slice() {
-                        x.write(w);
-                    }
+unsafe fn write_item_stack(
+    id: item,
+    count: i32,
+    add: &[TypedDataComponent],
+    remove: &[data_component_type],
+    w: &mut Writer,
+) {
+    unsafe {
+        if count <= 0 || id == item::air {
+            V32(0).write(w);
+        } else {
+            V32(count as u32).write(w);
+            id.write(w);
+            V21(add.len() as u32).write(w);
+            V21(remove.len() as u32).write(w);
+            if !add.is_empty() || !remove.is_empty() {
+                for x in add {
+                    x.write(w);
+                }
+                for x in remove {
+                    x.write(w);
                 }
             }
         }
     }
+}
+
+fn len_item_stack(
+    id: item,
+    count: i32,
+    add: &[TypedDataComponent],
+    remove: &[data_component_type],
+) -> usize {
+    if count <= 0 || id == item::air {
+        V32(0).len_s()
+    } else {
+        let mut l = 0;
+        l += V32(count as u32).len_s();
+        l += id.len_s();
+        l += V21(add.len() as u32).len_s();
+        l += V21(remove.len() as u32).len_s();
+        if !add.is_empty() || !remove.is_empty() {
+            for x in add {
+                l += x.len_s();
+            }
+            for x in remove {
+                l += x.len_s();
+            }
+        }
+        l
+    }
+}
+impl<'a> Write for OptionalItemStack<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            write_item_stack(
+                self.id,
+                self.count,
+                &self.components.patch_add,
+                &self.components.patch_remove,
+                w,
+            )
+        }
+    }
 
     fn len_s(&self) -> usize {
-        if self.count == 0 || self.id == item::air {
-            V32(0).len_s()
-        } else {
-            let mut w = 0;
-            w += V32(self.count).len_s();
-            w += self.id.len_s();
-            w += V21(self.patch_add.len() as u32).len_s();
-            w += V21(self.patch_remove.len() as u32).len_s();
-            if !self.patch_add.is_empty() || !self.patch_remove.is_empty() {
-                for x in self.patch_add.as_slice() {
-                    w += x.len_s();
-                }
-                for x in self.patch_remove.as_slice() {
-                    w += x.len_s();
-                }
-            }
-            w
-        }
+        len_item_stack(
+            self.id,
+            self.count,
+            &self.components.patch_add,
+            &self.components.patch_remove,
+        )
     }
 }
 
@@ -155,7 +239,7 @@ pub struct UseEffects {
 pub struct CustomData(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ItemLore<'a>(pub List<'a, Component, 256>);
+pub struct ItemLore<'a>(pub List<'a, ComponentRaw, 256>);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AdventureModePredicate<'a> {
@@ -325,12 +409,12 @@ pub enum MapPostProcessing {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChargedProjectiles<'a> {
-    pub items: List<'a, ItemStack<'a>>,
+    pub items: List<'a, ItemStack<'a>, 64>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BundleContents<'a> {
-    pub items: List<'a, ItemStack<'a>>,
+    pub items: List<'a, ItemStack<'a>, 256>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -352,7 +436,7 @@ pub struct WrittenBookContent<'a> {
     pub author: Utf8<'a>,
     #[mser(varint, filter = validate_written_book_content)]
     pub generation: u32,
-    pub pages: List<'a, Filterable<Component>>,
+    pub pages: List<'a, Filterable<ComponentRaw>>,
     pub resolved: bool,
 }
 
@@ -388,7 +472,7 @@ pub struct Instrument<'a> {
     pub sound_event: Holder<SoundEvent<'a>, sound_event>,
     pub use_duration: f32,
     pub range: f32,
-    pub description: Component,
+    pub description: ComponentRaw,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -410,7 +494,7 @@ pub struct JukeboxPlayable<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JukeboxSong<'a> {
     pub sound_event: Holder<SoundEvent<'a>, sound_event>,
-    pub description: Component,
+    pub description: ComponentRaw,
     pub length_in_seconds: f32,
     #[mser(varint)]
     pub comparator_output: u32,
@@ -459,10 +543,10 @@ pub enum TypedDataComponent<'a> {
     Damage(#[mser(varint)] u32),
     Unbreakable,
     UseEffects(UseEffects),
-    CustomName(Component),
+    CustomName(ComponentRaw),
     MinimumAttackCharge(f32),
     DamageType(Either<DamageTypeRef, ResourceKey<'a>>),
-    ItemName(Component),
+    ItemName(ComponentRaw),
     ItemModel(Ident<'a>),
     Lore(ItemLore<'a>),
     Rarity(Rarity),
@@ -521,7 +605,7 @@ pub enum TypedDataComponent<'a> {
     LodestoneTracker(LodestoneTracker),
     FireworkExplosion(FireworkExplosion<'a>),
     Fireworks(Fireworks<'a>),
-    Profile(ResolvableProfile<'a>),
+    Profile(ResolvableProfileRef<'a>),
     NoteBlockSound(Ident<'a>),
     BannerPatterns(BannerPatternLayers<'a>),
     BaseColor(DyeColor),

@@ -1,22 +1,25 @@
 [package]
 name = "haya_nbt"
-version = "0.4.0"
+version = "1.0.0"
 authors.workspace = true
 readme.workspace = true
-license.workspace = true
+license = "(MIT OR Apache-2.0) AND Unicode-DFS-2016"
 repository.workspace = true
 edition.workspace = true
 build = "build.rs"
+publish.workspace = true
+description = "nbt"
 
 [dependencies]
 mser = { workspace = true }
 haya_mutf8 = { workspace = true }
 haya_str = { workspace = true }
 haya_collection = { workspace = true }
+haya_ident = { workspace = true }
+uuid = { workspace = true }
 
 itoa = "1"
 ryu = "1"
-rand = "0"
 
 [build-dependencies]
 rand = "0"

@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 use crate::inventory::HumanoidArm;
 use alloc::vec::Vec;
@@ -54,13 +55,16 @@ pub struct Translatable<'a>(pub &'a str, pub &'a str);
 pub struct ComponentJson<'a>(pub Utf8<'a, 262144>);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Component(pub Tag);
+#[repr(transparent)]
+pub struct ComponentRaw(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Style(pub Tag);
+#[repr(transparent)]
+pub struct StyleRaw(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Dialog(pub Tag);
+#[repr(transparent)]
+pub struct DialogRaw(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct KnownPack<'a> {
@@ -71,7 +75,7 @@ pub struct KnownPack<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ServerLinkUntrustedEntry<'a> {
-    pub ty: Either<KnownLinkType, Component>,
+    pub ty: Either<KnownLinkType, ComponentRaw>,
     pub url: Utf8<'a>,
 }
 
@@ -196,7 +200,6 @@ impl Difficulty {
     }
 }
 
-// todo
 impl FromStr for Difficulty {
     type Err = Error;
     fn from_str(n: &str) -> Result<Self, Self::Err> {
@@ -244,9 +247,9 @@ impl<'a, T: Read<'a>> Read<'a> for HolderSet<'a, T> {
             let name = Ident::read(buf)?;
             Ok(Self::Named(name))
         } else {
-            let len = (len - 1) as usize;
-            let mut vec = Vec::with_capacity(capacity_fix(len));
-            for _ in 0..len {
+            let len2 = (len - 1) as usize;
+            let mut vec = Vec::with_capacity(capacity_fix(len2));
+            for _ in 0..len2 {
                 vec.push(T::read(buf)?);
             }
             Ok(Self::Direct(List::Owned(vec)))
@@ -707,9 +710,6 @@ impl Relatives {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ResourceTexture<'a>(pub Ident<'a>);
-
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct RgbColor {
     pub r: u8,
@@ -913,7 +913,7 @@ pub struct TestInstanceData<'a> {
     pub rotation: Rotation,
     pub ignore_entities: bool,
     pub status: TestInstanceStatus,
-    pub error_message: Option<Component>,
+    pub error_message: Option<ComponentRaw>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -948,19 +948,19 @@ pub struct BlockHitResult {
 mod tests {
     use super::*;
     use crate::clientbound::login::LoginFinished;
-    use crate::profile::{GameProfile, PropertyMap};
+    use crate::profile::{GameProfileRef, PropertyMapRef};
     use crate::types::Id as _;
-    use haya_collection::{List, Map};
-    use minecraft_data::clientbound__login;
+    use haya_collection::List;
+    use minecraft_data::clientbound_login;
     use uuid::Uuid;
 
     #[test]
     fn test_write() {
         let packet: LoginFinished = LoginFinished {
-            game_profile: GameProfile {
+            game_profile: GameProfileRef {
                 id: Uuid::nil(),
                 name: Utf8("abc"),
-                properties: PropertyMap(Map(List::Borrowed(&[]))),
+                properties: PropertyMapRef(List::Borrowed(&[])),
             },
         };
 
@@ -974,12 +974,12 @@ mod tests {
             data.set_len(len2);
             data.into_boxed_slice()
         };
-        let mut data = Reader::new(&data);
-        let id = V32::read(&mut data).unwrap().0;
-        assert_eq!(clientbound__login::new(id as _).unwrap(), LoginFinished::ID);
-        assert_eq!(Uuid::read(&mut data).unwrap(), Uuid::nil());
-        assert_eq!(Utf8::<16>::read(&mut data).unwrap().0, "abc");
-        assert_eq!(V32::read(&mut data).unwrap().0, 0);
-        assert!(data.is_empty());
+        let mut reader = Reader::new(&data);
+        let id = V32::read(&mut reader).unwrap().0;
+        assert_eq!(clientbound_login::new(id as _).unwrap(), LoginFinished::ID);
+        assert_eq!(Uuid::read(&mut reader).unwrap(), Uuid::nil());
+        assert_eq!(Utf8::<16>::read(&mut reader).unwrap().0, "abc");
+        assert_eq!(V32::read(&mut reader).unwrap().0, 0);
+        assert!(reader.is_empty());
     }
 }

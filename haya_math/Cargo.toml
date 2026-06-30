@@ -1,11 +1,13 @@
 [package]
 name = "haya_math"
-version = "0.3.0"
+version = "1.0.0"
 authors.workspace = true
 readme.workspace = true
 license.workspace = true
 repository.workspace = true
 edition.workspace = true
+publish.workspace = true
+description = "math"
 
 [dependencies]
 mser = { workspace = true }

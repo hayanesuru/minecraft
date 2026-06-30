@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 #![allow(non_camel_case_types, clippy::manual_map, non_upper_case_globals)]
 
 use core::hint::assert_unchecked;
@@ -41,8 +42,8 @@ fn name_u16<const K: u64, const N: usize, const M: usize>(
     let d1 = (d >> 32) as u32;
     let d2 = d as u32;
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
-    let index = (index % (M as u32)) as usize;
-    let v = unsafe { *vals.get_unchecked(index) };
+    let j = (index % (M as u32)) as usize;
+    let v = unsafe { *vals.get_unchecked(j) };
     let k = unsafe { *names.add(v as usize) };
     if name == k { Some(v) } else { None }
 }
@@ -583,14 +584,14 @@ impl core::fmt::Debug for fluid_state {
 }
 
 const fn hash64(n: &[u8], seed: u64) -> u64 {
-    const M: u64 = 0xc6a4a7935bd1e995;
-    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut h: u64 = seed ^ (n.len() as u64);
     let mut i = 0;
     while i < n.len() {
-        h ^= (n[i] as u64) << ((i & 7) * 8);
+        h ^= n[i] as u64;
+        h = h.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    h.wrapping_mul(M)
+    h
 }
 
 #[cfg(test)]

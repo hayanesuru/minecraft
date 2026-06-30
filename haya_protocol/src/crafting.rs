@@ -82,7 +82,7 @@ pub enum SlotDisplay<'a> {
         with_remainder: Cow<'a, WithRemainder<'a>>,
     },
     Composite {
-        contents: List<'a, SlotDisplay<'a>>,
+        contents: List<'a, Self>,
     },
 }
 

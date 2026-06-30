@@ -9,11 +9,11 @@ pub fn serialize_struct(
 ) -> syn::Result<proc_macro2::TokenStream> {
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let fields = match &input.data {
+    let fields_raw = match &input.data {
         syn::Data::Struct(data) => &data.fields,
         _ => unreachable!(),
     };
-    let fields = parse_fields(fields)?;
+    let fields = parse_fields(fields_raw)?;
     let write = fields
         .iter()
         .map(|(field, attrs, member)| write_ty(&cratename, field, attrs, member));
@@ -168,7 +168,7 @@ pub fn serialize_enum(
             ::#cratename::Write::len_s(&(#x))),
         ),
         None => {
-            let header = match &attrs.header {
+            let header_path = match &attrs.header {
                 Some(x) => x,
                 None => return Err(syn::Error::new_spanned(input, "expected header")),
             };
@@ -181,11 +181,11 @@ pub fn serialize_enum(
                         proc_macro2::Span::call_site(),
                     );
                     quote! {
-                        Self::#variant_name { .. } => #header::#header_variant,
+                        Self::#variant_name { .. } => #header_path::#header_variant,
                     }
                 })
                 .collect::<Vec<_>>();
-            let header = &header[..];
+            let header_t = &header[..];
             let mut write = Vec::with_capacity(variants.len());
 
             for variant in variants.iter() {
@@ -194,12 +194,12 @@ pub fn serialize_enum(
                 let fields2 = parse_fields(&variant.fields)?;
                 write.push(match &variant.fields {
                     syn::Fields::Named(_) => {
-                        let fields2 = fields2.iter().map(|(field, attr, _)| {
+                        let fields3 = fields2.iter().map(|(field, attr, _)| {
                             write_ty_enum(&cratename, field, attr, field.ident.as_ref().unwrap())
                         });
                         quote! {
                             Self::#variant_name { #(#fields),* } => {
-                                #(#fields2);*
+                                #(#fields3);*
                             }
                         }
                     }
@@ -207,7 +207,7 @@ pub fn serialize_enum(
                         let mut s = String::with_capacity(8);
                         s += "__self_";
                         let mut ss = Vec::new();
-                        let fields = fields.map(|m| match m {
+                        let fields3 = fields.map(|m| match m {
                             syn::Member::Unnamed(x) => {
                                 let mut s = String::with_capacity(8);
                                 s += "__self_";
@@ -217,7 +217,7 @@ pub fn serialize_enum(
                             }
                             _ => unreachable!(),
                         });
-                        let fields2 = fields2.iter().map(|(field, attr, m)| {
+                        let fields4 = fields2.iter().map(|(field, attr, m)| {
                             write_ty_enum(
                                 &cratename,
                                 field,
@@ -233,8 +233,8 @@ pub fn serialize_enum(
                             )
                         });
                         quote! {
-                            Self::#variant_name(#(#fields),*) => {
-                                #(#fields2;)*
+                            Self::#variant_name(#(#fields3),*) => {
+                                #(#fields4;)*
                             }
                         }
                     }
@@ -250,12 +250,12 @@ pub fn serialize_enum(
                 let fields2 = parse_fields(&variant.fields)?;
                 len.push(match variant.fields {
                     syn::Fields::Named(_) if !variant.fields.is_empty() => {
-                        let fields2 = fields2.iter().map(|(field, attr, _)| {
+                        let fields3 = fields2.iter().map(|(field, attr, _)| {
                             len_ty_enum(&cratename, field, attr, field.ident.as_ref().unwrap())
                         });
                         quote! {
                             Self::#variant_name { #(#fields),* } => {
-                                #(#fields2)+*
+                                #(#fields3)+*
                             }
                         }
                     }
@@ -263,7 +263,7 @@ pub fn serialize_enum(
                         let mut s = String::with_capacity(8);
                         s += "__self_";
                         let mut ss = Vec::new();
-                        let fields = fields.map(|m| match m {
+                        let fields3 = fields.map(|m| match m {
                             syn::Member::Unnamed(x) => {
                                 let mut s = String::with_capacity(8);
                                 s += "__self_";
@@ -273,7 +273,7 @@ pub fn serialize_enum(
                             }
                             _ => unreachable!(),
                         });
-                        let fields2 = fields2.iter().map(|(field, attr, m)| {
+                        let fields4 = fields2.iter().map(|(field, attr, m)| {
                             len_ty_enum(
                                 &cratename,
                                 field,
@@ -289,8 +289,8 @@ pub fn serialize_enum(
                             )
                         });
                         quote! {
-                            Self::#variant_name(#(#fields),*) => {
-                                #(#fields2)+*
+                            Self::#variant_name(#(#fields3),*) => {
+                                #(#fields4)+*
                             }
                         }
                     }
@@ -304,7 +304,7 @@ pub fn serialize_enum(
             (
                 quote! {
                     ::#cratename::Write::write(&match self {
-                        #(#header)*
+                        #(#header_t)*
                     }, __w);
                     match self {
                         #(#write)*
@@ -312,7 +312,7 @@ pub fn serialize_enum(
                 },
                 quote! {
                     #cratename::Write::len_s(&match self {
-                        #(#header)*
+                        #(#header_t)*
                     }) + match self {
                         #(#len)*
                     }

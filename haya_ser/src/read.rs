@@ -10,7 +10,7 @@ impl<'a> Read<'a> for u8 {
 impl<'a> Read<'a> for i8 {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
-        Ok(buf.read_byte()? as i8)
+        Ok(buf.read_byte()? as Self)
     }
 }
 

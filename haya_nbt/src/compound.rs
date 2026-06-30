@@ -1,73 +1,22 @@
-use crate::string::DecodeMutf8;
-use crate::{Compound, Name, Tag, read_tag};
-use alloc::borrow::ToOwned;
-use alloc::string::String;
+use crate::{CompoundTag, StringTag, Tag, read_tag};
 use alloc::vec::Vec;
-use haya_mutf8::{as_mutf8_ascii, decode_mutf8_len};
-use haya_str::HayaStr;
 use mser::{Error, Read, Reader, Write, Writer};
 
-impl<'a> Read<'a> for Name {
-    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        let len = u16::read(buf)? as usize;
-        let data = buf.read_slice(len)?;
-        if let Some(x) = as_mutf8_ascii(data) {
-            unsafe { Ok(Self::new(x)) }
-        } else {
-            let len = decode_mutf8_len(data)?;
-            let mut vec = Vec::with_capacity(len);
-            unsafe {
-                mser::write_unchecked(vec.as_mut_ptr(), &(DecodeMutf8(data, len)));
-                vec.set_len(len);
-                Ok(Self(crate::Inner::Heap(
-                    String::from_utf8_unchecked(vec).into_boxed_str(),
-                )))
-            }
-        }
-    }
-}
-
-impl AsRef<str> for Name {
-    fn as_ref(&self) -> &str {
-        match &self.0 {
-            crate::Inner::Thin(x) => x,
-            crate::Inner::Heap(x) => x,
-        }
-    }
-}
-
-impl core::ops::Deref for Name {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        self.as_ref()
-    }
-}
-
-impl Name {
-    pub(crate) unsafe fn new(s: &str) -> Self {
-        match HayaStr::copy_from(s) {
-            Ok(x) => Self(crate::Inner::Thin(x)),
-            Err(_) => Self(crate::Inner::Heap(s.to_owned().into_boxed_str())),
-        }
-    }
-}
-
-impl AsRef<[(Name, Tag)]> for Compound {
+impl AsRef<[(StringTag, Tag)]> for CompoundTag {
     #[inline]
-    fn as_ref(&self) -> &[(Name, Tag)] {
+    fn as_ref(&self) -> &[(StringTag, Tag)] {
         self.0.as_slice()
     }
 }
 
-impl AsMut<[(Name, Tag)]> for Compound {
+impl AsMut<[(StringTag, Tag)]> for CompoundTag {
     #[inline]
-    fn as_mut(&mut self) -> &mut [(Name, Tag)] {
+    fn as_mut(&mut self) -> &mut [(StringTag, Tag)] {
         self.0.as_mut_slice()
     }
 }
 
-impl Write for Compound {
+impl Write for CompoundTag {
     unsafe fn write(&self, w: &mut Writer) {
         crate::write_tag(w, crate::WriteEntry::Compound(&self.0));
     }
@@ -77,7 +26,7 @@ impl Write for Compound {
     }
 }
 
-impl<K: Into<Name>, V> FromIterator<(K, V)> for Compound
+impl<K: Into<StringTag>, V> FromIterator<(K, V)> for CompoundTag
 where
     Tag: From<V>,
 {
@@ -91,13 +40,13 @@ where
     }
 }
 
-impl Default for Compound {
+impl Default for CompoundTag {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Compound {
+impl CompoundTag {
     #[inline]
     #[must_use]
     pub const fn new() -> Self {
@@ -122,12 +71,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn iter(&self) -> core::slice::Iter<'_, (Name, Tag)> {
+    pub fn iter(&self) -> core::slice::Iter<'_, (StringTag, Tag)> {
         self.0.iter()
     }
 
     #[inline]
-    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (Name, Tag)> {
+    pub fn iter_mut(&mut self) -> core::slice::IterMut<'_, (StringTag, Tag)> {
         self.0.iter_mut()
     }
 
@@ -165,7 +114,7 @@ impl Compound {
     }
 
     #[inline]
-    pub fn push(&mut self, k: Name, v: Tag) {
+    pub fn push(&mut self, k: StringTag, v: Tag) {
         self.0.push((k, v));
     }
 
@@ -203,12 +152,12 @@ impl Compound {
     }
 
     #[inline]
-    pub fn into_inner(self) -> Vec<(Name, Tag)> {
+    pub fn into_inner(self) -> Vec<(StringTag, Tag)> {
         self.0
     }
 }
 
-impl Read<'_> for Compound {
+impl Read<'_> for CompoundTag {
     #[inline]
     fn read(buf: &mut Reader) -> Result<Self, Error> {
         match read_tag(buf, crate::ReadEntry::Compound(Self::new()), 512) {
@@ -219,9 +168,18 @@ impl Read<'_> for Compound {
     }
 }
 
-impl From<Vec<(Name, Tag)>> for Compound {
+impl From<Vec<(StringTag, Tag)>> for CompoundTag {
     #[inline]
-    fn from(value: Vec<(Name, Tag)>) -> Self {
+    fn from(value: Vec<(StringTag, Tag)>) -> Self {
         Self(value)
+    }
+}
+
+impl IntoIterator for CompoundTag {
+    type IntoIter = alloc::vec::IntoIter<(StringTag, Tag)>;
+    type Item = (StringTag, Tag);
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

@@ -1,7 +1,8 @@
-use alloc::vec::Vec;
+use alloc::string::String;
+use core::str::from_utf8_unchecked;
 use haya_str::u8_to_hex;
 
-pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
+pub fn json_escaped_string(s: &str, w: &mut String) {
     let mut start = 0;
     let mut cur = 0;
     let n = s.as_bytes();
@@ -12,17 +13,19 @@ pub fn json_escaped_string(s: &str, w: &mut Vec<u8>) {
             cur += esc as usize;
             continue;
         }
-        w.extend(unsafe { n.get_unchecked(start..cur) });
-        if esc == 0xff {
-            let (d1, d2) = u8_to_hex(byte);
-            w.extend(&[b'\\', b'u', b'0', b'0', d1, d2]);
-        } else {
-            w.extend(&[b'\\', esc]);
+        unsafe {
+            w.push_str(from_utf8_unchecked(n.get_unchecked(start..cur)));
+            if esc == 0xff {
+                let (d1, d2) = u8_to_hex(byte);
+                w.push_str(from_utf8_unchecked(&[b'\\', b'u', b'0', b'0', d1, d2]));
+            } else {
+                w.push_str(from_utf8_unchecked(&[b'\\', esc]));
+            }
         }
         cur += 1;
         start = cur;
     }
-    w.extend(unsafe { n.get_unchecked(start..) });
+    w.push_str(unsafe { from_utf8_unchecked(n.get_unchecked(start..)) });
 }
 
 const B: u8 = b'b'; // \x08

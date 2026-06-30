@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 mod chunk;
 
@@ -66,11 +67,11 @@ fn into_array<T, const N: usize>(s: Box<[T]>) -> Box<[T; N]> {
     assert_eq!(s.len(), N);
 
     let ptr = Box::into_raw(s);
-    let ptr = ptr as *mut [T; N];
+    let arr = ptr as *mut [T; N];
 
     // SAFETY: The underlying array of a slice has the exact same layout as an
     // actual array `[T; N]` if `N` is equal to the slice's length.
-    unsafe { Box::from_raw(ptr) }
+    unsafe { Box::from_raw(arr) }
 }
 
 impl<T: Copy + Default + Eq, const P: usize, const L: usize, const H: usize>
@@ -192,8 +193,8 @@ impl<const L: usize, const H: usize> PalettedContainer<u16, 16, L, H> {
                 let mut n = 0_u64;
                 let mut m = 0;
                 for &x in &*self.full {
-                    let x = x as u64;
-                    n |= x << m;
+                    let y = x as u64;
+                    n |= y << m;
                     m += bits;
                     if m == bits_per_u64 {
                         m = 0;
@@ -229,8 +230,8 @@ impl<const L: usize, const H: usize> PalettedContainer<u16, 16, L, H> {
                 if bits_per_entry == 4 {
                     let ptr = self.half.as_ptr().cast::<[u8; 8]>();
                     for x in 0..H / 8 {
-                        let x = *ptr.add(x);
-                        w.write(&u64::from_le_bytes(x).to_be_bytes());
+                        let y = *ptr.add(x);
+                        w.write(&u64::from_le_bytes(y).to_be_bytes());
                     }
                     return;
                 }
@@ -305,8 +306,8 @@ impl<const L: usize, const H: usize> PalettedContainer<u16, 4, L, H> {
                 let mut n = 0_u64;
                 let mut m = 0;
                 for &x in &*self.full {
-                    let x = x as u64;
-                    n |= x << m;
+                    let y = x as u64;
+                    n |= y << m;
                     m += bits;
                     if m == bits_per_u64 {
                         m = 0;

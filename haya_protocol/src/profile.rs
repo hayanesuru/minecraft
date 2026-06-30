@@ -1,42 +1,43 @@
-use crate::ResourceTexture;
-use haya_collection::{List, Map};
+use haya_collection::List;
+use haya_ident::Ident;
 use mser::{Either, Read, Utf8, Write};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct GameProfile<'a> {
+pub struct GameProfileRef<'a> {
     pub id: Uuid,
     pub name: Utf8<'a, 16>,
-    pub properties: PropertyMap<'a>,
+    pub properties: PropertyMapRef<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct PropertyMap<'a>(pub Map<'a, Utf8<'a, 64>, Property<'a>, 16>);
+pub struct PropertyMapRef<'a>(pub List<'a, PropertyRef<'a>, 16>);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct Property<'a> {
+pub struct PropertyRef<'a> {
+    pub name: Utf8<'a, 64>,
     pub value: Utf8<'a, 32767>,
     pub signature: Option<Utf8<'a, 1024>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ResolvableProfile<'a> {
-    pub profile: Either<GameProfile<'a>, Partial<'a>>,
-    pub skin_patch: PlayerSkinPatch<'a>,
+pub struct ResolvableProfileRef<'a> {
+    pub profile: Either<GameProfileRef<'a>, PartialRef<'a>>,
+    pub skin_patch: PlayerSkinPatchRef<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Partial<'a> {
+pub struct PartialRef<'a> {
     pub name: Option<Utf8<'a, 16>>,
     pub id: Option<Uuid>,
-    pub properties: List<'a, Property<'a>, 16>,
+    pub properties: List<'a, PropertyRef<'a>, 16>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct PlayerSkinPatch<'a> {
-    pub body: Option<ResourceTexture<'a>>,
-    pub cape: Option<ResourceTexture<'a>>,
-    pub elytra: Option<ResourceTexture<'a>>,
+pub struct PlayerSkinPatchRef<'a> {
+    pub body: Option<Ident<'a>>,
+    pub cape: Option<Ident<'a>>,
+    pub elytra: Option<Ident<'a>>,
     pub model: Option<PlayerModelType>,
 }
 

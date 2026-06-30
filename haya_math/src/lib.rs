@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 use mser::{Error, Read, Reader, V21, V32, Write, Writer};
 
@@ -280,13 +281,13 @@ impl LpVec3 {
             Self::Extended { a, b, c, d } => {
                 let packed: u64 = (c as u64) << 16 | (b as u64) << 8 | (a as u64);
                 let multiplier = (a & 3) as u64;
-                let multiplier = multiplier | ((d as u64) << 2);
-                let multiplier = multiplier as f64;
+                let mul = multiplier | ((d as u64) << 2);
+                let m = mul as f64;
 
                 Vec3 {
-                    x: Self::unpack_coord(packed >> 3) * multiplier,
-                    y: Self::unpack_coord(packed >> 18) * multiplier,
-                    z: Self::unpack_coord(packed >> 33) * multiplier,
+                    x: Self::unpack_coord(packed >> 3) * m,
+                    y: Self::unpack_coord(packed >> 18) * m,
+                    z: Self::unpack_coord(packed >> 33) * m,
                 }
             }
         }
@@ -317,7 +318,7 @@ impl From<LpVec3> for Vec3 {
 
 impl From<Vec3> for LpVec3 {
     fn from(value: Vec3) -> Self {
-        LpVec3::new(value)
+        Self::new(value)
     }
 }
 
@@ -485,7 +486,7 @@ impl ChunkSectionPos {
 }
 
 impl core::ops::Add for BlockPos {
-    type Output = BlockPos;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         Self {
@@ -505,7 +506,7 @@ impl core::ops::AddAssign for BlockPos {
 }
 
 impl core::ops::Sub for BlockPos {
-    type Output = BlockPos;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
@@ -525,7 +526,7 @@ impl core::ops::SubAssign for BlockPos {
 }
 
 impl core::ops::Mul for BlockPos {
-    type Output = BlockPos;
+    type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
         Self {
@@ -609,4 +610,12 @@ impl Write for Direction {
     fn len_s(&self) -> usize {
         1
     }
+}
+
+pub fn f32_to_u8(value: f32) -> u8 {
+    libm::floorf(value * 255.0) as u8
+}
+
+pub fn f64_to_u8(value: f64) -> u8 {
+    libm::floor(value * 255.0) as u8
 }

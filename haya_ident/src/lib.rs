@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 extern crate alloc;
 
@@ -105,6 +106,41 @@ impl<'a> Ident<'a> {
         Self { namespace, path }
     }
 
+    pub const fn new(path: &'a str) -> Option<Self> {
+        let b = path.as_bytes();
+        let mut i = 0;
+        while i < b.len() {
+            if !is_valid_path(b[i]) {
+                return None;
+            }
+            i += 1;
+        }
+        Some(Self {
+            namespace: None,
+            path,
+        })
+    }
+
+    pub fn to_identifier(self) -> Identifier {
+        let Ident { namespace, path } = self;
+        match namespace {
+            Some(ns) => {
+                let ns2 = ns.to_owned().into_boxed_str();
+                let path2 = path.to_owned().into_boxed_str();
+                Identifier(Inner::Full {
+                    namespace: ns2,
+                    path: path2,
+                })
+            }
+            None => match HayaStr::copy_from(path) {
+                Ok(path2) => Identifier(Inner::Thin { path: path2 }),
+                Err(_) => Identifier(Inner::Heap {
+                    path: path.to_owned().into_boxed_str(),
+                }),
+            },
+        }
+    }
+
     pub const fn namespace(&self) -> Option<&str> {
         self.namespace
     }
@@ -152,23 +188,6 @@ impl Write for Ident<'_> {
 pub struct Identifier(Inner);
 
 impl Identifier {
-    pub fn new(ident: Ident) -> Self {
-        let Ident { namespace, path } = ident;
-        match namespace {
-            Some(namespace) => {
-                let namespace = namespace.to_owned().into_boxed_str();
-                let path = path.to_owned().into_boxed_str();
-                Self(Inner::Full { namespace, path })
-            }
-            None => match HayaStr::copy_from(path) {
-                Ok(path) => Self(Inner::Thin { path }),
-                Err(_) => Self(Inner::Heap {
-                    path: path.to_owned().into_boxed_str(),
-                }),
-            },
-        }
-    }
-
     pub fn path(&self) -> &str {
         match &self.0 {
             Inner::Thin { path } => path,
@@ -183,6 +202,23 @@ impl Identifier {
             Inner::Heap { .. } => None,
             Inner::Full { namespace, .. } => Some(namespace),
         }
+    }
+
+    pub const fn new_const(path: &str) -> Option<Self> {
+        let b = path.as_bytes();
+        let mut i = 0;
+        while i < b.len() {
+            if !is_valid_path(b[i]) {
+                return None;
+            }
+            i += 1;
+        }
+        Some(Self(Inner::Thin {
+            path: match HayaStr::copy_from(path) {
+                Ok(x) => x,
+                Err(_) => return None,
+            },
+        }))
     }
 }
 

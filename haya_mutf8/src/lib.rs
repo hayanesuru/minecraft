@@ -1,4 +1,5 @@
 #![no_std]
+#![warn(clippy::shadow_reuse, clippy::use_self)]
 
 use mser::{Error, Writer};
 
@@ -42,10 +43,10 @@ const fn contains_zero_or_nonascii(bytes: &[u8]) -> bool {
     flag
 }
 
-pub const fn encode_mutf8_len(bytes: &str) -> usize {
+pub const fn encode_mutf8_len(s: &str) -> usize {
     let mut l = 0;
     let mut index = 0;
-    let bytes = bytes.as_bytes();
+    let bytes = s.as_bytes();
     while index < bytes.len() {
         let byte = bytes[index];
         let w = unsafe { *CHAR_WIDTH.as_ptr().add(byte as usize) };

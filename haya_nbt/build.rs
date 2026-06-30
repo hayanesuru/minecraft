@@ -567,15 +567,15 @@ pub fn generate_aliases(name_aliases: &'static str, path: &Path) {
     w.push('\n');
     write!(
         &mut w,
-        "pub fn get(n: &str) -> Option<char> {{
-const M: u64 = 0xc6a4a7935bd1e995;
-let mut h: u64 = {} ^ ((n.len() as u64).wrapping_mul(M));
+        "fn character_by_alias(n: &[u8]) -> Option<char> {{
+let mut h: u64 = {} ^ (n.len() as u64);
 let mut i = 0;
 while i < n.len() {{
-h ^= (n[i] as u64) << ((i & 7) * 8);
+h ^= n[i] as u64;
+h = h.wrapping_mul(0x100000001b3);
 i += 1;
 }}
-let a = h.wrapping_mul(M);
+let a = h;
 let g = (a >> 24) as u32;
 let f1 = a as u32;
 let f2 = (a >> 32) as u32;
@@ -583,10 +583,10 @@ let d = unsafe {{ *DISPS.get_unchecked((g % ({}_u32)) as usize) }};
 let d1 = (d >> 32) as u32;
 let d2 = d as u32;
 let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
-let index = (index % ({}_u32)) as usize;
-let v = unsafe {{ *VALS.get_unchecked(index) }};
+let index1 = (index % ({}_u32)) as usize;
+let v = unsafe {{ *VALS.get_unchecked(index1) }};
 let k = unsafe {{ *NAMES.get_unchecked(v as usize) }};
-if n == k {{ unsafe {{ Some(*CODE.get_unchecked(v as usize)) }} }} else {{ None }}
+if n == k.as_bytes() {{ unsafe {{ Some(*CODE.get_unchecked(v as usize)) }} }} else {{ None }}
 }}",
         state.key,
         state.disps.len(),
@@ -598,14 +598,14 @@ if n == k {{ unsafe {{ Some(*CODE.get_unchecked(v as usize)) }} }} else {{ None 
 }
 
 const fn hash64(n: &[u8], seed: u64) -> u64 {
-    const M: u64 = 0xc6a4a7935bd1e995;
-    let mut h: u64 = seed ^ ((n.len() as u64).wrapping_mul(M));
+    let mut h: u64 = seed ^ (n.len() as u64);
     let mut i = 0;
     while i < n.len() {
-        h ^= (unsafe { *n.as_ptr().add(i) } as u64) << ((i & 7) * 8);
+        h ^= n[i] as u64;
+        h = h.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    h.wrapping_mul(M)
+    h
 }
 
 struct GenerateHash {

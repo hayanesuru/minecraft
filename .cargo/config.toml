@@ -1,0 +1,2 @@
+[registries.haya]
+index = "sparse+https://codeberg.org/api/packages/hayanesuru/cargo/"
