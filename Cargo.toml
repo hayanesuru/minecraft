@@ -22,7 +22,6 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/hayanesuru/minecraft"
 edition = "2024"
-publish = ["haya"]
 
 [workspace.dependencies]
 mser = {  path = "haya_ser", version = "4", default-features = false }

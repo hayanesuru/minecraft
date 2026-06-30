@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 categories = ["no-std", "encoding"]
 documentation = "https://docs.rs/mser"
-publish = ["crates.io"]
+publish = ["crates-io"]
 readme = "README.md"
 
 [features]

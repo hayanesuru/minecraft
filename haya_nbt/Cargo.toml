@@ -7,7 +7,7 @@ license = "(MIT OR Apache-2.0) AND Unicode-DFS-2016"
 repository.workspace = true
 edition.workspace = true
 build = "build.rs"
-publish.workspace = true
+publish = ["haya"]
 description = "nbt"
 
 [dependencies]

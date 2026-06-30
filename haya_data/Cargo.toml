@@ -10,7 +10,7 @@ repository.workspace = true
 categories = ["game-engines", "no-std"]
 keywords = ["minecraft"]
 documentation = "https://docs.rs/minecraft_data"
-publish = ["crates.io"]
+publish = ["crates-io"]
 
 [features]
 default = []

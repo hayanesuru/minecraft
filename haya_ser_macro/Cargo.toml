@@ -8,7 +8,7 @@ repository.workspace = true
 edition.workspace = true
 documentation = "https://docs.rs/mser_macro"
 categories = ["no-std"]
-publish = ["crates.io"]
+publish = ["crates-io"]
 readme = "README.md"
 
 [lib]
