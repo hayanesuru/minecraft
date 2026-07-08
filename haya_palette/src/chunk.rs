@@ -8,6 +8,7 @@ const BLOCK_PER_CHUNK: usize = 4 * 4 * 4;
 const INDIRECT4_PER_CHUNK: usize = BLOCK_PER_CHUNK / 2;
 const INDIRECT2_PER_CHUNK: usize = BLOCK_PER_CHUNK / 4;
 const INDEX_MASK: u64 = 0x3FFF_FFFF_FFFF_FFFF;
+const VOID_AIR: block_state = block::void_air.state_default();
 
 #[derive(Clone)]
 pub struct Direct<T: Copy> {
@@ -63,16 +64,17 @@ impl ChunkCache {
     pub fn get_block(&self, x: i32, y: i32, z: i32) -> block_state {
         let j = ((x & 3) | ((y & 3) << 2) | ((z & 3) << 4)) as usize;
         let chunk = pack(x >> 2, y >> 2, z >> 2);
-        let t = match self.chunks.find(mix(chunk), |x| x.0 == chunk) {
+        let t = match self.chunks.find(mix(chunk), |(k, _)| *k == chunk) {
             Some(t) => t.1,
             None => {
                 cold_path();
-                return block::void_air.state_default();
+                return VOID_AIR;
             }
         };
         let n = (t & INDEX_MASK) as usize;
         let ty = t >> 62;
         unsafe {
+            // jump table
             match ty {
                 3 => block_state::new(n as u16).unwrap_unchecked(),
                 2 => self.indirect2.get_unchecked(n).get(j),
@@ -103,10 +105,6 @@ impl<T: Copy> Indirect4<T> {
     }
 }
 
-const PRIME_MAX_A: u32 = u32::MAX - 4;
-const PRIME_MAX_B: u32 = u32::MAX - 16;
-const PRIME_MAX_C: u32 = u32::MAX - 64;
-
 #[inline]
 fn pack(x: i32, y: i32, z: i32) -> u64 {
     let sx = (x & 0x3FF_FFFF) as i64;
@@ -115,15 +113,8 @@ fn pack(x: i32, y: i32, z: i32) -> u64 {
     ((sx << 38) | (sz << 12) | sy) as u64
 }
 
-// 32 bits
 #[inline]
 fn mix(v: u64) -> u64 {
-    let x = (v >> 38) as i32 as u32;
-    let y = ((v << 52) >> 52) as i32 as u32;
-    let z = ((v << 26) >> 38) as i32 as u32;
-    let m = PRIME_MAX_A
-        .wrapping_mul(x)
-        .wrapping_add(PRIME_MAX_B.wrapping_mul(y))
-        .wrapping_add(PRIME_MAX_C.wrapping_mul(z));
-    m as u64
+    let h = 11400714819323198485u64.wrapping_mul(v);
+    (h >> 32) ^ h
 }

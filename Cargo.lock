@@ -132,9 +132,9 @@ dependencies = [
 
 [[package]]
 name = "haya_palette"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
- "hashbrown 0.17.1",
+ "hashbrown 0.15.5",
  "minecraft_data",
  "mser",
 ]
