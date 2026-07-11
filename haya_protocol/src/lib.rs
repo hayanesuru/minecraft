@@ -9,7 +9,7 @@ use haya_ident::{Ident, ResourceKey};
 use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
 use haya_nbt::Tag;
 use minecraft_data::data_component_type;
-use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
+use mser::{Either, Error, Read, Reader, Utf8, V32, Write, Writer};
 
 pub mod advancement;
 pub mod attribute;
@@ -688,7 +688,7 @@ pub struct MilliSeconds(pub u64);
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
-pub enum ClickType {
+pub enum ContainerInput {
     Pickup,
     QuickMove,
     Swap,
@@ -913,6 +913,14 @@ pub struct BlockHitResult {
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct EntityId(#[mser(varint)] pub u32);
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct ClockNetworkState {
+    #[mser(varint)]
+    total_ticks: u64,
+    partial_tick: f32,
+    rate: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -931,6 +939,7 @@ mod tests {
                 name: Utf8("abc"),
                 properties: PropertyMapRef(List::Borrowed(&[])),
             },
+            session_id: Uuid::nil(),
         };
 
         let id = LoginFinished::ID;
@@ -949,6 +958,7 @@ mod tests {
         assert_eq!(Uuid::read(&mut reader).unwrap(), Uuid::nil());
         assert_eq!(Utf8::<16>::read(&mut reader).unwrap().0, "abc");
         assert_eq!(V32::read(&mut reader).unwrap().0, 0);
+        assert_eq!(Uuid::read(&mut reader).unwrap(), Uuid::nil());
         assert!(reader.is_empty());
     }
 }

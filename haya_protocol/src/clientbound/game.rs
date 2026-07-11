@@ -16,15 +16,17 @@ use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMapRef;
-use crate::registry::{DamageTypeRef, DimensionTypeRef};
-use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
+use crate::registry::{DamageTypeRef, DimensionTypeRef, WorldClockRef};
+use crate::score::{
+    DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamColor, TeamVisibility,
+};
 use crate::sound::{SoundEvent, SoundSource};
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::waypoint::TrackedWaypoint;
 use crate::{
-    BitSet, ChatFormatting, ComponentRaw, Difficulty, EntityAnchor, EntityId, GameType, GlobalPos,
-    HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, WeightedList,
+    BitSet, ClockNetworkState, ComponentRaw, Difficulty, EntityAnchor, EntityId, GameType,
+    GlobalPos, HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -410,6 +412,11 @@ pub struct GameEvent {
     pub param: f32,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameRuleValues<'a> {
+    pub values: Map<'a, ResourceKey<'a>, Utf8<'a>>,
+}
+
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum GameEventType {
@@ -543,8 +550,12 @@ pub struct Login<'a> {
     pub show_death_screen: bool,
     pub do_limited_crafting: bool,
     pub common_player_spawn_info: CommonPlayerSpawnInfo<'a>,
+    pub online_mode: bool,
     pub enforces_secure_chat: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LowDiskSpaceWarning {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommonPlayerSpawnInfo<'a> {
@@ -1192,8 +1203,7 @@ pub struct SetEntityLink {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetEntityMotion {
-    #[mser(varint)]
-    pub id: u32,
+    pub entity_id: EntityId,
     pub movement: LpVec3,
 }
 
@@ -1359,12 +1369,12 @@ pub enum SetPlayerTeamMethod<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetPlayerTeamParameters {
     pub display_name: ComponentRaw,
-    pub options: u8,
-    pub nametag_visibility: TeamVisibility,
-    pub collision_rule: TeamCollisionRule,
-    pub color: ChatFormatting,
     pub player_prefix: ComponentRaw,
     pub player_suffix: ComponentRaw,
+    pub nametag_visibility: TeamVisibility,
+    pub collision_rule: TeamCollisionRule,
+    pub color: Option<TeamColor>,
+    pub options: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1389,10 +1399,9 @@ pub struct SetSubtitleText {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct SetTime {
+pub struct SetTime<'a> {
     pub game_time: u64,
-    pub day_time: u64,
-    pub tick_day_time: bool,
+    pub clock_updates: Map<'a, WorldClockRef, ClockNetworkState>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1552,7 +1561,7 @@ pub struct UpdateAdvancements<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAttributes<'a> {
     pub entity_id: EntityId,
-    pub attributes: List<'a, AttributeSnapshot<'a>>,
+    pub attributes: List<'a, AttributeSnapshot<'a>, 128>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

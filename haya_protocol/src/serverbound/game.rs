@@ -3,13 +3,13 @@ use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
-    BlockHitResult, ClickType, CommandBlockEntityMode, Difficulty, EntityId, GameType, HashedStack,
-    Input, JointTypeName, MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType,
-    TestBlockMode, TestInstanceData,
+    BlockHitResult, CommandBlockEntityMode, ContainerInput, Difficulty, EntityId, GameType,
+    HashedStack, Input, JointTypeName, MilliSeconds, Mirror, OptionalV32, Rotation, StructureMode,
+    StructureUpdateType, TestBlockMode, TestInstanceData,
 };
 use haya_collection::{List, Map};
-use haya_ident::Ident;
-use haya_math::{BlockPosPacked, ByteDirection, FVec3, Vec3};
+use haya_ident::{Ident, ResourceKey};
+use haya_math::{BlockPosPacked, ByteDirection, LpVec3, Vec3};
 use minecraft_data::{debug_subscription, mob_effect};
 use mser::{ByteArray, Rest, Utf8};
 use uuid::Uuid;
@@ -18,6 +18,11 @@ use uuid::Uuid;
 pub struct AcceptTeleportation {
     #[mser(varint)]
     pub id: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Attack {
+    pub entity_id: EntityId,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -99,6 +104,7 @@ pub struct ClientCommand {
 pub enum ClientCommandAction {
     PerformRespawn,
     RequestStats,
+    RequestGameruleValues,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -133,7 +139,7 @@ pub struct ContainerClick<'a> {
     pub state_id: u32,
     pub slot_num: u16,
     pub button_num: u8,
-    pub click_type: ClickType,
+    pub container_input: ContainerInput,
     pub changed_slots: Map<'a, u16, Option<HashedStack<'a>>, 128>,
     pub carried_item: Option<HashedStack<'a>>,
 }
@@ -153,7 +159,7 @@ pub struct ContainerSlotStateChanged {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DebugSubscriptionRequest<'a> {
-    pub subscriptions: List<'a, debug_subscription, 64>,
+    pub subscriptions: List<'a, debug_subscription, 32>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -174,30 +180,9 @@ pub struct EntityTagQuery {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Interact {
     pub entity_id: EntityId,
-    pub action: InteractAction,
+    pub hand: InteractionHand,
+    pub location: LpVec3,
     pub using_secondary_action: bool,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[mser(header = InteractActionType, camel_case)]
-pub enum InteractAction {
-    Interact {
-        hand: InteractionHand,
-    },
-    Attack,
-    InteractAt {
-        location: FVec3,
-        hand: InteractionHand,
-    },
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[repr(u8)]
-#[mser(varint)]
-pub enum InteractActionType {
-    Interact,
-    Attack,
-    InteractAt,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -437,6 +422,18 @@ pub struct SetCreativeModeSlot<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct SetGameRule<'a> {
+    // fix: limit 128 entries
+    pub entries: List<'a, SetGameRuleEntry<'a>, 128>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SetGameRuleEntry<'a> {
+    pub game_rule_key: ResourceKey<'a>,
+    pub value: Utf8<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SetJigsawBlock<'a> {
     pub pos: BlockPosPacked,
     pub name: Ident<'a>,
@@ -496,6 +493,11 @@ pub struct SignUpdate<'a> {
     pub line2: Utf8<'a, 384>,
     pub line3: Utf8<'a, 384>,
     pub line4: Utf8<'a, 384>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SpectatorAction {
+    pub spectate_entity_id: OptionalV32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

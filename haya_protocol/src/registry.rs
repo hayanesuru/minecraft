@@ -8,65 +8,42 @@ use crate::{DialogRaw, Holder};
 use minecraft_data::sound_event;
 use mser::{Error, Read, Reader, V32, Write, Writer};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct DamageTypeRef(#[mser(varint)] pub u32);
+macro_rules! decl {
+    ($($i:ident),*) => {
+        $(
+            #[derive(Clone, Copy, Serialize, Deserialize)]
+            pub struct $i(#[mser(varint)] pub u32);
+        )*
+    };
+}
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct TrimMaterialRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct EnchntmentRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct TrimPatternRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct InstrumentRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct JukeboxSongRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct BannerPatternRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct VillagerTypeRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct WolfVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct WolfSoundVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct PigVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct CowVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct ChickenVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct ZombieNautilusVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct FrogVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct PaintingVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct CatVariantRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct ChatTypeRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct DimensionTypeRef(#[mser(varint)] pub u32);
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct DialogRef(#[mser(varint)] pub u32);
+decl![
+    DamageTypeRef,
+    TrimMaterialRef,
+    EnchntmentRef,
+    TrimPatternRef,
+    InstrumentRef,
+    JukeboxSongRef,
+    BannerPatternRef,
+    VillagerTypeRef,
+    WolfVariantRef,
+    WolfSoundVariantRef,
+    PigVariantRef,
+    PigSoundVariantRef,
+    CowVariantRef,
+    CowSoundVariantRef,
+    ChickenVariantRef,
+    ChickenSoundVariantRef,
+    ZombieNautilusVariantRef,
+    FrogVariantRef,
+    PaintingVariantRef,
+    CatVariantRef,
+    CatSoundVariantRef,
+    ChatTypeRef,
+    DimensionTypeRef,
+    DialogRef,
+    WorldClockRef
+];
 
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, sound_event> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {

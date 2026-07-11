@@ -2,6 +2,7 @@ use crate::ComponentJson;
 use crate::profile::GameProfileRef;
 use haya_ident::Ident;
 use mser::{ByteArray, Rest, Utf8};
+use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginDisconnect<'a> {
@@ -19,6 +20,7 @@ pub struct Hello<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LoginFinished<'a> {
     pub game_profile: GameProfileRef<'a>,
+    pub session_id: Uuid,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

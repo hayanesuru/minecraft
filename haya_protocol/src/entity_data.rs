@@ -7,7 +7,8 @@ use crate::item_stack::OptionalItemStack;
 use crate::particle::Particle;
 use crate::profile::ResolvableProfileRef;
 use crate::registry::{
-    CatVariantRef, ChickenVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef,
+    CatSoundVariantRef, CatVariantRef, ChickenSoundVariantRef, ChickenVariantRef,
+    CowSoundVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef, PigSoundVariantRef,
     PigVariantRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::{ComponentRaw, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
@@ -42,12 +43,16 @@ pub enum EntityDataSerializers {
     OptionalUnsignedInt,
     Pose,
     CatVariant,
+    CatSoundVariant,
     CowVariant,
+    CowSoundVariant,
     WolfVariant,
     WolfSoundVariant,
     FrogVariant,
     PigVariant,
+    PigSoundVariant,
     ChickenVariant,
+    ChickenSoundVariant,
     ZombieNautilusVariant,
     OptionalGlobalPos,
     PaintingVariant,
@@ -86,12 +91,16 @@ pub enum EntityDataSerializer<'a> {
     OptionalUnsignedInt(OptionalV32),
     Pose(Pose),
     CatVariant(CatVariantRef),
+    CatSoundVariant(CatSoundVariantRef),
     CowVariant(CowVariantRef),
+    CowSoundVariant(CowSoundVariantRef),
     WolfVariant(WolfVariantRef),
     WolfSoundVariant(WolfSoundVariantRef),
     FrogVariant(FrogVariantRef),
     PigVariant(PigVariantRef),
+    PigSoundVariant(PigSoundVariantRef),
     ChickenVariant(ChickenVariantRef),
+    ChickenSoundVariant(ChickenSoundVariantRef),
     ZombieNautilusVariant(ZombieNautilusVariantRef),
     OptionalGlobalPos(Option<GlobalPos<'a>>),
     PaintingVariant(Holder<PaintingVariant<'a>, PaintingVariantRef>),
