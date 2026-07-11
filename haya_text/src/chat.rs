@@ -498,6 +498,9 @@ impl Serialize for TextComponent {
                     if !hat {
                         nbt.push(OBJECT_HAT_K, hat.serialize());
                     }
+                    if let Some(f) = fallback {
+                        nbt.push(FALLBACK_K, f.serialize());
+                    }
                 }
             },
         }
