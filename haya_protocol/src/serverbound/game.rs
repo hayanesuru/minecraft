@@ -3,8 +3,8 @@ use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
-    BlockHitResult, ClickType, CommandBlockEntityMode, Difficulty, GameType, HashedStack, Input,
-    JointTypeName, MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType,
+    BlockHitResult, ClickType, CommandBlockEntityMode, Difficulty, EntityId, GameType, HashedStack,
+    Input, JointTypeName, MilliSeconds, Mirror, Rotation, StructureMode, StructureUpdateType,
     TestBlockMode, TestInstanceData,
 };
 use haya_collection::{List, Map};
@@ -168,14 +168,12 @@ pub struct EditBook<'a> {
 pub struct EntityTagQuery {
     #[mser(varint)]
     pub transaction_id: u32,
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Interact {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub action: InteractAction,
     pub using_secondary_action: bool,
 }

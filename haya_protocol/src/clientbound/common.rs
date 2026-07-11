@@ -1,8 +1,8 @@
 use crate::registry::DialogRef;
-use crate::{ComponentRaw, DialogRaw, Holder, ServerLinkUntrustedEntry, V32List};
+use crate::{ComponentRaw, DialogRaw, Holder, ServerLinkUntrustedEntry};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
-use mser::{ByteArray, Rest, Utf8};
+use mser::{ByteArray, Rest, Utf8, V32};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -100,7 +100,7 @@ pub struct GameUpdateTags<'a>(pub UpdateTags<'a>);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateTags<'a> {
-    pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, V32List<'a>>>,
+    pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, List<'a, V32>>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

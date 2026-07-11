@@ -23,8 +23,8 @@ use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::waypoint::TrackedWaypoint;
 use crate::{
-    BitSet, ChatFormatting, ComponentRaw, Difficulty, EntityAnchor, GameType, GlobalPos,
-    HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, V32List, WeightedList,
+    BitSet, ChatFormatting, ComponentRaw, Difficulty, EntityAnchor, EntityId, GameType, GlobalPos,
+    HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -302,8 +302,7 @@ pub enum CustomChatCompletionsAction {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DamageEvent {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub source_type: DamageTypeRef,
     pub source_cause_id: OptionalEntityId,
     pub source_direct_id: OptionalEntityId,
@@ -341,8 +340,7 @@ pub struct DebugChunkValue<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DebugEntityValue<'a> {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub update: DebugSubscriptionUpdate<'a>,
 }
 
@@ -581,8 +579,7 @@ pub struct MerchantOffers<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveEntityPos {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub xa: i16,
     pub ya: i16,
     pub za: i16,
@@ -591,8 +588,7 @@ pub struct MoveEntityPos {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveEntityPosRot {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub xa: i16,
     pub ya: i16,
     pub za: i16,
@@ -603,15 +599,13 @@ pub struct MoveEntityPosRot {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveMinecartAlongTrack<'a> {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub lerp_steps: List<'a, MinecartStep>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveEntityRot {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub y_rot: ByteAngle,
     pub x_rot: ByteAngle,
     pub on_ground: bool,
@@ -986,7 +980,7 @@ pub struct TypeSettings {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RemoveEntities<'a> {
-    pub entity_ids: V32List<'a>,
+    pub entity_ids: List<'a, EntityId>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1318,7 +1312,7 @@ pub enum SetObjectiveMethodType {
 pub struct SetPassengers<'a> {
     #[mser(varint)]
     pub vehicle: u32,
-    pub passengers: V32List<'a>,
+    pub passengers: List<'a, EntityId>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1557,8 +1551,7 @@ pub struct UpdateAdvancements<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAttributes<'a> {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub attributes: List<'a, AttributeSnapshot<'a>>,
 }
 
@@ -1571,8 +1564,7 @@ pub struct AttributeSnapshot<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateMobEffect {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub effect: mob_effect,
     #[mser(varint)]
     pub effect_amplifier: u32,

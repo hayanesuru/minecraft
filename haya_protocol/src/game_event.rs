@@ -1,3 +1,4 @@
+use crate::EntityId;
 use haya_math::BlockPosPacked;
 use minecraft_data::position_source_type;
 
@@ -15,7 +16,6 @@ pub struct BlockPositionSource {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct EntityPositionSource {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub y_offset: f32,
 }
