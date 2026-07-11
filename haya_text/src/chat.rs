@@ -2,7 +2,7 @@ use crate::click_event::ClickEvent;
 use crate::color::{TextColor, TextColorNamed, TextColorRgb};
 use crate::decoration::DecorationMap;
 use crate::hover_event::HoverEvent;
-use crate::profile::{PlayerSkinPatch, PropertyMap, ResolvableProfile};
+use crate::profile::ResolvableProfile;
 use crate::{capacity_fix, key};
 use alloc::boxed::Box;
 use alloc::vec;
@@ -16,7 +16,7 @@ const TYPE: &str = "type";
 const EXTRA: &str = "extra";
 const TEXT: &str = "text";
 const TRANSLATE: &str = "translate";
-const TRANSLATE_FALLBACK: &str = "fallback";
+const FALLBACK: &str = "fallback";
 const TRANSLATE_WITH: &str = "with";
 const SCORE: &str = "score";
 const SCORE_NAME: &str = "name";
@@ -26,6 +26,7 @@ const SEPARATOR: &str = "separator";
 const KEYBIND: &str = "keybind";
 const NBT_PATH: &str = "nbt";
 const NBT_INTERPRET: &str = "interpret";
+const NBT_PLAIN: &str = "plain";
 const NBT_SOURCE: &str = "source";
 const NBT_BLOCK: &str = "block";
 const NBT_ENTITY: &str = "entity";
@@ -40,7 +41,7 @@ const TYPE_K: StringTag = key(TYPE);
 const EXTRA_K: StringTag = key(EXTRA);
 const TEXT_K: StringTag = key(TEXT);
 const TRANSLATE_K: StringTag = key(TRANSLATE);
-const TRANSLATE_FALLBACK_K: StringTag = key(TRANSLATE_FALLBACK);
+const FALLBACK_K: StringTag = key(FALLBACK);
 const TRANSLATE_WITH_K: StringTag = key(TRANSLATE_WITH);
 const SCORE_K: StringTag = key(SCORE);
 const SCORE_NAME_K: StringTag = key(SCORE_NAME);
@@ -51,6 +52,7 @@ const NBT_PATH_K: StringTag = key(NBT_PATH);
 const OBJECT_TYPE_K: StringTag = key(OBJECT_TYPE);
 const SEPARATOR_K: StringTag = key(SEPARATOR);
 const NBT_INTERPRET_K: StringTag = key(NBT_INTERPRET);
+const NBT_PLAIN_K: StringTag = key(NBT_PLAIN);
 const NBT_SOURCE_K: StringTag = key(NBT_SOURCE);
 const NBT_BLOCK_K: StringTag = key(NBT_BLOCK);
 const NBT_ENTITY_K: StringTag = key(NBT_ENTITY);
@@ -114,12 +116,14 @@ pub enum Content {
     },
     Nbt {
         nbt_path: StringTag,
-        interpret: bool,
+        interpreting: bool,
+        plain: bool,
         separator: Option<Box<TextComponent>>,
         content: NbtContent,
     },
     Object {
         content: ObjectInfo,
+        fallback: Option<Box<TextComponent>>,
     },
 }
 
@@ -421,7 +425,7 @@ impl Serialize for TextComponent {
             } => {
                 nbt.push(TRANSLATE_K, key.serialize());
                 if let Some(f) = fallback {
-                    nbt.push(TRANSLATE_FALLBACK_K, f.serialize());
+                    nbt.push(FALLBACK_K, f.serialize());
                 }
                 if !args.is_empty() {
                     let mut vec = Vec::with_capacity(args.len());
@@ -452,13 +456,17 @@ impl Serialize for TextComponent {
             }
             Content::Nbt {
                 nbt_path,
-                interpret,
+                interpreting,
+                plain,
                 separator,
                 content,
             } => {
                 nbt.push(NBT_PATH_K, nbt_path.serialize());
-                if *interpret {
-                    nbt.push(NBT_INTERPRET_K, interpret.serialize());
+                if *interpreting {
+                    nbt.push(NBT_INTERPRET_K, interpreting.serialize());
+                }
+                if *plain {
+                    nbt.push(NBT_PLAIN_K, plain.serialize());
                 }
                 if let Some(s) = separator {
                     nbt.push(SEPARATOR_K, s.serialize());
@@ -475,11 +483,14 @@ impl Serialize for TextComponent {
                     NbtContent::Storage { storage } => nbt.push(NBT_STORAGE_K, storage.serialize()),
                 }
             }
-            Content::Object { content } => match content {
+            Content::Object { content, fallback } => match content {
                 ObjectInfo::Atlas { atlas, sprite } => {
                     nbt.push(OBJECT_TYPE_K, Tag::String(OBJECT_ATLAS_K));
                     nbt.push(OBJECT_ATLAS_K, atlas.serialize());
                     nbt.push(OBJECT_SPRITE_K, sprite.serialize());
+                    if let Some(f) = fallback {
+                        nbt.push(FALLBACK_K, f.serialize());
+                    }
                 }
                 ObjectInfo::Player { player, hat } => {
                     nbt.push(OBJECT_TYPE_K, Tag::String(OBJECT_PLAYER_K));
@@ -619,6 +630,7 @@ impl Deserialize for TextComponent {
         let mut ty: Option<StringTag> = None;
         let mut object: Option<StringTag> = None;
         let mut source: Option<StringTag> = None;
+        let mut fallback: Option<Tag> = None;
         for (k, v) in c {
             match &*k {
                 TYPE => {
@@ -641,18 +653,8 @@ impl Deserialize for TextComponent {
                         }
                     }
                 }
-                TRANSLATE_FALLBACK => {
-                    let fb = StringTag::deserialize(v)?;
-                    match &mut content {
-                        Content::Translatable { fallback, .. } => *fallback = Some(fb),
-                        _ => {
-                            content = Content::Translatable {
-                                key: StringTag::new(),
-                                fallback: Some(fb),
-                                args: Vec::new(),
-                            };
-                        }
-                    }
+                FALLBACK => {
+                    fallback = Some(v);
                 }
                 TRANSLATE_WITH => {
                     let w = match v {
@@ -729,7 +731,8 @@ impl Deserialize for TextComponent {
                         _ => {
                             content = Content::Nbt {
                                 nbt_path: path,
-                                interpret: false,
+                                interpreting: false,
+                                plain: false,
                                 separator: None,
                                 content: NbtContent::Block {
                                     pos: StringTag::new(),
@@ -741,11 +744,29 @@ impl Deserialize for TextComponent {
                 NBT_INTERPRET => {
                     let i = bool::deserialize(v)?;
                     match &mut content {
-                        Content::Nbt { interpret, .. } => *interpret = i,
+                        Content::Nbt { interpreting, .. } => *interpreting = i,
                         _ => {
                             content = Content::Nbt {
                                 nbt_path: StringTag::new(),
-                                interpret: i,
+                                interpreting: i,
+                                plain: false,
+                                separator: None,
+                                content: NbtContent::Block {
+                                    pos: StringTag::new(),
+                                },
+                            }
+                        }
+                    }
+                }
+                NBT_PLAIN => {
+                    let i = bool::deserialize(v)?;
+                    match &mut content {
+                        Content::Nbt { plain, .. } => *plain = i,
+                        _ => {
+                            content = Content::Nbt {
+                                nbt_path: StringTag::new(),
+                                interpreting: false,
+                                plain: i,
                                 separator: None,
                                 content: NbtContent::Block {
                                     pos: StringTag::new(),
@@ -766,7 +787,8 @@ impl Deserialize for TextComponent {
                         _ => {
                             content = Content::Nbt {
                                 nbt_path: StringTag::new(),
-                                interpret: false,
+                                interpreting: false,
+                                plain: false,
                                 separator: None,
                                 content: block,
                             }
@@ -782,7 +804,8 @@ impl Deserialize for TextComponent {
                         _ => {
                             content = Content::Nbt {
                                 nbt_path: StringTag::new(),
-                                interpret: false,
+                                interpreting: false,
+                                plain: false,
                                 separator: None,
                                 content: entity,
                             }
@@ -798,7 +821,8 @@ impl Deserialize for TextComponent {
                         _ => {
                             content = Content::Nbt {
                                 nbt_path: StringTag::new(),
-                                interpret: false,
+                                interpreting: false,
+                                plain: false,
                                 separator: None,
                                 content: storage,
                             }
@@ -819,6 +843,7 @@ impl Deserialize for TextComponent {
                     match &mut content {
                         Content::Object {
                             content: ObjectInfo::Player { player, .. },
+                            fallback: _,
                         } => **player = pl,
                         _ => {
                             content = Content::Object {
@@ -826,6 +851,7 @@ impl Deserialize for TextComponent {
                                     player: Box::new(pl),
                                     hat: true,
                                 },
+                                fallback: None,
                             }
                         }
                     }
@@ -835,23 +861,15 @@ impl Deserialize for TextComponent {
                     match &mut content {
                         Content::Object {
                             content: ObjectInfo::Player { hat, .. },
+                            fallback: _,
                         } => *hat = hat1,
                         _ => {
                             content = Content::Object {
                                 content: ObjectInfo::Player {
                                     hat: hat1,
-                                    player: Box::new(ResolvableProfile {
-                                        name: None,
-                                        id: None,
-                                        properties: PropertyMap(Vec::new()),
-                                        skin_patch: PlayerSkinPatch {
-                                            texture: None,
-                                            cape: None,
-                                            elytra: None,
-                                            model: None,
-                                        },
-                                    }),
+                                    player: Box::new(ResolvableProfile::new()),
                                 },
+                                fallback: None,
                             };
                         }
                     }
@@ -943,7 +961,8 @@ impl Deserialize for TextComponent {
             if matches!(
                 content,
                 Content::Object {
-                    content: ObjectInfo::Player { .. }
+                    content: ObjectInfo::Player { .. },
+                    fallback: _
                 }
             ) {
                 return Err(Error);
@@ -956,6 +975,7 @@ impl Deserialize for TextComponent {
                     },
                     sprite: s,
                 },
+                fallback: None,
             }
         }
         if let Some(ty1) = ty.as_deref() {
@@ -993,12 +1013,14 @@ impl Deserialize for TextComponent {
             }
         }
         if let Some(object1) = object.as_deref() {
-            let object2 = match content {
+            let object2 = match &content {
                 Content::Object {
                     content: ObjectInfo::Atlas { .. },
+                    fallback: _,
                 } => OBJECT_ATLAS,
                 Content::Object {
                     content: ObjectInfo::Player { .. },
+                    fallback: _,
                 } => OBJECT_PLAYER,
                 _ => return Err(Error),
             };
@@ -1006,7 +1028,27 @@ impl Deserialize for TextComponent {
                 return Err(Error);
             }
         }
-
+        if let Content::Nbt {
+            interpreting,
+            plain,
+            ..
+        } = &content
+            && *interpreting
+            && *plain
+        {
+            return Err(Error);
+        }
+        if let Some(f) = fallback {
+            match &mut content {
+                Content::Translatable { fallback, .. } => {
+                    *fallback = Some(StringTag::deserialize(f)?);
+                }
+                Content::Object { fallback, .. } => {
+                    *fallback = Some(Box::new(Self::deserialize(f)?));
+                }
+                _ => return Err(Error),
+            }
+        }
         Ok(Self {
             content,
             style,

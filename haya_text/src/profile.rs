@@ -41,6 +41,28 @@ pub struct ResolvableProfile {
     pub skin_patch: PlayerSkinPatch,
 }
 
+impl Default for ResolvableProfile {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ResolvableProfile {
+    pub const fn new() -> Self {
+        Self {
+            name: None,
+            id: None,
+            properties: PropertyMap(Vec::new()),
+            skin_patch: PlayerSkinPatch {
+                texture: None,
+                cape: None,
+                elytra: None,
+                model: None,
+            },
+        }
+    }
+}
+
 impl Deserialize for ResolvableProfile {
     fn deserialize(nbt: Tag) -> Result<Self, Error> {
         match nbt {
