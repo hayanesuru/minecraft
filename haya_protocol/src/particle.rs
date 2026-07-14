@@ -1,5 +1,5 @@
 use crate::game_event::PositionSource;
-use crate::item_stack::ItemStack;
+use crate::item_stack::ItemStackTemplate;
 use haya_math::Vec3;
 use minecraft_data::{block_state, particle_type};
 
@@ -191,7 +191,7 @@ pub struct SculkChargeParticleOptions {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ItemParticleOption<'a> {
-    pub item: ItemStack<'a>,
+    pub item: ItemStackTemplate<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

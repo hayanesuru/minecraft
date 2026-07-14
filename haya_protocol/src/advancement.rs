@@ -1,4 +1,4 @@
-use crate::item_stack::{ItemStack, TypedDataComponent};
+use crate::item_stack::{ItemStackTemplate, TypedDataComponent};
 use crate::{ComponentRaw, HolderSet, MilliSeconds};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
@@ -67,7 +67,7 @@ pub struct Advancement<'a> {
 pub struct DisplayInfo<'a> {
     pub title: ComponentRaw,
     pub description: ComponentRaw,
-    pub icon: ItemStack<'a>,
+    pub icon: ItemStackTemplate<'a>,
     pub ty: AdvancementType,
     pub background: Option<Ident<'a>>,
     pub show_toast: bool,
@@ -80,7 +80,7 @@ impl<'a> Read<'a> for DisplayInfo<'a> {
     fn read(buf: &mut mser::Reader<'a>) -> Result<Self, mser::Error> {
         let title = ComponentRaw::read(buf)?;
         let description = ComponentRaw::read(buf)?;
-        let icon = ItemStack::read(buf)?;
+        let icon = ItemStackTemplate::read(buf)?;
         let ty = AdvancementType::read(buf)?;
         let flags = u32::read(buf)?;
         let background = if flags & 1 != 0 {

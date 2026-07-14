@@ -312,7 +312,7 @@ pub struct TooltipDisplay<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UseRemainder<'a> {
-    pub convert_into: OptionalItemStack<'a>,
+    pub convert_into: ItemStackTemplate<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -459,12 +459,12 @@ pub enum MapPostProcessing {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChargedProjectiles<'a> {
-    pub items: List<'a, ItemStack<'a>, 64>,
+    pub items: List<'a, ItemStackTemplate<'a>, 64>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BundleContents<'a> {
-    pub items: List<'a, ItemStack<'a>, 256>,
+    pub items: List<'a, ItemStackTemplate<'a>, 256>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -563,7 +563,7 @@ pub struct Fireworks<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ItemContainerContents<'a> {
-    pub items: List<'a, OptionalItemStack<'a>, 256>,
+    pub items: List<'a, Option<ItemStackTemplate<'a>>, 256>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
