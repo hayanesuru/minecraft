@@ -1,7 +1,7 @@
 # minecraft_data
 
 minecraft version:
-`1.21.11`
+`26.2`
 
 # Usage
 
