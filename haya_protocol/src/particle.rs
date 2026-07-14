@@ -1,5 +1,5 @@
 use crate::game_event::PositionSource;
-use crate::item_stack::ItemStack;
+use crate::item_stack::ItemStackTemplate;
 use haya_math::Vec3;
 use minecraft_data::{block_state, particle_type};
 
@@ -10,6 +10,13 @@ pub enum Particle<'a> {
     Block(BlockParticleOption),
     BlockMarker(BlockParticleOption),
     Bubble,
+    SulfurBubbles,
+    NoxiousGas,
+    NoxiousGasCloud,
+    Geyser(GeyserParticleOptions),
+    GeyserBase(GeyserBaseParticleOptions),
+    GeyserPoof(GeyserBaseParticleOptions),
+    GeyserPlume(GeyserParticleOptions),
     Cloud,
     CopperFireFlame,
     Crit,
@@ -56,6 +63,8 @@ pub enum Particle<'a> {
     Item(ItemParticleOption<'a>),
     Vibration(VibrationParticleOption),
     Trail(TrailParticleOption),
+    PauseMobGrowth,
+    ResetMobGrowth,
     ItemSlime,
     ItemCobweb,
     ItemSnowball,
@@ -121,11 +130,29 @@ pub enum Particle<'a> {
     TrialOmen,
     BlockCrumble(BlockParticleOption),
     Firefly,
+    SulfurCubeGoo,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BlockParticleOption {
     pub state: block_state,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GeyserParticleOptions {
+    #[mser(filter = filter_water_blocks)]
+    pub water_blocks: u32,
+}
+
+fn filter_water_blocks(n: &u32) -> bool {
+    (*n as i32) > 0
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GeyserBaseParticleOptions {
+    #[mser(filter = filter_water_blocks)]
+    pub water_blocks: u32,
+    pub burst_impulse_base: f32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -164,7 +191,7 @@ pub struct SculkChargeParticleOptions {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ItemParticleOption<'a> {
-    pub item: ItemStack<'a>,
+    pub item: ItemStackTemplate<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

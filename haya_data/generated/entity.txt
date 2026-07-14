@@ -1,4 +1,4 @@
-;entity_type_height;u32+rle;9d
+;entity_type_height;u32+rle;9e
 ~2 3f100000
 3f19999a
 3f000000
@@ -8,7 +8,7 @@
 3ed70a3d
 ~2 3f100000
 3f666666
-3f19999a
+3f000000
 ~2 3f100000
 3fe66666
 0
@@ -91,7 +91,7 @@
 3fb33333
 ~2 3e800000
 3f333333
-3f000000
+3f19999a
 400ccccd
 3ecccccd
 3fa66666
@@ -112,6 +112,7 @@
 3f4ccccd
 3ffeb852
 3fd9999a
+3efae148
 3e99999a
 0
 3f7ae148
@@ -135,7 +136,7 @@
 ~2 3ff9999a
 3fe66666
 3e800000
-;entity_type_width;u32+rle;9d
+;entity_type_width;u32+rle;9e
 ~2 3fb00000
 3eb33333
 40c00000
@@ -144,7 +145,7 @@
 3f400000
 ~2 3fb00000
 3f000000
-3f333333
+3f0ccccd
 ~2 3fb00000
 3f19999a
 0
@@ -225,7 +226,7 @@
 3fb33333
 ~2 3e800000
 3f333333
-3ecccccd
+3efae148
 3ff9999a
 3f333333
 3f666666
@@ -246,6 +247,7 @@
 3f4ccccd
 3f19999a
 3f666666
+3efae148
 3ecccccd
 0
 ~2 3f7ae148
@@ -267,5 +269,5 @@
 3f600000
 ~3 3f19999a
 3e800000
-;entity_type_fixed;u32+rle;9d
-~9d 0
+;entity_type_fixed;u32+rle;9e
+~9e 0

@@ -16,15 +16,17 @@ use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
 use crate::particle::{ExplosionParticleInfo, Particle};
 use crate::profile::PropertyMapRef;
-use crate::registry::{DamageTypeRef, DimensionTypeRef};
-use crate::score::{DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamVisibility};
+use crate::registry::{DamageTypeRef, DimensionTypeRef, WorldClockRef};
+use crate::score::{
+    DisplaySlot, ObjectiveCriteriaRenderType, TeamCollisionRule, TeamColor, TeamVisibility,
+};
 use crate::sound::{SoundEvent, SoundSource};
 use crate::stat::Stat;
 use crate::trading::MerchantOffer;
 use crate::waypoint::TrackedWaypoint;
 use crate::{
-    BitSet, ChatFormatting, ComponentRaw, Difficulty, EntityAnchor, GameType, GlobalPos,
-    HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, V32List, WeightedList,
+    BitSet, ClockNetworkState, ComponentRaw, Difficulty, EntityAnchor, EntityId, GameType,
+    GlobalPos, HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -302,8 +304,7 @@ pub enum CustomChatCompletionsAction {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DamageEvent {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub source_type: DamageTypeRef,
     pub source_cause_id: OptionalEntityId,
     pub source_direct_id: OptionalEntityId,
@@ -341,8 +342,7 @@ pub struct DebugChunkValue<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DebugEntityValue<'a> {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub update: DebugSubscriptionUpdate<'a>,
 }
 
@@ -410,6 +410,11 @@ pub struct ForgetLevelChunk {
 pub struct GameEvent {
     pub event: GameEventType,
     pub param: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GameRuleValues<'a> {
+    pub values: Map<'a, ResourceKey<'a>, Utf8<'a>>,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -545,8 +550,12 @@ pub struct Login<'a> {
     pub show_death_screen: bool,
     pub do_limited_crafting: bool,
     pub common_player_spawn_info: CommonPlayerSpawnInfo<'a>,
+    pub online_mode: bool,
     pub enforces_secure_chat: bool,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LowDiskSpaceWarning {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CommonPlayerSpawnInfo<'a> {
@@ -581,8 +590,7 @@ pub struct MerchantOffers<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveEntityPos {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub xa: i16,
     pub ya: i16,
     pub za: i16,
@@ -591,8 +599,7 @@ pub struct MoveEntityPos {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveEntityPosRot {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub xa: i16,
     pub ya: i16,
     pub za: i16,
@@ -603,15 +610,13 @@ pub struct MoveEntityPosRot {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveMinecartAlongTrack<'a> {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub lerp_steps: List<'a, MinecartStep>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveEntityRot {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub y_rot: ByteAngle,
     pub x_rot: ByteAngle,
     pub on_ground: bool,
@@ -986,7 +991,7 @@ pub struct TypeSettings {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RemoveEntities<'a> {
-    pub entity_ids: V32List<'a>,
+    pub entity_ids: List<'a, EntityId>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1198,8 +1203,7 @@ pub struct SetEntityLink {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetEntityMotion {
-    #[mser(varint)]
-    pub id: u32,
+    pub entity_id: EntityId,
     pub movement: LpVec3,
 }
 
@@ -1318,7 +1322,7 @@ pub enum SetObjectiveMethodType {
 pub struct SetPassengers<'a> {
     #[mser(varint)]
     pub vehicle: u32,
-    pub passengers: V32List<'a>,
+    pub passengers: List<'a, EntityId>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1365,12 +1369,12 @@ pub enum SetPlayerTeamMethod<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SetPlayerTeamParameters {
     pub display_name: ComponentRaw,
-    pub options: u8,
-    pub nametag_visibility: TeamVisibility,
-    pub collision_rule: TeamCollisionRule,
-    pub color: ChatFormatting,
     pub player_prefix: ComponentRaw,
     pub player_suffix: ComponentRaw,
+    pub nametag_visibility: TeamVisibility,
+    pub collision_rule: TeamCollisionRule,
+    pub color: Option<TeamColor>,
+    pub options: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1395,10 +1399,9 @@ pub struct SetSubtitleText {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct SetTime {
+pub struct SetTime<'a> {
     pub game_time: u64,
-    pub day_time: u64,
-    pub tick_day_time: bool,
+    pub clock_updates: Map<'a, WorldClockRef, ClockNetworkState>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1557,9 +1560,8 @@ pub struct UpdateAdvancements<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAttributes<'a> {
-    #[mser(varint)]
-    pub entity_id: u32,
-    pub attributes: List<'a, AttributeSnapshot<'a>>,
+    pub entity_id: EntityId,
+    pub attributes: List<'a, AttributeSnapshot<'a>, 128>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1571,8 +1573,7 @@ pub struct AttributeSnapshot<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateMobEffect {
-    #[mser(varint)]
-    pub entity_id: u32,
+    pub entity_id: EntityId,
     pub effect: mob_effect,
     #[mser(varint)]
     pub effect_amplifier: u32,

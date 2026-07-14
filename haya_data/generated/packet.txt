@@ -51,7 +51,7 @@ resource_pack
 select_known_packs
 custom_click_action
 accept_code_of_conduct
-;clientbound/play;str;8b
+;clientbound/play;str;8d
 bundle_delimiter
 add_entity
 animate
@@ -91,6 +91,7 @@ entity_position_sync
 explode
 forget_level_chunk
 game_event
+game_rule_values
 game_test_highlight_pos
 mount_screen_open
 hurt_animation
@@ -101,6 +102,7 @@ level_event
 level_particles
 light_update
 login
+low_disk_space_warning
 map_item_data
 merchant_offers
 move_entity_pos
@@ -191,8 +193,9 @@ server_links
 waypoint
 clear_dialog
 show_dialog
-;serverbound/play;str;42
+;serverbound/play;str;45
 accept_teleportation
+attack
 block_entity_tag_query
 bundle_item_selected
 change_difficulty
@@ -248,10 +251,12 @@ set_carried_item
 set_command_block
 set_command_minecart
 set_creative_mode_slot
+set_game_rule
 set_jigsaw_block
 set_structure_block
 set_test_block
 sign_update
+spectator_action
 swing
 teleport_to_entity
 test_instance_block_action

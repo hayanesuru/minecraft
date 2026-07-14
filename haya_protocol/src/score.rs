@@ -107,3 +107,48 @@ impl TeamCollisionRule {
         }
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[mser(varint)]
+#[repr(u8)]
+pub enum TeamColor {
+    Black,
+    DarkBlue,
+    DarkGreen,
+    DarkAqua,
+    DarkRed,
+    DarkPurple,
+    Gold,
+    Gray,
+    DarkGray,
+    Blue,
+    Green,
+    Aqua,
+    Red,
+    LightPurple,
+    Yellow,
+    White,
+}
+
+impl TeamColor {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Black => "black",
+            Self::DarkBlue => "dark_blue",
+            Self::DarkGreen => "dark_green",
+            Self::DarkAqua => "dark_aqua",
+            Self::DarkRed => "dark_red",
+            Self::DarkPurple => "dark_purple",
+            Self::Gold => "gold",
+            Self::Gray => "gray",
+            Self::DarkGray => "dark_gray",
+            Self::Blue => "blue",
+            Self::Green => "green",
+            Self::Aqua => "aqua",
+            Self::Red => "red",
+            Self::LightPurple => "light_purple",
+            Self::Yellow => "yellow",
+            Self::White => "white",
+        }
+    }
+}

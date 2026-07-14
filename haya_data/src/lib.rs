@@ -277,7 +277,7 @@ impl block_state {
 
     #[inline]
     #[must_use]
-    #[doc(alias = "getLightBlock")]
+    #[doc(alias = "getLightDampening")]
     pub const fn opacity(self) -> Option<u8> {
         let x = self.static_bounds();
         if x == 0 {

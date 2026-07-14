@@ -27,9 +27,10 @@ use crate::inventory::EquipmentSlot;
 use crate::map::MapId;
 use crate::profile::ResolvableProfileRef;
 use crate::registry::{
-    CatVariantRef, ChickenVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
-    JukeboxSongRef, PaintingVariantRef, PigVariantRef, TrimMaterialRef, TrimPatternRef,
-    VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
+    BannerPatternRef, CatSoundVariantRef, CatVariantRef, ChickenSoundVariantRef, ChickenVariantRef,
+    CowSoundVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
+    JukeboxSongRef, PaintingVariantRef, PigSoundVariantRef, PigVariantRef, TrimMaterialRef,
+    TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -45,6 +46,13 @@ use minecraft_data::{
 use mser::{Either, Error, Read, Reader, Utf8, V21, V32, Write, Writer};
 
 #[derive(Clone)]
+pub struct ItemStackTemplate<'a> {
+    pub id: item,
+    pub count: i32,
+    pub components: DataComponentPatch<'a>,
+}
+
+#[derive(Clone)]
 pub struct ItemStack<'a> {
     pub id: item,
     pub count: i32,
@@ -55,6 +63,48 @@ pub struct ItemStack<'a> {
 pub struct DataComponentPatch<'a> {
     pub patch_add: List<'a, TypedDataComponent<'a>>,
     pub patch_remove: List<'a, data_component_type>,
+}
+
+impl<'a> Read<'a> for ItemStackTemplate<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let OptionalItemStack {
+            id,
+            count,
+            components,
+        } = Read::read(buf)?;
+        if count <= 0 || id == item::air {
+            Err(Error)
+        } else {
+            Ok(Self {
+                id,
+                count,
+                components,
+            })
+        }
+    }
+}
+
+impl<'a> Write for ItemStackTemplate<'a> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            write_item_stack(
+                self.id,
+                self.count,
+                &self.components.patch_add,
+                &self.components.patch_remove,
+                w,
+            )
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        len_item_stack(
+            self.id,
+            self.count,
+            &self.components.patch_add,
+            &self.components.patch_remove,
+        )
+    }
 }
 
 impl<'a> Read<'a> for ItemStack<'a> {
@@ -262,7 +312,7 @@ pub struct TooltipDisplay<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UseRemainder<'a> {
-    pub convert_into: OptionalItemStack<'a>,
+    pub convert_into: ItemStackTemplate<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -409,12 +459,12 @@ pub enum MapPostProcessing {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChargedProjectiles<'a> {
-    pub items: List<'a, ItemStack<'a>, 64>,
+    pub items: List<'a, ItemStackTemplate<'a>, 64>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BundleContents<'a> {
-    pub items: List<'a, ItemStack<'a>, 256>,
+    pub items: List<'a, ItemStackTemplate<'a>, 256>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -476,11 +526,6 @@ pub struct Instrument<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ProvidesTrimMaterial<'a> {
-    pub material: Either<TrimMaterial<'a>, ResourceKey<'a>>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct OminousBottleAmplifier {
     #[mser(varint)]
     pub value: u32,
@@ -518,7 +563,7 @@ pub struct Fireworks<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ItemContainerContents<'a> {
-    pub items: List<'a, OptionalItemStack<'a>, 256>,
+    pub items: List<'a, Option<ItemStackTemplate<'a>>, 256>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -529,6 +574,11 @@ pub struct BlockItemStateProperties<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Bees<'a> {
     pub bees: List<'a, BeehiveOccupant>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SulfurCubeContent<'a> {
+    pub absorbed_block_item_stack: ItemStackTemplate<'a>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -545,7 +595,7 @@ pub enum TypedDataComponent<'a> {
     UseEffects(UseEffects),
     CustomName(ComponentRaw),
     MinimumAttackCharge(f32),
-    DamageType(Either<DamageTypeRef, ResourceKey<'a>>),
+    DamageType(DamageTypeRef),
     ItemName(ComponentRaw),
     ItemModel(Ident<'a>),
     Lore(ItemLore<'a>),
@@ -578,7 +628,9 @@ pub enum TypedDataComponent<'a> {
     PiercingWeapon(PiercingWeapon<'a>),
     KineticWeapon(KineticWeapon<'a>),
     SwingAnimation(SwingAnimation),
+    AdditionalTradeCost(#[mser(varint)] u32),
     StoredEnchantments(ItemEnchantments<'a>),
+    Dye(DyeColor),
     DyedColor(DyedItemColor),
     MapColor(MapItemColor),
     MapId(MapId),
@@ -597,10 +649,10 @@ pub enum TypedDataComponent<'a> {
     BucketEntityData(CustomData),
     BlockEntityData(TypedEntityDataBlockEntity),
     Instrument(Either<Holder<Instrument<'a>, InstrumentRef>, ResourceKey<'a>>),
-    ProvidesTrimMaterial(ProvidesTrimMaterial<'a>),
     OminousBottleAmplifier(OminousBottleAmplifier),
+    ProvidesTrimMaterial(Holder<TrimMaterial<'a>, TrimMaterialRef>),
     JukeboxPlayable(JukeboxPlayable<'a>),
-    ProvidesBannerPatterns(TagKey<'a>),
+    ProvidesBannerPatterns(HolderSet<'a, BannerPatternRef>),
     Recipes(Recipes),
     LodestoneTracker(LodestoneTracker),
     FireworkExplosion(FireworkExplosion<'a>),
@@ -613,6 +665,7 @@ pub enum TypedDataComponent<'a> {
     Container(ItemContainerContents<'a>),
     BlockState(BlockItemStateProperties<'a>),
     Bees(Bees<'a>),
+    SulfurCubeContent(SulfurCubeContent<'a>),
     Lock(LockCode),
     ContainerLoot(SeededContainerLoot),
     BreakSound(Holder<SoundEvent<'a>, sound_event>),
@@ -629,15 +682,19 @@ pub enum TypedDataComponent<'a> {
     MooshroomVariant(MushroomCowVariant),
     RabbitVariant(RabbitVariant),
     PigVariant(PigVariantRef),
+    PigSoundVariant(PigSoundVariantRef),
     CowVariant(CowVariantRef),
-    ChickenVariant(Either<ChickenVariantRef, ResourceKey<'a>>),
-    ZombieNautilusVariant(Either<ZombieNautilusVariantRef, ResourceKey<'a>>),
+    CowSoundVariant(CowSoundVariantRef),
+    ChickenVariant(ChickenVariantRef),
+    ChickenSoundVariant(ChickenSoundVariantRef),
+    ZombieNautilusVariant(ZombieNautilusVariantRef),
     FrogVariant(FrogVariantRef),
     HorseVariant(EquineVariant),
     PaintingVariant(Holder<PaintingVariant<'a>, PaintingVariantRef>),
     LlamaVariant(LlamaVariant),
     AxolotlVariant(AxolotlVariant),
     CatVariant(CatVariantRef),
+    CatSoundVariant(CatSoundVariantRef),
     CatCollar(DyeColor),
     SheepColor(DyeColor),
     ShulkerColor(DyeColor),

@@ -1,10 +1,12 @@
-use crate::item_stack::ItemStack;
+use crate::item_stack::ItemStackTemplate;
 use crate::registry::TrimPatternRef;
 use crate::trim::TrimPattern;
 use crate::{Holder, HolderSet, OptionalV32};
 use haya_collection::{Cow, List};
 use haya_ident::TagKey;
-use minecraft_data::{item, recipe_book_category, recipe_display, slot_display};
+use minecraft_data::{
+    data_component_type, item, recipe_book_category, recipe_display, slot_display,
+};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[mser(header = recipe_display)]
@@ -66,14 +68,25 @@ pub struct SmithingRecipeDisplay<'a> {
 pub enum SlotDisplay<'a> {
     Empty {},
     AnyFuel {},
+    WithAnyPotion {
+        display: Cow<'a, Self>,
+    },
+    OnlyWithComponent {
+        source: Cow<'a, Self>,
+        component: data_component_type,
+    },
     Item {
         item: item,
     },
     ItemStack {
-        stack: ItemStack<'a>,
+        stack: ItemStackTemplate<'a>,
     },
     Tag {
         tag: TagKey<'a>,
+    },
+    Dyed {
+        dye: Cow<'a, Self>,
+        target: Cow<'a, Self>,
     },
     SmithingTrim {
         smithing_trim: Cow<'a, SmithingTrimDemoSlotDisplay<'a>>,
