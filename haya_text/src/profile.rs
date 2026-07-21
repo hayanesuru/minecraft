@@ -1,7 +1,7 @@
+use crate::identifier::Identifier;
 use crate::{capacity_fix, key};
 use alloc::vec;
 use alloc::vec::Vec;
-use haya_ident::Identifier;
 use haya_nbt::{CompoundTag, Deserialize, ListTag, Serialize, StringTag, Tag};
 use mser::Error;
 use uuid::Uuid;

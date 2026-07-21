@@ -1,7 +1,7 @@
 use crate::key;
 use core::str::FromStr;
 use haya_nbt::{Deserialize, Serialize, StringTag, Tag};
-use haya_str::{hex_to_u8, u8_to_hex};
+use haya_str::{HayaStr, hex_to_u8, u8_to_hex};
 use mser::Error;
 
 #[derive(Clone, Copy)]
@@ -296,22 +296,18 @@ impl Serialize for TextColor {
                 TextColorNamed::White => WHITE_K,
             }),
             Self::Rgb(text_color_rgb) => unsafe {
-                let mut a = [0; 7];
-                a[0] = b'#';
+                let mut a = HayaStr::new();
+                let _ = a.try_push('#');
                 let (r0, r1) = u8_to_hex(text_color_rgb.red);
-                a[1] = r0;
-                a[2] = r1;
+                let _ = a.try_push(r0 as char);
+                let _ = a.try_push(r1 as char);
                 let (g0, g1) = u8_to_hex(text_color_rgb.green);
-                a[3] = g0;
-                a[4] = g1;
+                let _ = a.try_push(g0 as char);
+                let _ = a.try_push(g1 as char);
                 let (b0, b1) = u8_to_hex(text_color_rgb.blue);
-                a[5] = b0;
-                a[6] = b1;
-                let s = core::str::from_utf8_unchecked(&a);
-                Tag::String(match StringTag::from_ascii_nunzero_unchecked(s) {
-                    Some(x) => x,
-                    None => StringTag::from_utf8(s),
-                })
+                let _ = a.try_push(b0 as char);
+                let _ = a.try_push(b1 as char);
+                Tag::String(StringTag::from_ascii_nunzero_unchecked(a))
             },
         }
     }

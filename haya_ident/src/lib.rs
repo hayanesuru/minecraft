@@ -3,19 +3,16 @@
 
 extern crate alloc;
 
-use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
 use core::str::from_utf8_unchecked;
-use haya_str::HayaStr;
 use mser::{ByteArray, Error, Read, Reader, V21, Write, Writer};
 
 pub const MINECRAFT: &str = "minecraft";
 
-const fn is_valid_path(c: u8) -> bool {
+pub const fn is_valid_path(c: u8) -> bool {
     matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'-' | b'.' | b'/')
 }
 
-const fn is_valid_namespace(c: u8) -> bool {
+pub const fn is_valid_namespace(c: u8) -> bool {
     matches!(c, b'a'..=b'z' | b'0'..=b'9' | b'_' | b'-' | b'.')
 }
 
@@ -121,26 +118,6 @@ impl<'a> Ident<'a> {
         })
     }
 
-    pub fn to_identifier(self) -> Identifier {
-        let Ident { namespace, path } = self;
-        match namespace {
-            Some(ns) => {
-                let ns2 = ns.to_owned().into_boxed_str();
-                let path2 = path.to_owned().into_boxed_str();
-                Identifier(Inner::Full {
-                    namespace: ns2,
-                    path: path2,
-                })
-            }
-            None => match HayaStr::copy_from(path) {
-                Ok(path2) => Identifier(Inner::Thin { path: path2 }),
-                Err(_) => Identifier(Inner::Heap {
-                    path: path.to_owned().into_boxed_str(),
-                }),
-            },
-        }
-    }
-
     pub const fn namespace(&self) -> Option<&str> {
         self.namespace
     }
@@ -182,51 +159,6 @@ impl Write for Ident<'_> {
         let a = namespace.len() + 1 + self.path.len();
         V21(a as u32).len_s() + a
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Identifier(Inner);
-
-impl Identifier {
-    pub fn path(&self) -> &str {
-        match &self.0 {
-            Inner::Thin { path } => path,
-            Inner::Heap { path } => path,
-            Inner::Full { path, .. } => path,
-        }
-    }
-
-    pub fn namespace(&self) -> Option<&str> {
-        match &self.0 {
-            Inner::Thin { .. } => None,
-            Inner::Heap { .. } => None,
-            Inner::Full { namespace, .. } => Some(namespace),
-        }
-    }
-
-    pub const fn new_const(path: &str) -> Option<Self> {
-        let b = path.as_bytes();
-        let mut i = 0;
-        while i < b.len() {
-            if !is_valid_path(b[i]) {
-                return None;
-            }
-            i += 1;
-        }
-        Some(Self(Inner::Thin {
-            path: match HayaStr::copy_from(path) {
-                Ok(x) => x,
-                Err(_) => return None,
-            },
-        }))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum Inner {
-    Thin { path: HayaStr },
-    Heap { path: Box<str> },
-    Full { namespace: Box<str>, path: Box<str> },
 }
 
 #[derive(Clone, Debug)]

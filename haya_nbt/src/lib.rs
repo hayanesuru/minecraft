@@ -18,10 +18,8 @@ use self::int_array::IntArray;
 use self::long_array::LongArray;
 pub use self::unicode::{character, name};
 use alloc::boxed::Box;
-use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
-use haya_ident::{Identifier, parse_ident};
 use haya_str::HayaStr;
 use mser::{Error, Read, Reader, Write, Writer};
 use uuid::Uuid;
@@ -64,49 +62,6 @@ impl Deserialize for bool {
             Tag::Long(x) => Ok(x != 0),
             Tag::Float(x) => Ok(x != 0.0),
             Tag::Double(x) => Ok(x != 0.0),
-            _ => Err(Error),
-        }
-    }
-}
-
-impl Serialize for Identifier {
-    fn serialize(&self) -> Tag {
-        let namespace = match self.namespace() {
-            Some(x) => x,
-            None => haya_ident::MINECRAFT,
-        };
-        let path = self.path();
-        let s = match HayaStr::copy_from(namespace) {
-            Ok(mut x) => match x.try_extend(":") {
-                Ok(_) => match x.try_extend(path) {
-                    Ok(_) => Some(StringTag(Inner::Thin(x))),
-                    Err(_) => None,
-                },
-                Err(_) => None,
-            },
-            Err(_) => None,
-        };
-        match s {
-            Some(x) => Tag::String(x),
-            None => {
-                let l = namespace.len() + 1 + path.len();
-                let mut s = String::with_capacity(l);
-                s.push_str(namespace);
-                s.push(':');
-                s.push_str(path);
-                Tag::String(StringTag(Inner::Heap(s.into_boxed_str())))
-            }
-        }
-    }
-}
-
-impl Deserialize for Identifier {
-    fn deserialize(nbt: Tag) -> Result<Self, Error> {
-        match nbt {
-            Tag::String(s) => match parse_ident(s.as_bytes()) {
-                Some(x) => Ok(x.to_identifier()),
-                None => Err(Error),
-            },
             _ => Err(Error),
         }
     }

@@ -1,7 +1,7 @@
+use crate::identifier::Identifier;
 use crate::{exact_one, key};
 use alloc::boxed::Box;
 use alloc::vec;
-use haya_ident::Identifier;
 use haya_nbt::{CompoundTag, Deserialize, Serialize, StringTag, Tag};
 use mser::Error;
 

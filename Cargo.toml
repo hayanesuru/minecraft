@@ -1,5 +1,5 @@
 [workspace]
-members = [
+members = ["haya_bot",
     "haya_collection",
     "haya_data",
     "haya_ecs",

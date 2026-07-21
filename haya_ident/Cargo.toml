@@ -11,4 +11,3 @@ description = "ident"
 
 [dependencies]
 mser = { workspace = true }
-haya_str = { workspace = true }

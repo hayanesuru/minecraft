@@ -177,16 +177,18 @@ impl StringTag {
     /// # Safety
     ///
     /// all byte values must be ASCII and non-zero
-    pub const unsafe fn from_ascii_nunzero_unchecked(s: &str) -> Option<Self> {
-        match HayaStr::copy_from(s) {
-            Ok(x) => Some(Self(Inner::Thin(x))),
-            Err(_) => None,
-        }
+    pub const unsafe fn from_ascii_nunzero_unchecked(s: HayaStr) -> Self {
+        Self(Inner::Thin(s))
     }
 
     pub const fn from_ascii_nonzero(s: &[u8]) -> Option<Self> {
         match as_mutf8_ascii(s) {
-            Some(ascii) => unsafe { Self::from_ascii_nunzero_unchecked(ascii) },
+            Some(ascii) => unsafe {
+                match HayaStr::copy_from(ascii) {
+                    Ok(x) => Some(Self::from_ascii_nunzero_unchecked(x)),
+                    Err(_) => None,
+                }
+            },
             None => None,
         }
     }

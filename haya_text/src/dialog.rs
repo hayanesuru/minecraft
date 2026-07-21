@@ -1,8 +1,8 @@
 use crate::chat::TextComponent;
 use crate::click_event::ClickEvent;
+use crate::identifier::Identifier;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use haya_ident::Identifier;
 use haya_nbt::{StringTag, Tag};
 
 #[derive(Clone)]

@@ -11,6 +11,7 @@ pub mod color;
 pub mod decoration;
 pub mod dialog;
 pub mod hover_event;
+pub mod identifier;
 pub mod json;
 pub mod profile;
 

@@ -1,0 +1,20 @@
+[package]
+name = "haya_bot"
+version = "0.1.0"
+authors.workspace = true
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+
+[dependencies]
+uuid = { workspace = true }
+mser_macro = { workspace = true }
+mser = { workspace = true }
+minecraft_data = { workspace = true }
+
+haya_ecs ={ workspace = true }
+haya_protocol = { workspace = true }
+haya_collection = { workspace = true }
+
+tokio = { version = "1", features = ["io-util", "net", "rt", "signal", "time"] }

@@ -1,8 +1,8 @@
 use crate::chat::TextComponent;
+use crate::identifier::Identifier;
 use crate::key;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use haya_ident::Identifier;
 use haya_nbt::{CompoundTag, Deserialize, Serialize, StringTag, Tag};
 use mser::Error;
 use uuid::Uuid;
