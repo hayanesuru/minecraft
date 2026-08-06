@@ -89,7 +89,7 @@ version = "1.0.0"
 
 [[package]]
 name = "haya_ident"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "mser",
 ]
@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "haya_nbt"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "haya_collection",
  "haya_ident",
@@ -135,7 +135,7 @@ dependencies = [
 
 [[package]]
 name = "haya_protocol"
-version = "1.1.0+26.2"
+version = "1.2.0+26.2"
 dependencies = [
  "haya_collection",
  "haya_ident",
@@ -153,7 +153,7 @@ version = "1.0.0"
 
 [[package]]
 name = "haya_text"
-version = "1.1.0+26.2"
+version = "1.2.0+26.2"
 dependencies = [
  "haya_ident",
  "haya_math",
