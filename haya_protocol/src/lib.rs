@@ -2,12 +2,16 @@
 #![warn(clippy::shadow_reuse, clippy::use_self)]
 
 use crate::inventory::HumanoidArm;
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::str::FromStr;
 use haya_collection::{List, Map, capacity_fix};
-use haya_ident::{Ident, ResourceKey};
+use haya_ident::{Ident, ResourceKey, is_valid_path, parse_ident};
 use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
-use haya_nbt::Tag;
+use haya_nbt::{StringTag, Tag};
+use haya_str::HayaStr;
 use minecraft_data::data_component_type;
 use mser::{Either, Error, Read, Reader, Utf8, V32, Write, Writer};
 
@@ -16,9 +20,11 @@ pub mod attribute;
 pub mod block;
 pub mod chat;
 pub mod clientbound;
+pub mod color;
 pub mod command;
 pub mod crafting;
 pub mod debug;
+pub mod decoration;
 pub mod effect;
 pub mod entity;
 pub mod entity_data;
@@ -39,6 +45,7 @@ pub mod serverbound;
 pub mod sound;
 pub mod stat;
 pub mod structure;
+pub mod text;
 pub mod trading;
 pub mod trim;
 pub mod types;
@@ -919,6 +926,132 @@ pub struct ClockNetworkState {
     total_ticks: u64,
     partial_tick: f32,
     rate: f32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Identifier(Inner);
+
+impl Identifier {
+    pub fn path(&self) -> &str {
+        match &self.0 {
+            Inner::Thin { path } => path,
+            Inner::Heap { path } => path,
+            Inner::Full { path, .. } => path,
+        }
+    }
+
+    pub fn namespace(&self) -> Option<&str> {
+        match &self.0 {
+            Inner::Thin { .. } => None,
+            Inner::Heap { .. } => None,
+            Inner::Full { namespace, .. } => Some(namespace),
+        }
+    }
+
+    pub const fn new_const(path: &str) -> Option<Self> {
+        let b = path.as_bytes();
+        let mut i = 0;
+        while i < b.len() {
+            if !is_valid_path(b[i]) {
+                return None;
+            }
+            i += 1;
+        }
+        Some(Self(Inner::Thin {
+            path: match HayaStr::copy_from(path) {
+                Ok(x) => x,
+                Err(_) => return None,
+            },
+        }))
+    }
+
+    pub fn new(ident: Ident) -> Self {
+        let namespace1 = ident.namespace();
+        let path1 = ident.path();
+        match namespace1 {
+            Some(namespace2) => {
+                let namespace = namespace2.to_owned().into_boxed_str();
+                let path = path1.to_owned().into_boxed_str();
+                Self(Inner::Full { namespace, path })
+            }
+            None => match HayaStr::copy_from(path1) {
+                Ok(path) => Self(Inner::Thin { path }),
+                Err(_) => Self(Inner::Heap {
+                    path: path1.to_owned().into_boxed_str(),
+                }),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Inner {
+    Thin { path: HayaStr },
+    Heap { path: Box<str> },
+    Full { namespace: Box<str>, path: Box<str> },
+}
+
+impl haya_nbt::Serialize for Identifier {
+    fn serialize(&self) -> Tag {
+        let namespace = match self.namespace() {
+            Some(x) => x,
+            None => haya_ident::MINECRAFT,
+        };
+        let path = self.path();
+        let s = match HayaStr::copy_from(namespace) {
+            Ok(mut x) => match x.try_extend(":") {
+                Ok(_) => match x.try_extend(path) {
+                    Ok(_) => unsafe { Some(StringTag::from_ascii_nunzero_unchecked(x)) },
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            },
+            Err(_) => None,
+        };
+        match s {
+            Some(x) => Tag::String(x),
+            None => {
+                let l = namespace.len() + 1 + path.len();
+                let mut s = String::with_capacity(l);
+                s.push_str(namespace);
+                s.push(':');
+                s.push_str(path);
+                Tag::String(StringTag::from_owned(s.into_boxed_str()))
+            }
+        }
+    }
+}
+
+impl haya_nbt::Deserialize for Identifier {
+    fn deserialize(nbt: Tag) -> Result<Self, Error> {
+        match nbt {
+            Tag::String(s) => match parse_ident(s.as_bytes()) {
+                Some(x) => Ok(Self::new(x)),
+                None => Err(Error),
+            },
+            _ => Err(Error),
+        }
+    }
+}
+
+const fn key(n: &'static str) -> StringTag {
+    StringTag::from_ascii_nonzero(n.as_bytes()).unwrap()
+}
+
+fn exact_one<T>(mut iter: alloc::vec::IntoIter<T>) -> Result<T, mser::Error> {
+    if iter.len() != 1 {
+        Err(mser::Error)
+    } else {
+        match iter.next() {
+            Some(x) => Ok(x),
+            None => Err(mser::Error),
+        }
+    }
+}
+
+#[inline(always)]
+fn hcap_fix(len: usize) -> usize {
+    usize::min(len, 64)
 }
 
 #[cfg(test)]

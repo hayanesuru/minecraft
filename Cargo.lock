@@ -141,6 +141,7 @@ dependencies = [
  "haya_ident",
  "haya_math",
  "haya_nbt",
+ "haya_str",
  "minecraft_data",
  "mser",
  "mser_macro",
@@ -150,18 +151,6 @@ dependencies = [
 [[package]]
 name = "haya_str"
 version = "1.0.0"
-
-[[package]]
-name = "haya_text"
-version = "1.2.0+26.2"
-dependencies = [
- "haya_ident",
- "haya_math",
- "haya_nbt",
- "haya_str",
- "mser",
- "uuid",
-]
 
 [[package]]
 name = "itoa"

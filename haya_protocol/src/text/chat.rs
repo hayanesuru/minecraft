@@ -1,10 +1,9 @@
-use crate::click_event::ClickEvent;
+use super::click_event::ClickEvent;
+use super::hover_event::HoverEvent;
 use crate::color::{TextColor, TextColorNamed, TextColorRgb};
 use crate::decoration::DecorationMap;
-use crate::hover_event::HoverEvent;
-use crate::identifier::Identifier;
 use crate::profile::ResolvableProfile;
-use crate::{capacity_fix, key};
+use crate::{Identifier, hcap_fix, key};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -577,7 +576,7 @@ impl Deserialize for TextComponent {
                     }
                 };
                 let mut c = Self::deserialize(Tag::Compound(first))?;
-                c.siblings.reserve_exact(capacity_fix(iter.len()));
+                c.siblings.reserve_exact(hcap_fix(iter.len()));
                 for sibling in iter {
                     c.siblings.push(Self::deserialize(Tag::Compound(sibling))?);
                 }
@@ -600,7 +599,7 @@ impl Deserialize for TextComponent {
                 let mut c = Self {
                     content: Content::Literal { content: first },
                     style: Style::new(),
-                    siblings: Vec::with_capacity(capacity_fix(iter.len())),
+                    siblings: Vec::with_capacity(hcap_fix(iter.len())),
                 };
                 for sibling in iter {
                     c.siblings.push(Self {
@@ -662,14 +661,14 @@ impl Deserialize for TextComponent {
                 TRANSLATE_WITH => {
                     let w = match v {
                         Tag::List(ListTag::Compound(l)) => {
-                            let mut vec = Vec::with_capacity(capacity_fix(l.len()));
+                            let mut vec = Vec::with_capacity(hcap_fix(l.len()));
                             for nbt in l {
                                 vec.push(Self::deserialize(Tag::Compound(nbt))?);
                             }
                             vec
                         }
                         Tag::List(ListTag::String(l)) => {
-                            let mut vec = Vec::with_capacity(capacity_fix(l.len()));
+                            let mut vec = Vec::with_capacity(hcap_fix(l.len()));
                             for nbt in l {
                                 vec.push(Self {
                                     content: Content::Literal { content: nbt },
@@ -879,14 +878,14 @@ impl Deserialize for TextComponent {
                 }
                 EXTRA => match v {
                     Tag::List(ListTag::Compound(l)) => {
-                        siblings.reserve_exact(capacity_fix(l.len()));
+                        siblings.reserve_exact(hcap_fix(l.len()));
                         for nbt in l {
                             let c = Self::deserialize(Tag::Compound(nbt))?;
                             siblings.push(c);
                         }
                     }
                     Tag::List(ListTag::String(l)) => {
-                        siblings.reserve_exact(capacity_fix(l.len()));
+                        siblings.reserve_exact(hcap_fix(l.len()));
                         for nbt in l {
                             siblings.push(Self {
                                 content: Content::Literal { content: nbt },

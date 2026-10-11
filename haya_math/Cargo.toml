@@ -9,7 +9,12 @@ edition.workspace = true
 publish = ["haya"]
 description = "math"
 
+[features]
+default = ["std"]
+libm = ["dep:libm"]
+std = []
+
 [dependencies]
 mser = { workspace = true }
 
-libm = "0.2"
+libm = { version = "0.2", optional = true }

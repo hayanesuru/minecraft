@@ -10,7 +10,8 @@ publish = ["haya"]
 description = "protocol"
 
 [features]
-default = []
+default = ["std"]
+std = ["haya_math/std"]
 
 [dependencies]
 minecraft_data = { workspace = true }
@@ -20,6 +21,7 @@ haya_nbt = { workspace = true }
 haya_ident = { workspace = true }
 haya_math = { workspace = true }
 haya_collection = { workspace = true }
+haya_str = { workspace = true }
 
 uuid = { workspace = true }
 

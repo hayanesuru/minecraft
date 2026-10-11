@@ -1,6 +1,6 @@
-use crate::chat::TextComponent;
-use crate::click_event::ClickEvent;
-use crate::identifier::Identifier;
+use super::chat::TextComponent;
+use super::click_event::ClickEvent;
+use crate::Identifier;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_nbt::{StringTag, Tag};

@@ -1,6 +1,5 @@
-use crate::chat::TextComponent;
-use crate::identifier::Identifier;
-use crate::key;
+use super::chat::TextComponent;
+use crate::{Identifier, key};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use haya_nbt::{CompoundTag, Deserialize, Serialize, StringTag, Tag};
