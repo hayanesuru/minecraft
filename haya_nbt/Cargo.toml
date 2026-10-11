@@ -15,7 +15,6 @@ mser = { workspace = true }
 haya_mutf8 = { workspace = true }
 haya_str = { workspace = true }
 haya_collection = { workspace = true }
-haya_ident = { workspace = true }
 uuid = { workspace = true }
 
 itoa = "1"

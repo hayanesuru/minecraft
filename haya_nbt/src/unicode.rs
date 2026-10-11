@@ -325,10 +325,10 @@ pub fn character(search_name: &str) -> Option<char> {
         Some(name) => name,
     };
 
-    // `name(codepoint)` returns an iterator yielding words separated by spaces or
-    // hyphens. That means whenever a name contains a non-medial hyphen, it must
-    // be emulated by inserting an artificial empty word (`""`) between the
-    // space and the hyphen.
+    // `name(codepoint)` returns an iterator yielding words separated by spaces
+    // or hyphens. That means whenever a name contains a non-medial hyphen,
+    // it must be emulated by inserting an artificial empty word (`""`)
+    // between the space and the hyphen.
     let mut cmp_name = search_name;
     for part in maybe_name {
         let part2 = match part {
@@ -380,8 +380,8 @@ fn normalise_name(search_name: &str, buf: &mut [u8; LONGEST_NAME_LEN]) -> usize 
             continue;
         }
 
-        // "[...] and all medial hyphens except the hyphen in U+1180 HANGUL JUNGSEONG
-        // O-E." See doc comment for why U+1180 isn't handled
+        // "[...] and all medial hyphens except the hyphen in U+1180 HANGUL
+        // JUNGSEONG O-E." See doc comment for why U+1180 isn't handled
         if c == b'-'
             && bytes.get(i - 1).is_some_and(u8::is_ascii_alphanumeric)
             && bytes.get(i + 1).is_some_and(u8::is_ascii_alphanumeric)
@@ -390,9 +390,9 @@ fn normalise_name(search_name: &str, buf: &mut [u8; LONGEST_NAME_LEN]) -> usize 
         }
 
         if !c.is_ascii_alphanumeric() && c != b'-' {
-            // All unicode names comprise only of alphanumeric characters and hyphens after
-            // stripping spaces and underscores. Returning 0 effectively serves as returning
-            // `None`.
+            // All unicode names comprise only of alphanumeric characters and
+            // hyphens after stripping spaces and underscores.
+            // Returning 0 effectively serves as returning `None`.
             return 0;
         }
 
@@ -619,8 +619,9 @@ const LEXICON_ORDERED_LENGTH_INDICES: [u16; LEXICON_ORDERED_LENGTHS_LEN] = {
     while i < LEXICON_ORDERED_LENGTHS.len() {
         let (end_idx, length) = LEXICON_ORDERED_LENGTHS[i];
 
-        // make sure this is contiguous - that there are no gaps where e.g. there
-        // are words of length 15 and of length 17 but none of length 16.
+        // make sure this is contiguous - that there are no gaps where e.g.
+        // there are words of length 15 and of length 17 but none of
+        // length 16.
         if let Some(l) = prev_len {
             assert!(length == l + 1);
         }
@@ -664,8 +665,10 @@ impl Iterator for IterStr {
             } else {
                 let idx = u16::from_be_bytes([b - PHRASEBOOK_SHORT, tmp.next().unwrap()]);
 
-                // The value at each index `i` in the array `LEXICON_ORDERED_LENGTH_INDICES`
-                // (herein referred to as `arr`) is the largest lexicon index with length `i`.
+                // The value at each index `i` in the array
+                // `LEXICON_ORDERED_LENGTH_INDICES`
+                // (herein referred to as `arr`) is the largest lexicon index
+                // with length `i`.
                 let length = match LEXICON_ORDERED_LENGTH_INDICES.binary_search(&idx) {
                     // In this case, `idx` is equal to the index at `arr[i]`,
                     // so `i` is the correct length.

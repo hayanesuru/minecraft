@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![warn(clippy::shadow_reuse, clippy::use_self)]
 
 use mser::{Error, Read, Reader, V21, V32, Write, Writer};
@@ -241,12 +241,15 @@ impl LpVec3 {
             return Self::Zero;
         }
 
+        #[cfg(feature = "std")]
+        let divisor = f64::ceil(max) as u64;
+        #[cfg(feature = "libm")]
         let divisor = libm::ceil(max) as u64;
         let is_extended = divisor & 3 != divisor;
         let packed_divisor = if is_extended {
-            (divisor as u64 & 3) | 4
+            (divisor & 3) | 4
         } else {
-            divisor as u64
+            divisor
         };
         let packed_x = Self::pack_coord(x / (divisor as f64)) << 3;
         let packed_y = Self::pack_coord(y / (divisor as f64)) << 18;
@@ -258,7 +261,7 @@ impl LpVec3 {
         let c = (packed >> 16) as u32;
 
         if is_extended {
-            let d = ((divisor as u64) >> 2) as u32;
+            let d = (divisor >> 2) as u32;
             Self::Extended { a, b, c, d }
         } else {
             Self::Normal { a, b, c }
@@ -298,7 +301,14 @@ impl LpVec3 {
     }
 
     fn pack_coord(value: f64) -> u64 {
-        libm::round((value * 0.5 + 0.5) * 32766.) as u64
+        #[cfg(feature = "std")]
+        {
+            f64::round((value * 0.5 + 0.5) * 32766.) as u64
+        }
+        #[cfg(feature = "libm")]
+        {
+            libm::round((value * 0.5 + 0.5) * 32766.) as u64
+        }
     }
 
     fn sanitize(value: f64) -> f64 {
@@ -327,7 +337,14 @@ pub struct ByteAngle(pub u8);
 
 impl ByteAngle {
     pub fn new(f: f32) -> Self {
-        Self(libm::floorf(f * 256.0 / 360.0) as u8)
+        #[cfg(feature = "std")]
+        {
+            Self(f32::floor(f * 256.0 / 360.0) as u8)
+        }
+        #[cfg(feature = "libm")]
+        {
+            Self(libm::floorf(f * 256.0 / 360.0) as u8)
+        }
     }
 
     pub fn to_degrees(self) -> f32 {
@@ -613,9 +630,23 @@ impl Write for Direction {
 }
 
 pub fn f32_to_u8(value: f32) -> u8 {
-    libm::floorf(value * 255.0) as u8
+    #[cfg(feature = "std")]
+    {
+        f32::floor(value * 255.0) as u8
+    }
+    #[cfg(feature = "libm")]
+    {
+        libm::floorf(value * 255.0) as u8
+    }
 }
 
 pub fn f64_to_u8(value: f64) -> u8 {
-    libm::floor(value * 255.0) as u8
+    #[cfg(feature = "std")]
+    {
+        f64::floor(value * 255.0) as u8
+    }
+    #[cfg(feature = "libm")]
+    {
+        libm::floor(value * 255.0) as u8
+    }
 }

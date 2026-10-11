@@ -13,7 +13,6 @@ mser_macro = { workspace = true }
 mser = { workspace = true }
 minecraft_data = { workspace = true }
 
-haya_ecs ={ workspace = true }
 haya_protocol = { workspace = true }
 haya_collection = { workspace = true }
 
