@@ -1,3 +1,5 @@
+// https://github.com/progval/unicode_names2
+
 use core::iter::repeat_n;
 use formatting::Context;
 use std::collections::{HashMap, hash_map};
@@ -471,7 +473,15 @@ pub fn generate(unicode_data: &'static str, path: &Path, truncate: Option<usize>
 pub fn generate_aliases(name_aliases: &'static str, path: &Path) {
     use std::fmt::Write;
     let aliases = get_aliases(name_aliases);
-    let entries = aliases.iter().map(|x| x.alias).collect::<Vec<_>>();
+    let entries = aliases
+        .iter()
+        .map(|x| {
+            let cp = u32::from_str_radix(x.code, 16).unwrap();
+            let c = char::from_u32(cp).unwrap();
+            normalise_name(x.alias, c)
+        })
+        .collect::<Vec<_>>();
+    let entries = entries.iter().map(|x| x.as_str()).collect::<Vec<_>>();
     let mut state = GenerateHash::new();
     let state = state.generate_hash(&entries);
     let mut w = String::new();

@@ -67,7 +67,6 @@ name = "haya_bot"
 version = "0.1.0"
 dependencies = [
  "haya_collection",
- "haya_ecs",
  "haya_protocol",
  "minecraft_data",
  "mser",
@@ -114,7 +113,6 @@ name = "haya_nbt"
 version = "2.0.0"
 dependencies = [
  "haya_collection",
- "haya_ident",
  "haya_mutf8",
  "haya_str",
  "itoa",
