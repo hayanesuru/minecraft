@@ -45,7 +45,8 @@ impl<'a, 'b> Iterator for Split<'a, 'b> {
         for (i, b) in self.s.bytes().enumerate() {
             if b == b' ' || self.splitters.contains(&b) {
                 let ret = &self.s[..i];
-                // dont include the space, but include everything else on the next step
+                // dont include the space, but include everything else on the
+                // next step
                 if b != b' ' {
                     self.pending = &self.s[i..i + 1]
                 }

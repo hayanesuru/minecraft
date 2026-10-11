@@ -435,8 +435,8 @@ fn normalise_name(s: &str, codepoint: char) -> String {
             continue;
         }
 
-        // "[...] and all medial hyphens except the hyphen in U+1180 HANGUL JUNGSEONG
-        // O-E."
+        // "[...] and all medial hyphens except the hyphen in U+1180 HANGUL
+        // JUNGSEONG O-E."
         if codepoint != '\u{1180}' // HANGUL JUNGSEONG O-E
             && c == b'-'
             && bytes.get(i - 1).is_some_and(u8::is_ascii_alphanumeric)
