@@ -95,7 +95,7 @@ dependencies = [
 
 [[package]]
 name = "haya_math"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "libm",
  "mser",
