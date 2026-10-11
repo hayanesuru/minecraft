@@ -34,7 +34,7 @@ haya_mutf8 = { registry = "haya", path = "haya_mutf8", version = "1" }
 haya_ecs = { registry = "haya", path = "haya_ecs", version = "1" }
 haya_math = { registry = "haya", path = "haya_math", version = "2", default-features = false }
 haya_collection = { registry = "haya", path = "haya_collection", version = "1" }
-haya_protocol = { registry = "haya", path = "haya_protocol", version = "1" }
+haya_protocol = { registry = "haya", path = "haya_protocol", version = "2" }
 uuid = { version = "1", default-features = false }
 
 [profile.dev.package."minecraft_data"]
