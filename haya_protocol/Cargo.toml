@@ -12,6 +12,7 @@ description = "protocol"
 [features]
 default = ["std"]
 std = ["haya_math/std"]
+libm = ["haya_math/libm"]
 
 [dependencies]
 minecraft_data = { workspace = true }
