@@ -6,7 +6,6 @@ use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::str::FromStr;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, is_valid_path, parse_ident};
 use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
@@ -86,9 +85,9 @@ pub struct ServerLinkUntrustedEntry<'a> {
     pub url: Utf8<'a>,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum KnownLinkType {
     ReportBug,
     CommunityGuidelines,
@@ -103,21 +102,6 @@ pub enum KnownLinkType {
 }
 
 impl KnownLinkType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::ReportBug => "report_bug",
-            Self::CommunityGuidelines => "community_guidelines",
-            Self::Support => "support",
-            Self::Status => "status",
-            Self::Feedback => "feedback",
-            Self::Community => "community",
-            Self::Website => "website",
-            Self::Forums => "forums",
-            Self::News => "news",
-            Self::Announcements => "announcements",
-        }
-    }
-
     pub const fn translation_key(self) -> Translatable<'static> {
         Translatable("known_server_link.", self.name())
     }
@@ -136,9 +120,9 @@ pub struct ClientInformation<'a> {
     pub particle_status: ParticleStatus,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum ChatVisibility {
     Full,
     System,
@@ -146,22 +130,14 @@ pub enum ChatVisibility {
 }
 
 impl ChatVisibility {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Full => "full",
-            Self::System => "system",
-            Self::Hidden => "hidden",
-        }
-    }
-
     pub const fn translation_key(self) -> Translatable<'static> {
         Translatable("options.chat.visibility.", self.name())
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum ParticleStatus {
     All,
     Decreased,
@@ -169,22 +145,14 @@ pub enum ParticleStatus {
 }
 
 impl ParticleStatus {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::All => "all",
-            Self::Decreased => "decreased",
-            Self::Minimal => "minimal",
-        }
-    }
-
     pub const fn translation_key(self) -> Translatable<'static> {
         Translatable("options.particles.", self.name())
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum Difficulty {
     Peaceful,
     Easy,
@@ -193,52 +161,19 @@ pub enum Difficulty {
 }
 
 impl Difficulty {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Peaceful => "peaceful",
-            Self::Easy => "easy",
-            Self::Normal => "normal",
-            Self::Hard => "hard",
-        }
-    }
-
     pub const fn translation_key(self) -> Translatable<'static> {
         Translatable("options.difficulty.", self.name())
     }
 }
 
-impl FromStr for Difficulty {
-    type Err = Error;
-    fn from_str(n: &str) -> Result<Self, Self::Err> {
-        Ok(match n {
-            "peaceful" => Self::Peaceful,
-            "easy" => Self::Easy,
-            "normal" => Self::Normal,
-            "hard" => Self::Hard,
-            _ => return Err(Error),
-        })
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum Rarity {
     Common,
     Uncommon,
     Rare,
     Epic,
-}
-
-impl Rarity {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Common => "common",
-            Self::Uncommon => "uncommon",
-            Self::Rare => "rare",
-            Self::Epic => "epic",
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -300,9 +235,9 @@ pub enum Holder<T, R> {
     Direct(T),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum DyeColor {
     White,
     Orange,
@@ -320,29 +255,6 @@ pub enum DyeColor {
     Green,
     Red,
     Black,
-}
-
-impl DyeColor {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::White => "white",
-            Self::Orange => "orange",
-            Self::Magenta => "magenta",
-            Self::LightBlue => "light_blue",
-            Self::Yellow => "yellow",
-            Self::Lime => "lime",
-            Self::Pink => "pink",
-            Self::Gray => "gray",
-            Self::LightGray => "light_gray",
-            Self::Cyan => "cyan",
-            Self::Purple => "purple",
-            Self::Blue => "blue",
-            Self::Brown => "brown",
-            Self::Green => "green",
-            Self::Red => "red",
-            Self::Black => "black",
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -450,24 +362,14 @@ impl HeightmapType {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BitSet<'a>(pub List<'a, u64>);
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
+#[mser(camel_case)]
 pub enum GameType {
     Survival,
     Creative,
     Adventure,
     Spectator,
-}
-
-impl GameType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Survival => "survival",
-            Self::Creative => "creative",
-            Self::Adventure => "adventure",
-            Self::Spectator => "spectator",
-        }
-    }
 }
 
 #[derive(Clone, Copy)]
@@ -509,21 +411,12 @@ pub struct GlobalPos<'a> {
     pub pos: BlockPosPacked,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum EntityAnchor {
     Feet,
     Eyes,
-}
-
-impl EntityAnchor {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Feet => "feet",
-            Self::Eyes => "eyes",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -570,25 +463,14 @@ pub struct Rotations {
     pub z: f32,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum WeatheringCopperState {
     Unaffected,
     Exposed,
     Weathered,
     Oxidized,
-}
-
-impl WeatheringCopperState {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Unaffected => "unaffected",
-            Self::Exposed => "exposed",
-            Self::Weathered => "weathered",
-            Self::Oxidized => "oxidized",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -742,9 +624,9 @@ pub enum CommandBlockEntityMode {
     Redstone,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum JointType {
     Rollable,
     Aligned,
@@ -777,15 +659,6 @@ impl Write for JointTypeName {
     }
 }
 
-impl JointType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Rollable => "rollable",
-            Self::Aligned => "aligned",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
 #[mser(varint)]
@@ -796,9 +669,9 @@ pub enum StructureUpdateType {
     ScanArea,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum StructureMode {
     Save,
     Load,
@@ -806,34 +679,13 @@ pub enum StructureMode {
     Data,
 }
 
-impl StructureMode {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Save => "save",
-            Self::Load => "load",
-            Self::Corner => "corner",
-            Self::Data => "data",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum Mirror {
     None,
     LeftRight,
     FrontBack,
-}
-
-impl Mirror {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::None => "none",
-            Self::LeftRight => "left_right",
-            Self::FrontBack => "front_back",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -857,25 +709,14 @@ impl Rotation {
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum TestBlockMode {
     Start,
     Log,
     Fail,
     Accept,
-}
-
-impl TestBlockMode {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Start => "start",
-            Self::Log => "log",
-            Self::Fail => "fail",
-            Self::Accept => "accept",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -888,23 +729,13 @@ pub struct TestInstanceData<'a> {
     pub error_message: Option<ComponentRaw>,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum TestInstanceStatus {
     Cleared,
     Running,
     Finished,
-}
-
-impl TestInstanceStatus {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Cleared => "cleared",
-            Self::Running => "running",
-            Self::Finished => "finished",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -419,23 +419,13 @@ pub struct SwingAnimation {
     pub duration: u32,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum SwingAnimationType {
     None,
     Whack,
     Stab,
-}
-
-impl SwingAnimationType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::None => "none",
-            Self::Whack => "whack",
-            Self::Stab => "stab",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

@@ -6,9 +6,9 @@ pub struct SoundEvent<'a> {
     pub fixed_range: Option<f32>,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum SoundSource {
     Master,
     Music,
@@ -21,22 +21,4 @@ pub enum SoundSource {
     Ambient,
     Voice,
     Ui,
-}
-
-impl SoundSource {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Master => "master",
-            Self::Music => "music",
-            Self::Record => "record",
-            Self::Weather => "weather",
-            Self::Block => "block",
-            Self::Hostile => "hostile",
-            Self::Neutral => "neutral",
-            Self::Player => "player",
-            Self::Ambient => "ambient",
-            Self::Voice => "voice",
-            Self::Ui => "ui",
-        }
-    }
 }

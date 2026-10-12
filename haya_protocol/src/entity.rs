@@ -4,24 +4,15 @@ use minecraft_data::{villager_profession, villager_type};
 use mser::{Read, V21, Write};
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum FoxVariant {
     Red,
     Snow,
 }
 
-impl FoxVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Red => "red",
-            Self::Snow => "snow",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
 #[mser(varint)]
 pub enum SalmonVariant {
@@ -30,19 +21,9 @@ pub enum SalmonVariant {
     Large,
 }
 
-impl SalmonVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Small => "small",
-            Self::Medium => "medium",
-            Self::Large => "large",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum ParrotVariant {
     RedBlue,
     Blue,
@@ -51,21 +32,9 @@ pub enum ParrotVariant {
     Gray,
 }
 
-impl ParrotVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::RedBlue => "red_blue",
-            Self::Blue => "blue",
-            Self::Green => "green",
-            Self::YellowBlue => "yellow_blue",
-            Self::Gray => "gray",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum TropicalFishPattern {
     Kob,
     Sunstreak,
@@ -81,44 +50,17 @@ pub enum TropicalFishPattern {
     Clayfish,
 }
 
-impl TropicalFishPattern {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Kob => "kob",
-            Self::Sunstreak => "sunstreak",
-            Self::Snooper => "snooper",
-            Self::Dasher => "dasher",
-            Self::Brinely => "brinely",
-            Self::Spotty => "spotty",
-            Self::Flopper => "flopper",
-            Self::Stripey => "stripey",
-            Self::Glitter => "glitter",
-            Self::Blockfish => "blockfish",
-            Self::Betty => "betty",
-            Self::Clayfish => "clayfish",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum MushroomCowVariant {
     Red,
     Brown,
 }
 
-impl MushroomCowVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Red => "red",
-            Self::Brown => "brown",
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Name)]
 #[repr(u8)]
+#[mser(camel_case)]
 pub enum RabbitVariant {
     Brown,
     White,
@@ -153,23 +95,9 @@ impl<'a> Read<'a> for RabbitVariant {
     }
 }
 
-impl RabbitVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Brown => "brown",
-            Self::White => "white",
-            Self::Black => "black",
-            Self::WhiteSplotched => "white_splotched",
-            Self::Gold => "gold",
-            Self::Salt => "salt",
-            Self::Evil => "evil",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum EquineVariant {
     White,
     Creamy,
@@ -178,20 +106,6 @@ pub enum EquineVariant {
     Black,
     Gray,
     DarkBrown,
-}
-
-impl EquineVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::White => "white",
-            Self::Creamy => "creamy",
-            Self::Chestnut => "chestnut",
-            Self::Brown => "brown",
-            Self::Black => "black",
-            Self::Gray => "gray",
-            Self::DarkBrown => "dark_brown",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -205,9 +119,9 @@ pub struct PaintingVariant<'a> {
     pub author: Option<ComponentRaw>,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum LlamaVariant {
     Creamy,
     White,
@@ -215,38 +129,15 @@ pub enum LlamaVariant {
     Gray,
 }
 
-impl LlamaVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Creamy => "creamy",
-            Self::White => "white",
-            Self::Brown => "brown",
-            Self::Gray => "gray",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum AxolotlVariant {
     Lucy,
     Wild,
     Gold,
     Cyan,
     Blue,
-}
-
-impl AxolotlVariant {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Lucy => "lucy",
-            Self::Wild => "wild",
-            Self::Gold => "gold",
-            Self::Cyan => "cyan",
-            Self::Blue => "blue",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -262,25 +153,14 @@ pub struct VillagerData {
     pub level: u32,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum ArmadilloState {
     Idle,
     Rolling,
     Scared,
     Unrolling,
-}
-
-impl ArmadilloState {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Idle => "idle",
-            Self::Rolling => "rolling",
-            Self::Scared => "scared",
-            Self::Unrolling => "unrolling",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
@@ -296,9 +176,9 @@ pub enum SnifferState {
     Rising,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum CopperGolemState {
     Idle,
     GettingItem,
@@ -307,21 +187,9 @@ pub enum CopperGolemState {
     DroppingNoItem,
 }
 
-impl CopperGolemState {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Idle => "idle",
-            Self::GettingItem => "getting_item",
-            Self::GettingNoItem => "getting_no_item",
-            Self::DroppingItem => "dropping_item",
-            Self::DroppingNoItem => "dropping_no_item",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[mser(varint)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
+#[mser(varint, camel_case)]
 pub enum Pose {
     Standing,
     FallFlying,
@@ -341,29 +209,4 @@ pub enum Pose {
     Sliding,
     Shooting,
     Inhaling,
-}
-
-impl Pose {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Standing => "standing",
-            Self::FallFlying => "fall_flying",
-            Self::Sleeping => "sleeping",
-            Self::Swimming => "swimming",
-            Self::SpinAttack => "spin_attack",
-            Self::Crouching => "crouching",
-            Self::LongJumping => "long_jumping",
-            Self::Dying => "dying",
-            Self::Croaking => "croaking",
-            Self::UsingTongue => "using_tongue",
-            Self::Sitting => "sitting",
-            Self::Roaring => "roaring",
-            Self::Sniffing => "sniffing",
-            Self::Emerging => "emerging",
-            Self::Digging => "digging",
-            Self::Sliding => "sliding",
-            Self::Shooting => "shooting",
-            Self::Inhaling => "inhaling",
-        }
-    }
 }

@@ -10,9 +10,9 @@ pub struct FireworkExplosion<'a> {
     pub has_twinkle: bool,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[mser(varint)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
+#[mser(varint, camel_case)]
 pub enum Shape {
     SmallBall,
     LargeBall,
@@ -22,16 +22,6 @@ pub enum Shape {
 }
 
 impl Shape {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::SmallBall => "small_ball",
-            Self::LargeBall => "large_ball",
-            Self::Star => "star",
-            Self::Creeper => "creeper",
-            Self::Burst => "burst",
-        }
-    }
-
     pub const fn translation_key(self) -> Translatable<'static> {
         Translatable("item.minecraft.firework_star.shape.", self.name())
     }

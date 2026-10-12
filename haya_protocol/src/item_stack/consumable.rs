@@ -9,9 +9,9 @@ pub struct Consumable<'a> {
     pub sound: Holder<SoundEvent<'a>, sound_event>,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[mser(varint)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
+#[mser(varint, camel_case)]
 pub enum ItemUseAnimation {
     None,
     Eat,
@@ -25,23 +25,4 @@ pub enum ItemUseAnimation {
     Brush,
     Bundle,
     Spear,
-}
-
-impl ItemUseAnimation {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::None => "none",
-            Self::Eat => "eat",
-            Self::Drink => "drink",
-            Self::Block => "block",
-            Self::Bow => "bow",
-            Self::Trident => "trident",
-            Self::Crossbow => "crossbow",
-            Self::Spyglass => "spyglass",
-            Self::TootHorn => "toot_horn",
-            Self::Brush => "brush",
-            Self::Bundle => "bundle",
-            Self::Spear => "spear",
-        }
-    }
 }

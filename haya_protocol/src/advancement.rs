@@ -152,23 +152,13 @@ impl<'a> Write for DisplayInfo<'a> {
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum AdvancementType {
     Task,
     Challenge,
     Goal,
-}
-
-impl AdvancementType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Task => "task",
-            Self::Challenge => "challenge",
-            Self::Goal => "goal",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

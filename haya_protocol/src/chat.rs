@@ -69,23 +69,13 @@ pub struct ChatTypeDecoration<'a> {
     pub style: StyleRaw,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum Parameter {
     Sender,
     Target,
     Content,
-}
-
-impl Parameter {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Sender => "sender",
-            Self::Target => "target",
-            Self::Content => "content",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -109,23 +99,13 @@ pub enum FilterMask<'a> {
     PartiallyFiltered { mask: BitSet<'a> },
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint)]
+#[mser(varint, camel_case)]
 pub enum FilterMaskType {
     PassThrough,
     FullyFiltered,
     PartiallyFiltered,
-}
-
-impl FilterMaskType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::PassThrough => "pass_through",
-            Self::FullyFiltered => "fully_filtered",
-            Self::PartiallyFiltered => "partially_filtered",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
