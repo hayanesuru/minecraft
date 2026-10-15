@@ -12,7 +12,7 @@ use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
 use haya_nbt::{StringTag, Tag};
 use haya_str::HayaStr;
 use minecraft_data::data_component_type;
-use mser::{Either, Error, Read, Reader, Utf8, V32, Write, Writer};
+use mser::{ByteArray, Either, Error, Read, Reader, Utf8, V32, Write, Writer};
 
 pub mod advancement;
 pub mod attribute;
@@ -44,7 +44,6 @@ pub mod serverbound;
 pub mod sound;
 pub mod stat;
 pub mod structure;
-pub mod text;
 pub mod trading;
 pub mod trim;
 pub mod types;
@@ -572,7 +571,10 @@ pub struct RgbColor {
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-pub struct MilliSeconds(pub u64);
+pub struct Instant(pub u64);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct PublicKey<'a>(pub ByteArray<'a, 512>);
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]

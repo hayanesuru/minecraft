@@ -1,8 +1,95 @@
 use crate::registry::ChatTypeRef;
-use crate::{BitSet, ComponentRaw, Holder, MilliSeconds, StyleRaw};
+use crate::{BitSet, ComponentRaw, Holder, Instant, PublicKey, StyleRaw};
 use haya_collection::List;
 use mser::{ByteArray, FixedByteArray, Read, Utf8, V32, Write};
 use uuid::Uuid;
+
+extern crate alloc;
+
+pub mod click_event;
+pub mod dialog;
+pub mod hover_event;
+pub mod text;
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Bound<'a> {
+    pub chat_type: Holder<ChatType<'a>, ChatTypeRef>,
+    pub name: ComponentRaw,
+    pub target_name: Option<ComponentRaw>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatType<'a> {
+    pub chat: ChatTypeDecoration<'a>,
+    pub narration: ChatTypeDecoration<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ChatTypeDecoration<'a> {
+    pub translation_key: Utf8<'a>,
+    pub parameters: List<'a, Parameter>,
+    pub style: StyleRaw,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
+#[repr(u8)]
+#[mser(varint, camel_case)]
+pub enum Parameter {
+    Sender,
+    Target,
+    Content,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SignedMessageBodyPacked<'a> {
+    pub content: Utf8<'a, 256>,
+    pub timestamp: Instant,
+    pub salt: u64,
+    pub last_seen: LastSeenMessagesPacked<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LastSeenMessagesPacked<'a> {
+    pub entries: List<'a, MessageSignaturePacked<'a>, 20>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = FilterMaskType, camel_case)]
+pub enum FilterMask<'a> {
+    PassThrough,
+    FullyFiltered,
+    PartiallyFiltered { mask: BitSet<'a> },
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
+#[repr(u8)]
+#[mser(varint, camel_case)]
+pub enum FilterMaskType {
+    PassThrough,
+    FullyFiltered,
+    PartiallyFiltered,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RemoteChatSession<'a> {
+    pub session_id: Uuid,
+    pub profile_public_key: ProfilePublicKey<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ProfilePublicKey<'a> {
+    pub expires_at: Instant,
+    pub key: PublicKey<'a>,
+    pub key_signature: ByteArray<'a, 4096>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LastSeenMessagesUpdate<'a> {
+    #[mser(varint)]
+    pub offset: u32,
+    pub acknowledged: FixedByteArray<'a, 3>,
+    pub checksum: u8,
+}
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct MessageSignature<'a> {
@@ -47,84 +134,4 @@ impl<'a> Read<'a> for MessageSignaturePacked<'a> {
             Self::Index(id)
         })
     }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Bound<'a> {
-    pub chat_type: Holder<ChatType<'a>, ChatTypeRef>,
-    pub name: ComponentRaw,
-    pub target_name: Option<ComponentRaw>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ChatType<'a> {
-    pub chat: ChatTypeDecoration<'a>,
-    pub narration: ChatTypeDecoration<'a>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ChatTypeDecoration<'a> {
-    pub translation_key: Utf8<'a>,
-    pub parameters: List<'a, Parameter>,
-    pub style: StyleRaw,
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize, Name)]
-#[repr(u8)]
-#[mser(varint, camel_case)]
-pub enum Parameter {
-    Sender,
-    Target,
-    Content,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct SignedMessageBodyPacked<'a> {
-    pub content: Utf8<'a, 256>,
-    pub timestamp: MilliSeconds,
-    pub salt: u64,
-    pub last_seen: LastSeenMessagesPacked<'a>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct LastSeenMessagesPacked<'a> {
-    pub entries: List<'a, MessageSignaturePacked<'a>, 20>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[mser(header = FilterMaskType, camel_case)]
-pub enum FilterMask<'a> {
-    PassThrough,
-    FullyFiltered,
-    PartiallyFiltered { mask: BitSet<'a> },
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize, Name)]
-#[repr(u8)]
-#[mser(varint, camel_case)]
-pub enum FilterMaskType {
-    PassThrough,
-    FullyFiltered,
-    PartiallyFiltered,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RemoteChatSession<'a> {
-    pub session_id: Uuid,
-    pub profile_public_key: ProfilePublicKey<'a>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ProfilePublicKey<'a> {
-    pub expires_at: MilliSeconds,
-    pub key: ByteArray<'a, 512>,
-    pub key_signature: ByteArray<'a, 4096>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct LastSeenMessagesUpdate<'a> {
-    #[mser(varint)]
-    pub offset: u32,
-    pub acknowledged: FixedByteArray<'a, 3>,
-    pub checksum: u8,
 }

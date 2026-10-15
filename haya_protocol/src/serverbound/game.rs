@@ -1,10 +1,10 @@
-use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
+use crate::chat::text::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
     BlockHitResult, CommandBlockEntityMode, ContainerInput, Difficulty, EntityId, GameType,
-    HashedStack, Input, JointTypeName, MilliSeconds, Mirror, OptionalV32, Rotation, StructureMode,
+    HashedStack, Input, Instant, JointTypeName, Mirror, OptionalV32, Rotation, StructureMode,
     StructureUpdateType, TestBlockMode, TestInstanceData,
 };
 use haya_collection::{List, Map};
@@ -68,7 +68,7 @@ pub struct ChatCommand<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChatCommandSigned<'a> {
     pub command: Utf8<'a>,
-    pub time_stamp: MilliSeconds,
+    pub time_stamp: Instant,
     pub salt: u64,
     pub argument_signatures: ArgumentSignatures<'a>,
     pub last_seen_messages: LastSeenMessagesUpdate<'a>,
@@ -77,7 +77,7 @@ pub struct ChatCommandSigned<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Chat<'a> {
     pub message: Utf8<'a, 256>,
-    pub time_stamp: MilliSeconds,
+    pub time_stamp: Instant,
     pub salt: u64,
     pub signature: Option<MessageSignature<'a>>,
     pub last_seen_messages: LastSeenMessagesUpdate<'a>,
