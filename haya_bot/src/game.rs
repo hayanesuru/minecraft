@@ -156,6 +156,8 @@ impl<'a> GameHandler for Game<'a> {
 
     fn entity_position_sync(&mut self, _: game::EntityPositionSync) {}
 
+    fn add_transient_block(&mut self, packet: game::AddTransientBlock) {}
+
     fn explode(&mut self, _: game::Explode<'_>) {}
 
     fn forget_level_chunk(&mut self, _: game::ForgetLevelChunk) {}
@@ -247,6 +249,8 @@ impl<'a> GameHandler for Game<'a> {
     fn resource_pack_pop(&mut self, _: game::ResourcePackPop) {}
 
     fn resource_pack_push(&mut self, _: game::ResourcePackPush<'_>) {}
+
+    fn post_effects(&mut self, packet: common::GamePostEffects<'_>) {}
 
     fn respawn(&mut self, _: game::Respawn<'_>) {}
 

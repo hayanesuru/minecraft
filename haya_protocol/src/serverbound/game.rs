@@ -1,4 +1,4 @@
-use crate::chat::text::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
+use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};

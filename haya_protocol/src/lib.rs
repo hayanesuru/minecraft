@@ -867,6 +867,9 @@ impl haya_nbt::Deserialize for Identifier {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct NetworkPayload<'a>(pub Map<'a, Ident<'a>, List<'a, V32>>);
+
 const fn key(n: &'static str) -> StringTag {
     StringTag::from_ascii_nonzero(n.as_bytes()).unwrap()
 }

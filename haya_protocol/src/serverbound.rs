@@ -43,7 +43,9 @@ macro_rules! packets {
                 Ok(())
             }
         $(
-            fn $variant(&mut self, packet: $type);
+            fn $variant(&mut self, packet: $type) {
+                let _ = packet;
+            }
         )+
         }
     };

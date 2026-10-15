@@ -41,7 +41,9 @@ macro_rules! packets {
                 Ok(())
             }
         $(
-            fn $variant(&mut self, packet: $type);
+            fn $variant(&mut self, packet: $type) {
+                let _ = packet;
+            }
         )+
         }
     };
@@ -78,6 +80,7 @@ packets! {
     registry_data = configuration::RegistryData<'_>,
     resource_pack_pop = common::ResourcePackPop,
     resource_pack_push = common::ResourcePackPush<'_>,
+    post_effects = common::ConfigurationPostEffects<'_>,
     store_cookie = common::ConfigurationStoreCookie<'_>,
     transfer = common::ConfigurationTransfer<'_>,
     update_enabled_features = configuration::UpdateEnabledFeatures<'_>,
@@ -130,6 +133,7 @@ packets! {
     entity_event = game::EntityEvent,
     entity_position_sync = game::EntityPositionSync,
     explode = game::Explode<'_>,
+    add_transient_block = game::AddTransientBlock,
     forget_level_chunk = game::ForgetLevelChunk,
     game_event = game::GameEvent,
     game_rule_values = game::GameRuleValues<'_>,
@@ -175,6 +179,7 @@ packets! {
     reset_score = game::ResetScore<'_>,
     resource_pack_pop = game::ResourcePackPop,
     resource_pack_push = game::ResourcePackPush<'_>,
+    post_effects = common::GamePostEffects<'_>,
     respawn = game::Respawn<'_>,
     rotate_head = game::RotateHead,
     section_blocks_update = game::SectionBlocksUpdate<'_>,

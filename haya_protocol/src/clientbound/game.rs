@@ -68,10 +68,7 @@ pub struct Animate {
 #[repr(u8)]
 #[mser(varint)]
 pub enum AnimateAction {
-    SwingMainHand,
-    Unused,
     WakeUp,
-    SwingOffHand,
     CriticalHit,
     MagicCriticalHit,
 }
@@ -219,7 +216,7 @@ pub struct ChunkBiomes<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChunkBiomeData<'a> {
     pub pos: ChunkPos,
-    pub data: ByteArray<'a, 2097152>,
+    pub buffer: ByteArray<'a, 2097152>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -371,7 +368,7 @@ pub struct DisguisedChat<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EntityEvent {
     pub entity_id: u32,
-    pub event_id: u8,
+    pub event_id: crate::entity::EntityEvent,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -399,6 +396,12 @@ pub struct Explode<'a> {
     pub explosion_particle: Particle<'a>,
     pub explosion_sound: Holder<SoundEvent<'a>, sound_event>,
     pub block_particles: WeightedList<'a, ExplosionParticleInfo<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AddTransientBlock {
+    pub pos: BlockPosPacked,
+    pub state: block_state,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
