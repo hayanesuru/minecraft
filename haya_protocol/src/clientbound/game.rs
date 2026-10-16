@@ -14,7 +14,7 @@ use crate::inventory::{ContainerId, EquipmentSlot, InteractionHand};
 use crate::item_stack::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
 use crate::minecart::MinecartStep;
-use crate::particle::{ExplosionParticleInfo, Particle};
+use crate::particle::{ExplosionParticleInfo, Particle, RandomizationType};
 use crate::profile::PropertyMapRef;
 use crate::registry::{DamageTypeRef, DimensionTypeRef, WorldClockRef};
 use crate::score::{
@@ -535,15 +535,19 @@ pub struct LevelEvent {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LevelParticles<'a> {
+    pub particle: Particle<'a>,
     pub override_limiter: bool,
     pub always_show: bool,
     pub pos: Vec3,
     pub x_dist: f32,
     pub y_dist: f32,
     pub z_dist: f32,
-    pub max_speed: f32,
+    pub x_max_speed: f32,
+    pub y_max_speed: f32,
+    pub z_max_speed: f32,
+    #[mser(varint)]
     pub count: u32,
-    pub particle: Particle<'a>,
+    pub randomization_type: RandomizationType,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

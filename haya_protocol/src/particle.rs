@@ -49,6 +49,9 @@ pub enum Particle<'a> {
     Infested,
     CherryLeaves,
     PaleOakLeaves,
+    RedPoplarLeaves,
+    OrangePoplarLeaves,
+    YellowPoplarLeaves,
     TintedLeaves(ColorParticleOption),
     SculkSoul,
     SculkCharge(SculkChargeParticleOptions),
@@ -220,4 +223,13 @@ pub struct ExplosionParticleInfo<'a> {
     pub particle: Particle<'a>,
     pub scaling: f32,
     pub speed: f32,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum RandomizationType {
+    Default,
+    Alternative,
+    AlternativeWithSpeed,
 }
