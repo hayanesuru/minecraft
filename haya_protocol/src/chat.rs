@@ -33,7 +33,7 @@ pub struct ChatTypeDecoration<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum Parameter {
     Sender,
     Target,
@@ -54,7 +54,7 @@ pub struct LastSeenMessagesPacked<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = FilterMaskType, camel_case)]
+#[mser(header = FilterMaskType, PascalCase)]
 pub enum FilterMask<'a> {
     PassThrough,
     FullyFiltered,
@@ -63,7 +63,7 @@ pub enum FilterMask<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum FilterMaskType {
     PassThrough,
     FullyFiltered,

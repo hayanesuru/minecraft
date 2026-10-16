@@ -59,7 +59,7 @@ pub struct TextColorRgb {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Name)]
-#[mser(camel_case)]
+#[repr(u8)]
 pub enum TextColorNamed {
     Black,
     DarkBlue,

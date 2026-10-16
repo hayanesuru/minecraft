@@ -131,7 +131,7 @@ packets! {
     disconnect = common::GameDisconnect,
     disguised_chat = game::DisguisedChat<'_>,
     entity_event = game::EntityEvent,
-    entity_position_sync = game::EntityPositionSync,
+    entity_position_sync = game::EntityPositionSync<'_>,
     explode = game::Explode<'_>,
     add_transient_block = game::AddTransientBlock,
     forget_level_chunk = game::ForgetLevelChunk,

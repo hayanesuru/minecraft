@@ -358,7 +358,7 @@ pub struct SeenAdvancements<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = SeenAdvancementsType, camel_case)]
+#[mser(header = SeenAdvancementsType, PascalCase)]
 pub enum SeenAdvancementsAction<'a> {
     OpenedTab { tab: Ident<'a> },
     ClosedScreen,

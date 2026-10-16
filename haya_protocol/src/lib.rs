@@ -26,7 +26,7 @@ pub mod debug;
 pub mod decoration;
 pub mod effect;
 pub mod entity;
-pub mod entity_data;
+pub mod entity_event;
 pub mod food;
 pub mod game_event;
 pub mod inventory;
@@ -86,7 +86,7 @@ pub struct ServerLinkUntrustedEntry<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum KnownLinkType {
     ReportBug,
     CommunityGuidelines,
@@ -121,7 +121,7 @@ pub struct ClientInformation<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum ChatVisibility {
     Full,
     System,
@@ -136,7 +136,7 @@ impl ChatVisibility {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum ParticleStatus {
     All,
     Decreased,
@@ -151,7 +151,7 @@ impl ParticleStatus {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum Difficulty {
     Peaceful,
     Easy,
@@ -167,7 +167,7 @@ impl Difficulty {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum Rarity {
     Common,
     Uncommon,
@@ -236,7 +236,7 @@ pub enum Holder<T, R> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum DyeColor {
     White,
     Orange,
@@ -363,7 +363,6 @@ pub struct BitSet<'a>(pub List<'a, u64>);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(camel_case)]
 pub enum GameType {
     Survival,
     Creative,
@@ -412,7 +411,7 @@ pub struct GlobalPos<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum EntityAnchor {
     Feet,
     Eyes,
@@ -464,7 +463,7 @@ pub struct Rotations {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum WeatheringCopperState {
     Unaffected,
     Exposed,
@@ -628,7 +627,7 @@ pub enum CommandBlockEntityMode {
 
 #[derive(Serialize, Deserialize, Clone, Copy, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum JointType {
     Rollable,
     Aligned,
@@ -673,7 +672,7 @@ pub enum StructureUpdateType {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum StructureMode {
     Save,
     Load,
@@ -683,7 +682,7 @@ pub enum StructureMode {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum Mirror {
     None,
     LeftRight,
@@ -713,7 +712,7 @@ impl Rotation {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum TestBlockMode {
     Start,
     Log,
@@ -733,7 +732,7 @@ pub struct TestInstanceData<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum TestInstanceStatus {
     Cleared,
     Running,

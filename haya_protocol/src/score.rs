@@ -101,7 +101,7 @@ impl TeamCollisionRule {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum TeamColor {
     Black,
     DarkBlue,

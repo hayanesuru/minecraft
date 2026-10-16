@@ -22,7 +22,7 @@ mod kw {
     syn::custom_keyword!(varint);
     syn::custom_keyword!(filter);
     syn::custom_keyword!(header);
-    syn::custom_keyword!(camel_case);
+    syn::custom_keyword!(PascalCase);
     syn::custom_keyword!(name);
 }
 
@@ -30,7 +30,7 @@ mod kw {
 struct Attrs {
     varint: bool,
     header: Option<syn::Path>,
-    camel_case: bool,
+    pascal_case: bool,
     filter: Option<syn::Path>,
     name: Option<Ident>,
 }
@@ -47,9 +47,9 @@ impl syn::parse::Parse for Attrs {
                 let _: kw::header = input.parse()?;
                 let _: syn::Token![=] = input.parse()?;
                 attr.header = Some(input.parse::<syn::Path>()?);
-            } else if lookahead.peek(kw::camel_case) {
-                let _: kw::camel_case = input.parse()?;
-                attr.camel_case = true;
+            } else if lookahead.peek(kw::PascalCase) {
+                let _: kw::PascalCase = input.parse()?;
+                attr.pascal_case = true;
             } else if lookahead.peek(kw::filter) {
                 let _: kw::filter = input.parse()?;
                 let _: syn::Token![=] = input.parse()?;
@@ -78,7 +78,7 @@ fn crate_name(input: &DeriveInput) -> Result<(Attrs, syn::Path), syn::Error> {
             let Attrs {
                 varint,
                 header,
-                camel_case,
+                pascal_case: camel_case,
                 filter,
                 name,
             } = attr.parse_args()?;
@@ -89,7 +89,7 @@ fn crate_name(input: &DeriveInput) -> Result<(Attrs, syn::Path), syn::Error> {
                 find.header = Some(h);
             }
             if camel_case {
-                find.camel_case = true;
+                find.pascal_case = true;
             }
             if let Some(f) = filter {
                 find.filter = Some(f);
@@ -262,7 +262,7 @@ fn ty(ty: &syn::Type) -> Ty {
 
 fn ident_case(a: &Attrs, ident: &syn::Ident) -> String {
     let s = ident.to_string();
-    if a.camel_case {
+    if a.pascal_case {
         return s;
     }
     let mut result = String::with_capacity(s.len());

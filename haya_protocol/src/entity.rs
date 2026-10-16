@@ -1,12 +1,23 @@
-use crate::ComponentRaw;
+use crate::inventory::HumanoidArm;
+use crate::item_stack::OptionalItemStack;
+use crate::particle::Particle;
+use crate::profile::ResolvableProfileRef;
+use crate::registry::{
+    CatSoundVariantRef, CatVariantRef, ChickenSoundVariantRef, ChickenVariantRef,
+    CowSoundVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef, PigSoundVariantRef,
+    PigVariantRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
+};
+use crate::{ComponentRaw, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
+use haya_collection::List;
 use haya_ident::Ident;
-use minecraft_data::{villager_profession, villager_type};
-use mser::{Read, V21, Write};
+use haya_math::{BlockPosPacked, Direction, FQuat, FVec3};
+use minecraft_data::{block_state, villager_profession, villager_type};
+use mser::{Read, Utf8, V21, Write};
 use uuid::Uuid;
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum FoxVariant {
     Red,
     Snow,
@@ -23,7 +34,7 @@ pub enum SalmonVariant {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum ParrotVariant {
     RedBlue,
     Blue,
@@ -34,7 +45,7 @@ pub enum ParrotVariant {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum TropicalFishPattern {
     Kob,
     Sunstreak,
@@ -52,7 +63,7 @@ pub enum TropicalFishPattern {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum MushroomCowVariant {
     Red,
     Brown,
@@ -60,7 +71,7 @@ pub enum MushroomCowVariant {
 
 #[derive(Clone, Copy, Name)]
 #[repr(u8)]
-#[mser(camel_case)]
+#[mser(varint)]
 pub enum RabbitVariant {
     Brown,
     White,
@@ -97,7 +108,7 @@ impl<'a> Read<'a> for RabbitVariant {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum EquineVariant {
     White,
     Creamy,
@@ -121,7 +132,7 @@ pub struct PaintingVariant<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum LlamaVariant {
     Creamy,
     White,
@@ -131,7 +142,7 @@ pub enum LlamaVariant {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum AxolotlVariant {
     Lucy,
     Wild,
@@ -155,7 +166,7 @@ pub struct VillagerData {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum ArmadilloState {
     Idle,
     Rolling,
@@ -178,7 +189,7 @@ pub enum SnifferState {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum CopperGolemState {
     Idle,
     GettingItem,
@@ -189,7 +200,7 @@ pub enum CopperGolemState {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum Pose {
     Standing,
     FallFlying,
@@ -213,78 +224,97 @@ pub enum Pose {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
-pub enum EntityEvent {
-    Unused0,
-    Jump,
-    KineticHit,
-    Death,
-    StartAttacking,
-    StopAttacking,
-    TamingFailed,
-    TamingSucceeded,
-    ShakeWetness,
-    UseItemComplete,
-    EatGrass,
-    OfferFlower,
-    LoveHearts,
-    VillagerAngry,
-    VillagerHappy,
-    WitchHatMagic,
-    ZombieConverting,
-    FireworksExplode,
-    InLoveHearts,
-    SquidAnimSynch,
-    SilverfishMergeAnim,
-    GuardianAttackSound,
-    ReducedDebugInfo,
-    FullDebugInfo,
-    PermissionLevelAll,
-    PermissionLevelModerators,
-    PermissionLevelGamemasters,
-    PermissionLevelAdmins,
-    PermissionLevelOwners,
-    Unused29,
-    Unused30,
-    FishingRodReelIn,
-    ArmorstandWobble,
-    Unused33,
-    StopOfferFlower,
-    ProtectedFromDeath,
-    Unused36,
-    Unused37,
-    DolphinLookingForTreasure,
-    RavagerStunned,
-    TrustingFailed,
-    TrustingSucceeded,
-    VillagerSweat,
-    Unused43,
-    Unused44,
-    FoxEat,
-    Teleport,
-    MainhandBreak,
-    OffhandBreak,
-    HeadBreak,
-    ChestBreak,
-    LegsBreak,
-    FeetBreak,
-    HoneySlide,
-    HoneyJump,
-    SwapHands,
-    CancelShakeWetness,
-    Unused57,
-    StartRam,
-    EndRam,
-    Poof,
-    TendrilsShiver,
-    SonicCharge,
-    SnifferDiggingSound,
-    ArmadilloPeek,
-    BodyBreak,
-    Shake,
-    DrownParticles,
-    SaddleBreak,
-    RavagerRoared,
-    TntPrime,
-    BoatSink,
-    BoatLaunch,
+#[mser(varint)]
+pub enum EntityDataSerializers {
+    Byte,
+    Int,
+    Long,
+    Float,
+    String,
+    Component,
+    OptionalComponent,
+    ItemStack,
+    Boolean,
+    Rotations,
+    BlockPos,
+    OptionalBlockPos,
+    Direction,
+    OptionalLivingEntityReference,
+    BlockState,
+    OptionalBlockState,
+    Particle,
+    Particles,
+    VillagerData,
+    OptionalUnsignedInt,
+    Pose,
+    CatVariant,
+    CatSoundVariant,
+    CowVariant,
+    CowSoundVariant,
+    WolfVariant,
+    WolfSoundVariant,
+    FrogVariant,
+    PigVariant,
+    PigSoundVariant,
+    ChickenVariant,
+    ChickenSoundVariant,
+    ZombieNautilusVariant,
+    OptionalGlobalPos,
+    PaintingVariant,
+    SnifferState,
+    ArmadilloState,
+    CopperGolemState,
+    WeatheringCopperState,
+    Vector3,
+    Quaternion,
+    ResolvableProfile,
+    HumanoidArm,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[mser(header = EntityDataSerializers, PascalCase)]
+pub enum EntityDataSerializer<'a> {
+    Byte(u8),
+    Int(#[mser(varint)] u32),
+    Long(#[mser(varint)] u64),
+    Float(f32),
+    String(Utf8<'a>),
+    Component(ComponentRaw),
+    OptionalComponent(Option<ComponentRaw>),
+    ItemStack(OptionalItemStack<'a>),
+    Boolean(bool),
+    Rotations(Rotations),
+    BlockPos(BlockPosPacked),
+    OptionalBlockPos(Option<BlockPosPacked>),
+    Direction(Direction),
+    OptionalLivingEntityReference(Option<EntityReference>),
+    BlockState(block_state),
+    OptionalBlockState(block_state),
+    Particle(Particle<'a>),
+    Particles(List<'a, Particle<'a>>),
+    VillagerData(VillagerData),
+    OptionalUnsignedInt(OptionalV32),
+    Pose(Pose),
+    CatVariant(CatVariantRef),
+    CatSoundVariant(CatSoundVariantRef),
+    CowVariant(CowVariantRef),
+    CowSoundVariant(CowSoundVariantRef),
+    WolfVariant(WolfVariantRef),
+    WolfSoundVariant(WolfSoundVariantRef),
+    FrogVariant(FrogVariantRef),
+    PigVariant(PigVariantRef),
+    PigSoundVariant(PigSoundVariantRef),
+    ChickenVariant(ChickenVariantRef),
+    ChickenSoundVariant(ChickenSoundVariantRef),
+    ZombieNautilusVariant(ZombieNautilusVariantRef),
+    OptionalGlobalPos(Option<GlobalPos<'a>>),
+    PaintingVariant(Holder<PaintingVariant<'a>, PaintingVariantRef>),
+    SnifferState(SnifferState),
+    ArmadilloState(ArmadilloState),
+    CopperGolemState(CopperGolemState),
+    WeatheringCopperState(WeatheringCopperState),
+    Vector3(FVec3),
+    Quaternion(FQuat),
+    ResolvableProfile(ResolvableProfileRef<'a>),
+    HumanoidArm(HumanoidArm),
 }

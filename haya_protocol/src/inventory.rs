@@ -2,7 +2,7 @@ use crate::Translatable;
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum HumanoidArm {
     Left,
     Right,
@@ -19,7 +19,7 @@ pub struct ContainerId(#[mser(varint)] pub u32);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum EquipmentSlotGroup {
     Any,
     Mainhand,
@@ -36,7 +36,7 @@ pub enum EquipmentSlotGroup {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum EquipmentSlot {
     Mainhand,
     Feet,

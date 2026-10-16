@@ -9,7 +9,7 @@ use crate::crafting::{
     RecipeDisplay, RecipeDisplayEntry, RecipeDisplayId, RecipePropertySet, SingleInputSet,
 };
 use crate::debug::{DebugSubscriptionEvent, DebugSubscriptionUpdate, RemoteDebugSampleType};
-use crate::entity_data::EntityDataSerializer;
+use crate::entity::EntityDataSerializer;
 use crate::inventory::{ContainerId, EquipmentSlot, InteractionHand};
 use crate::item_stack::OptionalItemStack;
 use crate::map::{MapDecoration, MapId, MapPatch};
@@ -123,7 +123,7 @@ pub struct BossEvent {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = BossEventOperationType, camel_case)]
+#[mser(header = BossEventOperationType, PascalCase)]
 pub enum BossEventOperation {
     Add {
         name: ComponentRaw,
@@ -368,23 +368,39 @@ pub struct DisguisedChat<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EntityEvent {
     pub entity_id: u32,
-    pub event_id: crate::entity::EntityEvent,
+    pub event_id: crate::entity_event::EntityEvent,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct EntityPositionSync {
+pub struct EntityPositionSync<'a> {
     #[mser(varint)]
     pub id: u32,
-    pub values: PositionMoveRotation,
+    pub position: PositionPath<'a>,
+    pub y_rot: f32,
+    pub x_rot: f32,
     pub on_ground: bool,
 }
 
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum PositionPathType {
+    Linear,
+    Stepped,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
-pub struct PositionMoveRotation {
+#[mser(header = PositionPathType, PascalCase)]
+pub enum PositionPath<'a> {
+    Linear(Vec3),
+    Stepped(List<'a, PositionStep>),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PositionStep {
     pub position: Vec3,
-    pub delta_movement: Vec3,
-    pub y_rot: f32,
-    pub x_rot: f32,
+    #[mser(varint)]
+    pub tick_offset: u32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -396,6 +412,7 @@ pub struct Explode<'a> {
     pub explosion_particle: Particle<'a>,
     pub explosion_sound: Holder<SoundEvent<'a>, sound_event>,
     pub block_particles: WeightedList<'a, ExplosionParticleInfo<'a>>,
+    pub play_sound: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -486,7 +503,7 @@ pub struct LevelChunkWithLight<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChunkData<'a> {
     pub heightmaps: Map<'a, HeightmapType, List<'a, u64>>,
-    pub data: ByteArray<'a>,
+    pub data: ByteArray<'a, 2097152>,
     pub block_entities_data: List<'a, BlockEntityInfo>,
 }
 
@@ -941,7 +958,6 @@ pub struct PlayerLookAtEntity {
 pub struct PlayerPosition {
     #[mser(varint)]
     pub id: u32,
-    pub change: PositionMoveRotation,
     pub relatives: Relatives,
 }
 
@@ -1298,7 +1314,7 @@ pub struct SetObjective<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = SetObjectiveMethodType, camel_case)]
+#[mser(header = SetObjectiveMethodType, PascalCase)]
 pub enum SetObjectiveMethod {
     Add {
         display_name: ComponentRaw,
@@ -1351,7 +1367,7 @@ pub enum SetPlayerTeamMethodType {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = SetPlayerTeamMethodType, camel_case)]
+#[mser(header = SetPlayerTeamMethodType, PascalCase)]
 pub enum SetPlayerTeamMethod<'a> {
     Add {
         parameters: SetPlayerTeamParameters,
@@ -1529,7 +1545,6 @@ pub struct TakeItemEntity {
 pub struct TeleportEntity {
     #[mser(varint)]
     pub id: u32,
-    pub change: PositionMoveRotation,
     pub relatives: Relatives,
     pub on_ground: bool,
 }

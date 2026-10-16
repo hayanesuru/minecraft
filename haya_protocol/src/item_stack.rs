@@ -421,7 +421,7 @@ pub struct SwingAnimation {
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
-#[mser(varint, camel_case)]
+#[mser(varint)]
 pub enum SwingAnimationType {
     None,
     Whack,
