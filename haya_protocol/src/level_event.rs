@@ -1,82 +1,312 @@
-pub const SOUND_DISPENSER_DISPENSE: u32 = 1000;
-pub const SOUND_DISPENSER_FAIL: u32 = 1001;
-pub const SOUND_DISPENSER_PROJECTILE_LAUNCH: u32 = 1002;
-pub const SOUND_FIREWORK_SHOOT: u32 = 1004;
-pub const SOUND_EXTINGUISH_FIRE: u32 = 1009;
-pub const SOUND_PLAY_JUKEBOX_SONG: u32 = 1010;
-pub const SOUND_STOP_JUKEBOX_SONG: u32 = 1011;
-pub const SOUND_GHAST_WARNING: u32 = 1015;
-pub const SOUND_GHAST_FIREBALL: u32 = 1016;
-pub const SOUND_DRAGON_FIREBALL: u32 = 1017;
-pub const SOUND_BLAZE_FIREBALL: u32 = 1018;
-pub const SOUND_ZOMBIE_WOODEN_DOOR: u32 = 1019;
-pub const SOUND_ZOMBIE_IRON_DOOR: u32 = 1020;
-pub const SOUND_ZOMBIE_DOOR_CRASH: u32 = 1021;
-pub const SOUND_WITHER_BLOCK_BREAK: u32 = 1022;
-pub const SOUND_WITHER_BOSS_SPAWN: u32 = 1023;
-pub const SOUND_WITHER_BOSS_SHOOT: u32 = 1024;
-pub const SOUND_BAT_LIFTOFF: u32 = 1025;
-pub const SOUND_ZOMBIE_INFECTED: u32 = 1026;
-pub const SOUND_ZOMBIE_CONVERTED: u32 = 1027;
-pub const SOUND_DRAGON_DEATH: u32 = 1028;
-pub const SOUND_ANVIL_BROKEN: u32 = 1029;
-pub const SOUND_ANVIL_USED: u32 = 1030;
-pub const SOUND_ANVIL_LAND: u32 = 1031;
-pub const SOUND_PORTAL_TRAVEL: u32 = 1032;
-pub const SOUND_CHORUS_GROW: u32 = 1033;
-pub const SOUND_CHORUS_DEATH: u32 = 1034;
-pub const SOUND_BREWING_STAND_BREW: u32 = 1035;
-pub const SOUND_END_PORTAL_SPAWN: u32 = 1038;
-pub const SOUND_PHANTOM_BITE: u32 = 1039;
-pub const SOUND_ZOMBIE_TO_DROWNED: u32 = 1040;
-pub const SOUND_HUSK_TO_ZOMBIE: u32 = 1041;
-pub const SOUND_GRINDSTONE_USED: u32 = 1042;
-pub const SOUND_PAGE_TURN: u32 = 1043;
-pub const SOUND_SMITHING_TABLE_USED: u32 = 1044;
-pub const SOUND_POINTED_DRIPSTONE_LAND: u32 = 1045;
-pub const SOUND_DRIP_LAVA_INTO_CAULDRON: u32 = 1046;
-pub const SOUND_DRIP_WATER_INTO_CAULDRON: u32 = 1047;
-pub const SOUND_SKELETON_TO_STRAY: u32 = 1048;
-pub const SOUND_CRAFTER_CRAFT: u32 = 1049;
-pub const SOUND_CRAFTER_FAIL: u32 = 1050;
-pub const SOUND_WIND_CHARGE_SHOOT: u32 = 1051;
-pub const COMPOSTER_FILL: u32 = 1500;
-pub const LAVA_FIZZ: u32 = 1501;
-pub const REDSTONE_TORCH_BURNOUT: u32 = 1502;
-pub const END_PORTAL_FRAME_FILL: u32 = 1503;
-pub const DRIPSTONE_DRIP: u32 = 1504;
-pub const PARTICLES_AND_SOUND_PLANT_GROWTH: u32 = 1505;
-pub const PARTICLES_SHOOT_SMOKE: u32 = 2000;
-pub const PARTICLES_DESTROY_BLOCK: u32 = 2001;
-pub const PARTICLES_SPELL_POTION_SPLASH: u32 = 2002;
-pub const PARTICLES_EYE_OF_ENDER_DEATH: u32 = 2003;
-pub const PARTICLES_MOBBLOCK_SPAWN: u32 = 2004;
-pub const PARTICLES_DRAGON_FIREBALL_SPLASH: u32 = 2006;
-pub const PARTICLES_INSTANT_POTION_SPLASH: u32 = 2007;
-pub const PARTICLES_DRAGON_BLOCK_BREAK: u32 = 2008;
-pub const PARTICLES_WATER_EVAPORATING: u32 = 2009;
-pub const PARTICLES_SHOOT_WHITE_SMOKE: u32 = 2010;
-pub const PARTICLES_BEE_GROWTH: u32 = 2011;
-pub const PARTICLES_TURTLE_EGG_PLACEMENT: u32 = 2012;
-pub const PARTICLES_SMASH_ATTACK: u32 = 2013;
-pub const ANIMATION_END_GATEWAY_SPAWN: u32 = 3000;
-pub const ANIMATION_DRAGON_SUMMON_ROAR: u32 = 3001;
-pub const PARTICLES_ELECTRIC_SPARK: u32 = 3002;
-pub const PARTICLES_AND_SOUND_WAX_ON: u32 = 3003;
-pub const PARTICLES_WAX_OFF: u32 = 3004;
-pub const PARTICLES_SCRAPE: u32 = 3005;
-pub const PARTICLES_SCULK_CHARGE: u32 = 3006;
-pub const PARTICLES_SCULK_SHRIEK: u32 = 3007;
-pub const PARTICLES_AND_SOUND_BRUSH_BLOCK_COMPLETE: u32 = 3008;
-pub const PARTICLES_EGG_CRACK: u32 = 3009;
-pub const PARTICLES_TRIAL_SPAWNER_SPAWN: u32 = 3011;
-pub const PARTICLES_TRIAL_SPAWNER_SPAWN_MOB_AT: u32 = 3012;
-pub const PARTICLES_TRIAL_SPAWNER_DETECT_PLAYER: u32 = 3013;
-pub const ANIMATION_TRIAL_SPAWNER_EJECT_ITEM: u32 = 3014;
-pub const ANIMATION_VAULT_ACTIVATE: u32 = 3015;
-pub const ANIMATION_VAULT_DEACTIVATE: u32 = 3016;
-pub const ANIMATION_VAULT_EJECT_ITEM: u32 = 3017;
-pub const ANIMATION_SPAWN_COBWEB: u32 = 3018;
-pub const PARTICLES_TRIAL_SPAWNER_DETECT_PLAYER_OMINOUS: u32 = 3019;
-pub const PARTICLES_TRIAL_SPAWNER_BECOME_OMINOUS: u32 = 3020;
-pub const PARTICLES_TRIAL_SPAWNER_SPAWN_ITEM: u32 = 3021;
+#[derive(Clone, Copy)]
+pub enum LevelEvent {
+    None,
+    SoundDispenserDispense,
+    SoundDispenserFail,
+    SoundDispenserProjectileLaunch,
+    SoundFireworkShoot,
+    SoundExtinguishFire,
+    SoundPlayJukeboxSong,
+    SoundStopJukeboxSong,
+    SoundGhastWarning,
+    SoundGhastFireball,
+    SoundDragonFireball,
+    SoundBlazeFireball,
+    SoundZombieWoodenDoor,
+    SoundZombieIronDoor,
+    SoundZombieDoorCrash,
+    SoundWitherBlockBreak,
+    SoundWitherBossSpawn,
+    SoundWitherBossShoot,
+    SoundBatLiftoff,
+    SoundZombieInfected,
+    SoundZombieConverted,
+    SoundDragonDeath,
+    SoundAnvilBroken,
+    SoundAnvilUsed,
+    SoundAnvilLand,
+    SoundPortalTravel,
+    SoundChorusGrow,
+    SoundChorusDeath,
+    SoundBrewingStandBrew,
+    SoundEndPortalSpawn,
+    SoundPhantomBite,
+    SoundZombieToDrowned,
+    SoundHuskToZombie,
+    SoundGrindstoneUsed,
+    SoundPageTurn,
+    SoundSmithingTableUsed,
+    SoundPointedDripstoneLand,
+    SoundDripLavaIntoCauldron,
+    SoundDripWaterIntoCauldron,
+    SoundSkeletonToStray,
+    SoundCrafterCraft,
+    SoundCrafterFail,
+    SoundWindChargeShoot,
+    SoundSulfurSpikeLand,
+    SoundSpellPotionSplash,
+    SoundInstantPotionSplash,
+    ComposterFill,
+    LavaFizz,
+    RedstoneTorchBurnout,
+    EndPortalFrameFill,
+    DripstoneDrip,
+    ParticlesAndSoundPlantGrowth,
+    ParticlesShootSmoke,
+    ParticlesAndSoundDestroyBlock,
+    ParticlesSpellPotionSplash,
+    ParticlesEyeOfEnderDeath,
+    ParticlesMobblockSpawn,
+    ParticlesDragonFireballSplash,
+    ParticlesInstantPotionSplash,
+    ParticlesDragonBlockBreak,
+    ParticlesWaterEvaporating,
+    ParticlesShootWhiteSmoke,
+    ParticlesBeeGrowth,
+    ParticlesTurtleEggPlacement,
+    ParticlesSmashAttack,
+    ParticlesDestroyBlock,
+    ParticlesDragonEggTeleport,
+    ParticlesShulkerTeleport,
+    ParticlesConsumeEffectTeleport,
+    ParticlesEndermanTeleport,
+    ParticlesDestroyProgress,
+    ParticlesAndSoundDestroyProgress,
+    AnimationEndGatewaySpawn,
+    AnimationDragonSummonRoar,
+    ParticlesElectricSpark,
+    ParticlesWaxOn,
+    ParticlesWaxOff,
+    ParticlesScrape,
+    ParticlesSculkCharge,
+    ParticlesSculkShriek,
+    ParticlesAndSoundBrushBlockComplete,
+    ParticlesEggCrack,
+    ParticlesTrialSpawnerSpawn,
+    ParticlesTrialSpawnerSpawnMobAt,
+    ParticlesTrialSpawnerDetectPlayer,
+    AnimationTrialSpawnerEjectItem,
+    AnimationVaultActivate,
+    AnimationVaultDeactivate,
+    AnimationVaultEjectItem,
+    AnimationSpawnCobweb,
+    ParticlesTrialSpawnerDetectPlayerOminous,
+    ParticlesTrialSpawnerBecomeOminous,
+    ParticlesTrialSpawnerSpawnItem,
+}
+
+impl LevelEvent {
+    pub const fn id(self) -> u32 {
+        match self {
+            Self::None => u32::MAX,
+            Self::SoundDispenserDispense => 1000,
+            Self::SoundDispenserFail => 1001,
+            Self::SoundDispenserProjectileLaunch => 1002,
+            Self::SoundFireworkShoot => 1004,
+            Self::SoundExtinguishFire => 1009,
+            Self::SoundPlayJukeboxSong => 1010,
+            Self::SoundStopJukeboxSong => 1011,
+            Self::SoundGhastWarning => 1015,
+            Self::SoundGhastFireball => 1016,
+            Self::SoundDragonFireball => 1017,
+            Self::SoundBlazeFireball => 1018,
+            Self::SoundZombieWoodenDoor => 1019,
+            Self::SoundZombieIronDoor => 1020,
+            Self::SoundZombieDoorCrash => 1021,
+            Self::SoundWitherBlockBreak => 1022,
+            Self::SoundWitherBossSpawn => 1023,
+            Self::SoundWitherBossShoot => 1024,
+            Self::SoundBatLiftoff => 1025,
+            Self::SoundZombieInfected => 1026,
+            Self::SoundZombieConverted =>1027,
+            Self::SoundDragonDeath=>1028,
+            Self::SoundAnvilBroken=>1029,
+            Self::SoundAnvilUsed =>1030,
+            Self::SoundAnvilLand=>1031,
+            Self::SoundPortalTravel=>1032,
+            Self::SoundChorusGrow=>1033,
+            Self::SoundChorusDeath=>1034,
+            Self::SoundBrewingStandBrew=>1035,
+            Self::SoundEndPortalSpawn=>1038,
+            Self::SoundPhantomBite=>1039,
+            Self::SoundZombieToDrowned => 1040,
+            Self::SoundHuskToZombie => 1041,
+            Self::SoundGrindstoneUsed=>1042,
+            Self::SoundPageTurn=>1043,
+            Self::SoundSmithingTableUsed=>1044,
+            Self::SoundPointedDripstoneLand=>1045,
+            Self::SoundDripLavaIntoCauldron=>1046,
+            Self::SoundDripWaterIntoCauldron => 1047,
+            Self::SoundSkeletonToStray=> 1048,
+            Self::SoundCrafterCraft => 1049,
+            Self::SoundCrafterFail => 1050,
+            Self::SoundWindChargeShoot => 1051,
+            Self::SoundSulfurSpikeLand => 1052,
+            Self::SoundSpellPotionSplash => 1053,
+            Self::SoundInstantPotionSplash => 1054,
+            Self::ComposterFill => 1500,
+            Self::LavaFizz => 1501,
+            Self::RedstoneTorchBurnout=>1502,
+            Self::EndPortalFrameFill=>1503,
+            Self::DripstoneDrip=>1504,
+            Self::ParticlesAndSoundPlantGrowth=>1505,
+            Self::ParticlesShootSmoke => 2000,
+            Self::ParticlesAndSoundDestroyBlock => 2001,
+            Self::ParticlesSpellPotionSplash => 2002,
+            Self::ParticlesEyeOfEnderDeath => 2003,
+            Self::ParticlesMobblockSpawn => 2004,
+            Self::ParticlesDragonFireballSplash => 2006,
+            Self::ParticlesInstantPotionSplash=> 2007,
+            Self::ParticlesDragonBlockBreak => 2008,
+            Self::ParticlesWaterEvaporating=> 2009,
+            Self::ParticlesShootWhiteSmoke=>2010,
+            Self::ParticlesBeeGrowth=>2011,
+            Self::ParticlesTurtleEggPlacement =>2012,
+            Self::ParticlesSmashAttack=> 2013,
+            Self::ParticlesDestroyBlock => 2014,
+            Self::ParticlesDragonEggTeleport => 2015,
+            Self::ParticlesShulkerTeleport => 2016,
+            Self::ParticlesConsumeEffectTeleport => 2017,
+            Self::ParticlesEndermanTeleport => 2018,
+            Self::ParticlesDestroyProgress => 2019,
+            Self::ParticlesAndSoundDestroyProgress =>2020,
+            Self::AnimationEndGatewaySpawn => 3000,
+            Self::AnimationDragonSummonRoar => 3001,
+            Self::ParticlesElectricSpark => 3002,
+            Self::ParticlesWaxOn => 3003,
+            Self::ParticlesWaxOff => 3004,
+            Self::ParticlesScrape => 3005,
+            Self::ParticlesSculkCharge => 3006,
+            Self::ParticlesSculkShriek => 3007,
+            Self::ParticlesAndSoundBrushBlockComplete => 3008,
+            Self::ParticlesEggCrack => 3009,
+            Self::ParticlesTrialSpawnerSpawn => 3011,
+            Self::ParticlesTrialSpawnerSpawnMobAt => 3012,
+            Self::ParticlesTrialSpawnerDetectPlayer => 3013,
+            Self::AnimationTrialSpawnerEjectItem => 3014,
+            Self::AnimationVaultActivate => 3015,
+            Self::AnimationVaultDeactivate =>3016,
+            Self::AnimationVaultEjectItem => 3017,
+            Self::AnimationSpawnCobweb => 3018,
+            Self::ParticlesTrialSpawnerDetectPlayerOminous =>3019,
+            Self::ParticlesTrialSpawnerBecomeOminous =>3020,
+            Self::ParticlesTrialSpawnerSpawnItem => 3021,
+        }
+    }
+
+    pub const fn new(id: u32) -> Self {
+        match id {
+            1000 => Self::SoundDispenserDispense,
+            1001 => Self::SoundDispenserFail,
+            1002 => Self::SoundDispenserProjectileLaunch,
+            1004 => Self::SoundFireworkShoot,
+            1009 => Self::SoundExtinguishFire,
+            1010 => Self::SoundPlayJukeboxSong,
+            1011 => Self::SoundStopJukeboxSong,
+            1015 => Self::SoundGhastWarning,
+            1016 => Self::SoundGhastFireball,
+            1017 => Self::SoundDragonFireball,
+            1018 => Self::SoundBlazeFireball,
+            1019 => Self::SoundZombieWoodenDoor,
+            1020 => Self::SoundZombieIronDoor,
+            1021 => Self::SoundZombieDoorCrash,
+            1022 => Self::SoundWitherBlockBreak,
+            1023 => Self::SoundWitherBossSpawn,
+            1024 => Self::SoundWitherBossShoot,
+            1025=>Self::SoundBatLiftoff,
+            1026=>Self::SoundZombieInfected,
+            1027=>Self::SoundZombieConverted,
+            1028=>Self::SoundDragonDeath,
+            1029=>Self::SoundAnvilBroken,
+            1030=>Self::SoundAnvilUsed,
+            1031=>Self::SoundAnvilLand,
+            1032=>Self::SoundPortalTravel,
+            1033=>Self::SoundChorusGrow,
+            1034=>Self::SoundChorusDeath,
+            1035=>Self::SoundBrewingStandBrew,
+            1038=>Self::SoundEndPortalSpawn,
+            1039=>Self::SoundPhantomBite,
+            1040=>Self::SoundZombieToDrowned,
+            1041=>Self::SoundHuskToZombie,
+            1042=>Self::SoundGrindstoneUsed,
+            1043=>Self::SoundPageTurn,
+            1044=>Self::SoundSmithingTableUsed,
+            1045=>Self::SoundPointedDripstoneLand,
+            1046=>Self::SoundDripLavaIntoCauldron,
+            1047=>Self::SoundDripWaterIntoCauldron,
+            1048=>Self::SoundSkeletonToStray,
+            1049=>Self::SoundCrafterCraft,
+            1050=>Self::SoundCrafterFail,
+            1051=>Self::SoundWindChargeShoot,
+            1052=>Self::SoundSulfurSpikeLand,
+            1053=>Self::SoundSpellPotionSplash,
+            1054=>Self::SoundInstantPotionSplash,
+            1500=>Self::ComposterFill,
+            1501=>Self::LavaFizz,
+            1502=>Self::RedstoneTorchBurnout,
+            1503=>Self::EndPortalFrameFill,
+            1504=>Self::DripstoneDrip,
+            1505=>Self::ParticlesAndSoundPlantGrowth,
+            2000=>Self::ParticlesShootSmoke,
+            2001=>Self::ParticlesAndSoundDestroyBlock,
+            2002=>Self::ParticlesSpellPotionSplash,
+            2003=>Self::ParticlesEyeOfEnderDeath,
+            2004=>Self::ParticlesMobblockSpawn,
+            2006=>Self::ParticlesDragonFireballSplash,
+            2007=>Self::ParticlesInstantPotionSplash,
+            2008=>Self::ParticlesDragonBlockBreak,
+            2009=>Self::ParticlesWaterEvaporating,
+            2010=>Self::ParticlesShootWhiteSmoke,
+            2011=>Self::ParticlesBeeGrowth,
+            2012=>Self::ParticlesTurtleEggPlacement,
+            2013=>Self::ParticlesSmashAttack,
+            2014=>Self::ParticlesDestroyBlock,
+            2015=>Self::ParticlesDragonEggTeleport,
+            2016=>Self::ParticlesShulkerTeleport,
+            2017=>Self::ParticlesConsumeEffectTeleport,
+            2018=>Self::ParticlesEndermanTeleport,
+            2019=>Self::ParticlesDestroyProgress,
+            2020=>Self::ParticlesAndSoundDestroyProgress,
+            3000=>Self::AnimationEndGatewaySpawn,
+            3001=>Self::AnimationDragonSummonRoar,
+            3002=>Self::ParticlesElectricSpark,
+            3003=>Self::ParticlesWaxOn,
+            3004=>Self::ParticlesWaxOff,
+            3005=>Self::ParticlesScrape,
+            3006=>Self::ParticlesSculkCharge,
+            3007=>Self::ParticlesSculkShriek,
+            3008=>Self::ParticlesAndSoundBrushBlockComplete,
+            3009=>Self::ParticlesEggCrack,
+            3011=>Self::ParticlesTrialSpawnerSpawn,
+            3012=>Self::ParticlesTrialSpawnerSpawnMobAt,
+            3013=>Self::ParticlesTrialSpawnerDetectPlayer,
+            3014=>Self::AnimationTrialSpawnerEjectItem,
+            3015=>Self::AnimationVaultActivate,
+            3016=>Self::AnimationVaultDeactivate,
+            3017=>Self::AnimationVaultEjectItem,
+            3018=>Self::AnimationSpawnCobweb,
+            3019=>Self::ParticlesTrialSpawnerDetectPlayerOminous,
+            3020=>Self::ParticlesTrialSpawnerBecomeOminous,
+            3021=>Self::ParticlesTrialSpawnerSpawnItem,
+            _ => Self::None,
+        }
+    }
+}
+
+impl mser::Write for LevelEvent {
+    unsafe fn write(&self, w: &mut mser::Writer) {
+        unsafe {
+            <u32 as mser::Write>::write(&self.id(), w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        4
+    }
+}
+
+impl<'a> mser::Read<'a> for LevelEvent {
+    fn read(buf: &mut mser::Reader<'a>) -> Result<Self, mser::Error> {
+        Ok(Self::new(<u32 as mser::Read>::read(buf)?))
+    }
+}

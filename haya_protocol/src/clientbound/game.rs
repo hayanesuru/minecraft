@@ -527,7 +527,7 @@ pub struct LightData<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LevelEvent {
-    pub ty: u32,
+    pub ty: crate::level_event::LevelEvent,
     pub pos: BlockPosPacked,
     pub data: u32,
     pub global_event: bool,
