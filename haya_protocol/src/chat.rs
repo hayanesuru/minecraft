@@ -131,7 +131,7 @@ impl<'a> Read<'a> for MessageSignaturePacked<'a> {
         Ok(if id == 0 {
             Self::FullSignature(MessageSignature::read(buf)?)
         } else {
-            Self::Index(id)
+            Self::Index(id - 1)
         })
     }
 }
