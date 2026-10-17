@@ -22,20 +22,23 @@ use crate::entity::{
     AxolotlVariant, EquineVariant, FoxVariant, LlamaVariant, MushroomCowVariant, PaintingVariant,
     ParrotVariant, RabbitVariant, SalmonVariant, TropicalFishPattern,
 };
-use crate::food::FoodProperties;
+use crate::food::{FoodProperties, VillagerFood};
 use crate::inventory::EquipmentSlot;
 use crate::map::MapId;
 use crate::profile::ResolvableProfileRef;
 use crate::registry::{
     BannerPatternRef, BlockTransformerRef, CatSoundVariantRef, CatVariantRef,
     ChickenSoundVariantRef, ChickenVariantRef, CowSoundVariantRef, CowVariantRef, DamageTypeRef,
-    FrogVariantRef, InstrumentRef, JukeboxSongRef, PaintingVariantRef, PigSoundVariantRef,
-    PigVariantRef, TrimMaterialRef, TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef,
-    WolfVariantRef, ZombieNautilusVariantRef,
+    DecoratedPotPatternsRef, FrogVariantRef, InstrumentRef, JukeboxSongRef, PaintingVariantRef,
+    PigSoundVariantRef, PigVariantRef, TrimMaterialRef, TrimPatternRef, VillagerTypeRef,
+    WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
-use crate::{ComponentRaw, DyeColor, Filterable, Holder, HolderSet, LockCode, Rarity};
+use crate::{
+    ComponentRaw, DyeColor, Filterable, Holder, HolderSet, LockCode, Rarity, ResolvableFloat,
+    ResolvableInt,
+};
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, TagKey};
@@ -576,6 +579,45 @@ pub struct SulfurCubeContent<'a> {
 pub struct SeededContainerLoot(pub Tag);
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Compostable<'a> {
+    pub layers: ResolvableInt<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MobVisibility<'a> {
+    pub targeting_entity_types: HolderSet<'a, entity_type>,
+    pub visibility: f32,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CookingFuel<'a> {
+    pub burn_time: ResolvableInt<'a>,
+    pub speed_multiplier: ResolvableFloat<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BrewingFuel<'a> {
+    pub uses: ResolvableInt<'a>,
+    pub speed_multiplier: ResolvableFloat<'a>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SignText {
+    pub messages: SignTextData,
+    pub filtered_messages: Option<SignTextData>,
+    pub color: DyeColor,
+    pub has_glowing_text: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SignTextData {
+    pub line1: ComponentRaw,
+    pub line2: ComponentRaw,
+    pub line3: ComponentRaw,
+    pub line4: ComponentRaw,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 #[mser(header = data_component_type)]
 pub enum TypedDataComponent<'a> {
     CustomData(CustomData),
@@ -662,7 +704,10 @@ pub enum TypedDataComponent<'a> {
     Lock(LockCode),
     ContainerLoot(SeededContainerLoot),
     BreakSound(Holder<SoundEvent<'a>, sound_event>),
-
+    Compostable(Compostable<'a>),
+    CookingFuel(CookingFuel<'a>),
+    BrewingFuel(BrewingFuel<'a>),
+    MobVisibility(MobVisibility<'a>),
     VillagerVariant(VillagerTypeRef),
     WolfVariant(WolfVariantRef),
     WolfSoundVariant(WolfSoundVariantRef),
@@ -692,15 +737,14 @@ pub enum TypedDataComponent<'a> {
     CatCollar(DyeColor),
     SheepColor(DyeColor),
     ShulkerColor(DyeColor),
+    ProvidesPotteryPattern(DecoratedPotPatternsRef),
+    SignTextFront(SignText),
+    SignTextBack(SignText),
+    Waxed,
+    CushionColor(DyeColor),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DataComponentExactPredicate<'a> {
     pub expected_components: List<'a, TypedDataComponent<'a>>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct VillagerFood {
-    #[mser(varint)]
-    nutrition: u32,
 }

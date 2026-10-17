@@ -382,7 +382,7 @@ impl<'a> Read<'a> for Integer {
         } else {
             i32::MAX
         };
-        Ok(Integer { min, max })
+        Ok(Self { min, max })
     }
 }
 
@@ -399,7 +399,7 @@ impl<'a> Read<'a> for Long {
         } else {
             i64::MAX
         };
-        Ok(Long { min, max })
+        Ok(Self { min, max })
     }
 }
 
@@ -408,7 +408,7 @@ impl<'a> Read<'a> for Entity {
         let flags = u8::read(buf)?;
         let single = flags & FLAG_SINGLE != 0;
         let players_only = flags & FLAG_PLAYERS_ONLY != 0;
-        Ok(Entity {
+        Ok(Self {
             single,
             players_only,
         })

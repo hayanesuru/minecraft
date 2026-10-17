@@ -5,3 +5,9 @@ pub struct FoodProperties {
     pub saturation: f32,
     pub can_always_eat: bool,
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct VillagerFood {
+    #[mser(varint)]
+    nutrition: u32,
+}

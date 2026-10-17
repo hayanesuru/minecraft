@@ -44,6 +44,7 @@ decl![
     DialogRef,
     WorldClockRef,
     BlockTransformerRef,
+    DecoratedPotPatternsRef,
 ];
 
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, sound_event> {

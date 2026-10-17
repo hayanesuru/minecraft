@@ -1,7 +1,7 @@
 use crate::Client;
 use haya_protocol::clientbound::{GameHandler, common, cookie, game, ping};
 use haya_protocol::serverbound::common::{GameKeepAlive, KeepAlive};
-use haya_protocol::serverbound::game::{AcceptTeleportation, ClientInformation};
+use haya_protocol::serverbound::game::ClientInformation;
 use minecraft_data::clientbound_play;
 use mser::{Read, Reader, Utf8, V21};
 use tokio::io::AsyncReadExt;
@@ -156,8 +156,6 @@ impl<'a> GameHandler for Game<'a> {
 
     fn entity_position_sync(&mut self, _: game::EntityPositionSync) {}
 
-    fn add_transient_block(&mut self, packet: game::AddTransientBlock) {}
-
     fn explode(&mut self, _: game::Explode<'_>) {}
 
     fn forget_level_chunk(&mut self, _: game::ForgetLevelChunk) {}
@@ -228,8 +226,8 @@ impl<'a> GameHandler for Game<'a> {
 
     fn player_look_at(&mut self, _: game::PlayerLookAt) {}
 
-    fn player_position(&mut self, p: game::PlayerPosition) {
-        self.c.write(&AcceptTeleportation { id: p.id });
+    fn player_position(&mut self, _p: game::PlayerPosition) {
+        // self.c.write(&AcceptTeleportation { id: p.id });
     }
 
     fn player_rotation(&mut self, _: game::PlayerRotation) {}
@@ -249,8 +247,6 @@ impl<'a> GameHandler for Game<'a> {
     fn resource_pack_pop(&mut self, _: game::ResourcePackPop) {}
 
     fn resource_pack_push(&mut self, _: game::ResourcePackPush<'_>) {}
-
-    fn post_effects(&mut self, packet: common::GamePostEffects<'_>) {}
 
     fn respawn(&mut self, _: game::Respawn<'_>) {}
 

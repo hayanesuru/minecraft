@@ -234,6 +234,12 @@ pub enum Holder<T, R> {
     Direct(T),
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResolvableInt<'a>(Either<u32, ResourceKey<'a>>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ResolvableFloat<'a>(Either<f32, ResourceKey<'a>>);
+
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
 #[mser(varint)]
