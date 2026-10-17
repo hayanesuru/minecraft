@@ -1,4 +1,3 @@
-use crate::key;
 use core::str::FromStr;
 use haya_nbt::{Deserialize, Serialize, StringTag, Tag};
 use haya_str::{HayaStr, hex_to_u8, u8_to_hex};
@@ -59,7 +58,8 @@ pub struct TextColorRgb {
     pub blue: u8,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Name)]
+#[repr(u8)]
 pub enum TextColorNamed {
     Black,
     DarkBlue,
@@ -192,109 +192,16 @@ impl TextColorNamed {
             },
         }
     }
-
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Black => BLACK,
-            Self::DarkBlue => DARK_BLUE,
-            Self::DarkGreen => DARK_GREEN,
-            Self::DarkAqua => DARK_AQUA,
-            Self::DarkRed => DARK_RED,
-            Self::DarkPurple => DARK_PURPLE,
-            Self::Gold => GOLD,
-            Self::Gray => GRAY,
-            Self::DarkGray => DARK_GRAY,
-            Self::Blue => BLUE,
-            Self::Green => GREEN,
-            Self::Aqua => AQUA,
-            Self::Red => RED,
-            Self::LightPurple => LIGHT_PURPLE,
-            Self::Yellow => YELLOW,
-            Self::White => WHITE,
-        }
-    }
-}
-
-const BLACK: &str = "black";
-const DARK_BLUE: &str = "dark_blue";
-const DARK_GREEN: &str = "dark_green";
-const DARK_AQUA: &str = "dark_aqua";
-const DARK_RED: &str = "dark_red";
-const DARK_PURPLE: &str = "dark_purple";
-const GOLD: &str = "gold";
-const GRAY: &str = "gray";
-const DARK_GRAY: &str = "dark_gray";
-const BLUE: &str = "blue";
-const GREEN: &str = "green";
-const AQUA: &str = "aqua";
-const RED: &str = "red";
-const LIGHT_PURPLE: &str = "light_purple";
-const YELLOW: &str = "yellow";
-const WHITE: &str = "white";
-const BLACK_K: StringTag = key(BLACK);
-const DARK_BLUE_K: StringTag = key(DARK_BLUE);
-const DARK_GREEN_K: StringTag = key(DARK_GREEN);
-const DARK_AQUA_K: StringTag = key(DARK_AQUA);
-const DARK_RED_K: StringTag = key(DARK_RED);
-const DARK_PURPLE_K: StringTag = key(DARK_PURPLE);
-const GOLD_K: StringTag = key(GOLD);
-const GRAY_K: StringTag = key(GRAY);
-const DARK_GRAY_K: StringTag = key(DARK_GRAY);
-const BLUE_K: StringTag = key(BLUE);
-const GREEN_K: StringTag = key(GREEN);
-const AQUA_K: StringTag = key(AQUA);
-const RED_K: StringTag = key(RED);
-const LIGHT_PURPLE_K: StringTag = key(LIGHT_PURPLE);
-const YELLOW_K: StringTag = key(YELLOW);
-const WHITE_K: StringTag = key(WHITE);
-
-impl FromStr for TextColorNamed {
-    type Err = Error;
-
-    fn from_str(n: &str) -> Result<Self, Self::Err> {
-        Ok(match n {
-            BLACK => Self::Black,
-            DARK_BLUE => Self::DarkBlue,
-            DARK_GREEN => Self::DarkGreen,
-            DARK_AQUA => Self::DarkAqua,
-            DARK_RED => Self::DarkRed,
-            DARK_PURPLE => Self::DarkPurple,
-            GOLD => Self::Gold,
-            GRAY => Self::Gray,
-            DARK_GRAY => Self::DarkGray,
-            BLUE => Self::Blue,
-            GREEN => Self::Green,
-            AQUA => Self::Aqua,
-            RED => Self::Red,
-            LIGHT_PURPLE => Self::LightPurple,
-            YELLOW => Self::Yellow,
-            WHITE => Self::White,
-            _ => return Err(Error),
-        })
-    }
 }
 
 impl Serialize for TextColor {
     fn serialize(&self) -> Tag {
         match self {
-            Self::Named(text_color_named) => Tag::String(match text_color_named {
-                TextColorNamed::Black => BLACK_K,
-                TextColorNamed::DarkBlue => DARK_BLUE_K,
-                TextColorNamed::DarkGreen => DARK_GREEN_K,
-                TextColorNamed::DarkAqua => DARK_AQUA_K,
-                TextColorNamed::DarkRed => DARK_RED_K,
-                TextColorNamed::DarkPurple => DARK_PURPLE_K,
-                TextColorNamed::Gold => GOLD_K,
-                TextColorNamed::Gray => GRAY_K,
-                TextColorNamed::DarkGray => DARK_GRAY_K,
-                TextColorNamed::Blue => BLUE_K,
-                TextColorNamed::Green => GREEN_K,
-                TextColorNamed::Aqua => AQUA_K,
-                TextColorNamed::Red => RED_K,
-                TextColorNamed::LightPurple => LIGHT_PURPLE_K,
-                TextColorNamed::Yellow => YELLOW_K,
-                TextColorNamed::White => WHITE_K,
-            }),
+            Self::Named(text_color_named) => unsafe {
+                Tag::String(StringTag::from_ascii_nunzero_unchecked(
+                    HayaStr::copy_from(text_color_named.name()).unwrap_unchecked(),
+                ))
+            },
             Self::Rgb(text_color_rgb) => unsafe {
                 let mut a = HayaStr::new();
                 let _ = a.try_push('#');

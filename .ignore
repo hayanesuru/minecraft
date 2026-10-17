@@ -1,3 +1,4 @@
 /minecraft_data/generated/*.txt
 /haya_nbt/unicode/*.txt
 /Cargo.lock
+/target

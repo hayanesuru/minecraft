@@ -45,14 +45,230 @@ pub enum CommandNode<'a> {
 }
 
 #[derive(Clone, Debug)]
+pub struct Float {
+    pub min: f32,
+    pub max: f32,
+}
+
+#[derive(Clone, Debug)]
+pub struct Double {
+    pub min: f64,
+    pub max: f64,
+}
+
+#[derive(Clone, Debug)]
+pub struct Integer {
+    pub min: i32,
+    pub max: i32,
+}
+
+#[derive(Clone, Debug)]
+pub struct Long {
+    pub min: i64,
+    pub max: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct Entity {
+    pub single: bool,
+    pub players_only: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct ScoreHolder {
+    pub multiple: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Time {
+    pub min: i32,
+}
+
+impl Write for Float {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let Self { min, max } = *self;
+            let mut flags = 0u8;
+            if min == f32::MIN {
+                flags |= NUMBER_FLAG_MIN;
+            }
+            if max == f32::MAX {
+                flags |= NUMBER_FLAG_MAX;
+            }
+            flags.write(w);
+            if min != f32::MIN {
+                min.write(w);
+            }
+            if max != f32::MAX {
+                max.write(w);
+            }
+        }
+    }
+    fn len_s(&self) -> usize {
+        let Self { min, max } = *self;
+        let mut w = 1;
+        if min != f32::MIN {
+            w += min.len_s();
+        }
+        if max != f32::MAX {
+            w += max.len_s();
+        }
+        w
+    }
+}
+
+impl Write for Double {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let Self { min, max } = *self;
+            let mut flags = 0u8;
+            if min == f64::MIN {
+                flags |= NUMBER_FLAG_MIN;
+            }
+            if max == f64::MAX {
+                flags |= NUMBER_FLAG_MAX;
+            }
+            flags.write(w);
+            if min != f64::MIN {
+                min.write(w);
+            }
+            if max != f64::MAX {
+                max.write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let Self { min, max } = *self;
+        let mut w = 1;
+        if min != f64::MIN {
+            w += min.len_s();
+        }
+        if max != f64::MAX {
+            w += max.len_s();
+        }
+        w
+    }
+}
+
+impl Write for Integer {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let Self { min, max } = *self;
+            let mut flags = 0u8;
+            if min == i32::MIN {
+                flags |= NUMBER_FLAG_MIN;
+            }
+            if max == i32::MAX {
+                flags |= NUMBER_FLAG_MAX;
+            }
+            flags.write(w);
+            if min != i32::MIN {
+                min.write(w);
+            }
+            if max != i32::MAX {
+                max.write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let Self { min, max } = *self;
+        let mut w = 1;
+        if min != i32::MIN {
+            w += min.len_s();
+        }
+        if max != i32::MAX {
+            w += max.len_s();
+        }
+        w
+    }
+}
+
+impl Write for Long {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let Self { min, max } = *self;
+            let mut flags = 0u8;
+            if min == i64::MIN {
+                flags |= NUMBER_FLAG_MIN;
+            }
+            if max == i64::MAX {
+                flags |= NUMBER_FLAG_MAX;
+            }
+            flags.write(w);
+            if min != i64::MIN {
+                min.write(w);
+            }
+            if max != i64::MAX {
+                max.write(w);
+            }
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        let Self { min, max } = *self;
+        let mut w = 1;
+        if min != i64::MIN {
+            w += min.len_s();
+        }
+        if max != i64::MAX {
+            w += max.len_s();
+        }
+        w
+    }
+}
+
+impl Write for Entity {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let Self {
+                single,
+                players_only,
+            } = *self;
+            let mut flags = 0u8;
+            if single {
+                flags |= FLAG_SINGLE;
+            }
+            if players_only {
+                flags |= FLAG_PLAYERS_ONLY;
+            }
+            flags.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        1
+    }
+}
+
+impl Write for ScoreHolder {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            let Self { multiple } = *self;
+            let mut flags = 0u8;
+            if multiple {
+                flags |= FLAG_MULTIPLE;
+            }
+            flags.write(w);
+        }
+    }
+
+    fn len_s(&self) -> usize {
+        1
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[mser(header = command_argument_type)]
 pub enum CommandArgument<'a> {
     Bool,
-    Float { min: f32, max: f32 },
-    Double { min: f64, max: f64 },
-    Integer { min: i32, max: i32 },
-    Long { min: i64, max: i64 },
-    String { ty: StringType },
-    Entity { single: bool, players_only: bool },
+    Float(Float),
+    Double(Double),
+    Integer(Integer),
+    Long(Long),
+    String(StringType),
+    Entity(Entity),
     GameProfile,
     BlockPos,
     ColumnPos,
@@ -77,7 +293,7 @@ pub enum CommandArgument<'a> {
     Angle,
     Rotation,
     ScoreboardSlot,
-    ScoreHolder { multiple: bool },
+    ScoreHolder(ScoreHolder),
     Swizzle,
     Team,
     ItemSlot,
@@ -89,19 +305,24 @@ pub enum CommandArgument<'a> {
     FloatRange,
     Dimension,
     Gamemode,
-    Time { min: i32 },
-    ResourceOrTag { registry_key: ResourceKey<'a> },
-    ResourceOrTagKey { registry_key: ResourceKey<'a> },
-    Resource { registry_key: ResourceKey<'a> },
-    ResourceKey { registry_key: ResourceKey<'a> },
-    ResourceSelector { registry_key: ResourceKey<'a> },
+    Time(Time),
+    ResourceOrTag(ResourceKey<'a>),
+    ResourceOrTagKey(ResourceKey<'a>),
+    Resource(ResourceKey<'a>),
+    ResourceKey(ResourceKey<'a>),
+    ResourceSelector(ResourceKey<'a>),
     TemplateMirror,
     TemplateRotation,
     Heightmap,
     LootTable,
     LootPredicate,
     LootModifier,
+    ContextFloatProvider,
+    ContextIntProvider,
+    SlotSource,
     Dialog,
+    Feature,
+    SwingAnimation,
     Uuid,
 }
 
@@ -114,398 +335,90 @@ pub enum StringType {
     GreedyPhrase,
 }
 
-impl<'a> CommandArgument<'a> {
-    pub const fn id(&self) -> command_argument_type {
-        use command_argument_type::*;
-        match self {
-            Self::Bool => bool,
-            Self::Float { .. } => float,
-            Self::Double { .. } => double,
-            Self::Integer { .. } => integer,
-            Self::Long { .. } => long,
-            Self::String { .. } => string,
-            Self::Entity { .. } => entity,
-            Self::GameProfile => game_profile,
-            Self::BlockPos => block_pos,
-            Self::ColumnPos => column_pos,
-            Self::Vec3 => vec3,
-            Self::Vec2 => vec2,
-            Self::BlockState => block_state,
-            Self::BlockPredicate => block_predicate,
-            Self::ItemStack => item_stack,
-            Self::ItemPredicate => item_predicate,
-            Self::TeamColor => team_color,
-            Self::HexColor => hex_color,
-            Self::Component => component,
-            Self::Style => style,
-            Self::Message => message,
-            Self::NbtCompoundTag => nbt_compound_tag,
-            Self::NbtTag => nbt_tag,
-            Self::NbtPath => nbt_path,
-            Self::Objective => objective,
-            Self::ObjectiveCriteria => objective_criteria,
-            Self::Operation => operation,
-            Self::Particle => particle,
-            Self::Angle => angle,
-            Self::Rotation => rotation,
-            Self::ScoreboardSlot => scoreboard_slot,
-            Self::ScoreHolder { .. } => score_holder,
-            Self::Swizzle => swizzle,
-            Self::Team => team,
-            Self::ItemSlot => item_slot,
-            Self::ItemSlots => item_slots,
-            Self::ResourceLocation => resource_location,
-            Self::Function => function,
-            Self::EntityAnchor => entity_anchor,
-            Self::IntRange => int_range,
-            Self::FloatRange => float_range,
-            Self::Dimension => dimension,
-            Self::Gamemode => gamemode,
-            Self::Time { .. } => time,
-            Self::ResourceOrTag { .. } => resource_or_tag,
-            Self::ResourceOrTagKey { .. } => resource_or_tag_key,
-            Self::Resource { .. } => resource,
-            Self::ResourceKey { .. } => resource_key,
-            Self::ResourceSelector { .. } => resource_selector,
-            Self::TemplateMirror => template_mirror,
-            Self::TemplateRotation => template_rotation,
-            Self::Heightmap => heightmap,
-            Self::LootTable => loot_table,
-            Self::LootPredicate => loot_predicate,
-            Self::LootModifier => loot_modifier,
-            Self::Dialog => dialog,
-            Self::Uuid => uuid,
-        }
-    }
-}
-
-impl Write for CommandArgument<'_> {
-    unsafe fn write(&self, w: &mut Writer) {
-        unsafe {
-            self.id().write(w);
-            match self {
-                Self::Float { min, max } => {
-                    let mut flags = 0u8;
-                    if *min == f32::MIN {
-                        flags |= NUMBER_FLAG_MIN;
-                    }
-                    if *max == f32::MAX {
-                        flags |= NUMBER_FLAG_MAX;
-                    }
-                    flags.write(w);
-                    if *min != f32::MIN {
-                        min.write(w);
-                    }
-                    if *max != f32::MAX {
-                        max.write(w);
-                    }
-                }
-                Self::Double { min, max } => {
-                    let mut flags = 0u8;
-                    if *min == f64::MIN {
-                        flags |= NUMBER_FLAG_MIN;
-                    }
-                    if *max == f64::MAX {
-                        flags |= NUMBER_FLAG_MAX;
-                    }
-                    flags.write(w);
-                    if *min != f64::MIN {
-                        min.write(w);
-                    }
-                    if *max != f64::MAX {
-                        max.write(w);
-                    }
-                }
-                Self::Integer { min, max } => {
-                    let mut flags = 0u8;
-                    if *min == i32::MIN {
-                        flags |= NUMBER_FLAG_MIN;
-                    }
-                    if *max == i32::MAX {
-                        flags |= NUMBER_FLAG_MAX;
-                    }
-                    flags.write(w);
-                    if *min != i32::MIN {
-                        min.write(w);
-                    }
-                    if *max != i32::MAX {
-                        max.write(w);
-                    }
-                }
-                Self::Long { min, max } => {
-                    let mut flags = 0u8;
-                    if *min == i64::MIN {
-                        flags |= NUMBER_FLAG_MIN;
-                    }
-                    if *max == i64::MAX {
-                        flags |= NUMBER_FLAG_MAX;
-                    }
-                    flags.write(w);
-                    if *min != i64::MIN {
-                        min.write(w);
-                    }
-                    if *max != i64::MAX {
-                        max.write(w);
-                    }
-                }
-                Self::String { ty } => {
-                    ty.write(w);
-                }
-                Self::Entity {
-                    single,
-                    players_only,
-                } => {
-                    let mut flags = 0u8;
-                    if *single {
-                        flags |= FLAG_SINGLE;
-                    }
-                    if *players_only {
-                        flags |= FLAG_PLAYERS_ONLY;
-                    }
-                    flags.write(w);
-                }
-                Self::ScoreHolder { multiple } => {
-                    let mut flags = 0u8;
-                    if *multiple {
-                        flags |= FLAG_MULTIPLE;
-                    }
-                    flags.write(w);
-                }
-                Self::Time { min } => {
-                    min.write(w);
-                }
-                Self::ResourceOrTag { registry_key } => {
-                    registry_key.write(w);
-                }
-                Self::ResourceOrTagKey { registry_key } => {
-                    registry_key.write(w);
-                }
-                Self::Resource { registry_key } => {
-                    registry_key.write(w);
-                }
-                Self::ResourceKey { registry_key } => {
-                    registry_key.write(w);
-                }
-                Self::ResourceSelector { registry_key } => {
-                    registry_key.write(w);
-                }
-                _ => {}
-            }
-        }
-    }
-    fn len_s(&self) -> usize {
-        let mut w = self.id().len_s();
-        match self {
-            Self::Float { min, max } => {
-                w += 1;
-                if *min != f32::MIN {
-                    w += min.len_s();
-                }
-                if *max != f32::MAX {
-                    w += max.len_s();
-                }
-            }
-            Self::Double { min, max } => {
-                w += 1;
-                if *min != f64::MIN {
-                    w += min.len_s();
-                }
-                if *max != f64::MAX {
-                    w += max.len_s();
-                }
-            }
-            Self::Integer { min, max } => {
-                w += 1;
-                if *min != i32::MIN {
-                    w += min.len_s();
-                }
-                if *max != i32::MAX {
-                    w += max.len_s();
-                }
-            }
-            Self::Long { min, max } => {
-                w += 1;
-                if *min != i64::MIN {
-                    w += min.len_s();
-                }
-                if *max != i64::MAX {
-                    w += max.len_s();
-                }
-            }
-            Self::String { ty } => {
-                w += ty.len_s();
-            }
-            Self::Entity {
-                single: _,
-                players_only: _,
-            } => {
-                w += 1;
-            }
-            Self::ScoreHolder { multiple: _ } => {
-                w += 1;
-            }
-            Self::Time { min } => {
-                w += min.len_s();
-            }
-            Self::ResourceOrTag { registry_key } => {
-                w += registry_key.len_s();
-            }
-            Self::ResourceOrTagKey { registry_key } => {
-                w += registry_key.len_s();
-            }
-            Self::Resource { registry_key } => {
-                w += registry_key.len_s();
-            }
-            Self::ResourceKey { registry_key } => {
-                w += registry_key.len_s();
-            }
-            Self::ResourceSelector { registry_key } => {
-                w += registry_key.len_s();
-            }
-            _ => {}
-        }
-        w
-    }
-}
-
-impl<'a> Read<'a> for CommandArgument<'a> {
+impl<'a> Read<'a> for Float {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
-        use command_argument_type::*;
+        let flags = u8::read(buf)?;
+        let min = if flags & NUMBER_FLAG_MIN != 0 {
+            f32::read(buf)?
+        } else {
+            f32::MIN
+        };
+        let max = if flags & NUMBER_FLAG_MAX != 0 {
+            f32::read(buf)?
+        } else {
+            f32::MAX
+        };
+        Ok(Self { min, max })
+    }
+}
 
-        Ok(match command_argument_type::read(buf)? {
-            bool => Self::Bool,
-            float => {
-                let flags = u8::read(buf)?;
-                let min = if flags & NUMBER_FLAG_MIN != 0 {
-                    f32::read(buf)?
-                } else {
-                    f32::MIN
-                };
-                let max = if flags & NUMBER_FLAG_MAX != 0 {
-                    f32::read(buf)?
-                } else {
-                    f32::MAX
-                };
-                Self::Float { min, max }
-            }
-            double => {
-                let flags = u8::read(buf)?;
-                let min = if flags & NUMBER_FLAG_MIN != 0 {
-                    f64::read(buf)?
-                } else {
-                    f64::MIN
-                };
-                let max = if flags & NUMBER_FLAG_MAX != 0 {
-                    f64::read(buf)?
-                } else {
-                    f64::MAX
-                };
-                Self::Double { min, max }
-            }
-            integer => {
-                let flags = u8::read(buf)?;
-                let min = if flags & NUMBER_FLAG_MIN != 0 {
-                    i32::read(buf)?
-                } else {
-                    i32::MIN
-                };
-                let max = if flags & NUMBER_FLAG_MAX != 0 {
-                    i32::read(buf)?
-                } else {
-                    i32::MAX
-                };
-                Self::Integer { min, max }
-            }
-            long => {
-                let flags = u8::read(buf)?;
-                let min = if flags & NUMBER_FLAG_MIN != 0 {
-                    i64::read(buf)?
-                } else {
-                    i64::MIN
-                };
-                let max = if flags & NUMBER_FLAG_MAX != 0 {
-                    i64::read(buf)?
-                } else {
-                    i64::MAX
-                };
-                Self::Long { min, max }
-            }
-            string => Self::String {
-                ty: StringType::read(buf)?,
-            },
-            entity => {
-                let flags = u8::read(buf)?;
-                let single = flags & FLAG_SINGLE != 0;
-                let players_only = flags & FLAG_PLAYERS_ONLY != 0;
-                Self::Entity {
-                    single,
-                    players_only,
-                }
-            }
-            game_profile => Self::GameProfile,
-            block_pos => Self::BlockPos,
-            column_pos => Self::ColumnPos,
-            vec3 => Self::Vec3,
-            vec2 => Self::Vec2,
-            block_state => Self::BlockState,
-            block_predicate => Self::BlockPredicate,
-            item_stack => Self::ItemStack,
-            item_predicate => Self::ItemPredicate,
-            team_color => Self::TeamColor,
-            hex_color => Self::HexColor,
-            component => Self::Component,
-            style => Self::Style,
-            message => Self::Message,
-            nbt_compound_tag => Self::NbtCompoundTag,
-            nbt_tag => Self::NbtTag,
-            nbt_path => Self::NbtPath,
-            objective => Self::Objective,
-            objective_criteria => Self::ObjectiveCriteria,
-            operation => Self::Operation,
-            particle => Self::Particle,
-            angle => Self::Angle,
-            rotation => Self::Rotation,
-            scoreboard_slot => Self::ScoreboardSlot,
-            score_holder => Self::ScoreHolder {
-                multiple: (u8::read(buf)? & FLAG_MULTIPLE) != 0,
-            },
-            swizzle => Self::Swizzle,
-            team => Self::Team,
-            item_slot => Self::ItemSlot,
-            item_slots => Self::ItemSlots,
-            resource_location => Self::ResourceLocation,
-            function => Self::Function,
-            entity_anchor => Self::EntityAnchor,
-            int_range => Self::IntRange,
-            float_range => Self::FloatRange,
-            dimension => Self::Dimension,
-            gamemode => Self::Gamemode,
-            time => Self::Time {
-                min: i32::read(buf)?,
-            },
-            resource_or_tag => Self::ResourceOrTag {
-                registry_key: ResourceKey::read(buf)?,
-            },
-            resource_or_tag_key => Self::ResourceOrTagKey {
-                registry_key: ResourceKey::read(buf)?,
-            },
-            resource => Self::Resource {
-                registry_key: ResourceKey::read(buf)?,
-            },
-            resource_key => Self::ResourceKey {
-                registry_key: ResourceKey::read(buf)?,
-            },
-            resource_selector => Self::ResourceSelector {
-                registry_key: ResourceKey::read(buf)?,
-            },
-            template_mirror => Self::TemplateMirror,
-            template_rotation => Self::TemplateRotation,
-            heightmap => Self::Heightmap,
-            loot_table => Self::LootTable,
-            loot_predicate => Self::LootPredicate,
-            loot_modifier => Self::LootModifier,
-            dialog => Self::Dialog,
-            uuid => Self::Uuid,
+impl<'a> Read<'a> for Double {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = u8::read(buf)?;
+        let min = if flags & NUMBER_FLAG_MIN != 0 {
+            f64::read(buf)?
+        } else {
+            f64::MIN
+        };
+        let max = if flags & NUMBER_FLAG_MAX != 0 {
+            f64::read(buf)?
+        } else {
+            f64::MAX
+        };
+        Ok(Self { min, max })
+    }
+}
+
+impl<'a> Read<'a> for Integer {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = u8::read(buf)?;
+        let min = if flags & NUMBER_FLAG_MIN != 0 {
+            i32::read(buf)?
+        } else {
+            i32::MIN
+        };
+        let max = if flags & NUMBER_FLAG_MAX != 0 {
+            i32::read(buf)?
+        } else {
+            i32::MAX
+        };
+        Ok(Self { min, max })
+    }
+}
+
+impl<'a> Read<'a> for Long {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = u8::read(buf)?;
+        let min = if flags & NUMBER_FLAG_MIN != 0 {
+            i64::read(buf)?
+        } else {
+            i64::MIN
+        };
+        let max = if flags & NUMBER_FLAG_MAX != 0 {
+            i64::read(buf)?
+        } else {
+            i64::MAX
+        };
+        Ok(Self { min, max })
+    }
+}
+
+impl<'a> Read<'a> for Entity {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let flags = u8::read(buf)?;
+        let single = flags & FLAG_SINGLE != 0;
+        let players_only = flags & FLAG_PLAYERS_ONLY != 0;
+        Ok(Self {
+            single,
+            players_only,
+        })
+    }
+}
+
+impl<'a> Read<'a> for ScoreHolder {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        Ok(Self {
+            multiple: (u8::read(buf)? & FLAG_MULTIPLE) != 0,
         })
     }
 }

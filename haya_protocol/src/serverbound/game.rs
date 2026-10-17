@@ -1,11 +1,12 @@
+use crate::block::{CommandBlockEntityMode, SignTextSlot, TestBlockMode};
 use crate::chat::{LastSeenMessagesUpdate, MessageSignature, RemoteChatSession};
 use crate::command::ArgumentSignatures;
 use crate::crafting::RecipeDisplayId;
 use crate::inventory::{ContainerId, InteractionHand, RecipeBookType};
 use crate::{
-    BlockHitResult, CommandBlockEntityMode, ContainerInput, Difficulty, EntityId, GameType,
-    HashedStack, Input, JointTypeName, MilliSeconds, Mirror, OptionalV32, Rotation, StructureMode,
-    StructureUpdateType, TestBlockMode, TestInstanceData,
+    BlockHitResult, ContainerInput, Difficulty, EntityId, GameType, HashedStack, Input, Instant,
+    JointTypeName, Mirror, OptionalV32, Rotation, StructureMode, StructureUpdateType,
+    TestInstanceData,
 };
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
@@ -18,6 +19,9 @@ use uuid::Uuid;
 pub struct AcceptTeleportation {
     #[mser(varint)]
     pub id: u32,
+    pub pos: Vec3,
+    pub y_rot: f32,
+    pub x_rot: f32,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -68,7 +72,7 @@ pub struct ChatCommand<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ChatCommandSigned<'a> {
     pub command: Utf8<'a>,
-    pub time_stamp: MilliSeconds,
+    pub time_stamp: Instant,
     pub salt: u64,
     pub argument_signatures: ArgumentSignatures<'a>,
     pub last_seen_messages: LastSeenMessagesUpdate<'a>,
@@ -77,7 +81,7 @@ pub struct ChatCommandSigned<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Chat<'a> {
     pub message: Utf8<'a, 256>,
-    pub time_stamp: MilliSeconds,
+    pub time_stamp: Instant,
     pub salt: u64,
     pub signature: Option<MessageSignature<'a>>,
     pub last_seen_messages: LastSeenMessagesUpdate<'a>,
@@ -296,6 +300,7 @@ pub struct PlayerAction {
 #[mser(varint)]
 pub enum PlayerActionType {
     StartDestroyBlock,
+    ChangeDestroyDirection,
     AbortDestroyBlock,
     StopDestroyBlock,
     DropAllItems,
@@ -336,6 +341,9 @@ pub struct PlayerInput {
 pub struct PlayerLoaded {}
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Punch {}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RecipeBookChangeSettings {
     pub book_type: RecipeBookType,
     pub is_open: bool,
@@ -358,7 +366,7 @@ pub struct SeenAdvancements<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = SeenAdvancementsType, camel_case)]
+#[mser(header = SeenAdvancementsType, PascalCase)]
 pub enum SeenAdvancementsAction<'a> {
     OpenedTab { tab: Ident<'a> },
     ClosedScreen,
@@ -488,21 +496,16 @@ pub struct SetTestBlock<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SignUpdate<'a> {
     pub pos: BlockPosPacked,
-    pub is_front_text: bool,
     pub line1: Utf8<'a, 384>,
     pub line2: Utf8<'a, 384>,
     pub line3: Utf8<'a, 384>,
     pub line4: Utf8<'a, 384>,
+    pub slot: SignTextSlot,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SpectatorAction {
     pub spectate_entity_id: OptionalV32,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Swing {
-    pub hand: InteractionHand,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

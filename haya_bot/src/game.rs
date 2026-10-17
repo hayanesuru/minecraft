@@ -1,7 +1,7 @@
 use crate::Client;
 use haya_protocol::clientbound::{GameHandler, common, cookie, game, ping};
 use haya_protocol::serverbound::common::{GameKeepAlive, KeepAlive};
-use haya_protocol::serverbound::game::{AcceptTeleportation, ClientInformation};
+use haya_protocol::serverbound::game::ClientInformation;
 use minecraft_data::clientbound_play;
 use mser::{Read, Reader, Utf8, V21};
 use tokio::io::AsyncReadExt;
@@ -226,8 +226,8 @@ impl<'a> GameHandler for Game<'a> {
 
     fn player_look_at(&mut self, _: game::PlayerLookAt) {}
 
-    fn player_position(&mut self, p: game::PlayerPosition) {
-        self.c.write(&AcceptTeleportation { id: p.id });
+    fn player_position(&mut self, _p: game::PlayerPosition) {
+        // self.c.write(&AcceptTeleportation { id: p.id });
     }
 
     fn player_rotation(&mut self, _: game::PlayerRotation) {}

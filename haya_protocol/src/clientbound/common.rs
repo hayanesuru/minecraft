@@ -1,8 +1,8 @@
 use crate::registry::DialogRef;
-use crate::{ComponentRaw, DialogRaw, Holder, ServerLinkUntrustedEntry};
+use crate::{ComponentRaw, DialogRaw, Holder, NetworkPayload, ServerLinkUntrustedEntry};
 use haya_collection::{List, Map};
 use haya_ident::{Ident, ResourceKey};
-use mser::{ByteArray, Rest, Utf8, V32};
+use mser::{ByteArray, Rest, Utf8};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -100,7 +100,7 @@ pub struct GameUpdateTags<'a>(pub UpdateTags<'a>);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateTags<'a> {
-    pub tags: Map<'a, ResourceKey<'a>, Map<'a, Ident<'a>, List<'a, V32>>>,
+    pub tags: Map<'a, ResourceKey<'a>, NetworkPayload<'a>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -140,3 +140,14 @@ pub struct ConfigurationShowDialog {
 pub struct GameShowDialog {
     pub dialog: Holder<DialogRaw, DialogRef>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PostEffects<'a> {
+    pub post_effects: List<'a, Ident<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigurationPostEffects<'a>(pub PostEffects<'a>);
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GamePostEffects<'a>(pub PostEffects<'a>);

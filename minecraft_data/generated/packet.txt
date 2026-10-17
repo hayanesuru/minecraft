@@ -19,7 +19,7 @@ key
 custom_query_answer
 login_acknowledged
 cookie_response
-;clientbound/configuration;str;14
+;clientbound/configuration;str;15
 cookie_request
 custom_payload
 disconnect
@@ -30,6 +30,7 @@ reset_chat
 registry_data
 resource_pack_pop
 resource_pack_push
+post_effects
 store_cookie
 transfer
 update_enabled_features
@@ -51,7 +52,7 @@ resource_pack
 select_known_packs
 custom_click_action
 accept_code_of_conduct
-;clientbound/play;str;8d
+;clientbound/play;str;90
 bundle_delimiter
 add_entity
 animate
@@ -89,6 +90,7 @@ disguised_chat
 entity_event
 entity_position_sync
 explode
+add_transient_block
 forget_level_chunk
 game_event
 game_rule_values
@@ -134,6 +136,7 @@ remove_mob_effect
 reset_score
 resource_pack_pop
 resource_pack_push
+post_effects
 respawn
 rotate_head
 section_blocks_update
@@ -173,6 +176,7 @@ sound
 start_configuration
 stop_sound
 store_cookie
+swing_animation
 system_chat
 tab_list
 tag_query
@@ -240,6 +244,7 @@ player_command
 player_input
 player_loaded
 pong
+punch
 recipe_book_change_settings
 recipe_book_seen_recipe
 rename_item
@@ -257,7 +262,6 @@ set_structure_block
 set_test_block
 sign_update
 spectator_action
-swing
 teleport_to_entity
 test_instance_block_action
 use_item_on

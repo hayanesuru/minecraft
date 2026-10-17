@@ -201,9 +201,7 @@ impl ListInfo {
                 )))
             },
             TagType::ByteArray => {
-                if len.checked_mul(4).ok_or(Error)? > n.len() {
-                    return Err(Error);
-                }
+                n.ensure(len.checked_mul(4).ok_or(Error)?)?;
                 let mut list = Vec::with_capacity(capacity_fix(len));
                 for _ in 0..len {
                     list.push(ByteArray::read(n)?.0);
@@ -211,9 +209,7 @@ impl ListInfo {
                 Ok(ListTag::ByteArray(list))
             }
             TagType::String => {
-                if len.checked_mul(2).ok_or(Error)? > n.len() {
-                    return Err(Error);
-                }
+                n.ensure(len.checked_mul(2).ok_or(Error)?)?;
                 let mut list = Vec::with_capacity(capacity_fix(len));
                 for _ in 0..len {
                     list.push(StringTag::read(n)?);
@@ -223,9 +219,7 @@ impl ListInfo {
             TagType::List => Ok(ListTag::List(Vec::with_capacity(capacity_fix(len)))),
             TagType::Compound => Ok(ListTag::Compound(Vec::with_capacity(capacity_fix(len)))),
             TagType::IntArray => {
-                if len.checked_mul(4).ok_or(Error)? > n.len() {
-                    return Err(Error);
-                }
+                n.ensure(len.checked_mul(4).ok_or(Error)?)?;
                 let mut list = Vec::with_capacity(capacity_fix(len));
                 for _ in 0..len {
                     list.push(IntArray::read(n)?.0);
@@ -233,9 +227,7 @@ impl ListInfo {
                 Ok(ListTag::IntArray(list))
             }
             TagType::LongArray => {
-                if len.checked_mul(4).ok_or(Error)? > n.len() {
-                    return Err(Error);
-                }
+                n.ensure(len.checked_mul(4).ok_or(Error)?)?;
                 let mut list = Vec::with_capacity(capacity_fix(len));
                 for _ in 0..len {
                     list.push(LongArray::read(n)?.0);

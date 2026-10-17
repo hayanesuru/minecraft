@@ -27,7 +27,7 @@ pub enum TrackedWaypointType {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = TrackedWaypointType, camel_case)]
+#[mser(header = TrackedWaypointType, PascalCase)]
 pub enum TrackedWaypointContent {
     Empty(EmptyWaypoint),
     Vec3i(Vec3iWaypoint),

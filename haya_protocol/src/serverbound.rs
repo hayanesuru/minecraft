@@ -43,7 +43,9 @@ macro_rules! packets {
                 Ok(())
             }
         $(
-            fn $variant(&mut self, packet: $type);
+            fn $variant(&mut self, packet: $type) {
+                let _ = packet;
+            }
         )+
         }
     };
@@ -136,6 +138,7 @@ packets! {
     player_input = game::PlayerInput,
     player_loaded = game::PlayerLoaded,
     pong = common::GamePong,
+    punch = game::Punch,
     recipe_book_change_settings = game::RecipeBookChangeSettings,
     recipe_book_seen_recipe = game::RecipeBookSeenRecipe,
     rename_item = game::RenameItem<'_>,
@@ -153,7 +156,6 @@ packets! {
     set_test_block = game::SetTestBlock<'_>,
     sign_update = game::SignUpdate<'_>,
     spectator_action = game::SpectatorAction,
-    swing = game::Swing,
     teleport_to_entity = game::TeleportToEntity,
     test_instance_block_action = game::TestInstanceBlockAction<'_>,
     use_item_on = game::UseItemOn,

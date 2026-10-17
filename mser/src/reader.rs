@@ -138,6 +138,16 @@ impl<'a> Reader<'a> {
     }
 
     #[inline]
+    pub const fn ensure(&self, len: usize) -> Result<(), Error> {
+        if len > self.len() {
+            cold_path();
+            Err(Error)
+        } else {
+            Ok(())
+        }
+    }
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         core::ptr::eq(self.ptr, self.end)
     }

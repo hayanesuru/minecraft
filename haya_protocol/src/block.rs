@@ -30,3 +30,30 @@ pub struct BeehiveOccupant {
     #[mser(varint)]
     pub min_ticks_in_hive: u32,
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum SignTextSlot {
+    Back,
+    Front,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum CommandBlockEntityMode {
+    Sequence,
+    Auto,
+    Redstone,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum TestBlockMode {
+    Start,
+    Log,
+    Fail,
+    Accept,
+}
