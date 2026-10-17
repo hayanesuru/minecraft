@@ -1088,3 +1088,10 @@ impl Write for CompoundNamed {
         1 + Write::len_s(&self.0) + Write::len_s(&self.1)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test() {}
+}
