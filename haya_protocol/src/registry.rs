@@ -9,7 +9,7 @@ use minecraft_data::sound_event;
 use mser::{Error, Read, Reader, V32, Write, Writer};
 
 macro_rules! decl {
-    ($($i:ident),*) => {
+    ($($i:ident),* $(,)*) => {
         $(
             #[derive(Clone, Copy, Serialize, Deserialize)]
             pub struct $i(#[mser(varint)] pub u32);
@@ -42,7 +42,8 @@ decl![
     ChatTypeRef,
     DimensionTypeRef,
     DialogRef,
-    WorldClockRef
+    WorldClockRef,
+    BlockTransformerRef,
 ];
 
 impl<'a> Read<'a> for Holder<SoundEvent<'a>, sound_event> {

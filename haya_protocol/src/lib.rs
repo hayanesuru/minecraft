@@ -542,18 +542,18 @@ pub enum VecDelta<'a> {
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct VecDeltaLinear {
-    xa: i16,
-    ya: i16,
-    za: i16,
+    pub xa: i16,
+    pub ya: i16,
+    pub za: i16,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct VecDeltaStep {
     #[mser(varint)]
-    ticks: u32,
-    xa: i16,
-    ya: i16,
-    za: i16,
+    pub ticks: u32,
+    pub xa: i16,
+    pub ya: i16,
+    pub za: i16,
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

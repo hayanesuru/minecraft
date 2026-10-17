@@ -627,8 +627,8 @@ impl<'a> Read<'a> for MoveEntityPos<'a> {
         let prop = V32::read(buf)?;
         let len = (prop.0 >> 1) as usize;
         let on_ground = (prop.0 & 1) != 0;
-        let delta = if len <= 0 {
-            buf.ensure(7 * len)?;
+        let delta = if len > 0 {
+            buf.ensure(len.checked_mul(7).ok_or(Error)?)?;
             let mut vec = Vec::with_capacity(capacity_fix(len));
             for _ in 0..len {
                 vec.push(VecDeltaStep::read(buf)?);
@@ -697,8 +697,8 @@ impl<'a> Read<'a> for MoveEntityPosRot<'a> {
         let y_rot = ByteAngle::read(buf)?;
         let x_rot = ByteAngle::read(buf)?;
         let on_ground = (prop.0 & 1) != 0;
-        let delta = if len <= 0 {
-            buf.ensure(7 * len)?;
+        let delta = if len > 0 {
+            buf.ensure(len.checked_mul(7).ok_or(Error)?)?;
             let mut vec = Vec::with_capacity(capacity_fix(len));
             for _ in 0..len {
                 vec.push(VecDeltaStep::read(buf)?);
@@ -1706,13 +1706,18 @@ pub struct TickingStep {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAdvancements<'a> {
     pub should_reset: bool,
-    pub added: List<'a, AdvancementHolder<'a>>,
+    pub added: List<'a, PositionedAdvancement<'a>>,
     pub removed: List<'a, Ident<'a>>,
     pub progress: Map<'a, Ident<'a>, AdvancementProgress<'a>>,
     pub show_advancements: bool,
 }
 
-pub struct PositionedAdvancement {}
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PositionedAdvancement<'a> {
+    pub advancement: AdvancementHolder<'a>,
+    pub x: f32,
+    pub y: f32,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAttributes<'a> {

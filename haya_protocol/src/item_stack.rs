@@ -27,10 +27,11 @@ use crate::inventory::EquipmentSlot;
 use crate::map::MapId;
 use crate::profile::ResolvableProfileRef;
 use crate::registry::{
-    BannerPatternRef, CatSoundVariantRef, CatVariantRef, ChickenSoundVariantRef, ChickenVariantRef,
-    CowSoundVariantRef, CowVariantRef, DamageTypeRef, FrogVariantRef, InstrumentRef,
-    JukeboxSongRef, PaintingVariantRef, PigSoundVariantRef, PigVariantRef, TrimMaterialRef,
-    TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
+    BannerPatternRef, BlockTransformerRef, CatSoundVariantRef, CatVariantRef,
+    ChickenSoundVariantRef, ChickenVariantRef, CowSoundVariantRef, CowVariantRef, DamageTypeRef,
+    FrogVariantRef, InstrumentRef, JukeboxSongRef, PaintingVariantRef, PigSoundVariantRef,
+    PigVariantRef, TrimMaterialRef, TrimPatternRef, VillagerTypeRef, WolfSoundVariantRef,
+    WolfVariantRef, ZombieNautilusVariantRef,
 };
 use crate::sound::SoundEvent;
 use crate::trim::{TrimMaterial, TrimPattern};
@@ -617,12 +618,14 @@ pub enum TypedDataComponent<'a> {
     BlocksAttacks(BlocksAttacks<'a>),
     PiercingWeapon(PiercingWeapon<'a>),
     KineticWeapon(KineticWeapon<'a>),
-    SwingAnimation(SwingAnimation),
+    AttackAnimation(SwingAnimation),
+    InteractAnimation(SwingAnimation),
     AdditionalTradeCost(#[mser(varint)] u32),
+    BlockTransformer(BlockTransformerRef),
+    VillagerFood(VillagerFood),
     StoredEnchantments(ItemEnchantments<'a>),
     Dye(DyeColor),
     DyedColor(DyedItemColor),
-    MapColor(MapItemColor),
     MapId(MapId),
     MapDecorations(MapDecorations),
     MapPostProcessing(MapPostProcessing),
@@ -659,6 +662,7 @@ pub enum TypedDataComponent<'a> {
     Lock(LockCode),
     ContainerLoot(SeededContainerLoot),
     BreakSound(Holder<SoundEvent<'a>, sound_event>),
+
     VillagerVariant(VillagerTypeRef),
     WolfVariant(WolfVariantRef),
     WolfSoundVariant(WolfSoundVariantRef),
@@ -693,4 +697,10 @@ pub enum TypedDataComponent<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DataComponentExactPredicate<'a> {
     pub expected_components: List<'a, TypedDataComponent<'a>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct VillagerFood {
+    #[mser(varint)]
+    nutrition: u32,
 }
