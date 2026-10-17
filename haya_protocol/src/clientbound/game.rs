@@ -1,5 +1,6 @@
 use crate::advancement::{AdvancementHolder, AdvancementProgress};
 use crate::attribute::AttributeModifier;
+use crate::block::SignTextSlot;
 use crate::chat::{
     Bound, FilterMask, MessageSignature, MessageSignaturePacked, RemoteChatSession,
     SignedMessageBodyPacked,
@@ -26,7 +27,8 @@ use crate::trading::MerchantOffer;
 use crate::waypoint::TrackedWaypoint;
 use crate::{
     BitSet, ClockNetworkState, ComponentRaw, Difficulty, EntityAnchor, EntityId, GameType,
-    GlobalPos, HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, WeightedList,
+    GlobalPos, HeightmapType, Holder, OptionalGameType, Relatives, RespawnData, VecDelta,
+    VecDeltaLinear, VecDeltaStep, WeightedList,
 };
 use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
@@ -612,38 +614,166 @@ pub struct MerchantOffers<'a> {
     pub offers: List<'a, MerchantOffer<'a>>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct MoveEntityPos {
+#[derive(Clone)]
+pub struct MoveEntityPos<'a> {
     pub entity_id: EntityId,
-    pub xa: i16,
-    pub ya: i16,
-    pub za: i16,
     pub on_ground: bool,
+    pub delta: VecDelta<'a>,
+}
+
+impl<'a> Read<'a> for MoveEntityPos<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let entity_id = EntityId::read(buf)?;
+        let prop = V32::read(buf)?;
+        let len = (prop.0 >> 1) as usize;
+        let on_ground = (prop.0 & 1) != 0;
+        let delta = if len <= 0 {
+            buf.ensure(7 * len)?;
+            let mut vec = Vec::with_capacity(capacity_fix(len));
+            for _ in 0..len {
+                vec.push(VecDeltaStep::read(buf)?);
+            }
+            VecDelta::Stepped(List::Owned(vec))
+        } else {
+            VecDelta::Linear(VecDeltaLinear::read(buf)?)
+        };
+        Ok(Self {
+            entity_id,
+            delta,
+            on_ground,
+        })
+    }
+}
+
+impl Write for MoveEntityPos<'_> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.entity_id.write(w);
+            match &self.delta {
+                VecDelta::Linear(vec_delta_linear) => {
+                    let prop = self.on_ground as u32;
+                    V32(prop).write(w);
+                    vec_delta_linear.write(w);
+                }
+                VecDelta::Stepped(list) => {
+                    let prop = ((list.len() as u32) << 1) | self.on_ground as u32;
+                    V32(prop).write(w);
+                    for ele in list.iter() {
+                        ele.write(w);
+                    }
+                }
+            }
+        }
+    }
+    fn len_s(&self) -> usize {
+        self.entity_id.len_s()
+            + match &self.delta {
+                VecDelta::Linear(vec_delta_linear) => {
+                    let prop = self.on_ground as u32;
+                    V32(prop).len_s() + vec_delta_linear.len_s()
+                }
+                VecDelta::Stepped(list) => {
+                    let prop = ((list.len() as u32) << 1) | self.on_ground as u32;
+                    V32(prop).len_s() + list.iter().map(|x| x.len_s()).sum::<usize>()
+                }
+            }
+    }
+}
+
+#[derive(Clone)]
+pub struct MoveEntityPosRot<'a> {
+    pub entity_id: EntityId,
+    pub on_ground: bool,
+    pub delta: VecDelta<'a>,
+    pub y_rot: ByteAngle,
+    pub x_rot: ByteAngle,
+}
+
+impl<'a> Read<'a> for MoveEntityPosRot<'a> {
+    fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
+        let entity_id = EntityId::read(buf)?;
+        let prop = V32::read(buf)?;
+        let len = (prop.0 >> 1) as usize;
+        let y_rot = ByteAngle::read(buf)?;
+        let x_rot = ByteAngle::read(buf)?;
+        let on_ground = (prop.0 & 1) != 0;
+        let delta = if len <= 0 {
+            buf.ensure(7 * len)?;
+            let mut vec = Vec::with_capacity(capacity_fix(len));
+            for _ in 0..len {
+                vec.push(VecDeltaStep::read(buf)?);
+            }
+            VecDelta::Stepped(List::Owned(vec))
+        } else {
+            VecDelta::Linear(VecDeltaLinear::read(buf)?)
+        };
+        Ok(Self {
+            entity_id,
+            delta,
+            x_rot,
+            y_rot,
+            on_ground,
+        })
+    }
+}
+
+impl Write for MoveEntityPosRot<'_> {
+    unsafe fn write(&self, w: &mut Writer) {
+        unsafe {
+            self.entity_id.write(w);
+            match &self.delta {
+                VecDelta::Linear(vec_delta_linear) => {
+                    let prop = self.on_ground as u32;
+                    V32(prop).write(w);
+                    self.y_rot.write(w);
+                    self.x_rot.write(w);
+                    vec_delta_linear.write(w);
+                }
+                VecDelta::Stepped(list) => {
+                    let prop = ((list.len() as u32) << 1) | self.on_ground as u32;
+                    V32(prop).write(w);
+                    self.y_rot.write(w);
+                    self.x_rot.write(w);
+                    for ele in list.iter() {
+                        ele.write(w);
+                    }
+                }
+            }
+        }
+    }
+    fn len_s(&self) -> usize {
+        self.entity_id.len_s()
+            + match &self.delta {
+                VecDelta::Linear(vec_delta_linear) => {
+                    let prop = self.on_ground as u32;
+                    V32(prop).len_s()
+                        + self.y_rot.len_s()
+                        + self.x_rot.len_s()
+                        + vec_delta_linear.len_s()
+                }
+                VecDelta::Stepped(list) => {
+                    let prop = ((list.len() as u32) << 1) | self.on_ground as u32;
+                    V32(prop).len_s()
+                        + self.y_rot.len_s()
+                        + self.x_rot.len_s()
+                        + list.iter().map(|x| x.len_s()).sum::<usize>()
+                }
+            }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct MoveEntityPosRot {
+pub struct MoveEntityRot {
     pub entity_id: EntityId,
-    pub xa: i16,
-    pub ya: i16,
-    pub za: i16,
+    pub on_ground: bool,
     pub y_rot: ByteAngle,
     pub x_rot: ByteAngle,
-    pub on_ground: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MoveMinecartAlongTrack<'a> {
     pub entity_id: EntityId,
     pub lerp_steps: List<'a, MinecartStep>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct MoveEntityRot {
-    pub entity_id: EntityId,
-    pub y_rot: ByteAngle,
-    pub x_rot: ByteAngle,
-    pub on_ground: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -668,7 +798,7 @@ pub struct OpenScreen {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct OpenSignEditor {
     pub pos: BlockPosPacked,
-    pub is_front_text: bool,
+    pub slot: SignTextSlot,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -832,7 +962,7 @@ impl<'a> PlayerInfoUpdateEntry<'a> {
     /// # Safety
     ///
     /// [`mser::Write::write`]
-    pub unsafe fn write(&self, w: &mut Writer, actions: PlayerInfoUpdateActions) {
+    unsafe fn write(&self, w: &mut Writer, actions: PlayerInfoUpdateActions) {
         unsafe {
             self.profile_id.write(w);
             if actions.add_player() {
@@ -863,7 +993,7 @@ impl<'a> PlayerInfoUpdateEntry<'a> {
         }
     }
 
-    pub fn len_s(&self, actions: PlayerInfoUpdateActions) -> usize {
+    fn len_s(&self, actions: PlayerInfoUpdateActions) -> usize {
         let mut len = self.profile_id.len_s();
         if actions.add_player() {
             len += self.name.len_s();
@@ -893,7 +1023,7 @@ impl<'a> PlayerInfoUpdateEntry<'a> {
         len
     }
 
-    pub fn read(buf: &mut Reader<'a>, actions: PlayerInfoUpdateActions) -> Result<Self, Error> {
+    fn read(buf: &mut Reader<'a>, actions: PlayerInfoUpdateActions) -> Result<Self, Error> {
         Ok(Self {
             profile_id: Uuid::read(buf)?,
             name: if actions.add_player() {
@@ -1056,7 +1186,7 @@ pub struct RespawnFlags(pub u8);
 impl RespawnFlags {
     pub const KEEP_ATTRIBUTE_MODIFIERS: u8 = 1;
     pub const KEEP_ENTITY_DATA: u8 = 2;
-    pub const KEEP_ALL_DATA: u8 = 4;
+    pub const KEEP_ALL_DATA: u8 = 3;
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1355,14 +1485,9 @@ pub struct SetPlayerInventory<'a> {
     pub contents: OptionalItemStack<'a>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct SetPlayerTeam<'a> {
-    pub name: Utf8<'a>,
-}
-
 #[derive(Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
-pub enum SetPlayerTeamMethodType {
+pub enum SetPlayerTeamType {
     Add,
     Remove,
     Change,
@@ -1371,11 +1496,11 @@ pub enum SetPlayerTeamMethodType {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[mser(header = SetPlayerTeamMethodType, PascalCase)]
-pub enum SetPlayerTeamMethod<'a> {
+#[mser(header = SetPlayerTeamType, PascalCase)]
+pub enum SetPlayerTeam<'a> {
     Add {
         parameters: SetPlayerTeamParameters,
-        players: List<'a, Utf8<'a>>,
+        players1: List<'a, Utf8<'a>>,
     },
     Remove,
     Change {
@@ -1517,6 +1642,13 @@ impl<'a> Read<'a> for StopSound<'a> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct SwingAnimation {
+    pub entity_id: EntityId,
+    pub hand: InteractionHand,
+    pub animation: crate::item_stack::SwingAnimation,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SystemChat {
     pub content: ComponentRaw,
     pub overlay: bool,
@@ -1573,12 +1705,14 @@ pub struct TickingStep {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAdvancements<'a> {
-    pub reset: bool,
+    pub should_reset: bool,
     pub added: List<'a, AdvancementHolder<'a>>,
     pub removed: List<'a, Ident<'a>>,
     pub progress: Map<'a, Ident<'a>, AdvancementProgress<'a>>,
     pub show_advancements: bool,
 }
+
+pub struct PositionedAdvancement {}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateAttributes<'a> {

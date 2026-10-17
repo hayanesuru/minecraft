@@ -135,3 +135,31 @@ impl<'a> Read<'a> for MessageSignaturePacked<'a> {
         })
     }
 }
+
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
+#[repr(u8)]
+#[mser(varint)]
+pub enum ChatFormatting {
+    Black,
+    DarkBlue,
+    DarkGreen,
+    DarkAqua,
+    DarkRed,
+    DarkPurple,
+    Gold,
+    Gray,
+    DarkGray,
+    Blue,
+    Green,
+    Aqua,
+    Red,
+    LightPurple,
+    Yellow,
+    White,
+    Obfuscated,
+    Bold,
+    Strikethrough,
+    Underline,
+    Italic,
+    Reset,
+}

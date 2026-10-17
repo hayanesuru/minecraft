@@ -472,34 +472,6 @@ pub enum WeatheringCopperState {
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-#[repr(u8)]
-#[mser(varint)]
-pub enum ChatFormatting {
-    Black,
-    DarkBlue,
-    DarkGreen,
-    DarkAqua,
-    DarkRed,
-    DarkPurple,
-    Gold,
-    Gray,
-    DarkGray,
-    Blue,
-    Green,
-    Aqua,
-    Red,
-    LightPurple,
-    Yellow,
-    White,
-    Obfuscated,
-    Bold,
-    Strikethrough,
-    Underline,
-    Italic,
-    Reset,
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Relatives(pub u32);
 
 impl Relatives {
@@ -562,6 +534,28 @@ impl Relatives {
     }
 }
 
+#[derive(Clone)]
+pub enum VecDelta<'a> {
+    Linear(VecDeltaLinear),
+    Stepped(List<'a, VecDeltaStep>),
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct VecDeltaLinear {
+    xa: i16,
+    ya: i16,
+    za: i16,
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub struct VecDeltaStep {
+    #[mser(varint)]
+    ticks: u32,
+    xa: i16,
+    ya: i16,
+    za: i16,
+}
+
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct RgbColor {
     pub r: u8,
@@ -614,15 +608,6 @@ impl Input {
     pub const JUMP: u8 = 16;
     pub const SHIFT: u8 = 32;
     pub const SPRINT: u8 = 64;
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-#[repr(u8)]
-#[mser(varint)]
-pub enum CommandBlockEntityMode {
-    Sequence,
-    Auto,
-    Redstone,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Name)]
@@ -708,16 +693,6 @@ impl Rotation {
             Self::Counterclockwise90 => "counterclockwise_90",
         }
     }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize, Name)]
-#[repr(u8)]
-#[mser(varint)]
-pub enum TestBlockMode {
-    Start,
-    Log,
-    Fail,
-    Accept,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
