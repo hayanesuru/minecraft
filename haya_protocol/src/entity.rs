@@ -7,7 +7,9 @@ use crate::registry::{
     CowSoundVariantRef, CowVariantRef, FrogVariantRef, PaintingVariantRef, PigSoundVariantRef,
     PigVariantRef, WolfSoundVariantRef, WolfVariantRef, ZombieNautilusVariantRef,
 };
-use crate::{ComponentRaw, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState};
+use crate::{
+    ComponentRaw, DyeColor, GlobalPos, Holder, OptionalV32, Rotations, WeatheringCopperState,
+};
 use haya_collection::List;
 use haya_ident::Ident;
 use haya_math::{BlockPosPacked, Direction, FQuat, FVec3};
@@ -269,6 +271,7 @@ pub enum EntityDataSerializers {
     Quaternion,
     ResolvableProfile,
     HumanoidArm,
+    DyeColor,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -317,4 +320,5 @@ pub enum EntityDataSerializer<'a> {
     Quaternion(FQuat),
     ResolvableProfile(ResolvableProfileRef<'a>),
     HumanoidArm(HumanoidArm),
+    DyeColor(DyeColor),
 }
