@@ -209,14 +209,23 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
     };
 
     let mut start = 0;
-    let mut cur = 0;
-    while let Some(b'_') = n.get(cur) {
-        tmp.extend(unsafe { n.get_unchecked(start..cur) });
-        cur += 1;
-        start = cur;
+    let mut found = false;
+    let mut prev = 0u8;
+    for (cur, &b) in n.iter().enumerate() {
+        if b == b'_' {
+            let prev_ok = prev.is_ascii_digit();
+            let next_ok = n.get(cur + 1).is_some_and(u8::is_ascii_digit);
+            if !(prev_ok && next_ok) {
+                return Err(Error);
+            }
+            tmp.extend(&n[start..cur]);
+            start = cur + 1;
+            found = true;
+        }
+        prev = b;
     }
-    let mut m = if start != 0 {
-        tmp.extend(unsafe { n.get_unchecked(start..) });
+    let mut m = if found {
+        tmp.extend(&n[start..]);
         &tmp[..]
     } else {
         n
