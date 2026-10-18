@@ -370,7 +370,7 @@ pub struct DisguisedChat<'a> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct EntityEvent {
     pub entity_id: u32,
-    pub event_id: crate::entity_event::EntityEvent,
+    pub event_id: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -529,7 +529,7 @@ pub struct LightData<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LevelEvent {
-    pub ty: crate::level_event::LevelEvent,
+    pub ty: u32,
     pub pos: BlockPosPacked,
     pub data: u32,
     pub global_event: bool,
