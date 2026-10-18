@@ -38,4 +38,4 @@ jobs:
       - name: Rustfmt
         run: cargo fmt --all -- --check
       - name: Spell Check Repo
-        uses: crate-ci/typos@master
+        uses: crate-ci/typos@main
