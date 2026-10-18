@@ -10,9 +10,10 @@ mod serialize;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use proc_macro::TokenStream;
+use quote::quote;
 use syn::parse::ParseStream;
 use syn::spanned::Spanned;
-use syn::{DeriveInput, parse_macro_input};
+use syn::{Data, DeriveInput, Fields, Ident, parse_macro_input};
 
 const V21MAX: usize = 0x1FFFFF;
 const V7MAX: usize = 0x7F;
@@ -21,15 +22,17 @@ mod kw {
     syn::custom_keyword!(varint);
     syn::custom_keyword!(filter);
     syn::custom_keyword!(header);
-    syn::custom_keyword!(camel_case);
+    syn::custom_keyword!(PascalCase);
+    syn::custom_keyword!(name);
 }
 
 #[derive(Default)]
 struct Attrs {
     varint: bool,
     header: Option<syn::Path>,
-    camel_case: bool,
+    pascal_case: bool,
     filter: Option<syn::Path>,
+    name: Option<Ident>,
 }
 
 impl syn::parse::Parse for Attrs {
@@ -44,13 +47,17 @@ impl syn::parse::Parse for Attrs {
                 let _: kw::header = input.parse()?;
                 let _: syn::Token![=] = input.parse()?;
                 attr.header = Some(input.parse::<syn::Path>()?);
-            } else if lookahead.peek(kw::camel_case) {
-                let _: kw::camel_case = input.parse()?;
-                attr.camel_case = true;
+            } else if lookahead.peek(kw::PascalCase) {
+                let _: kw::PascalCase = input.parse()?;
+                attr.pascal_case = true;
             } else if lookahead.peek(kw::filter) {
                 let _: kw::filter = input.parse()?;
                 let _: syn::Token![=] = input.parse()?;
                 attr.filter = Some(input.parse::<syn::Path>()?);
+            } else if lookahead.peek(kw::name) {
+                let _: kw::name = input.parse()?;
+                let _: syn::Token![=] = input.parse()?;
+                attr.name = Some(input.parse::<syn::Ident>()?);
             } else {
                 return Err(lookahead.error());
             }
@@ -66,14 +73,30 @@ impl syn::parse::Parse for Attrs {
 
 fn crate_name(input: &DeriveInput) -> Result<(Attrs, syn::Path), syn::Error> {
     let mut find = Attrs::default();
-    let mut flag = false;
     for attr in input.attrs.iter() {
         if attr.path().is_ident("mser") {
-            if flag {
-                return Err(syn::Error::new_spanned(attr, "multiple `mser` attributes"));
+            let Attrs {
+                varint,
+                header,
+                pascal_case: camel_case,
+                filter,
+                name,
+            } = attr.parse_args()?;
+            if varint {
+                find.varint = true;
             }
-            flag = true;
-            find = attr.parse_args()?;
+            if let Some(h) = header {
+                find.header = Some(h);
+            }
+            if camel_case {
+                find.pascal_case = true;
+            }
+            if let Some(f) = filter {
+                find.filter = Some(f);
+            }
+            if let Some(n) = name {
+                find.name = Some(n);
+            }
         }
     }
     Ok((
@@ -239,7 +262,7 @@ fn ty(ty: &syn::Type) -> Ty {
 
 fn ident_case(a: &Attrs, ident: &syn::Ident) -> String {
     let s = ident.to_string();
-    if a.camel_case {
+    if a.pascal_case {
         return s;
     }
     let mut result = String::with_capacity(s.len());
@@ -254,4 +277,66 @@ fn ident_case(a: &Attrs, ident: &syn::Ident) -> String {
     }
     result.push_str(unsafe { s.get_unchecked(last_end..s.len()) });
     result
+}
+
+#[proc_macro_derive(Name, attributes(mser))]
+pub fn enum_info(input: TokenStream) -> TokenStream {
+    let i = parse_macro_input!(input as DeriveInput);
+    let name = &i.ident;
+    let (attrs, c) = match crate_name(&i) {
+        Ok(x) => x,
+        Err(err) => {
+            return err.to_compile_error().into();
+        }
+    };
+    let cratename = &c;
+    let fn_name = match &attrs.name {
+        Some(x) => x.clone(),
+        None => Ident::new("name", proc_macro2::Span::call_site()),
+    };
+
+    let Data::Enum(data) = &i.data else {
+        return syn::Error::new_spanned(name, "not impl")
+            .to_compile_error()
+            .into();
+    };
+
+    let arms = data.variants.iter().map(|v| {
+        let id = &v.ident;
+        let s = ident_case(&attrs, id);
+        let pat = match &v.fields {
+            Fields::Unit => quote!(),
+            Fields::Unnamed(_) => quote!((..)),
+            Fields::Named(_) => quote!({ .. }),
+        };
+        quote!(Self::#id #pat => #s,)
+    });
+    let from_arms = data
+        .variants
+        .iter()
+        .filter(|v| matches!(v.fields, Fields::Unit))
+        .map(|v| {
+            let id = &v.ident;
+            let s = ident_case(&attrs, id);
+            quote!(#s => ::core::result::Result::Ok(Self::#id),)
+        });
+
+    let (ig, tg, wc) = i.generics.split_for_impl();
+    quote! {
+        impl #ig #name #tg #wc {
+            pub const fn #fn_name(self) -> &'static str {
+                match self { #(#arms)* }
+            }
+        }
+        impl #ig ::core::str::FromStr for #name #tg #wc {
+            type Err = #cratename::Error;
+            fn from_str(__s: &str) -> ::core::result::Result<Self, #cratename::Error> {
+                match __s {
+                    #(#from_arms)*
+                    _ => ::core::result::Result::Err(#cratename::Error),
+                }
+            }
+        }
+    }
+    .into()
 }

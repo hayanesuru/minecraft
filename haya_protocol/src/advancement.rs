@@ -1,5 +1,5 @@
 use crate::item_stack::{ItemStackTemplate, TypedDataComponent};
-use crate::{ComponentRaw, HolderSet, MilliSeconds};
+use crate::{ComponentRaw, HolderSet, Instant};
 use haya_collection::{List, Map};
 use haya_ident::Ident;
 use haya_nbt::Tag;
@@ -72,8 +72,6 @@ pub struct DisplayInfo<'a> {
     pub background: Option<Ident<'a>>,
     pub show_toast: bool,
     pub hidden: bool,
-    pub x: f32,
-    pub y: f32,
 }
 
 impl<'a> Read<'a> for DisplayInfo<'a> {
@@ -90,8 +88,6 @@ impl<'a> Read<'a> for DisplayInfo<'a> {
         };
         let show_toast = flags & 2 != 0;
         let hidden = flags & 4 != 0;
-        let x = f32::read(buf)?;
-        let y = f32::read(buf)?;
         Ok(Self {
             title,
             description,
@@ -100,8 +96,6 @@ impl<'a> Read<'a> for DisplayInfo<'a> {
             background,
             show_toast,
             hidden,
-            x,
-            y,
         })
     }
 }
@@ -124,8 +118,6 @@ impl<'a> Write for DisplayInfo<'a> {
             if let Some(background) = &self.background {
                 background.write(w);
             }
-            self.x.write(w);
-            self.y.write(w);
         }
     }
 
@@ -146,29 +138,17 @@ impl<'a> Write for DisplayInfo<'a> {
         if let Some(background) = &self.background {
             l += background.len_s();
         }
-        l += self.x.len_s();
-        l += self.y.len_s();
         l
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
 #[mser(varint)]
 pub enum AdvancementType {
     Task,
     Challenge,
     Goal,
-}
-
-impl AdvancementType {
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Task => "task",
-            Self::Challenge => "challenge",
-            Self::Goal => "goal",
-        }
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -183,5 +163,5 @@ pub struct AdvancementProgress<'a> {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CriterionProgress {
-    pub obtained: Option<MilliSeconds>,
+    pub obtained: Option<Instant>,
 }

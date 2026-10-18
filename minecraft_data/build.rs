@@ -150,7 +150,7 @@ fn kw_prefix(w: &mut String, s: &str) {
     if s.chars().next().unwrap().is_ascii_digit() {
         *w += "d_";
         *w += s;
-    } else if let "match" | "true" | "false" | "type" = s {
+    } else if let "mod" | "match" | "true" | "false" | "type" = s {
         *w += "r#";
         *w += s;
     } else {

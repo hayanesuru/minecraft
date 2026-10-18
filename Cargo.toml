@@ -31,7 +31,7 @@ haya_nbt = { registry = "haya", path = "haya_nbt", version = "3" }
 haya_str = { registry = "haya", path = "haya_str", version = "1" }
 haya_ident = { registry = "haya", path = "haya_ident", version = "2" }
 haya_mutf8 = { registry = "haya", path = "haya_mutf8", version = "1" }
-haya_ecs = { registry = "haya", path = "haya_ecs", version = "1" }
+#haya_ecs = { registry = "haya", path = "haya_ecs", version = "1" }
 haya_math = { registry = "haya", path = "haya_math", version = "2", default-features = false }
 haya_collection = { registry = "haya", path = "haya_collection", version = "1" }
 haya_protocol = { registry = "haya", path = "haya_protocol", version = "2" }

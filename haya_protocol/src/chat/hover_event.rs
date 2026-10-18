@@ -1,4 +1,4 @@
-use super::chat::TextComponent;
+use crate::chat::text::TextComponent;
 use crate::{Identifier, key};
 use alloc::boxed::Box;
 use alloc::vec::Vec;

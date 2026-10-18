@@ -41,7 +41,9 @@ macro_rules! packets {
                 Ok(())
             }
         $(
-            fn $variant(&mut self, packet: $type);
+            fn $variant(&mut self, packet: $type) {
+                let _ = packet;
+            }
         )+
         }
     };
@@ -78,6 +80,7 @@ packets! {
     registry_data = configuration::RegistryData<'_>,
     resource_pack_pop = common::ResourcePackPop,
     resource_pack_push = common::ResourcePackPush<'_>,
+    post_effects = common::ConfigurationPostEffects<'_>,
     store_cookie = common::ConfigurationStoreCookie<'_>,
     transfer = common::ConfigurationTransfer<'_>,
     update_enabled_features = configuration::UpdateEnabledFeatures<'_>,
@@ -128,8 +131,9 @@ packets! {
     disconnect = common::GameDisconnect,
     disguised_chat = game::DisguisedChat<'_>,
     entity_event = game::EntityEvent,
-    entity_position_sync = game::EntityPositionSync,
+    entity_position_sync = game::EntityPositionSync<'_>,
     explode = game::Explode<'_>,
+    add_transient_block = game::AddTransientBlock,
     forget_level_chunk = game::ForgetLevelChunk,
     game_event = game::GameEvent,
     game_rule_values = game::GameRuleValues<'_>,
@@ -146,8 +150,8 @@ packets! {
     low_disk_space_warning = game::LowDiskSpaceWarning,
     map_item_data = game::MapItemData<'_>,
     merchant_offers = game::MerchantOffers<'_>,
-    move_entity_pos = game::MoveEntityPos,
-    move_entity_pos_rot = game::MoveEntityPosRot,
+    move_entity_pos = game::MoveEntityPos<'_>,
+    move_entity_pos_rot = game::MoveEntityPosRot<'_>,
     move_minecart_along_track = game::MoveMinecartAlongTrack<'_>,
     move_entity_rot = game::MoveEntityRot,
     move_vehicle = game::MoveVehicle,
@@ -175,6 +179,7 @@ packets! {
     reset_score = game::ResetScore<'_>,
     resource_pack_pop = game::ResourcePackPop,
     resource_pack_push = game::ResourcePackPush<'_>,
+    post_effects = common::GamePostEffects<'_>,
     respawn = game::Respawn<'_>,
     rotate_head = game::RotateHead,
     section_blocks_update = game::SectionBlocksUpdate<'_>,
@@ -214,6 +219,7 @@ packets! {
     start_configuration = game::StartConfiguration,
     stop_sound = game::StopSound<'_>,
     store_cookie = common::GameStoreCookie<'_>,
+    swing_animation = game::SwingAnimation,
     system_chat = game::SystemChat,
     tab_list = game::TabList,
     tag_query = game::TagQuery,

@@ -42,7 +42,7 @@ fn find_next_value<'a>(n: &mut Reader<'a>) -> Result<&'a [u8], Error> {
     }
 }
 
-fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
+fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<Option<TagArray>, Error> {
     match n.peek_array::<2>()? {
         [b'B', b';'] => unsafe {
             n.advance(2);
@@ -51,7 +51,7 @@ fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
             let mut vec = Vec::new();
             if b']' == n.peek_byte()? {
                 n.advance(1);
-                return Ok(TagArray::Byte(vec));
+                return Ok(Some(TagArray::Byte(vec)));
             }
             loop {
                 skip_ws(n);
@@ -69,7 +69,7 @@ fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(TagArray::Byte(vec))
+            Ok(Some(TagArray::Byte(vec)))
         },
         [b'I', b';'] => unsafe {
             n.advance(2);
@@ -78,7 +78,7 @@ fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
             let mut vec = Vec::new();
             if b']' == n.peek_byte()? {
                 n.advance(1);
-                return Ok(TagArray::Int(vec));
+                return Ok(Some(TagArray::Int(vec)));
             }
             loop {
                 skip_ws(n);
@@ -96,7 +96,7 @@ fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(TagArray::Int(vec))
+            Ok(Some(TagArray::Int(vec)))
         },
         [b'L', b';'] => unsafe {
             n.advance(2);
@@ -105,7 +105,7 @@ fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
             let mut vec = Vec::new();
             if b']' == n.peek_byte()? {
                 n.advance(1);
-                return Ok(TagArray::Long(vec));
+                return Ok(Some(TagArray::Long(vec)));
             }
             loop {
                 skip_ws(n);
@@ -123,9 +123,9 @@ fn dec_arr_peek(n: &mut Reader, tmp: &mut TBuf) -> Result<TagArray, Error> {
                 }
             }
             vec.shrink_to_fit();
-            Ok(TagArray::Long(vec))
+            Ok(Some(TagArray::Long(vec)))
         },
-        _ => Err(Error),
+        _ => Ok(None),
     }
 }
 
@@ -137,6 +137,8 @@ impl TBuf {
     }
 }
 
+// todo: heterogenous list
+// todo: operations bool(..) uuid(..)
 unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error> {
     enum Bl {
         C(CompoundTag),
@@ -280,6 +282,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
         }
         match bl {
             Bl::C(mut c) => {
+                let name_start = names.len();
                 let k = match n.peek_byte()? {
                     b'\"' => {
                         unsafe { n.advance(1) }
@@ -295,9 +298,8 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
                             return Err(Error);
                         }
                         let m = n.read_slice_from(x);
-                        let a = names.len();
                         names.extend(m);
-                        names.get_unchecked(a..)
+                        names.get_unchecked(name_start..)
                     },
                 };
                 let kl = (k.len() as u32).to_le_bytes();
@@ -319,11 +321,11 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
                     }
                     b'[' => {
                         unsafe { n.advance(1) }
-                        match dec_arr_peek(n, &mut tmp) {
-                            Ok(TagArray::Byte(x)) => Tag::ByteArray(x),
-                            Ok(TagArray::Int(x)) => Tag::IntArray(x),
-                            Ok(TagArray::Long(x)) => Tag::LongArray(x),
-                            Err(_) => {
+                        match dec_arr_peek(n, &mut tmp)? {
+                            Some(TagArray::Byte(x)) => Tag::ByteArray(x),
+                            Some(TagArray::Int(x)) => Tag::IntArray(x),
+                            Some(TagArray::Long(x)) => Tag::LongArray(x),
+                            None => {
                                 names.extend(kl);
                                 blocks.push(Bl::C(c));
                                 blocks.push(Bl::L(ListTag::None));
@@ -353,6 +355,8 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
                 unsafe {
                     c.push(StringTag::from_utf8(from_utf8_unchecked(k)), t);
                 }
+                names.truncate(name_start);
+                blocks.push(Bl::C(c));
             }
             Bl::L(mut l) => match n.peek_byte()? {
                 b'{' => unsafe {
@@ -366,8 +370,8 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
                 },
                 b'[' => unsafe {
                     n.advance(1);
-                    match dec_arr_peek(n, &mut tmp) {
-                        Ok(arr) => {
+                    match dec_arr_peek(n, &mut tmp)? {
+                        Some(arr) => {
                             match arr {
                                 TagArray::Byte(b) => {
                                     if let ListTag::None = &l {
@@ -399,7 +403,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
                             }
                             blocks.push(Bl::L(l));
                         }
-                        Err(_) => {
+                        None => {
                             match &l {
                                 ListTag::None => {
                                     l = ListTag::List(Vec::new());
@@ -442,6 +446,7 @@ unsafe fn decode(n: &mut Reader, max_depth: usize) -> Result<CompoundTag, Error>
                         }
                     };
                     blocks.push(Bl::L(l));
+                    on_end = true;
                 },
             },
         }

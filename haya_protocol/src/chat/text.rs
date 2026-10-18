@@ -1,5 +1,5 @@
-use super::click_event::ClickEvent;
-use super::hover_event::HoverEvent;
+use crate::chat::click_event::ClickEvent;
+use crate::chat::hover_event::HoverEvent;
 use crate::color::{TextColor, TextColorNamed, TextColorRgb};
 use crate::decoration::DecorationMap;
 use crate::profile::ResolvableProfile;
@@ -550,6 +550,8 @@ impl Serialize for TextComponent {
     }
 }
 
+// todo: resolved limit
+// todo: depth limit
 impl Deserialize for TextComponent {
     fn deserialize(nbt: Tag) -> Result<Self, Error> {
         let c = match nbt {

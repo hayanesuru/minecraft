@@ -239,16 +239,16 @@ pub struct RefStringTag<'a>(pub &'a str);
 #[derive(Clone, Copy)]
 pub struct RawStringTag<'a>(&'a str);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CompoundTag(Vec<(StringTag, Tag)>);
 
 #[derive(Clone)]
 pub struct CompoundStringify(pub CompoundTag);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StringTag(Inner);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum Inner {
     Thin(HayaStr),
     Heap(Box<str>),
@@ -257,7 +257,7 @@ enum Inner {
 #[derive(Clone, Copy)]
 pub struct ListInfo(pub TagType, pub u32);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ListTag {
     None,
     Byte(Vec<i8>),
@@ -820,7 +820,7 @@ impl Write for TagType {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Tag {
     Byte(i8),
     Short(i16),
@@ -1086,5 +1086,73 @@ impl Write for CompoundNamed {
     #[inline]
     fn len_s(&self) -> usize {
         1 + Write::len_s(&self.0) + Write::len_s(&self.1)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        let a = r#"{
+  key1: 123,
+}"#;
+        let comp = decode(a);
+        assert_eq!(comp.as_ref(), &[(s("key1"), Tag::Int(123))]);
+        let mut vec = Vec::new();
+        CompoundStringify(comp).encode(&mut vec);
+        assert_eq!(str::from_utf8(&vec).unwrap(), "{\n    \"key1\": 123\n}");
+    }
+
+    #[track_caller]
+    fn decode(a: &str) -> CompoundTag {
+        CompoundStringify::decode(a).unwrap().0
+    }
+
+    fn s(n: &str) -> StringTag {
+        StringTag::from_utf8(n)
+    }
+
+    #[test]
+    fn test_p() {
+        let a = r#"{'a':151, 'b':{c:0x2}, d:"x"}"#;
+        assert_eq!(
+            decode(a).as_ref(),
+            &[
+                (s("a"), Tag::Int(151)),
+                (
+                    s("b"),
+                    Tag::Compound(CompoundTag(vec![(s("c"), Tag::Int(2))]))
+                ),
+                (s("d"), Tag::String(s("x")))
+            ]
+        );
+        let b = r#"{a:[1000,22], b:[[1],[2]]}"#;
+        assert_eq!(
+            decode(b).as_ref(),
+            &[
+                (s("a"), Tag::List(ListTag::Int(vec![1000, 22]))),
+                (
+                    s("b"),
+                    Tag::List(ListTag::List(vec![
+                        ListTag::Int(vec![1]),
+                        ListTag::Int(vec![2]),
+                    ]))
+                ),
+            ]
+        );
+        let c = r#"{a:[I;1111,2222],b:[B;-1B,-2B],c:[L;1_000_000_000_000_000L,-2_000_000_000_000_000L]}"#;
+        assert_eq!(
+            decode(c).as_ref(),
+            &[
+                (s("a"), Tag::IntArray(vec![1111, 2222]),),
+                (s("b"), Tag::ByteArray(vec![-1, -2])),
+                (
+                    s("c"),
+                    Tag::LongArray(vec![1_000_000_000_000_000, -2_000_000_000_000_000])
+                ),
+            ],
+        );
     }
 }

@@ -209,14 +209,73 @@ pub(crate) unsafe fn dec_num(mut n: &[u8], tmp: &mut Vec<u8>) -> Result<TagPrimi
     };
 
     let mut start = 0;
-    let mut cur = 0;
-    while let Some(b'_') = n.get(cur) {
-        tmp.extend(unsafe { n.get_unchecked(start..cur) });
-        cur += 1;
-        start = cur;
+    let mut found = false;
+    let mut prev = 0u8;
+    let mut i = 0;
+    match radix2 {
+        Radix::Hexadecimal | Radix::NegativeHexadecimal => {
+            while i < n.len() {
+                let j = n[i];
+                if j != b'_' {
+                    prev = j;
+                    i += 1;
+                    continue;
+                }
+                let r = i;
+                while i < n.len() && n[i] == b'_' {
+                    i += 1;
+                }
+                if !(prev.is_ascii_hexdigit() && (i < n.len() && n[i].is_ascii_hexdigit())) {
+                    return Err(Error);
+                }
+                tmp.extend_from_slice(&n[start..r]);
+                start = i;
+                found = true;
+            }
+        }
+        Radix::Binary | Radix::NegativeBinary => {
+            while i < n.len() {
+                let j = n[i];
+                if j != b'_' {
+                    prev = j;
+                    i += 1;
+                    continue;
+                }
+                let r = i;
+                while i < n.len() && n[i] == b'_' {
+                    i += 1;
+                }
+                if !(matches!(prev, b'0' | b'1') && (i < n.len() && matches!(n[i], b'0' | b'1'))) {
+                    return Err(Error);
+                }
+                tmp.extend_from_slice(&n[start..r]);
+                start = i;
+                found = true;
+            }
+        }
+        Radix::Decimal | Radix::NegativeDecimal => {
+            while i < n.len() {
+                let j = n[i];
+                if j != b'_' {
+                    prev = j;
+                    i += 1;
+                    continue;
+                }
+                let r = i;
+                while i < n.len() && n[i] == b'_' {
+                    i += 1;
+                }
+                if !(prev.is_ascii_digit() && (i < n.len() && n[i].is_ascii_digit())) {
+                    return Err(Error);
+                }
+                tmp.extend_from_slice(&n[start..r]);
+                start = i;
+                found = true;
+            }
+        }
     }
-    let mut m = if start != 0 {
-        tmp.extend(unsafe { n.get_unchecked(start..) });
+    let mut m = if found {
+        tmp.extend(&n[start..]);
         &tmp[..]
     } else {
         n
