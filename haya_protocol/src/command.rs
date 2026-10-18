@@ -89,10 +89,10 @@ impl Write for Float {
         unsafe {
             let Self { min, max } = *self;
             let mut flags = 0u8;
-            if min == f32::MIN {
+            if min != f32::MIN {
                 flags |= NUMBER_FLAG_MIN;
             }
-            if max == f32::MAX {
+            if max != f32::MAX {
                 flags |= NUMBER_FLAG_MAX;
             }
             flags.write(w);
@@ -122,10 +122,10 @@ impl Write for Double {
         unsafe {
             let Self { min, max } = *self;
             let mut flags = 0u8;
-            if min == f64::MIN {
+            if min != f64::MIN {
                 flags |= NUMBER_FLAG_MIN;
             }
-            if max == f64::MAX {
+            if max != f64::MAX {
                 flags |= NUMBER_FLAG_MAX;
             }
             flags.write(w);
@@ -156,10 +156,10 @@ impl Write for Integer {
         unsafe {
             let Self { min, max } = *self;
             let mut flags = 0u8;
-            if min == i32::MIN {
+            if min != i32::MIN {
                 flags |= NUMBER_FLAG_MIN;
             }
-            if max == i32::MAX {
+            if max != i32::MAX {
                 flags |= NUMBER_FLAG_MAX;
             }
             flags.write(w);
@@ -190,10 +190,10 @@ impl Write for Long {
         unsafe {
             let Self { min, max } = *self;
             let mut flags = 0u8;
-            if min == i64::MIN {
+            if min != i64::MIN {
                 flags |= NUMBER_FLAG_MIN;
             }
-            if max == i64::MAX {
+            if max != i64::MAX {
                 flags |= NUMBER_FLAG_MAX;
             }
             flags.write(w);

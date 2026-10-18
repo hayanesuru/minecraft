@@ -9,5 +9,5 @@ pub struct FoodProperties {
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct VillagerFood {
     #[mser(varint)]
-    nutrition: u32,
+    pub nutrition: u32,
 }

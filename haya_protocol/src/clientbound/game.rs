@@ -1500,7 +1500,7 @@ pub enum SetPlayerTeamType {
 pub enum SetPlayerTeam<'a> {
     Add {
         parameters: SetPlayerTeamParameters,
-        players1: List<'a, Utf8<'a>>,
+        players: List<'a, Utf8<'a>>,
     },
     Remove,
     Change {

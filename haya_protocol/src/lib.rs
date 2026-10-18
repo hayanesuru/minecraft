@@ -235,10 +235,10 @@ pub enum Holder<T, R> {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ResolvableInt<'a>(Either<u32, ResourceKey<'a>>);
+pub struct ResolvableInt<'a>(pub Either<u32, ResourceKey<'a>>);
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ResolvableFloat<'a>(Either<f32, ResourceKey<'a>>);
+pub struct ResolvableFloat<'a>(pub Either<f32, ResourceKey<'a>>);
 
 #[derive(Clone, Copy, Serialize, Deserialize, Name)]
 #[repr(u8)]
