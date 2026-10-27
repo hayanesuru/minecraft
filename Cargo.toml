@@ -23,9 +23,9 @@ repository = "https://github.com/hayanesuru/minecraft"
 edition = "2024"
 
 [workspace.dependencies]
-mser = {  path = "mser", version = "4", default-features = false }
-mser_macro = { path = "mser_macro", version = "4", default-features = false }
-minecraft_data = { path = "minecraft_data", version = "4", default-features = false }
+mser = { path = "mser", version = "4.1", default-features = false }
+mser_macro = { path = "mser_macro", version = "4.1", default-features = false }
+minecraft_data = { path = "minecraft_data", version = "4.2", default-features = false }
 haya_nbt = { registry = "haya", path = "haya_nbt", version = "3" }
 haya_str = { registry = "haya", path = "haya_str", version = "1" }
 haya_ident = { registry = "haya", path = "haya_ident", version = "2" }
