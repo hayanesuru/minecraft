@@ -673,9 +673,11 @@ impl Iterator for IterStr {
                     // In this case, `idx` is equal to the index at `arr[i]`,
                     // so `i` is the correct length.
                     Ok(i) => i,
-                    // `binary_search(idx)` returning `Err(i)` means that `arr[i-1] < idx < arr[i]`.
-                    // Therefore, `idx` is larger than the largest index with length `i - 1`, but
-                    // smaller than the largest index with length `i`, meaning its length is `i`.
+                    // `binary_search(idx)` returning `Err(i)` means that
+                    // `arr[i-1] < idx < arr[i]`. Therefore, `idx` is larger
+                    // than the largest index with length `i - 1`, but
+                    // smaller than the largest index with length `i`, meaning
+                    // its length is `i`.
                     Err(i) => i,
                 };
 

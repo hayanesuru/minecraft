@@ -629,7 +629,7 @@ impl<'a> Read<'a> for MoveEntityPos<'a> {
         let on_ground = (prop.0 & 1) != 0;
         let delta = if len > 0 {
             buf.ensure(len.checked_mul(7).ok_or(Error)?)?;
-            let mut vec = Vec::with_capacity(capacity_fix(len));
+            let mut vec = capacity_fix(len);
             for _ in 0..len {
                 vec.push(VecDeltaStep::read(buf)?);
             }
@@ -699,7 +699,7 @@ impl<'a> Read<'a> for MoveEntityPosRot<'a> {
         let on_ground = (prop.0 & 1) != 0;
         let delta = if len > 0 {
             buf.ensure(len.checked_mul(7).ok_or(Error)?)?;
-            let mut vec = Vec::with_capacity(capacity_fix(len));
+            let mut vec = capacity_fix(len);
             for _ in 0..len {
                 vec.push(VecDeltaStep::read(buf)?);
             }
@@ -887,7 +887,7 @@ impl<'a> Read<'a> for PlayerInfoUpdate<'a> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let actions = PlayerInfoUpdateActions::read(buf)?;
         let len = V21::read(buf)?.0 as usize;
-        let mut vec = Vec::with_capacity(capacity_fix(len));
+        let mut vec = capacity_fix(len);
         for _ in 0..len {
             vec.push(PlayerInfoUpdateEntry::read(buf, actions)?);
         }

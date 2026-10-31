@@ -39,7 +39,6 @@ use crate::{
     ComponentRaw, DyeColor, Filterable, Holder, HolderSet, LockCode, Rarity, ResolvableFloat,
     ResolvableInt,
 };
-use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, TagKey};
 use haya_math::BlockPosPacked;
@@ -186,11 +185,11 @@ impl<'a> Read<'a> for OptionalItemStack<'a> {
                     },
                 })
             } else {
-                let mut patch_add = Vec::with_capacity(capacity_fix(positive));
+                let mut patch_add = capacity_fix(positive);
                 for _ in 0..positive {
                     patch_add.push(TypedDataComponent::read(buf)?);
                 }
-                let mut patch_remove = Vec::with_capacity(capacity_fix(negative));
+                let mut patch_remove = capacity_fix(negative);
                 for _ in 0..negative {
                     patch_remove.push(data_component_type::read(buf)?);
                 }

@@ -5,7 +5,6 @@ use crate::inventory::HumanoidArm;
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::Vec;
 use haya_collection::{List, Map, capacity_fix};
 use haya_ident::{Ident, ResourceKey, is_valid_path, parse_ident};
 use haya_math::{BlockPosPacked, Direction, FVec3, IVec3};
@@ -189,7 +188,7 @@ impl<'a, T: Read<'a>> Read<'a> for HolderSet<'a, T> {
             Ok(Self::Named(name))
         } else {
             let len2 = (len - 1) as usize;
-            let mut vec = Vec::with_capacity(capacity_fix(len2));
+            let mut vec = capacity_fix(len2);
             for _ in 0..len2 {
                 vec.push(T::read(buf)?);
             }
