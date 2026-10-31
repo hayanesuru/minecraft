@@ -1,6 +1,6 @@
 [package]
 name = "haya_protocol"
-version = "2.1.0+26.3"
+version = "2.2.0+26.3"
 authors.workspace = true
 readme.workspace = true
 license.workspace = true
