@@ -90,14 +90,18 @@ impl<'a, T: Write + 'a, const MAX: usize> Write for List<'a, T, MAX> {
 }
 
 #[inline(always)]
-pub fn capacity_fix(len: usize) -> usize {
-    usize::min(len, 65536)
+pub fn capacity_fix<T>(len: usize) -> Vec<T> {
+    if size_of::<T>() <= 16 {
+        Vec::with_capacity(usize::min(len, 65536))
+    } else {
+        Vec::with_capacity(usize::min(len, 256))
+    }
 }
 
 impl<'a, T: Read<'a>, const MAX: usize> Read<'a> for List<'a, T, MAX> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = read_v21_len(buf, MAX)?;
-        let mut vec = Vec::with_capacity(capacity_fix(len));
+        let mut vec = capacity_fix(len);
         for _ in 0..len {
             vec.push(T::read(buf)?);
         }
@@ -134,7 +138,7 @@ impl<'a, K: Write + 'a, V: Write + 'a, const MAX: usize> Write for Map<'a, K, V,
 impl<'a, K: Read<'a>, V: Read<'a>, const MAX: usize> Read<'a> for Map<'a, K, V, MAX> {
     fn read(buf: &mut Reader<'a>) -> Result<Self, Error> {
         let len = read_v21_len(buf, MAX)?;
-        let mut vec = Vec::with_capacity(capacity_fix(len));
+        let mut vec = capacity_fix(len);
         for _ in 0..len {
             let k = K::read(buf)?;
             let v = V::read(buf)?;

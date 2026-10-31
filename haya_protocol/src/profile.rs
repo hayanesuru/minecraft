@@ -201,7 +201,7 @@ impl Deserialize for ResolvableProfile {
                                     if cap > 512 {
                                         return Err(Error);
                                     }
-                                    let mut vec = Vec::with_capacity(capacity_fix(cap));
+                                    let mut vec = capacity_fix(cap);
                                     for (k, v) in props {
                                         if utf16(&k) > 64 {
                                             return Err(Error);
@@ -247,7 +247,7 @@ impl Deserialize for ResolvableProfile {
                                     if props.len() > 16 {
                                         return Err(Error);
                                     }
-                                    let mut v = Vec::with_capacity(capacity_fix(props.len()));
+                                    let mut v = capacity_fix(props.len());
                                     for c in props {
                                         let mut name: Option<StringTag> = None;
                                         let mut value: Option<StringTag> = None;
