@@ -7,7 +7,6 @@ license.workspace = true
 repository.workspace = true
 edition.workspace = true
 publish.workspace = true
-documentation = "https://docs.rs/mser_macro"
 categories = ["no-std"]
 readme = "README.md"
 
