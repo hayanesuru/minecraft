@@ -6,9 +6,8 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
 categories = ["no-std", "encoding"]
-documentation = "https://docs.rs/mser"
-publish = ["crates-io"]
 readme = "README.md"
 
 [features]

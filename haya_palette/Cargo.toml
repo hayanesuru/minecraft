@@ -6,7 +6,7 @@ readme.workspace = true
 license.workspace = true
 repository.workspace = true
 edition.workspace = true
-publish = ["haya"]
+publish.workspace = true
 description = "palette"
 
 [dependencies]

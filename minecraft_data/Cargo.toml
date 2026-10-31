@@ -4,13 +4,12 @@ version = "4.2.0+26.3"
 description = "minecraft data"
 edition.workspace = true
 authors.workspace = true
-readme = "README.md"
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
+readme = "README.md"
 categories = ["game-engines", "no-std"]
 keywords = ["minecraft"]
-documentation = "https://docs.rs/minecraft_data"
-publish = ["crates-io"]
 
 [features]
 default = []

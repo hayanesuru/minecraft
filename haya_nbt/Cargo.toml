@@ -3,11 +3,11 @@ name = "haya_nbt"
 version = "3.2.0"
 authors.workspace = true
 readme.workspace = true
-license = "(MIT OR Apache-2.0) AND Unicode-DFS-2016"
 repository.workspace = true
 edition.workspace = true
+publish.workspace = true
+license = "(MIT OR Apache-2.0) AND Unicode-DFS-2016"
 build = "build.rs"
-publish = ["haya"]
 description = "nbt"
 
 [dependencies]
