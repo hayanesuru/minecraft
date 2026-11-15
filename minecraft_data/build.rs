@@ -1244,9 +1244,10 @@ type Err = ::mser::Error;
 fn from_str(n: &str) -> Result<Self, Self::Err> {
 ";
     if let Some(state1) = state {
+        *w += "match unsafe { crate::";
         match repr {
             Repr::U8 => {
-                *w += "match crate::name_u8::<";
+                *w += "name_u8::<";
                 write(w, state1.key);
                 *w += ", ";
                 write(w, state1.disps.len());
@@ -1254,7 +1255,7 @@ fn from_str(n: &str) -> Result<Self, Self::Err> {
                 write(w, names.len());
             }
             Repr::U16 => {
-                *w += "match crate::name_u16::<";
+                *w += "name_u16::<";
                 write(w, state1.key);
                 *w += ", ";
                 write(w, state1.disps.len());
@@ -1264,7 +1265,7 @@ fn from_str(n: &str) -> Result<Self, Self::Err> {
             _ => unimplemented!(),
         }
 
-        *w += ">(Self::DISPS, Self::N.as_ptr(), Self::VALS, n) {\n";
+        *w += ">(Self::DISPS.as_ptr(), Self::N.as_ptr(), Self::VALS.as_ptr(), n) } {\n";
         *w += "::core::option::Option::Some(x) => unsafe { ::core::result::Result::Ok(::core::mem::transmute::<";
         *w += repr.to_int();
         *w += ", Self>(x)) },
