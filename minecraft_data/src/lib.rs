@@ -8,44 +8,60 @@ use mser::cold_path;
 include!(concat!(env!("OUT_DIR"), "/data.rs"));
 
 #[inline]
-fn name_u8<const K: u64, const N: usize, const M: usize>(
-    disps: &'static [u64; N],
+const unsafe fn name_u8<const K: u64, const N: u32, const M: u32>(
+    disps: *const u64,
     names: *const &'static str,
-    vals: &'static [u8; M],
+    vals: *const u8,
     name: &str,
 ) -> Option<u8> {
     let a = hash64(name.as_bytes(), K);
     let g = (a >> 24) as u32;
     let f1 = a as u32;
     let f2 = (a >> 32) as u32;
-    let d = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let d = unsafe { *disps.add((g % N) as usize) };
     let d1 = (d >> 32) as u32;
     let d2 = d as u32;
-    let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % (M as u32);
-    let v = unsafe { *vals.get_unchecked(index as usize) };
+    let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2) % M;
+    let v = unsafe { *vals.add(index as usize) };
     let k = unsafe { *names.add(v as usize) };
-    if name == k { Some(v) } else { None }
+    if eq_str(name, k) { Some(v) } else { None }
+}
+
+const fn eq_str(left: &str, right: &str) -> bool {
+    let l = left.as_bytes();
+    let r = right.as_bytes();
+    if l.len() != r.len() {
+        return false;
+    }
+    let mut i = 0;
+    while i != l.len() {
+        if l[i] != r[i] {
+            return false;
+        }
+        i += 1;
+    }
+    true
 }
 
 #[inline]
-fn name_u16<const K: u64, const N: usize, const M: usize>(
-    disps: &'static [u64; N],
+const unsafe fn name_u16<const K: u64, const N: u32, const M: u32>(
+    disps: *const u64,
     names: *const &'static str,
-    vals: &'static [u16; M],
+    vals: *const u16,
     name: &str,
 ) -> Option<u16> {
     let a = hash64(name.as_bytes(), K);
     let g = (a >> 24) as u32;
     let f1 = a as u32;
     let f2 = (a >> 32) as u32;
-    let d = unsafe { *disps.get_unchecked((g % (N as u32)) as usize) };
+    let d = unsafe { *disps.add((g % N) as usize) };
     let d1 = (d >> 32) as u32;
     let d2 = d as u32;
     let index = d2.wrapping_add(f1.wrapping_mul(d1)).wrapping_add(f2);
-    let j = (index % (M as u32)) as usize;
-    let v = unsafe { *vals.get_unchecked(j) };
+    let j = (index % M) as usize;
+    let v = unsafe { *vals.add(j) };
     let k = unsafe { *names.add(v as usize) };
-    if name == k { Some(v) } else { None }
+    if eq_str(name, k) { Some(v) } else { None }
 }
 
 fn make_block_state(
