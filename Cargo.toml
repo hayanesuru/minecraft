@@ -21,18 +21,18 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/hayanesuru/minecraft"
 edition = "2024"
-publish = ["haya"]
+publish = ["hayane"]
 
 [workspace.dependencies]
-mser = { registry = "haya", path = "mser", version = "4.1", default-features = false }
-mser_macro = { registry = "haya", path = "mser_macro", version = "4.1", default-features = false }
-minecraft_data = { registry = "haya", path = "minecraft_data", version = "4.2", default-features = false }
-haya_nbt = { registry = "haya", path = "haya_nbt", version = "3" }
-haya_str = { registry = "haya", path = "haya_str", version = "1" }
-haya_ident = { registry = "haya", path = "haya_ident", version = "2" }
-haya_mutf8 = { registry = "haya", path = "haya_mutf8", version = "1" }
-haya_math = { registry = "haya", path = "haya_math", version = "2", default-features = false }
-haya_collection = { registry = "haya", path = "haya_collection", version = "2" }
+mser = { registry = "hayane", path = "mser", version = "4.1", default-features = false }
+mser_macro = { registry = "hayane", path = "mser_macro", version = "4.1", default-features = false }
+minecraft_data = { registry = "hayane", path = "minecraft_data", version = "4.2", default-features = false }
+haya_nbt = { registry = "hayane", path = "haya_nbt", version = "3" }
+haya_str = { registry = "hayane", path = "haya_str", version = "1" }
+haya_ident = { registry = "hayane", path = "haya_ident", version = "2" }
+haya_mutf8 = { registry = "hayane", path = "haya_mutf8", version = "1" }
+haya_math = { registry = "hayane", path = "haya_math", version = "2", default-features = false }
+haya_collection = { registry = "hayane", path = "haya_collection", version = "2" }
 uuid = { version = "1", default-features = false }
 
 [profile.dev.package."minecraft_data"]

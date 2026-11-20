@@ -1,2 +1,2 @@
-[registries.haya]
+[registries.hayane]
 index = "sparse+https://hayane.co/api/v1/crates/"
