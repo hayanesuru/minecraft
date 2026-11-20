@@ -4,7 +4,7 @@
 use core::mem::transmute;
 use core::ptr::copy_nonoverlapping;
 
-const MAX: usize = 31;
+pub const MAX: usize = 31;
 
 #[derive(Clone, Copy)]
 pub struct HayaStr {

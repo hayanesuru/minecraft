@@ -159,9 +159,7 @@ impl<'a> Reader<'a> {
 
     /// # Safety
     ///
-    /// `origin` >= [`self.ptr`]
-    ///
-    /// [`self.ptr`]: Reader::ptr
+    /// `origin` >= current pointer.
     #[inline]
     pub unsafe fn offset_from(&self, origin: *const u8) -> usize {
         unsafe { self.ptr.offset_from_unsigned(origin) }
@@ -169,9 +167,7 @@ impl<'a> Reader<'a> {
 
     /// # Safety
     ///
-    /// `origin` >= [`self.ptr`]
-    ///
-    /// [`self.ptr`]: Reader::ptr
+    /// `origin` >= current pointer.
     #[inline]
     pub unsafe fn read_slice_from(&mut self, origin: *const u8) -> &'a [u8] {
         unsafe {
@@ -184,9 +180,7 @@ impl<'a> Reader<'a> {
 
     /// # Safety
     ///
-    /// `origin` >= [`self.ptr`]
-    ///
-    /// [`self.ptr`]: Reader::ptr
+    /// `origin` >= current pointer.
     #[inline]
     pub unsafe fn peek_slice_from(&mut self, origin: *const u8) -> &'a [u8] {
         unsafe {

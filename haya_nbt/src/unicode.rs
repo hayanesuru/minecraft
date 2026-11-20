@@ -233,8 +233,7 @@ fn split(hash: u64) -> (u32, u32, u32) {
 /// Find the character called `name`, or `None` if no such character
 /// exists.
 ///
-/// This function uses the [UAX44-LM2] loose matching scheme for lookup. For
-/// more information, see the [crate-level docs][self].
+/// This function uses the [UAX44-LM2] loose matching scheme for lookup.
 ///
 /// [UAX44-LM2]: https://www.unicode.org/reports/tr44/tr44-34.html#UAX44-LM2
 ///
